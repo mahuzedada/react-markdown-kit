@@ -69,8 +69,9 @@ What the answers reveal, for the pages in `docs/SEO_PLAN.md` section 4:
 
 ## Search Console
 
-Properties exist for all six hosts (added 2026-09-21, URL-prefix, HTML tag
-method). Rows start once they verify and show impressions.
+All six hosts are verified in Google Search Console and Bing Webmaster Tools
+(2026-09-21, URL-prefix properties, HTML tag method) with `/sitemap.xml`
+submitted on each. Rows start once impressions appear.
 
 | Date | Host | Term | Position | Impressions | Clicks |
 | --- | --- | --- | --- | --- | --- |

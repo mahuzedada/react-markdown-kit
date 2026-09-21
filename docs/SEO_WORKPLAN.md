@@ -409,9 +409,8 @@ Listed so the agent does not attempt them and so the human knows what remains.
   local until it is pushed. Topics, description and website are set.
 - npm login if `npm whoami` fails.
 - Record baseline positions in `docs/SEO_LOG.md` once Search Console shows
-  impressions. All six properties are verified with sitemaps submitted
-  (2026-09-21); the six Bing Webmaster sites verify from the `msvalidate.01`
-  tag on the next deploy, then need their sitemaps submitted.
+  impressions. All six hosts are verified in Google Search Console and Bing
+  Webmaster Tools with a sitemap submitted on each (2026-09-21).
 - Validating the keyword shortlist in Google Keyword Planner.
 - Outreach to listicle authors (Strapi, Eddyter, Froala, Refine, Windmill,
   Contentful, medevel), replies on remarkjs discussion #1148 and
