@@ -1,0 +1,300 @@
+---
+title: "React Markdown Kit vs markdown-to-jsx"
+description: "React Markdown Kit vs markdown-to-jsx on install size, GFM, security defaults, streaming, server rendering, plugins and migration, with linked evidence."
+---
+
+import Link from '@docusaurus/Link'
+import RenderExample from '@site/src/components/RenderExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+import CompareTable, { gzipDifference, measuredOn } from '@site/src/components/CompareTable'
+
+export const PATH = '/compare/markdown-to-jsx'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'React Markdown renderer', path: '/react-markdown-renderer' },
+  { name: 'vs markdown-to-jsx' },
+]
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/renderer'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+export const theirs = 'https://github.com/quantizor/markdown-to-jsx'
+
+export const FAQ = [
+  {
+    question: 'Is markdown-to-jsx smaller than React Markdown Kit?',
+    answer:
+      'Yes. One import of markdown-to-jsx 9.10.3 is smaller gzipped than one import of @react-markdown-kit/renderer 0.1.0, and markdown-to-jsx declares no runtime dependencies. The measurement is in docs/data/bundle-sizes.json, written by scripts/compare-bundles.mjs.',
+  },
+  {
+    question: 'Does markdown-to-jsx render raw HTML by default?',
+    answer:
+      'Yes. Its readme documents disableParsingRawHTML defaulting to false, so HTML in the Markdown is parsed into JSX, with tagfilter on by default escaping script, iframe, style and similar tags. React Markdown Kit does the opposite by default: raw HTML stays visible escaped text until you add rehype-raw yourself.',
+  },
+  {
+    question: 'Which one should I use for a React Markdown renderer?',
+    answer:
+      'Use markdown-to-jsx for the smallest bundle, zero dependencies, or output targets other than React. Use React Markdown Kit when you want the remark and rehype plugin surface, raw HTML inert by default, streaming tested prefix by prefix, or an editor and diagram plugins reading the same compiled document.',
+  },
+]
+
+export const gfmSource = `| Package | Gzipped |
+| --- | ---: |
+| renderer | measured |
+
+- [x] task list
+- [ ] ~~strikethrough~~ and https://example.com
+`
+
+export const htmlSource = `Inline <b>bold tag</b> and a <div>block</div>.
+
+<img src=x onerror="alert(1)">
+`
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
+
+# React Markdown Kit vs markdown-to-jsx
+
+`markdown-to-jsx` is a single-package Markdown toolchain with no runtime dependencies
+that compiles to React, React Native, SolidJS, Vue, HTML, Markdown or an AST.
+`@react-markdown-kit/renderer` is a React renderer built on micromark with the
+`react-markdown` prop surface. They differ most on raw HTML and on how you extend them.
+
+This page uses the same section order as every comparison page here: install size, GFM,
+security defaults, streaming, server rendering, plugins, migration. Facts about
+`markdown-to-jsx` come from its readme at version 9.10.3,
+<Link href={theirs}>quantizor/markdown-to-jsx</Link>. Facts about the kit link to the
+test or the generated table that produced them.
+
+## Install size
+
+Bytes a browser downloads for one import, measured from published tarballs by
+<Link href={blob('scripts/compare-bundles.mjs')}>`scripts/compare-bundles.mjs`</Link> and
+committed to
+<Link href={blob('docs/data/bundle-sizes.json')}>`docs/data/bundle-sizes.json`</Link> on
+{measuredOn}. React and React DOM are external in every row, minification is esbuild with
+`NODE_ENV` set to `production`, and 1 KB is 1024 bytes.
+
+<CompareTable
+  ids={['markdown-to-jsx', 'kit-renderer', 'kit-renderer-gfm']}
+  caption="One import, minified and gzipped"
+  licenses
+/>
+
+`markdown-to-jsx` wins this section by
+{' '}{gzipDifference('kit-renderer', 'markdown-to-jsx')} gzipped against the kit on
+CommonMark, and by {gzipDifference('kit-renderer-gfm', 'markdown-to-jsx')} against the kit
+with GFM enabled. Its npm metadata lists no runtime dependencies, so nothing else arrives
+with it. The kit brings the micromark and
+unified packages, which is what buys it the remark and rehype interface.
+
+## GFM
+
+`markdown-to-jsx` parses GFM with no option and no plugin. Its readme states that all
+GFM special syntaxes are supported, including tables, task lists, strikethrough,
+autolinks and tag filtering.
+
+The kit needs one line.
+
+```tsx
+import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+<Markdown preset={preset}>{content}</Markdown>
+```
+
+```tsx
+// or the plugin route, which must produce the same markup
+import remarkGfm from 'remark-gfm'
+
+<Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+```
+
+What the kit can show is the conformance run.
+<Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link> asserts 68 cases derived
+from the GFM spec three ways: through `gfm()`, through `remarkPlugins={[remarkGfm]}`, and
+through plain CommonMark, where the first two must be byte-identical and the third must
+not produce the GFM markup.
+<Link href={blob('tests/commonmark.test.ts')}>`tests/commonmark.test.ts`</Link> runs every
+example from CommonMark 0.31.2. This repository runs no conformance suite against
+`markdown-to-jsx`, so its compliance is reported here as its readme states it and not as
+a measurement.
+
+<RenderExample
+  title="GFM on this page, rendered by @react-markdown-kit/renderer"
+  markdown={gfmSource}
+  gfm
+/>
+
+`markdown-to-jsx` for less setup. Kit for a published conformance run.
+
+## Security defaults
+
+This is the section where the two packages disagree on purpose. Neither uses
+`dangerouslySetInnerHTML`.
+
+| Default | markdown-to-jsx 9.10.3 | React Markdown Kit |
+| --- | --- | --- |
+| Raw HTML in the source | Parsed into JSX. `disableParsingRawHTML` defaults to `false` | Rendered as visible escaped text. Opt in with `rehype-raw` |
+| Dangerous tags | `tagfilter` defaults to `true`, escaping `script`, `iframe`, `style` and similar | Not applicable by default, because no tag is mounted |
+| Raw HTML sanitization | Documented as always on, independent of `options.sanitizer` | Not applicable by default |
+| URLs | Built-in sanitizer, replaceable through `options.sanitizer` | Default `urlTransform` allows `http`, `https`, `irc`, `ircs`, `mailto`, `xmpp` and empties the rest |
+| Custom components | `overrides` by tag name | `components` by tag name, trusted code in both |
+
+Read the two positions in full:
+<Link href={`${theirs}#raw-html-sanitization`}>raw HTML sanitization</Link> and
+<Link href={`${theirs}#optionssanitizer`}>`options.sanitizer`</Link> on their side,
+<Link to="/docs/security">the security model</Link> on this one.
+
+The practical question is what happens to HTML you did not write. On the kit it is text
+until you add a plugin, which is asserted by
+<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>the renderer security tests</Link>:
+raw HTML not executed, script tags escaped rather than emitted, `javascript:` URLs
+blocked, obfuscated protocols blocked, dangerous image sources blocked, relative and
+anchor URLs kept, and the same policy applied to a precompiled document so it is not a
+bypass.
+
+<RenderExample
+  title="Raw HTML through @react-markdown-kit/renderer, default settings"
+  markdown={htmlSource}
+>
+  The tags are text. On `markdown-to-jsx` defaults, `b` and `div` would be real elements
+  and the `img` tag's leading angle bracket would be neutralized by `tagfilter`.
+</RenderExample>
+
+Different goals. Pick `markdown-to-jsx` if authors are meant to write HTML in the
+Markdown. Pick the kit if the Markdown can come from a user, a model or a CMS.
+
+## Streaming
+
+Both packages address streaming, and they choose opposite behaviour for an incomplete
+construct.
+
+`markdown-to-jsx` has an opt-in `optimizeForStreaming` option, `false` by default, which
+its readme says suppresses incomplete structures until the closing delimiter arrives:
+unclosed HTML tags, unclosed inline code, unclosed emphasis, unclosed strikethrough,
+unclosed links and an incomplete table are held back, while a fenced code block shows its
+content as it arrives
+(<Link href={`${theirs}#streaming-markdown`}>streaming Markdown</Link>).
+
+**React Markdown Kit passes with no option to set, and the behaviour is tested.**
+<Link href={blob('packages/renderer/tests/streaming.test.tsx')}>`packages/renderer/tests/streaming.test.tsx`</Link>
+is 59 tests that feed seven documents token by token and assert four properties on every
+prefix: no prefix throws, the HTML of the closed prefix is byte-identical at every later
+prefix, nothing in the closed prefix is duplicated, and the final prefix renders exactly
+like the whole document rendered once. The same run is repeated through `compileMarkdown`
+and through a mounted React root that grows token by token.
+
+An incomplete construct renders as the characters typed so far. `**str` is the text
+`**str`, `[text](` is the text `[text](`, and a table is a paragraph until its delimiter
+row is complete. Nothing is dropped and nothing is invented. Two prefixes legitimately
+rewrite output that already rendered, and both are pinned by tests: a paragraph becomes a
+heading when a setext underline arrives, and a GFM autolink points at the truncated host
+while the URL is still being typed.
+
+Which you want depends on the UI. Suppression hides the syntax and shows nothing;
+literal text shows the syntax and never moves the text above it. The kit's guarantee is
+the byte-stable closed prefix, which is what stops a long chat answer from reflowing.
+
+## Server rendering
+
+Both render on the server. `markdown-to-jsx` documents that its `Markdown` component
+detects a React Server Component environment and adapts with no `'use client'` directive
+(<Link href={`${theirs}#react-server-components-rsc`}>RSC usage</Link>), and it also
+compiles to HTML, Markdown and an AST outside React entirely.
+
+The kit is server-safe by construction. Its conformance suites call
+`renderToStaticMarkup`, and
+<Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link> installs the
+packed tarball into a consumer with no Lexical and renders there, so the renderer entry
+pulls in no browser-only code
+(<Link to="/docs/server-rendering">server rendering</Link>).
+
+The kit's extra is `compileMarkdown`. A `MarkdownDocument` compiled once renders many
+times without parsing again: on the reference machine in
+<Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link> a 10 KB document
+takes 16.80 ms from a string and 5.99 ms precompiled, 2.8x faster.
+
+Single-render speed against `react-markdown@10.1.0`, both sides parsing GFM, is the
+honest counterweight: **1 KB is 1.21x slower** (2.69 ms against 2.23 ms), 10 KB is at
+parity, and 100 KB is 0.89x. The 1 KB row is an open regression, tracked in
+<Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link>. No benchmark
+against `markdown-to-jsx` is published here, so no speed claim is made against it.
+
+## Plugins
+
+`markdown-to-jsx` has no remark or rehype interface. It extends through options:
+`overrides` to swap the component for a tag name, `renderRule` for per-rule control,
+`sanitizer` for URLs, `slugify` for heading ids, and `createElement` for another
+framework. Its own AST is exported for anything else.
+
+The kit takes the unified ecosystem directly: `remarkPlugins`, `rehypePlugins` and
+`remarkRehypeOptions`, compared prop for prop against `react-markdown` at 4 of 4, 3 of 3
+and 3 of 3 identical
+(<Link href={blob('docs/COMPATIBILITY.md')}>`docs/COMPATIBILITY.md`</Link>). On top of
+that it has extensions, which register micromark syntax, mdast handlers, hast handlers
+and editor behaviour in one declaration, so the renderer, the editor and a server that
+only compiles the document all read the same thing
+(<Link to="/docs/extensions">extensions</Link>). `@react-markdown-kit/mermaid`,
+`@react-markdown-kit/slides` and `@react-markdown-kit/template` are built that way.
+
+Kit, if you want existing remark or rehype plugins or an editor.
+`markdown-to-jsx`, if overrides are all you need and you want to stay at zero
+dependencies.
+
+## Migration
+
+There is no codemod for this direction. `rmk-migrate` and `rmk-compare` handle
+`react-markdown` only
+(<Link href={blob('packages/renderer/src/codemod/compare.mjs')}>`compare.mjs`</Link>), so
+moving from `markdown-to-jsx` is a hand edit. The shape of it:
+
+```diff
+-import Markdown from 'markdown-to-jsx'
++import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
++
++const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+-<Markdown options={{ overrides: { a: Anchor } }}>{content}</Markdown>
++<Markdown preset={preset} components={{ a: Anchor }}>{content}</Markdown>
+```
+
+Three things to check before you start.
+
+- **Raw HTML stops rendering.** Anything relying on HTML inside the Markdown becomes
+  text unless you add `rehype-raw` and a sanitizer, in that order.
+- **`options` splits into props.** `overrides` becomes `components`, `sanitizer` becomes
+  `urlTransform`, and `wrapper` and `forceInline` have no equivalent.
+- **`renderRule` has no equivalent.** Per-rule rendering is a rehype plugin or an
+  extension here.
+
+Diff your own corpus through both before committing. Render the same files with each
+package and compare the HTML, the way
+<Link href={blob('tests/compatibility.test.tsx')}>`tests/compatibility.test.tsx`</Link>
+does for `react-markdown`.
+
+## FAQ
+
+<dl>
+  {FAQ.map((item) => (
+    <div key={item.question}>
+      <dt><strong>{item.question}</strong></dt>
+      <dd>{item.answer}</dd>
+    </div>
+  ))}
+</dl>
+
+## Next
+
+<Link href={sites.rendererDemo}>Renderer playground</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/renderer on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
+
+<Link to="/react-markdown-alternative">react-markdown alternative</Link> ·{' '}
+<Link to="/compare/react-markdown">vs react-markdown</Link> ·{' '}
+<Link to="/compare/streamdown">vs Streamdown</Link> ·{' '}
+<Link to="/react-markdown-renderer">Renderer overview</Link> ·{' '}
+<Link to="/docs/security">Security model</Link>
