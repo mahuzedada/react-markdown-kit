@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm fixtures          # download the pinned CommonMark spec
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: node scripts/check-css-scope.mjs   # styling contract
+      - run: pnpm build
+
+  # Spec 12.2: never trust monorepo imports. Pack the real tarballs and install
+  # them into clean consumers, so undeclared dependencies, broken exports and
+  # missing types fail here rather than for a user.
+  packaged-consumers:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        client: [npm, pnpm, yarn]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/pack-check.mjs ${{ matrix.client }}
+
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @react-markdown-kit/renderer build
+      # Informational. CI machines are too noisy to gate on timing, so this
+      # records numbers rather than failing a PR over them.
+      - run: node benchmarks/run.mjs
+
+  # The docs site build is also a real integration test: RenderExample and
+  # TemplateExample server-render with the actual packages, so a renderer or a
+  # template plugin that reached for a browser global would fail here. The
+  # home page and the four demo sites build after it, against the same packages.
+  public-sites:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter react-markdown-kit-docs build
+      - name: Live examples must have server-rendered
+        run: |
+          grep -q "<table>" public-sites/docs/build/index.html
+          grep -q "Acme Industrial" public-sites/docs/build/index.html
+      # The slides page renders a deck on the server (a second <section> proves
+      # the split) and imports the plugin stylesheet, which must reach the
+      # built CSS: RenderExample loads no plugin CSS on its own.
+      - name: The slides page server-rendered a deck with its stylesheet
+        run: |
+          grep -q 'data-rmk-slide="2"' public-sites/docs/build/docs/slides/index.html
+          grep -q 'data-rmk-slide-body' public-sites/docs/build/assets/css/*.css
+      - run: pnpm --filter react-markdown-kit-home build
+      - run: pnpm --filter react-markdown-kit-renderer-demo build
+      - run: pnpm --filter react-markdown-kit-editor-demo build
+      - run: pnpm --filter react-markdown-kit-mermaid-demo build
+      - run: pnpm --filter react-markdown-kit-slides-demo build
+      # The SEO surface of the six built sites: one h1, canonical, Open Graph
+      # with a PNG, structured data, robots, sitemap, llms.txt, no internal 404.
+      - run: pnpm vitest run tests/seo-surface.test.ts

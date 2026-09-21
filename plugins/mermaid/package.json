@@ -1,0 +1,90 @@
+{
+  "name": "@react-markdown-kit/mermaid",
+  "version": "0.1.0",
+  "description": "Mermaid flowcharts for React Markdown Kit, as a plugin: mermaid() turns ```mermaid fences into static SVG in the renderer and a drawing canvas in the editor, writing edits back as Mermaid syntax. No standalone API.",
+  "homepage": "https://docs.reactmarkdownkit.com/docs/mermaid",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mahuzedada/react-markdown-kit.git",
+    "directory": "plugins/mermaid"
+  },
+  "bugs": "https://github.com/mahuzedada/react-markdown-kit/issues",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "DRAWING_FORMAT.md",
+    "LAYOUT_ANNOTATION.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./editor": {
+      "types": "./dist/editor.d.ts",
+      "default": "./dist/editor.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@types/hast": "^3.0.4",
+    "@types/mdast": "^4.0.4"
+  },
+  "peerDependencies": {
+    "@lexical/utils": "^0.35.0",
+    "@react-markdown-kit/editor": "^0.1.0",
+    "@react-markdown-kit/renderer": "^0.1.0",
+    "lexical": "^0.35.0",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@lexical/utils": {
+      "optional": true
+    },
+    "@react-markdown-kit/editor": {
+      "optional": true
+    },
+    "lexical": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "markdown",
+    "diagram",
+    "drawing",
+    "flowchart",
+    "svg",
+    "react",
+    "plugin",
+    "mermaid",
+    "mermaid-editor",
+    "visual-editor",
+    "flowchart-editor",
+    "react-mermaid"
+  ],
+  "devDependencies": {
+    "@lexical/utils": "^0.35.0",
+    "@react-markdown-kit/editor": "workspace:*",
+    "@react-markdown-kit/renderer": "workspace:*",
+    "lexical": "^0.35.0"
+  }
+}

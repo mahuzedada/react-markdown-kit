@@ -1,0 +1,27 @@
+{
+  "name": "react-markdown-kit-mermaid-demo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "serve": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-markdown-kit/editor": "workspace:*",
+    "@react-markdown-kit/mermaid": "workspace:*",
+    "@react-markdown-kit/renderer": "workspace:*",
+    "@zuilib/tokens": "0.2.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^5.7.2",
+    "vite": "^7.3.6"
+  }
+}

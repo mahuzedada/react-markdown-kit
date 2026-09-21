@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="React Markdown Kit">
+  <rect width="32" height="32" rx="7" fill="#2d72d2"/>
+  <path d="M6.5 22V10h3l3.2 4.4L15.9 10h3v12h-3v-7.2l-2.2 3h-.9l-2.2-3V22z" fill="#fff"/>
+  <path d="M22.6 10h2.9v7.2h3.2L24 22.6 19.3 17.2h3.3z" fill="#8abbff"/>
+</svg>

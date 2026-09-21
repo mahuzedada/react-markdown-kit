@@ -1,0 +1,71 @@
+---
+title: Markdown in Next.js
+description: Render Markdown in a Next.js server component with no client JavaScript, and precompile documents at module scope for faster requests.
+---
+
+import Link from '@docusaurus/Link'
+import { ArticleJsonLd } from '@site/src/components/JsonLd'
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path="/nextjs-markdown" />
+
+# Markdown in Next.js
+
+The renderer is a server component. It reads files, runs during a static build, and ships
+no JavaScript to the browser for the Markdown itself.
+
+## A server component
+
+There is no `use client` in this file or in the renderer entry, so React keeps it on the
+server.
+
+```tsx
+// app/posts/[slug]/page.tsx
+import { readFile } from 'node:fs/promises'
+import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+export default async function Page({ params }) {
+  const content = await readFile(`content/${params.slug}.md`, 'utf8')
+  return <Markdown preset={preset}>{content}</Markdown>
+}
+```
+
+Reading from `node:fs` in the same component only works because the renderer never
+touches a browser global.
+
+## Precompile what does not change
+
+Parsing is roughly 80% of the work. Hoist it out of the request path and re-render from
+the compiled document, which is about 2.8 times faster.
+
+```tsx
+import Markdown, { compileMarkdown } from '@react-markdown-kit/renderer'
+
+// Parsed once per process, not once per request.
+const TERMS = compileMarkdown(await readFile('content/terms.md', 'utf8'))
+
+export default function Page() {
+  return <Markdown document={TERMS} />
+}
+```
+
+A compiled document is plain JSON. It survives a cache, a queue and an HTTP boundary, so
+it can also come from a build step.
+
+## The editor is the other case
+
+The editor is interactive, so it is a client component. That is precisely why it is a
+separate package: installing the renderer never drags editor code into a server bundle,
+and a packaging test asserts it against the real tarball.
+
+```tsx
+'use client'
+
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+```
+
+## Next
+
+<Link to="/docs/server-rendering">Server rendering in depth</Link> ·{' '}
+<Link to="/react-markdown-renderer">Renderer overview</Link>

@@ -1,0 +1,193 @@
+/*
+ * Optional chrome for @react-markdown-kit/editor.
+ *
+ * Opt in by importing this file. Everything is scoped to `.rmk-editor`, uses
+ * single-class specificity, ships no reset, and reads every value from a
+ * --rmk-* custom property you can override on any ancestor. The editor is
+ * fully functional with this file absent — `tests/no-css.test.tsx` asserts it.
+ */
+
+.rmk-editor {
+  --rmk-font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --rmk-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --rmk-text: currentColor;
+  --rmk-muted: color-mix(in srgb, currentColor 55%, transparent);
+  --rmk-border: color-mix(in srgb, currentColor 18%, transparent);
+  --rmk-surface: color-mix(in srgb, currentColor 4%, transparent);
+  --rmk-surface-active: color-mix(in srgb, currentColor 12%, transparent);
+  --rmk-focus: currentColor;
+  --rmk-space: 0.5rem;
+  --rmk-radius: 4px;
+  --rmk-content-min-height: 12rem;
+
+  display: flex;
+  flex-direction: column;
+  color: var(--rmk-text);
+  font-family: var(--rmk-font-body);
+  border: 1px solid var(--rmk-border);
+  border-radius: var(--rmk-radius);
+}
+
+/* ------------------------------------------------------------------ toolbar */
+
+.rmk-editor .rmk-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rmk-space);
+  padding: var(--rmk-space);
+  border-block-end: 1px solid var(--rmk-border);
+  background: var(--rmk-surface);
+}
+
+.rmk-editor .rmk-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.rmk-editor .rmk-toolbar-group + .rmk-toolbar-group {
+  padding-inline-start: var(--rmk-space);
+  border-inline-start: 1px solid var(--rmk-border);
+}
+
+.rmk-editor .rmk-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  padding: 0;
+  font-size: 1rem;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--rmk-radius);
+  cursor: pointer;
+}
+
+.rmk-editor .rmk-toolbar-button:hover:enabled {
+  background: var(--rmk-surface-active);
+}
+
+.rmk-editor .rmk-toolbar-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rmk-editor .rmk-toolbar-button-active {
+  background: var(--rmk-surface-active);
+  border-color: var(--rmk-border);
+}
+
+.rmk-editor .rmk-toolbar-button:focus-visible {
+  outline: 2px solid var(--rmk-focus);
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ content */
+
+.rmk-editor .rmk-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-block-size: var(--rmk-content-min-height);
+}
+
+.rmk-editor .rmk-content > [contenteditable] {
+  flex: 1;
+  padding: calc(var(--rmk-space) * 2);
+  outline: none;
+}
+
+.rmk-editor .rmk-content > [contenteditable]:focus-visible {
+  outline: 2px solid var(--rmk-focus);
+  outline-offset: -2px;
+}
+
+.rmk-editor .rmk-placeholder {
+  position: absolute;
+  inset-block-start: calc(var(--rmk-space) * 2);
+  inset-inline-start: calc(var(--rmk-space) * 2);
+  color: var(--rmk-muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+.rmk-editor .rmk-source-textarea {
+  flex: 1;
+  min-block-size: var(--rmk-content-min-height);
+  padding: calc(var(--rmk-space) * 2);
+  color: inherit;
+  font-family: var(--rmk-font-mono);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  tab-size: 2;
+  background: transparent;
+  border: 0;
+  resize: vertical;
+}
+
+.rmk-editor .rmk-source-textarea:focus-visible {
+  outline: 2px solid var(--rmk-focus);
+  outline-offset: -2px;
+}
+
+.rmk-editor .rmk-preview {
+  padding: calc(var(--rmk-space) * 2);
+}
+
+/* ----------------------------------------------------- preserved constructs */
+
+.rmk-editor .rmk-opaque {
+  margin-block: var(--rmk-space);
+  border: 1px dashed var(--rmk-border);
+  border-radius: var(--rmk-radius);
+  background: var(--rmk-surface);
+  user-select: none;
+}
+
+.rmk-editor .rmk-opaque-source {
+  margin: 0;
+  padding: var(--rmk-space);
+  overflow-x: auto;
+  color: var(--rmk-muted);
+  font-family: var(--rmk-font-mono);
+  font-size: 0.8125rem;
+  white-space: pre;
+}
+
+.rmk-editor .rmk-strong { font-weight: 700; }
+.rmk-editor .rmk-emphasis { font-style: italic; }
+.rmk-editor .rmk-strikethrough { text-decoration: line-through; }
+
+.rmk-editor .rmk-inline-opaque {
+  font-family: var(--rmk-font-mono);
+  color: var(--rmk-muted);
+}
+
+.rmk-editor [data-rmk-code-block] {
+  margin-block: var(--rmk-space);
+  padding: var(--rmk-space);
+  font-family: var(--rmk-font-mono);
+  font-size: 0.875rem;
+  background: var(--rmk-surface);
+  border-radius: var(--rmk-radius);
+  white-space: pre-wrap;
+}
+
+.rmk-editor table {
+  border-collapse: collapse;
+}
+
+.rmk-editor th,
+.rmk-editor td {
+  padding: calc(var(--rmk-space) / 2) var(--rmk-space);
+  border: 1px solid var(--rmk-border);
+}
+
+.rmk-editor img {
+  max-inline-size: 100%;
+  block-size: auto;
+  vertical-align: bottom;
+}

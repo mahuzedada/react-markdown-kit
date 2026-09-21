@@ -1,0 +1,281 @@
+---
+title: Styling
+description: Style rendered Markdown with plain CSS, the opt-in theme, utility classes or your own components. The kit ships no styling dependency.
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+
+# Styling
+
+```tsx
+<Markdown>{source}</Markdown>
+```
+
+```css
+.rmk-document h1 { font-size: 2rem; }
+```
+
+React Markdown Kit ships no styling dependency. No design system, no Tailwind,
+no CSS-in-JS runtime, no theme provider. The only peer dependencies are `react`
+and `react-dom`. A packaging test fails the build if that ever changes.
+
+With no CSS imported, the renderer emits plain semantic HTML. Nothing has a
+colour, a font, a radius or a shadow until you ask for one.
+
+## Four approaches
+
+Every one of these works without patching the library.
+
+| Approach | What it needs |
+| --- | --- |
+| Bring your own CSS | Nothing at all |
+| The shipped theme, retinted | One import plus a few custom properties |
+| Utility classes | A `classNames` prop |
+| Your own components | A `components` prop |
+
+### 1. Bring your own CSS
+
+The default DOM is the same semantic HTML `react-markdown` emits, with no
+kit-specific classes on it. Style it with element selectors under a class of
+your own.
+
+<RenderExample
+  title="Unstyled output"
+  markdown={`## Release 1.4
+
+Ships **today**. See the [changelog](https://example.com/changelog).
+
+- Faster cold render
+- Smaller bundle
+`}
+/>
+
+```css
+.article h2 { font-size: 1.5rem; letter-spacing: -0.01em; }
+.article a { color: rebeccapurple; }
+```
+
+### 2. The shipped theme, retinted
+
+Import the optional stylesheet and put `.rmk-document` on a wrapper.
+
+```tsx
+import '@react-markdown-kit/renderer/styles.css'
+
+<div className="rmk-document">
+  <Markdown>{source}</Markdown>
+</div>
+```
+
+Every colour, space, radius and font in that file reads a `--rmk-*` custom
+property. Override the property on any ancestor and the whole thing retints.
+
+```css
+.rmk-document {
+  --rmk-text: #111;
+  --rmk-link: rebeccapurple;
+  --rmk-font-body: 'Inter', system-ui, sans-serif;
+}
+```
+
+<div style={{
+  '--rmk-link': '#7b3fa0',
+  '--rmk-font-body': 'Georgia, "Times New Roman", serif',
+  '--rmk-border': '#7b3fa0',
+  '--rmk-surface': 'rgba(123, 63, 160, 0.08)',
+}}>
+
+<RenderExample
+  title="Same component, three custom properties"
+  gfm
+  markdown={`## Release 1.4
+
+Ships **today**. See the [changelog](https://example.com/changelog).
+
+> Cold render is down to 9.1 ms.
+
+| Metric | Before | After |
+| --- | ---: | ---: |
+| Bundle | 41 kB | 38 kB |
+`}
+/>
+
+</div>
+
+The renderer's properties:
+
+| Property | Default |
+| --- | --- |
+| `--rmk-font-body` | the system UI stack |
+| `--rmk-font-mono` | the system monospace stack |
+| `--rmk-text` | `currentColor` |
+| `--rmk-muted` | `currentColor` at 65% |
+| `--rmk-border` | `currentColor` at 15% |
+| `--rmk-surface` | `currentColor` at 5% |
+| `--rmk-link` | `currentColor` |
+| `--rmk-measure` | `68ch` |
+| `--rmk-space` | `1rem` |
+| `--rmk-radius` | `4px` |
+
+The editor stylesheet reads the same names plus `--rmk-focus`,
+`--rmk-surface-active` and `--rmk-content-min-height`. Because the defaults are
+`currentColor` and `color-mix`, the theme follows your dark mode without a
+second theme block.
+
+### 3. Utility classes
+
+Pass your own classes per part. Tailwind, CSS Modules, BEM and Infima all work
+the same way.
+
+```tsx
+<Markdown
+  classNames={{
+    root: 'prose prose-slate max-w-none',
+    code: 'rounded bg-slate-100 px-1 py-0.5 font-mono text-sm',
+  }}
+>
+  {source}
+</Markdown>
+```
+
+A class you supply replaces the kit's default for that part rather than merging
+with it. There is nothing to `!important` away, and no specificity to out-rank.
+Passing an empty string removes the class entirely.
+
+<RenderExample
+  title="classNames, using this site's own utility classes"
+  markdown={`## Release 1.4
+
+Ships **today**. See the [changelog](https://example.com/changelog).
+`}
+  rendererProps={{
+    classNames: {
+      heading: 'text--primary',
+      paragraph: 'text--italic',
+      link: 'text--bold',
+    },
+  }}
+>
+  Those three classes come from Docusaurus. Swap them for Tailwind utilities and
+  nothing else about the call changes.
+</RenderExample>
+
+Renderer parts: `root`, `paragraph`, `heading`, `link`, `image`, `list`,
+`listItem`, `taskListItem`, `blockquote`, `code`, `codeBlock`, `pre`, `table`,
+`thead`, `tbody`, `tr`, `th`, `td`, `hr`, `footnotes`, `footnoteRef`,
+`variable`, plus `diagram` (set by the mermaid plugin) and `deck`, `slide`,
+`slideNotes` (set by the slides plugin).
+
+Editor parts: `root`, `toolbar`, `toolbarGroup`, `toolbarButton`,
+`toolbarButtonActive`, `toolbarDivider`, `content`, `placeholder`,
+`sourceTextarea`, `preview`, `statusBar`, `variableChip`, plus `modeGroup`,
+`opaque`, `image`, `codeBlock`, `table` and the inline mark parts.
+
+```tsx
+<MarkdownEditor
+  classNames={{
+    root: 'rounded-lg border border-slate-200',
+    toolbar: 'flex gap-1 border-b p-2',
+    content: 'min-h-64 p-4 focus:outline-none',
+  }}
+  value={value}
+  onChange={setValue}
+/>
+```
+
+### 4. Your own components
+
+`components` maps any element to a component of yours. This is the escape hatch
+that always works, and it is how a design system gets adopted, by choice, from
+the application.
+
+export function AppLink({ href, children }) {
+  return (
+    <a href={href} rel="noreferrer" style={{ fontWeight: 600 }}>
+      {children}
+      <span aria-hidden="true"> ↗</span>
+    </a>
+  )
+}
+
+export function AppCode({ children }) {
+  return (
+    <code style={{ border: '1px solid currentColor', borderRadius: 4, padding: '0 4px' }}>
+      {children}
+    </code>
+  )
+}
+
+<RenderExample
+  title="Two element overrides"
+  markdown={`Ships **today**. See the [changelog](https://example.com/changelog).
+
+Call \`compileMarkdown\` once, then render the document.
+`}
+  rendererProps={{ components: { a: AppLink, code: AppCode } }}
+/>
+
+```tsx
+<Markdown components={{ a: AppLink, img: AppImage, code: AppCode }}>
+  {source}
+</Markdown>
+```
+
+Swap those for ZUI, shadcn/ui or MUI components and nothing else in the call
+changes. The library never imports them.
+
+## The contract
+
+These rules are binding, and `scripts/check-css-scope.mjs` enforces the CSS half
+of them on every build.
+
+1. No styling runtime dependency in any package.
+2. Unstyled by default, with inline style used only for function and never for
+   appearance.
+3. Clean DOM by default. Kit classes appear when you ask for them through
+   `classNames`, or on parts with no semantic element of their own, such as a
+   variable chip or a task-list item.
+4. No global selectors and no reset. Optional CSS only matches inside
+   `.rmk-document` or `.rmk-editor`.
+5. Single-class specificity, so one class of yours wins.
+6. Every value in the optional CSS reads a `--rmk-*` custom property.
+7. Class names are replaceable through `classNames`.
+8. Components are replaceable through `components`.
+
+The optional CSS is deliberately small. `renderer/styles.css` is typography
+only: measure, heading scale, list indentation, code and table defaults.
+`editor/styles.css` is chrome only: the content box, toolbar layout, focus ring,
+placeholder, and the editing affordances that have no semantic HTML equivalent.
+
+## Editor chrome
+
+The default editor ships a toolbar so `<MarkdownEditor value onChange />` is
+useful on its own. It uses `<button type="button">` with accessible names, and
+its icons are inline SVG in the package rather than an icon font or an icon
+dependency.
+
+```tsx
+<MarkdownEditor value={value} onChange={setValue} toolbar={false} />
+```
+
+`toolbar={false}` removes it. A function replaces it. For full control, use the
+headless parts and bring your own chrome:
+
+```tsx
+const editor = useMarkdownEditor({ value, onChange })
+
+<MarkdownEditorProvider editor={editor}>
+  <MyOwnToolbar />
+  <MarkdownEditorContent />
+</MarkdownEditorProvider>
+```
+
+Nothing about the editor's behaviour depends on its own CSS. With
+`@react-markdown-kit/editor/styles.css` absent, the editor is unstyled and fully
+functional: typing, shortcuts, mode switching and serialization all work. A
+packaging test asserts exactly that.
+
+## See also
+
+- [The styling contract](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/STYLING.md) in the repository.
+- `examples/styling-approaches`, which renders one document all four ways in one page.

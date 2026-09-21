@@ -1,0 +1,93 @@
+---
+title: Compatibility
+description: How the renderer compares with react-markdown 10.1.0, prop by prop, including the rows that differ.
+---
+
+# Compatibility
+
+This renderer is not a drop-in replacement for `react-markdown`. It is a
+different package with a compatible surface for the props people actually
+migrate. Same prop names, same meanings, same default URL policy. Where
+behaviour differs, the difference is listed rather than smoothed over.
+
+The numbers below come from a test that renders identical input through both
+packages and compares normalized HTML. It regenerates
+[`docs/COMPATIBILITY.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/COMPATIBILITY.md)
+on every run, so that file is the authority and this page is the summary.
+
+## Result
+
+Measured against `react-markdown@10.1.0`. 39 comparisons across 11 props, and
+39 produce identical markup.
+
+| Status | Count |
+| --- | --- |
+| Compatible | 11 |
+| Intentionally different | 1 |
+| Not supported yet | 1 |
+| Compatible with a documented change | 1 |
+
+## The 11 compatible props
+
+| Prop | What was compared |
+| --- | --- |
+| `children` | Headings, emphasis, lists, code, quotes, links, hard breaks, empty string |
+| `components` | Element-name keys map to components, and the same props arrive |
+| `remarkPlugins` | Tree transforms and dialect plugins, including `remark-gfm` |
+| `rehypePlugins` | hast plugins running after mdast to hast and before the content policy |
+| `remarkRehypeOptions` | Footnote label, back-label and clobber prefix |
+| `allowedElements` | Only listed tags survive, and children of a removed element go with it |
+| `disallowedElements` | Listed tags are removed and everything else stays |
+| `allowElement` | The predicate receives element, index and parent |
+| `unwrapDisallowed` | A removed element is replaced by its children |
+| `urlTransform` | Runs on every URL attribute, with the same default algorithm |
+| `skipHtml` | Same meaning and the same `false` default |
+
+Both packages default `skipHtml` to `false`, so raw HTML renders as visible
+escaped text. Neither executes raw HTML without an explicit `rehype-raw` opt-in.
+
+## The rows that differ
+
+### `className` is intentionally different
+
+`react-markdown` 10 throws on a `className` prop. This renderer has no
+`className` prop either, and TypeScript rejects it, but at runtime it is
+ignored rather than thrown.
+
+JavaScript code that still passes `className` loses the wrapper silently
+instead of failing loudly. Use `components` or the opt-in `classNames` hooks
+described in [styling](/docs/styling).
+
+### `MarkdownAsync` and `MarkdownHooks` are not supported yet
+
+`react-markdown` 10 exports both for plugins that need async work. This
+renderer is synchronous only. There is no equivalent export, and an async
+remark or rehype plugin will not run.
+
+### `remarkPlugins` on a precompiled document has a documented change
+
+`react-markdown` only ever takes a string, so every plugin runs at parse time.
+This renderer also accepts an already-compiled `MarkdownDocument`.
+
+A plugin that changes the dialect, such as `remark-gfm`, cannot apply to text
+that was already parsed. Tree-transforming plugins still run. Compile with the
+same extensions you render with, or pass the string.
+
+```tsx
+// The plugin cannot add table syntax to text that is already a tree.
+const document = compileMarkdown(source, { preset: gfmPreset })
+<Markdown document={document} />
+```
+
+## What is not covered
+
+Everything outside the prop surface has no `react-markdown` equivalent, so it
+is not a compatibility question. That includes bundle size, the
+`MarkdownDocument` input, presets, extensions, the editor and the template
+engine.
+
+## Migrating
+
+The [migration guide](/migrate-from-react-markdown) walks through the codemod
+and the manual steps. The claims on this page are generated from tests, so
+check the matrix for your pinned version before you plan a migration.

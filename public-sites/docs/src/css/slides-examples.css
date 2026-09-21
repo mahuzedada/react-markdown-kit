@@ -1,0 +1,11 @@
+/*
+ * The slides page's examples only. A slide in a half-width example pane is a
+ * thumbnail, so the stack raises the plugin's own `--rmk-slide-font-size`
+ * token (1.72cqw, 22px on a 1280px slide) to keep the thumbnails readable.
+ * Present and presenter mode fall back to the shipped default, which is what
+ * a consumer gets without this rule. No colour, no layout: a token, set the
+ * way the Styling page documents.
+ */
+.slides-examples .rmk-document [data-rmk-deck]:not([data-rmk-deck-mode='present']):not([data-rmk-deck-mode='presenter']) {
+  --rmk-slide-font-size: 2.5cqw;
+}

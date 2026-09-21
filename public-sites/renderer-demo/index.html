@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>React Markdown Renderer Playground | React Markdown Kit</title>
+    <meta name="description" content="Try the React Markdown renderer in the browser: paste Markdown, turn on GFM and safety policies, override components, and copy the code behind the output." />
+    <link rel="canonical" href="https://renderer.reactmarkdownkit.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="React Markdown Kit" />
+    <meta property="og:title" content="React Markdown Renderer Playground | React Markdown Kit" />
+    <meta property="og:description" content="Try the React Markdown renderer in the browser: paste Markdown, turn on GFM and safety policies, override components, and copy the code behind the output." />
+    <meta property="og:url" content="https://renderer.reactmarkdownkit.com/" />
+    <meta property="og:image" content="https://renderer.reactmarkdownkit.com/social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="React Markdown Renderer Playground | React Markdown Kit" />
+    <meta name="twitter:description" content="Try the React Markdown renderer in the browser: paste Markdown, turn on GFM and safety policies, override components, and copy the code behind the output." />
+    <meta name="twitter:image" content="https://renderer.reactmarkdownkit.com/social-card.png" />
+    <meta name="keywords" content="react markdown renderer, render markdown in react, react markdown alternative, react markdown example, react-markdown remark-gfm, markdown to jsx, react markdown kit" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      // Colour mode before first paint: the saved choice, else the system's.
+      ;(function () {
+        try {
+          var theme = localStorage.getItem('theme')
+          if (theme !== 'light' && theme !== 'dark') {
+            theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          }
+          document.documentElement.dataset.theme = theme
+        } catch (error) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

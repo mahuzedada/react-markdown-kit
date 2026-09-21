@@ -1,0 +1,220 @@
+---
+title: Template basics
+description: Personalize a Markdown document with the template() plugin, read the diagnostics it reports, and understand why a failed resolution renders nothing.
+---
+
+import TemplateExample from '@site/src/components/TemplateExample'
+
+# Template basics
+
+```bash
+npm install @react-markdown-kit/template
+```
+
+```tsx
+import Markdown from '@react-markdown-kit/renderer'
+import { template } from '@react-markdown-kit/template'
+
+<Markdown extensions={[template({ data: { user: { name: 'Chatis' } } })]}>
+  {'# Hello {{user.name}}'}
+</Markdown>
+```
+
+`@react-markdown-kit/template` is a plugin package. It has no engine of its
+own to call: `template({ data })` is an extension, and the renderer runs it
+while parsing. Put it in an `extensions` prop for one render, or in a preset
+when a whole surface is personalized. Outside React, `compileMarkdown` runs
+the same extension and returns the resolved `MarkdownDocument`:
+
+```ts
+import { compileMarkdown } from '@react-markdown-kit/renderer'
+import { template } from '@react-markdown-kit/template'
+
+const document = compileMarkdown(source, { extensions: [template({ data })] })
+```
+
+The plugin calls no React, so this works in a Node service, a worker, a CLI
+or an email job.
+
+## One template, many customers
+
+The authored source on the left never changes. Only the data does.
+
+<TemplateExample
+  title="Invoice header"
+  markdown={`## Invoice for {{customer.name}}
+
+Amount due: **{{amount | currency:"USD"}}** by {{dueDate | date:"long"}}.
+
+Account manager: {{owner.name}}.
+`}
+  datasets={[
+    {
+      label: 'Acme',
+      data: {
+        customer: { name: 'Acme Industrial' },
+        amount: 4250,
+        dueDate: '2026-03-01',
+        owner: { name: 'Dana Reyes' },
+      },
+    },
+    {
+      label: 'Globex',
+      data: {
+        customer: { name: 'Globex' },
+        amount: 18999.5,
+        dueDate: '2026-04-15',
+        owner: { name: 'Sam Okafor' },
+      },
+    },
+  ]}
+>
+  Switching the dataset recompiles the same source with new data. The
+  template text is never rewritten.
+</TemplateExample>
+
+## Options
+
+| Option | Purpose |
+| --- | --- |
+| `data` | The values placeholders resolve to |
+| `schema` | A Standard Schema validator; rejected data is an error |
+| `locale`, `timeZone` | Formatting locale (default `en-US`) and zone (default `UTC`) |
+| `formatters` | Formatters on top of the built-ins and those other extensions contribute |
+| `variables` | Per-path metadata: `required`, `default`, `label`, `group` |
+| `fallback` | Markdown shown instead when resolution fails. Default: nothing |
+| `onDiagnostics` | Called with every diagnostic, on success and on failure |
+
+## Failure renders nothing
+
+A missing required value, a rejected schema or an unsafe path is an error.
+On any error the document becomes `fallback`, or an empty document, never a
+report with a blank where the account number should be.
+
+```tsx
+<Markdown
+  extensions={[
+    template({
+      data,
+      fallback: 'This report is temporarily unavailable.',
+      onDiagnostics: (diagnostics) => logger.warn('invoice', { diagnostics }),
+    }),
+  ]}
+>
+  {source}
+</Markdown>
+```
+
+With `compileMarkdown` the diagnostics are also on the document:
+
+```ts
+const document = compileMarkdown(source, { extensions: [template({ data })] })
+const failed = document.diagnostics.some((d) => d.severity === 'error')
+```
+
+Diagnostics also arrive on success. A warning such as an absent optional value
+is reported without failing the resolution.
+
+## Diagnostics
+
+Every diagnostic has a stable `code`, a `severity`, a `message`, and usually the
+data `path` it concerns. Messages name the path and never the runtime value, so
+they are safe to log.
+
+```ts
+import { TEMPLATE_DIAGNOSTIC_CODES } from '@react-markdown-kit/template'
+
+const missing = diagnostics.filter((item) => item.code === TEMPLATE_DIAGNOSTIC_CODES.requiredValue)
+```
+
+| Code | Severity | Meaning |
+| --- | --- | --- |
+| `TEMPLATE_REQUIRED_VALUE` | error | A required variable had no value in the data. |
+| `TEMPLATE_OPTIONAL_VALUE_MISSING` | warning | A variable declared optional had no value and resolved to empty text. |
+| `TEMPLATE_VALUE_NOT_SCALAR` | error | The value was an object, an array or a function. |
+| `TEMPLATE_UNKNOWN_FORMATTER` | error | No formatter is registered under that name. |
+| `TEMPLATE_UNSAFE_PATH` | error | A path segment was `__proto__`, `constructor` or `prototype`. |
+| `TEMPLATE_PARTIAL_URL` | error | A placeholder filled part of a URL instead of all of it. |
+| `TEMPLATE_SCHEMA_INVALID` | error | The schema rejected the data. |
+
+The full list is exported as `TEMPLATE_DIAGNOSTIC_CODES`. New members may appear
+in a minor release; existing members never change meaning.
+
+## Values become text, never structure
+
+Data is placed structurally into the parsed tree. It is never substituted into
+the source text and re-parsed, so Markdown punctuation inside a value stays
+literal.
+
+<TemplateExample
+  title="A value that tries to be bold"
+  gfm={false}
+  markdown={`## Hello {{user.name}}
+
+Signed by {{user.name}}.
+`}
+  datasets={[
+    { label: 'Plain name', data: { user: { name: 'Chatis' } } },
+    { label: 'Markdown in the value', data: { user: { name: '**Administrator**' } } },
+  ]}
+>
+  The second dataset renders the asterisks as characters. No value can create a
+  heading, a table row, a link destination, an HTML tag or a code fence.
+</TemplateExample>
+
+The [security guide](/docs/security) explains the rules behind this, including
+literal code contexts, escaped delimiters and the newline boundary.
+
+## Which Markdown the template speaks
+
+The plugin has no dialect of its own. It resolves whatever tree the preset
+parsed, so one source has one meaning everywhere in the kit. Tables and task
+lists are the renderer's `gfm()`, exactly as for rendering:
+
+```tsx
+import { gfmPreset } from '@react-markdown-kit/renderer/gfm'
+
+<Markdown preset={gfmPreset} extensions={[template({ data })]}>{source}</Markdown>
+```
+
+Other plugins participate through the extension contract's `template`
+capability: `mermaid()` marks its payload literal, and any extension can
+contribute formatters.
+
+## Resolved Markdown text
+
+When you need Markdown text rather than a rendered document, for an email
+body or a file on disk, serialize the compiled document:
+
+```ts
+import { compileMarkdown, documentToMarkdown } from '@react-markdown-kit/renderer'
+
+const document = compileMarkdown(source, { extensions: [template({ data })] })
+await writeFile('report.md', await documentToMarkdown(document))
+```
+
+Serializing re-escapes, so a value of `**Administrator**` comes back out as
+`\*\*Administrator\*\*` and keeps the literal reading it was given.
+
+## Finding placeholders without data
+
+`templateVariables()` from the same package lifts every placeholder into a
+`templateVariable` node, so compiling with it and no data is an inspection:
+
+```ts
+import { templateVariables, isTemplateVariableNode } from '@react-markdown-kit/template'
+
+const { tree } = compileMarkdown(source, { extensions: [templateVariables()] })
+// walk `tree` for nodes where isTemplateVariableNode(node): path, formatter, argument
+```
+
+## No conditions or loops in v1
+
+There is no `if`, no `each`, and no expression language. Branching belongs in
+your application, which picks the data or picks the source.
+
+## Next
+
+- [Schemas and types](/docs/templates/schemas) for runtime validation.
+- [Formatting and localization](/docs/templates/formatting) for numbers, dates and locales.
+- [Authoring](/docs/templates/authoring) for the editor extension.

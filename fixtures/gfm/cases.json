@@ -1,0 +1,924 @@
+{
+  "description": "GFM conformance corpus. Cases are derived from the GitHub Flavored Markdown spec (https://github.github.com/gfm/) plus the behaviours GitHub actually ships that the prose spec leaves implicit (extended autolinks, footnotes). Each case is checked twice: once through the native gfm() extension and once through the remark-gfm plugin route, which must agree (spec 6.5).",
+  "specUrl": "https://github.github.com/gfm/",
+  "cases": [
+    {
+      "name": "table-basic",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| foo | bar |\n| --- | --- |\n| baz | bim |",
+      "expectedHtmlContains": [
+        "<table>",
+        "<thead>",
+        "<th>foo</th>",
+        "<th>bar</th>",
+        "<tbody>",
+        "<td>baz</td>",
+        "<td>bim</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "| foo |",
+        "---"
+      ]
+    },
+    {
+      "name": "table-alignment-left",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| :-- |\n| 1 |",
+      "expectedHtmlContains": [
+        "style=\"text-align:left\"",
+        "<td style=\"text-align:left\">1</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "text-align:right",
+        "text-align:center"
+      ]
+    },
+    {
+      "name": "table-alignment-center",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| :-: |\n| 1 |",
+      "expectedHtmlContains": [
+        "style=\"text-align:center\""
+      ],
+      "expectedHtmlNotContains": [
+        "text-align:left",
+        "text-align:right"
+      ]
+    },
+    {
+      "name": "table-alignment-right",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| --: |\n| 1 |",
+      "expectedHtmlContains": [
+        "style=\"text-align:right\""
+      ],
+      "expectedHtmlNotContains": [
+        "text-align:left",
+        "text-align:center"
+      ]
+    },
+    {
+      "name": "table-alignment-none",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| --- |\n| 1 |",
+      "expectedHtmlContains": [
+        "<th>a</th>",
+        "<td>1</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "text-align"
+      ]
+    },
+    {
+      "name": "table-alignment-mixed",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| l | c | r | n |\n| :-- | :-: | --: | --- |\n| 1 | 2 | 3 | 4 |",
+      "expectedHtmlContains": [
+        "<th style=\"text-align:left\">l</th>",
+        "<th style=\"text-align:center\">c</th>",
+        "<th style=\"text-align:right\">r</th>",
+        "<th>n</th>",
+        "<td style=\"text-align:left\">1</td>",
+        "<td>4</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "<th style=\"text-align:left\">n</th>"
+      ]
+    },
+    {
+      "name": "table-alignment-single-dash-delimiter",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a | b |\n| - | - |\n| 1 | 2 |",
+      "expectedHtmlContains": [
+        "<table>",
+        "<th>a</th>",
+        "<td>2</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "| - |"
+      ]
+    },
+    {
+      "name": "table-ragged-short-row-is-padded",
+      "category": "tables",
+      "spec": "4.10 — 'The remainder of the table's rows may vary in the number of cells. If a row has fewer cells than the header row, empty cells are inserted.'",
+      "source": "| a | b | c |\n| - | - | - |\n| 1 |",
+      "expectedHtmlContains": [
+        "<td>1</td>",
+        "<td></td>"
+      ],
+      "expectedHtmlNotContains": [
+        "<td>2</td>"
+      ]
+    },
+    {
+      "name": "table-ragged-long-row-is-truncated",
+      "category": "tables",
+      "spec": "4.10 — 'If a row has more cells than the header row, the excess is ignored.'",
+      "source": "| a | b |\n| - | - |\n| 1 | 2 | 3 |",
+      "expectedHtmlContains": [
+        "<td>1</td>",
+        "<td>2</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "<td>3</td>"
+      ]
+    },
+    {
+      "name": "table-escaped-pipe-in-header",
+      "category": "tables",
+      "spec": "4.10 — 'include a pipe in a cell's content by escaping it, including inside other inline spans'",
+      "source": "| a \\| b |\n| - |\n| c |",
+      "expectedHtmlContains": [
+        "<th>a | b</th>"
+      ],
+      "expectedHtmlNotContains": [
+        "\\|",
+        "<th>a</th>"
+      ]
+    },
+    {
+      "name": "table-escaped-pipe-in-cell",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| - |\n| c \\| d |",
+      "expectedHtmlContains": [
+        "<td>c | d</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "\\|"
+      ]
+    },
+    {
+      "name": "table-unescaped-pipe-splits-code-span",
+      "category": "tables",
+      "spec": "4.10 example 200 — a pipe splits cells even inside a code span",
+      "source": "| f\\|oo  |\n| ------ |\n| b `\\|` az |",
+      "expectedHtmlContains": [
+        "<th>f|oo</th>",
+        "<code>|</code>"
+      ],
+      "expectedHtmlNotContains": [
+        "<th>f</th>"
+      ]
+    },
+    {
+      "name": "table-emphasis-in-cell",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| - |\n| *em* and **strong** |",
+      "expectedHtmlContains": [
+        "<em>em</em>",
+        "<strong>strong</strong>",
+        "<table>",
+        "<td>",
+        "<td><em>em</em> and <strong>strong</strong></td>"
+      ],
+      "expectedHtmlNotContains": [
+        "*em*"
+      ]
+    },
+    {
+      "name": "table-code-span-in-cell",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| - |\n| `code()` |",
+      "expectedHtmlContains": [
+        "<code>code()</code>",
+        "<table>",
+        "<td><code>code()</code></td>"
+      ],
+      "expectedHtmlNotContains": [
+        "`code()`"
+      ]
+    },
+    {
+      "name": "table-link-in-cell",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| - |\n| [text](https://example.com) |",
+      "expectedHtmlContains": [
+        "<a href=\"https://example.com\">text</a>",
+        "<table>",
+        "<td><a href=\"https://example.com\">text</a></td>"
+      ],
+      "expectedHtmlNotContains": [
+        "](https://"
+      ]
+    },
+    {
+      "name": "table-strikethrough-in-cell",
+      "category": "tables",
+      "spec": "4.10 + 6.5",
+      "source": "| a |\n| - |\n| ~~gone~~ |",
+      "expectedHtmlContains": [
+        "<del>gone</del>",
+        "<table>",
+        "<td>",
+        "<td><del>gone</del></td>"
+      ],
+      "expectedHtmlNotContains": [
+        "~~gone~~"
+      ]
+    },
+    {
+      "name": "table-empty-cell",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a | b |\n| - | - |\n|  | 2 |",
+      "expectedHtmlContains": [
+        "<td></td>",
+        "<td>2</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "<td> </td>"
+      ]
+    },
+    {
+      "name": "table-header-only-has-no-tbody",
+      "category": "tables",
+      "spec": "4.10 — 'The table is broken at the first empty line, or beginning of another block-level structure'",
+      "source": "| a | b |\n| - | - |",
+      "expectedHtmlContains": [
+        "<table>",
+        "<thead>",
+        "<th>a</th>"
+      ],
+      "expectedHtmlNotContains": [
+        "<tbody>",
+        "<td>"
+      ]
+    },
+    {
+      "name": "table-without-outer-pipes",
+      "category": "tables",
+      "spec": "4.10 — 'The leading and trailing pipes ... are optional'",
+      "source": "a | b\n--- | ---\n1 | 2",
+      "expectedHtmlContains": [
+        "<table>",
+        "<th>a</th>",
+        "<td>2</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "<p>a | b"
+      ]
+    },
+    {
+      "name": "table-ends-at-blank-line",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| - |\n| 1 |\n\nAfter.",
+      "expectedHtmlContains": [
+        "<td>1</td>",
+        "</table>",
+        "<p>After.</p>"
+      ],
+      "expectedHtmlNotContains": [
+        "<td>After.</td>"
+      ]
+    },
+    {
+      "name": "table-ends-at-next-block",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "| a |\n| - |\n| 1 |\n# Heading",
+      "expectedHtmlContains": [
+        "</table>",
+        "<h1>Heading</h1>"
+      ],
+      "expectedHtmlNotContains": [
+        "<td># Heading</td>"
+      ]
+    },
+    {
+      "name": "table-delimiter-count-must-match-header",
+      "category": "tables",
+      "spec": "4.10 example 205 — 'The delimiter row must match the header row in the number of cells. If not, a table will not be recognized'",
+      "source": "| abc | def |\n| --- |\n| bar |",
+      "expectedHtmlContains": [
+        "<p>"
+      ],
+      "expectedHtmlNotContains": [
+        "<table>",
+        "<th>"
+      ]
+    },
+    {
+      "name": "table-interrupts-paragraph",
+      "category": "tables",
+      "spec": "4.10 — cmark-gfm and github.com both start a table on the line after a paragraph, with no blank line required",
+      "source": "Some prose\n| a | b |\n| - | - |\n| 1 | 2 |",
+      "expectedHtmlContains": [
+        "<p>Some prose</p>",
+        "<table>",
+        "<th>a</th>",
+        "<td>2</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "<p>Some prose\n| a | b |"
+      ]
+    },
+    {
+      "name": "table-inside-blockquote",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "> | a |\n> | - |\n> | 1 |",
+      "expectedHtmlContains": [
+        "<blockquote>",
+        "<table>",
+        "<td>1</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "<p>| a |"
+      ]
+    },
+    {
+      "name": "table-inside-list-item",
+      "category": "tables",
+      "spec": "4.10",
+      "source": "- item\n\n  | a |\n  | - |\n  | 1 |",
+      "expectedHtmlContains": [
+        "<li>",
+        "<table>",
+        "<td>1</td>"
+      ],
+      "expectedHtmlNotContains": [
+        "<li>| a |"
+      ]
+    },
+    {
+      "name": "task-list-unchecked",
+      "category": "task-lists",
+      "spec": "5.3",
+      "source": "- [ ] todo",
+      "expectedHtmlContains": [
+        "<input type=\"checkbox\"",
+        "disabled=\"\"",
+        "class=\"task-list-item\"",
+        "todo"
+      ],
+      "expectedHtmlNotContains": [
+        "checked",
+        "[ ]"
+      ]
+    },
+    {
+      "name": "task-list-checked",
+      "category": "task-lists",
+      "spec": "5.3",
+      "source": "- [x] done",
+      "expectedHtmlContains": [
+        "<input type=\"checkbox\"",
+        "checked=\"\"",
+        "done"
+      ],
+      "expectedHtmlNotContains": [
+        "[x]"
+      ]
+    },
+    {
+      "name": "task-list-uppercase-x-is-checked",
+      "category": "task-lists",
+      "spec": "5.3 — 'whitespace, lowercase or uppercase x'",
+      "source": "- [X] done",
+      "expectedHtmlContains": [
+        "checked=\"\""
+      ],
+      "expectedHtmlNotContains": [
+        "[X]"
+      ]
+    },
+    {
+      "name": "task-list-mixed",
+      "category": "task-lists",
+      "spec": "5.3",
+      "source": "- [ ] a\n- [x] b\n- [ ] c",
+      "expectedHtmlContains": [
+        "class=\"contains-task-list\"",
+        "checked=\"\""
+      ],
+      "expectedHtmlNotContains": [
+        "[ ] a"
+      ]
+    },
+    {
+      "name": "task-list-nested",
+      "category": "task-lists",
+      "spec": "5.3",
+      "source": "- [ ] outer\n  - [x] inner",
+      "expectedHtmlContains": [
+        "<ul",
+        "checked=\"\"",
+        "inner",
+        "outer"
+      ],
+      "expectedHtmlNotContains": [
+        "[x] inner"
+      ]
+    },
+    {
+      "name": "task-list-in-ordered-list",
+      "category": "task-lists",
+      "spec": "5.3",
+      "source": "1. [x] first\n2. [ ] second",
+      "expectedHtmlContains": [
+        "<ol",
+        "<input type=\"checkbox\"",
+        "checked=\"\""
+      ],
+      "expectedHtmlNotContains": [
+        "[x] first"
+      ]
+    },
+    {
+      "name": "task-list-needs-space-after-bracket",
+      "category": "task-lists",
+      "spec": "5.3 — the marker must be followed by whitespace",
+      "source": "- [x]nospace",
+      "expectedHtmlContains": [
+        "[x]nospace"
+      ],
+      "expectedHtmlNotContains": [
+        "<input"
+      ]
+    },
+    {
+      "name": "task-list-marker-must-start-the-item",
+      "category": "task-lists",
+      "spec": "5.3 — 'the first block of the list item'",
+      "source": "- text [ ] not a task",
+      "expectedHtmlContains": [
+        "[ ] not a task"
+      ],
+      "expectedHtmlNotContains": [
+        "<input"
+      ]
+    },
+    {
+      "name": "task-list-with-inline-formatting",
+      "category": "task-lists",
+      "spec": "5.3",
+      "source": "- [x] **bold** and [link](https://example.com)",
+      "expectedHtmlContains": [
+        "checked=\"\"",
+        "<strong>bold</strong>",
+        "<a href=\"https://example.com\">link</a>"
+      ],
+      "expectedHtmlNotContains": [
+        "**bold**"
+      ]
+    },
+    {
+      "name": "task-list-item-with-paragraph-continuation",
+      "category": "task-lists",
+      "spec": "5.3",
+      "source": "- [ ] first\n\n  second paragraph",
+      "expectedHtmlContains": [
+        "<input type=\"checkbox\"",
+        "second paragraph"
+      ],
+      "expectedHtmlNotContains": [
+        "[ ] first"
+      ]
+    },
+    {
+      "name": "strikethrough-double-tilde",
+      "category": "strikethrough",
+      "spec": "6.5 example 491",
+      "source": "~~Hi~~ Hello, world!",
+      "expectedHtmlContains": [
+        "<del>Hi</del>",
+        "Hello, world!"
+      ],
+      "expectedHtmlNotContains": [
+        "~~Hi~~"
+      ]
+    },
+    {
+      "name": "strikethrough-single-tilde",
+      "category": "strikethrough",
+      "spec": "6.5 — GitHub, cmark-gfm and micromark all strike a single tilde",
+      "source": "~one~ tilde",
+      "expectedHtmlContains": [
+        "<del>one</del>"
+      ],
+      "expectedHtmlNotContains": [
+        "~one~"
+      ]
+    },
+    {
+      "name": "strikethrough-does-not-cross-paragraphs",
+      "category": "strikethrough",
+      "spec": "6.5 example 492 — 'strikethrough ... cannot contain a blank line'",
+      "source": "This ~~has a\n\nnew paragraph~~.",
+      "expectedHtmlContains": [
+        "~~has a",
+        "new paragraph~~"
+      ],
+      "expectedHtmlNotContains": [
+        "<del>"
+      ]
+    },
+    {
+      "name": "strikethrough-contains-emphasis",
+      "category": "strikethrough",
+      "spec": "6.5",
+      "source": "~~*nested em*~~",
+      "expectedHtmlContains": [
+        "<del><em>nested em</em></del>"
+      ],
+      "expectedHtmlNotContains": [
+        "~~"
+      ]
+    },
+    {
+      "name": "strikethrough-inside-emphasis",
+      "category": "strikethrough",
+      "spec": "6.5",
+      "source": "*em with ~~strike~~ inside*",
+      "expectedHtmlContains": [
+        "<em>em with <del>strike</del> inside</em>"
+      ],
+      "expectedHtmlNotContains": [
+        "~~strike~~"
+      ]
+    },
+    {
+      "name": "strikethrough-intraword",
+      "category": "strikethrough",
+      "spec": "6.5",
+      "source": "a~~b~~c",
+      "expectedHtmlContains": [
+        "<del>b</del>"
+      ],
+      "expectedHtmlNotContains": [
+        "~~b~~"
+      ]
+    },
+    {
+      "name": "strikethrough-triple-tilde-is-not-strikethrough",
+      "category": "strikethrough",
+      "spec": "6.5 — a run of more than two tildes does not open strikethrough",
+      "source": "a ~~~not struck~~~ b",
+      "expectedHtmlContains": [
+        "~~~not struck~~~"
+      ],
+      "expectedHtmlNotContains": [
+        "<del>"
+      ]
+    },
+    {
+      "name": "strikethrough-with-link-inside",
+      "category": "strikethrough",
+      "spec": "6.5",
+      "source": "~~[gone](https://example.com)~~",
+      "expectedHtmlContains": [
+        "<del><a href=\"https://example.com\">gone</a></del>"
+      ],
+      "expectedHtmlNotContains": [
+        "~~["
+      ]
+    },
+    {
+      "name": "autolink-www",
+      "category": "autolinks",
+      "spec": "6.9 — extended www autolink",
+      "source": "Visit www.commonmark.org for more.",
+      "expectedHtmlContains": [
+        "<a href=\"http://www.commonmark.org\">www.commonmark.org</a>"
+      ],
+      "expectedHtmlNotContains": [
+        "<a href=\"www."
+      ]
+    },
+    {
+      "name": "autolink-http",
+      "category": "autolinks",
+      "spec": "6.9 — extended url autolink",
+      "source": "See http://example.com/path now.",
+      "expectedHtmlContains": [
+        "<a href=\"http://example.com/path\">http://example.com/path</a>"
+      ],
+      "expectedHtmlNotContains": [
+        "<p>See http"
+      ]
+    },
+    {
+      "name": "autolink-https",
+      "category": "autolinks",
+      "spec": "6.9",
+      "source": "See https://example.com/a?b=c#d now.",
+      "expectedHtmlContains": [
+        "<a href=\"https://example.com/a?b=c#d\">"
+      ],
+      "expectedHtmlNotContains": [
+        "<p>See https://example.com/a?b=c#d now"
+      ]
+    },
+    {
+      "name": "autolink-email",
+      "category": "autolinks",
+      "spec": "6.9 — extended email autolink",
+      "source": "Mail foo@bar.baz please.",
+      "expectedHtmlContains": [
+        "<a href=\"mailto:foo@bar.baz\">foo@bar.baz</a>"
+      ],
+      "expectedHtmlNotContains": [
+        "<p>Mail foo@bar.baz please"
+      ]
+    },
+    {
+      "name": "autolink-trailing-period-excluded",
+      "category": "autolinks",
+      "spec": "6.9 — 'Trailing punctuation ... will not be considered part of the autolink'",
+      "source": "www.commonmark.org/a.b.",
+      "expectedHtmlContains": [
+        "www.commonmark.org/a.b",
+        "</a>."
+      ],
+      "expectedHtmlNotContains": [
+        "a.b.</a>"
+      ]
+    },
+    {
+      "name": "autolink-balanced-parens-kept",
+      "category": "autolinks",
+      "spec": "6.9 example 623 — parentheses are balanced, so the trailing one is not part of the link",
+      "source": "(www.google.com/search?q=Markup+(business))",
+      "expectedHtmlContains": [
+        "<a href=\"http://www.google.com/search?q=Markup+(business)\">",
+        "</a>)"
+      ],
+      "expectedHtmlNotContains": [
+        "business))\">"
+      ]
+    },
+    {
+      "name": "autolink-entity-suffix-excluded",
+      "category": "autolinks",
+      "spec": "6.9 example 624 — a trailing entity-like run is not part of the link",
+      "source": "www.google.com/search?q=commonmark&hl;",
+      "expectedHtmlContains": [
+        "<a href=\"http://www.google.com/search?q=commonmark\">",
+        "&amp;hl;"
+      ],
+      "expectedHtmlNotContains": [
+        "hl;\">"
+      ]
+    },
+    {
+      "name": "autolink-underscore-near-tld-is-not-linked",
+      "category": "autolinks",
+      "spec": "6.9 example 622 — 'Valid domains ... underscores are not allowed in the last two segments'",
+      "source": "www.commonmark.org/he_re",
+      "expectedHtmlContains": [
+        "<a href=\"http://www.commonmark.org/he_re\">"
+      ],
+      "expectedHtmlNotContains": [
+        "<p>www.commonmark.org/he_re</p>"
+      ]
+    },
+    {
+      "name": "autolink-bare-domain-is-not-linked",
+      "category": "autolinks",
+      "spec": "6.9 — an extended autolink needs www., a scheme, or an email shape",
+      "source": "Just example.com here.",
+      "expectedHtmlContains": [
+        "Just example.com here."
+      ],
+      "expectedHtmlNotContains": [
+        "<a href"
+      ]
+    },
+    {
+      "name": "autolink-underscore-in-domain-blocks-link",
+      "category": "autolinks",
+      "spec": "6.9 example 621",
+      "source": "www.commonmark.org/a_b_c",
+      "expectedHtmlContains": [
+        "<a href=\"http://www.commonmark.org/a_b_c\">"
+      ],
+      "expectedHtmlNotContains": [
+        "<p>www.commonmark.org/a_b_c</p>"
+      ]
+    },
+    {
+      "name": "autolink-inside-emphasis",
+      "category": "autolinks",
+      "spec": "6.9",
+      "source": "*see www.example.com*",
+      "expectedHtmlContains": [
+        "<em>",
+        "<a href=\"http://www.example.com\">"
+      ],
+      "expectedHtmlNotContains": [
+        "<em>see www.example.com</em>"
+      ]
+    },
+    {
+      "name": "autolink-not-inside-code-span",
+      "category": "autolinks",
+      "spec": "6.9 — inline code is not scanned for autolinks",
+      "source": "`www.example.com`",
+      "expectedHtmlContains": [
+        "<code>www.example.com</code>"
+      ],
+      "expectedHtmlNotContains": [
+        "<a href"
+      ]
+    },
+    {
+      "name": "footnote-basic",
+      "category": "footnotes",
+      "spec": "GitHub footnotes extension",
+      "source": "Here is a note[^1].\n\n[^1]: The note text.",
+      "expectedHtmlContains": [
+        "<sup>",
+        "data-footnote-ref",
+        "href=\"#user-content-fn-1\"",
+        "class=\"footnotes\"",
+        "The note text.",
+        "data-footnote-backref"
+      ],
+      "expectedHtmlNotContains": [
+        "[^1]"
+      ]
+    },
+    {
+      "name": "footnote-multiple-are-numbered-in-reference-order",
+      "category": "footnotes",
+      "spec": "GitHub footnotes extension",
+      "source": "First[^b] then[^a].\n\n[^a]: Alpha.\n[^b]: Bravo.",
+      "expectedHtmlContains": [
+        "href=\"#user-content-fn-b\"",
+        "href=\"#user-content-fn-a\"",
+        "Alpha.",
+        "Bravo."
+      ],
+      "expectedHtmlNotContains": [
+        "[^a]",
+        "[^b]"
+      ]
+    },
+    {
+      "name": "footnote-multi-paragraph",
+      "category": "footnotes",
+      "spec": "GitHub footnotes extension",
+      "source": "Note[^n]\n\n[^n]: para one\n\n    para two",
+      "expectedHtmlContains": [
+        "para one",
+        "para two",
+        "data-footnotes"
+      ],
+      "expectedHtmlNotContains": [
+        "[^n]:"
+      ]
+    },
+    {
+      "name": "footnote-with-inline-formatting",
+      "category": "footnotes",
+      "spec": "GitHub footnotes extension",
+      "source": "Note[^f]\n\n[^f]: has **bold** and `code`.",
+      "expectedHtmlContains": [
+        "<strong>bold</strong>",
+        "<code>code</code>",
+        "data-footnotes",
+        "id=\"user-content-fn-f\"",
+        "data-footnote-ref"
+      ],
+      "expectedHtmlNotContains": [
+        "**bold**",
+        "[^f]"
+      ]
+    },
+    {
+      "name": "footnote-referenced-twice-gets-two-backrefs",
+      "category": "footnotes",
+      "spec": "GitHub footnotes extension",
+      "source": "A[^r] and B[^r].\n\n[^r]: Shared.",
+      "expectedHtmlContains": [
+        "user-content-fnref-r",
+        "user-content-fnref-r-2",
+        "Shared."
+      ],
+      "expectedHtmlNotContains": [
+        "[^r]"
+      ]
+    },
+    {
+      "name": "footnote-undefined-reference-stays-literal",
+      "category": "footnotes",
+      "spec": "GitHub footnotes extension — an unresolved reference is plain text",
+      "source": "Missing[^nope] note.",
+      "expectedHtmlContains": [
+        "[^nope]"
+      ],
+      "expectedHtmlNotContains": [
+        "data-footnote-ref",
+        "<section"
+      ]
+    },
+    {
+      "name": "footnote-section-is-last",
+      "category": "footnotes",
+      "spec": "GitHub footnotes extension — the section is appended at the end of the document",
+      "source": "Note[^1].\n\n[^1]: Text.\n\nTrailing paragraph.",
+      "expectedHtmlContains": [
+        "<p>Trailing paragraph.</p>",
+        "data-footnotes"
+      ],
+      "expectedHtmlNotContains": [
+        "[^1]:"
+      ]
+    },
+    {
+      "name": "footnote-definition-without-reference-is-dropped",
+      "category": "footnotes",
+      "spec": "GitHub footnotes extension — an unreferenced definition renders nothing",
+      "source": "Body text.\n\n[^unused]: Never referenced.",
+      "expectedHtmlContains": [
+        "<p>Body text.</p>"
+      ],
+      "expectedHtmlNotContains": [
+        "Never referenced.",
+        "data-footnotes"
+      ]
+    },
+    {
+      "name": "gfm-constructs-combined",
+      "category": "mixed",
+      "spec": "4.10 + 5.3 + 6.5 + 6.9",
+      "source": "| task | link | struck |\n| :-- | :-: | --: |\n| done | www.example.com | ~~old~~ |\n\n- [x] shipped\n- [ ] pending",
+      "expectedHtmlContains": [
+        "style=\"text-align:center\"",
+        "<a href=\"http://www.example.com\">",
+        "<del>old</del>",
+        "checked=\"\""
+      ],
+      "expectedHtmlNotContains": [
+        "~~old~~",
+        "[x] shipped"
+      ]
+    },
+    {
+      "name": "gfm-does-not-execute-raw-html",
+      "category": "security",
+      "spec": "RENDER-08 — the content policy applies on the GFM route too: raw HTML never becomes markup, whatever the skipHtml default is",
+      "source": "| a |\n| - |\n| <img src=x onerror=\"alert(1)\"> |",
+      "expectedHtmlContains": [
+        "<table>",
+        "<td"
+      ],
+      "expectedHtmlNotContains": [
+        "<img",
+        "<script"
+      ]
+    },
+    {
+      "name": "autolink-unbalanced-trailing-parens-excluded",
+      "category": "autolinks",
+      "spec": "6.9 example 622 — unmatched closing parens are trimmed",
+      "source": "www.google.com/search?q=Markup+(business)))",
+      "expectedHtmlContains": [
+        "<a href=\"http://www.google.com/search?q=Markup+(business)\">",
+        "</a>))"
+      ],
+      "expectedHtmlNotContains": [
+        "business)))\">"
+      ]
+    },
+    {
+      "name": "autolink-stops-at-less-than",
+      "category": "autolinks",
+      "spec": "6.9 — \"<\" immediately ends an extended autolink",
+      "source": "www.commonmark.org/he<lp",
+      "expectedHtmlContains": [
+        "<a href=\"http://www.commonmark.org/he\">",
+        "&lt;lp"
+      ],
+      "expectedHtmlNotContains": [
+        "he&lt;lp\">"
+      ]
+    },
+    {
+      "name": "table-delimiter-needs-three-dashes-without-pipes",
+      "category": "tables",
+      "spec": "4.10 — with no leading pipe, \"- | -\" is a bullet list, not a delimiter row",
+      "source": "a | b\n- | -\n1 | 2",
+      "expectedHtmlContains": [
+        "<ul>",
+        "<p>a | b</p>"
+      ],
+      "expectedHtmlNotContains": [
+        "<table>"
+      ]
+    }
+  ]
+}

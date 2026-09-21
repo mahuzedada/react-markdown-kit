@@ -1,0 +1,217 @@
+/*
+ * "Foundry": a ZUI token theme for this site.
+ *
+ * The site's chrome is styled entirely through `@zuilib/tokens`; this file is
+ * the theme, expressed the way the tokens README describes: a set of
+ * overrides of the token names. The palette is Palantir Blueprint's (the
+ * design system behind Foundry): cool greys with a hint of blue, intent
+ * blue #2D72D2, 3px corners, hairline borders, elevation rings, a dense
+ * control scale and a system font stack.
+ *
+ * Light values sit on `:root`. Dark values sit on Docusaurus' `[data-theme]`
+ * attribute, on the tokens' own `.dark` class (any subtree, e.g. the home
+ * hero) and on `.navbar--dark`, because Foundry's top bar is dark in both
+ * modes.
+ */
+
+:root {
+  --zui-theme-version: "1.0.0";
+
+  /* Core */
+  --background: #ffffff;
+  --foreground: #1c2127;
+
+  /* Border & input: Blueprint's divider-black hairlines */
+  --border: rgba(17, 20, 24, 0.15);
+  --input: rgba(17, 20, 24, 0.2);
+  --input-unsaved: #fdf6e6;
+  --ring: #2d72d2;
+
+  /* Primary: intent blue (blue3 surface, blue2 as text) */
+  --primary: #2d72d2;
+  --primary-foreground: #ffffff;
+  --primary-text: #215db0;
+  --primary-border: #b7d0f5;
+  --primary-glow: rgba(45, 114, 210, 0.3);
+
+  /* Secondary */
+  --secondary: #f6f7f9;
+  --secondary-foreground: #1c2127;
+
+  /* Danger: red3 surface, red2 text */
+  --danger: #cd4246;
+  --danger-foreground: #ffffff;
+  --danger-text: #ac2f33;
+  --danger-border: #f0c4c5;
+
+  /* Muted: light-gray5 surface, gray1 text */
+  --muted: #f6f7f9;
+  --muted-foreground: #5f6b7c;
+
+  /* Accent: light-gray4 */
+  --accent: #edeff2;
+  --accent-foreground: #1c2127;
+  --accent-glow: rgba(237, 239, 242, 0.6);
+
+  /* Popover & card: flat white, separated by elevation rings */
+  --popover: #ffffff;
+  --popover-foreground: #1c2127;
+  --card: #ffffff;
+  --card-foreground: #1c2127;
+
+  /* Success: green3 surface, green2 text */
+  --success: #238551;
+  --success-foreground: #ffffff;
+  --success-text: #1c6e42;
+  --success-border: #b6dcc6;
+
+  /* Warning: orange2 surface (orange3 fails AA under white), orange1 text */
+  --warning: #935610;
+  --warning-foreground: #ffffff;
+  --warning-text: #77450d;
+  --warning-border: #efd2b2;
+
+  /* Info */
+  --info: #f6f7f9;
+  --info-foreground: #1c2127;
+  --info-text: var(--info-foreground);
+  --info-border: rgba(17, 20, 24, 0.15);
+
+  /* Sidebar: light-gray5 rail with a hairline */
+  --sidebar: #f6f7f9;
+  --sidebar-foreground: #1c2127;
+  --sidebar-primary: #2d72d2;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e5e8eb;
+  --sidebar-accent-foreground: #1c2127;
+  --sidebar-border: rgba(17, 20, 24, 0.15);
+  --sidebar-ring: #2d72d2;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #4c90f0 0%, #2d72d2 100%);
+  --gradient-subtle: linear-gradient(180deg, #ffffff 0%, #f6f7f9 100%);
+  --gradient-card: linear-gradient(135deg, rgba(45, 114, 210, 0.05) 0%, rgba(45, 114, 210, 0.02) 100%);
+  --gradient-hero: linear-gradient(135deg, #184a90 0%, #2d72d2 100%);
+
+  /* Shadows: Blueprint elevations 0 to 4. Elevation 0 is a 1px ring, which
+     is what separates every flat surface in Foundry. */
+  --shadow-1: 0 0 0 1px rgba(17, 20, 24, 0.15);
+  --shadow-2: 0 0 0 1px rgba(17, 20, 24, 0.1), 0 1px 1px rgba(17, 20, 24, 0.2);
+  --shadow-3: 0 0 0 1px rgba(17, 20, 24, 0.1), 0 2px 4px rgba(17, 20, 24, 0.2), 0 8px 24px rgba(17, 20, 24, 0.2);
+  --shadow-4: 0 0 0 1px rgba(17, 20, 24, 0.1), 0 4px 8px rgba(17, 20, 24, 0.2), 0 18px 46px 6px rgba(17, 20, 24, 0.2);
+  --shadow-card: var(--shadow-1);
+  --shadow-glow: 0 0 0 3px rgba(45, 114, 210, 0.3);
+
+  /* Shape: near-square corners */
+  --radius: 3px;
+
+  /* Type: Blueprint's system stack */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --font-mono: "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", Monaco, "Courier New", monospace;
+
+  /* Control density: 24 / 30 / 40px controls */
+  --control-height-sm: 1.5rem;
+  --control-height-md: 1.875rem;
+  --control-height-lg: 2.5rem;
+  --control-padding-x-sm: 0.5rem;
+  --control-padding-x-md: 0.625rem;
+  --control-padding-x-lg: 0.75rem;
+  --button-padding-x-sm: 0.5rem;
+  --button-padding-x-md: 0.625rem;
+  --button-padding-x-lg: 1rem;
+
+  /* Motion: Blueprint transitions are quick */
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-slow: 250ms;
+}
+
+[data-theme='dark'],
+.dark,
+.navbar--dark {
+  color-scheme: dark;
+
+  /* Core: dark-gray1 canvas, light-gray5 text */
+  --background: #1c2127;
+  --foreground: #f6f7f9;
+
+  /* Border & input: divider-white hairlines */
+  --border: rgba(255, 255, 255, 0.2);
+  --input: rgba(255, 255, 255, 0.2);
+  --input-unsaved: #2b2718;
+  --ring: #4c90f0;
+
+  /* Primary: blue3 surface, blue5 text */
+  --primary: #2d72d2;
+  --primary-foreground: #ffffff;
+  --primary-text: #8abbff;
+  --primary-border: #184a90;
+  --primary-glow: rgba(76, 144, 240, 0.4);
+
+  /* Secondary: dark-gray3 */
+  --secondary: #2f343c;
+  --secondary-foreground: #f6f7f9;
+
+  /* Danger: red3 surface, red5 text */
+  --danger: #cd4246;
+  --danger-foreground: #ffffff;
+  --danger-text: #fa999c;
+  --danger-border: #8e292c;
+
+  /* Muted: dark-gray3 surface, gray4 text */
+  --muted: #2f343c;
+  --muted-foreground: #abb3bf;
+
+  /* Accent: dark-gray4 */
+  --accent: #383e47;
+  --accent-foreground: #f6f7f9;
+  --accent-glow: rgba(56, 62, 71, 0.7);
+
+  /* Popover & card: dark-gray2 panels on the dark-gray1 canvas */
+  --popover: #252a31;
+  --popover-foreground: #f6f7f9;
+  --card: #252a31;
+  --card-foreground: #f6f7f9;
+
+  /* Success: green3 surface, green5 text */
+  --success: #238551;
+  --success-foreground: #ffffff;
+  --success-text: #72ca9b;
+  --success-border: #165a36;
+
+  /* Warning: orange2 surface, orange5 text */
+  --warning: #935610;
+  --warning-foreground: #ffffff;
+  --warning-text: #fbb360;
+  --warning-border: #77450d;
+
+  /* Info */
+  --info: #252a31;
+  --info-foreground: #f6f7f9;
+  --info-text: var(--info-foreground);
+  --info-border: rgba(255, 255, 255, 0.2);
+
+  /* Sidebar: dark-gray2 rail */
+  --sidebar: #252a31;
+  --sidebar-foreground: #f6f7f9;
+  --sidebar-primary: #2d72d2;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #383e47;
+  --sidebar-accent-foreground: #f6f7f9;
+  --sidebar-border: rgba(255, 255, 255, 0.15);
+  --sidebar-ring: #4c90f0;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #4c90f0 0%, #215db0 100%);
+  --gradient-subtle: linear-gradient(180deg, #1c2127 0%, #252a31 100%);
+  --gradient-card: linear-gradient(135deg, rgba(76, 144, 240, 0.08) 0%, rgba(76, 144, 240, 0.03) 100%);
+  --gradient-hero: linear-gradient(135deg, #111418 0%, #184a90 100%);
+
+  /* Shadows: a light ring separates surfaces; the drops are deep */
+  --shadow-1: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --shadow-2: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 1px 1px rgba(17, 20, 24, 0.4);
+  --shadow-3: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(17, 20, 24, 0.4), 0 8px 24px rgba(17, 20, 24, 0.4);
+  --shadow-4: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 8px rgba(17, 20, 24, 0.4), 0 18px 46px 6px rgba(17, 20, 24, 0.4);
+  --shadow-card: var(--shadow-1);
+  --shadow-glow: 0 0 0 3px rgba(76, 144, 240, 0.4);
+}

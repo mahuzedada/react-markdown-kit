@@ -1,0 +1,34 @@
+/* The stock toggle's box, with the icon keyed on the resolved mode rather than the stored choice. */
+
+.toggle {
+  width: 2rem;
+  height: 2rem;
+}
+
+.toggleButton {
+  -webkit-tap-highlight-color: transparent;
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius);
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.toggleButton:hover {
+  background: var(--accent);
+}
+
+.toggleIcon {
+  display: none;
+}
+
+:global(html[data-theme='light']) .lightToggleIcon,
+:global(html[data-theme='dark']) .darkToggleIcon {
+  display: initial;
+}
+
+.toggleButtonDisabled {
+  cursor: not-allowed;
+}

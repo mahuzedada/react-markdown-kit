@@ -1,0 +1,38 @@
+/*
+ * Optional styling for @react-markdown-kit/template: the placeholder chip in
+ * rendered output (`templateVariables()` on the root entry) and in the editor
+ * (`/editor`). Scoped to `.rmk-document` and `.rmk-editor`, every value a
+ * --rmk-* custom property.
+ */
+
+.rmk-document [data-rmk-variable] {
+  background: var(--rmk-surface);
+  border-radius: var(--rmk-radius);
+  padding: 0.1em 0.3em;
+  font-family: var(--rmk-font-mono);
+  font-size: 0.875em;
+}
+
+.rmk-editor .rmk-variable-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+  padding: 0.05em 0.45em;
+  border: 1px solid var(--rmk-border);
+  border-radius: 999px;
+  background: var(--rmk-surface);
+  font-size: 0.875em;
+  line-height: 1.4;
+  white-space: nowrap;
+  user-select: none;
+  cursor: default;
+}
+
+.rmk-editor .rmk-variable-chip [data-rmk-variable-preview] {
+  color: var(--rmk-muted);
+}
+
+.rmk-editor .rmk-variable-chip [data-rmk-variable-preview]::before {
+  content: '=';
+  margin-inline-end: 0.35em;
+}

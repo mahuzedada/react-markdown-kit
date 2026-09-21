@@ -1,0 +1,10 @@
+/* Panel 3: stand-ins for Tailwind-style utilities, so the example needs no
+   build step. With Tailwind you would pass its class names instead. */
+.u-heading { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+.u-paragraph { max-width: 62ch; line-height: 1.7; color: #3b4a52; }
+.u-link { color: #b4531f; text-decoration: underline; text-underline-offset: 3px; }
+.u-list { padding-inline-start: 1.25rem; }
+.u-table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+.u-th { background: #f4f1ea; text-align: start; padding: 0.4rem 0.6rem; }
+.u-td { border-top: 1px solid #e6e1d6; padding: 0.4rem 0.6rem; }
+.u-code { background: #f4f1ea; border-radius: 3px; padding: 0.1em 0.3em; font-size: 0.9em; }

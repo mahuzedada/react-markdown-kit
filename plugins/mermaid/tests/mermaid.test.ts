@@ -1,0 +1,163 @@
+// Ported from @zuilib/text-editor tests/mermaid.test.mjs (MIT).
+import { describe, it, expect } from 'vitest'
+
+import {
+  drawingToMermaid,
+  type DrawingData,
+  type DrawingShape,
+  type DrawingShapeType,
+  type MermaidOptions,
+} from '../src/core/index.js'
+
+const box = (id: string, type: DrawingShapeType, extra: Partial<DrawingShape> = {}): DrawingShape => ({
+  id, type, x: 0, y: 0, width: 100, height: 60,
+  stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2, ...extra,
+})
+const connector = (
+  id: string,
+  from: string | null,
+  to: string | null,
+  extra: Partial<DrawingShape> = {}
+): DrawingShape => ({
+  id, type: 'arrow', x: 0, y: 0, width: 100, height: 0,
+  stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2,
+  ...(from ? { startBinding: { id: from } } : {}),
+  ...(to ? { endBinding: { id: to } } : {}),
+  ...extra,
+})
+const drawing = (...shapes: DrawingShape[]): DrawingData => ({ version: 3, canvasHeight: 320, shapes })
+// The syntax tests read the plain export; the layout comment has its own tests below.
+const lines = (data: DrawingData, options?: MermaidOptions) =>
+  drawingToMermaid(data, { omitLayout: true, ...options }).split('\n')
+
+describe('drawingToMermaid', () => {
+  it('two cards joined by a labelled arrow', () => {
+    const out = drawingToMermaid(drawing(
+      box('a', 'rect', { label: 'Service', text: 'Auth API', footer: 'v2.1', fill: '#a5d8ff' }),
+      box('b', 'cylinder', { text: 'Users DB' }),
+      connector('e', 'a', 'b', { text: 'reads' }),
+    ), { omitLayout: true })
+    expect(out).toBe([
+      'flowchart LR',
+      '    a["Service<br/>Auth API<br/>v2.1"]',
+      '    b[("Users DB")]',
+      '    a -->|reads| b',
+      '    style a fill:#a5d8ff',
+      '',
+    ].join('\n'))
+  })
+
+  it('auto direction: horizontal majority is LR, vertical is TD; no edges is LR', () => {
+    const a = box('a', 'rect')
+    const b = box('b', 'rect')
+    expect(lines(drawing(a, b, connector('e', 'a', 'b', { width: 80, height: 10 })))[0]).toBe('flowchart LR')
+    expect(lines(drawing(a, b, connector('e', 'a', 'b', { width: 10, height: 80 })))[0]).toBe('flowchart TD')
+    expect(lines(drawing(a, b))[0]).toBe('flowchart LR')
+    expect(lines(drawing(a, b, connector('e', 'a', 'b', { width: 80, height: 10 })), { direction: 'TD' })[0]).toBe('flowchart TD')
+  })
+
+  it('each box type uses its Mermaid shape syntax', () => {
+    const types: DrawingShapeType[] = ['rect', 'ellipse', 'diamond', 'note', 'cylinder', 'cloud', 'queue', 'actor']
+    const out = lines(drawing(...types.map((t) => box(t, t, { text: 'x' }))))
+    expect(out.slice(1, 9)).toEqual([
+      '    rect["x"]',
+      '    ellipse(["x"])',
+      '    diamond{"x"}',
+      '    note>"x"]',
+      '    cylinder[("x")]',
+      '    cloud(("x"))',
+      '    queue[["x"]]',
+      '    actor(("x"))',
+    ])
+  })
+
+  it('empty text falls back to the shape id; newlines become <br/>', () => {
+    const out = lines(drawing(box('empty', 'rect'), box('multi', 'rect', { text: 'one\ntwo' })))
+    expect(out[1]).toBe('    empty["empty"]')
+    expect(out[2]).toBe('    multi["one<br/>two"]')
+  })
+
+  it('quotes, angle brackets and pipes are escaped', () => {
+    const out = lines(drawing(
+      box('a', 'rect', { text: 'say "hi" <b>' }),
+      box('b', 'rect'),
+      connector('e', 'a', 'b', { text: 'x | "y"' }),
+    ))
+    expect(out[1]).toBe('    a["say #quot;hi#quot; #lt;b#gt;"]')
+    expect(out[3]).toBe('    a -->|x #124; #quot;y#quot;| b')
+  })
+
+  it('connectors without both bindings are skipped', () => {
+    const out = drawingToMermaid(drawing(
+      box('a', 'rect'), box('b', 'rect'),
+      connector('half', 'a', null, { text: 'dangling' }),
+      connector('ghost', 'a', 'missing'),
+      connector('free', null, null),
+    ), { omitLayout: true })
+    expect(out).toBe('flowchart LR\n    a["a"]\n    b["b"]\n')
+  })
+
+  it('bidirectional arrows and lines', () => {
+    const out = lines(drawing(
+      box('a', 'rect'), box('b', 'rect'),
+      connector('e1', 'a', 'b', { bidirectional: true, text: 'sync' }),
+      connector('e2', 'b', 'a', { type: 'line' }),
+      connector('e3', 'a', 'b', { type: 'line', text: 'peer' }),
+    ))
+    expect(out[3]).toBe('    a <-->|sync| b')
+    expect(out[4]).toBe('    b --- a')
+    expect(out[5]).toBe('    a ---|peer| b')
+  })
+
+  it('style lines include only the properties that differ from defaults', () => {
+    const out = lines(drawing(
+      box('plain', 'rect'),
+      box('filled', 'rect', { fill: '#ffc9c9' }),
+      box('stroked', 'rect', { stroke: '#e03131' }),
+      box('both', 'rect', { fill: '#b2f2bb', stroke: '#2f9e44' }),
+    ))
+    expect(out.slice(5, 8)).toEqual([
+      '    style filled fill:#ffc9c9',
+      '    style stroked fill:transparent,stroke:#e03131',
+      '    style both fill:#b2f2bb,stroke:#2f9e44',
+    ])
+  })
+
+  it('ids are sanitised and kept unique', () => {
+    const out = lines(drawing(
+      box('my-box', 'rect'), box('my.box', 'rect'), box('1st', 'rect'), box('my_box', 'rect'),
+      connector('e', 'my-box', 'my.box'),
+    ))
+    expect(out[1]).toBe('    my_box["my-box"]')
+    expect(out[2]).toBe('    my_box_2["my.box"]')
+    expect(out[3]).toBe('    n_1st["1st"]')
+    expect(out[4]).toBe('    my_box_3["my_box"]')
+    expect(out[5]).toBe('    my_box --> my_box_2')
+  })
+
+  it('free text shapes are preserved as comments', () => {
+    const out = lines(drawing(
+      box('a', 'rect'),
+      { id: 't', type: 'text', x: 0, y: 0, width: 50, height: 20, stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2, text: 'Legend:\n  red = error' },
+    ))
+    expect(out[2]).toBe('    %% note: Legend: red = error')
+    expect(out.at(-1)).toBe('')
+  })
+})
+
+describe('the %% rmk-layout annotation', () => {
+  it('is the last line, one JSON object, and is left out of the plain export', () => {
+    const data = drawing(box('a', 'cloud', { text: 'A', x: 40, y: 50 }), box('b', 'rect', { text: 'B', x: 300 }), connector('e', 'a', 'b', { routing: 'elbow', elbow: 0.4 }))
+    const out = drawingToMermaid(data)
+    const last = out.trim().split('\n').pop() as string
+    expect(last.startsWith('    %% rmk-layout v1 {')).toBe(true)
+    const payload = JSON.parse(last.trim().slice('%% rmk-layout v1 '.length)) as {
+      nodes: Record<string, { x: number; type?: string }>
+      edges: Record<string, { routing?: string; elbow?: number }>
+    }
+    expect(payload.nodes['a']?.x).toBe(40)
+    expect(payload.nodes['a']?.type).toBe('cloud')
+    expect(payload.edges['a->b']?.routing).toBe('elbow')
+    expect(drawingToMermaid(data, { omitLayout: true })).not.toContain('%% rmk-layout')
+  })
+})

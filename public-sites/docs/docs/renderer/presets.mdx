@@ -1,0 +1,179 @@
+---
+title: Presets
+description: Define your application's Markdown dialect once with defineMarkdownPreset, reuse it across the renderer, editor and templates, and compose presets with extends.
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+
+export function BrandLink(props) {
+  return <a {...props} style={{ fontWeight: 700, textDecoration: 'underline wavy' }} />
+}
+
+export function Quote(props) {
+  return (
+    <blockquote style={{ borderInlineStart: '3px solid currentColor', paddingInlineStart: '1rem', fontStyle: 'italic' }}>
+      {props.children}
+    </blockquote>
+  )
+}
+
+# Presets
+
+```ts
+// markdown.ts
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+export const appMarkdown = defineMarkdownPreset({
+  extensions: [gfm()],
+  components: { a: AppLink, img: AppImage },
+})
+```
+
+```tsx
+<Markdown preset={appMarkdown}>{content}</Markdown>
+```
+
+A preset is your application's answer to one question. What does Markdown mean here?
+
+Answer it once, in one file, and reuse the answer everywhere Markdown is read or written.
+
+## Why not pass props each time
+
+Props work for one call site. A preset works for every call site, including the ones in other packages.
+
+The same preset object goes to the renderer, the editor and the template engine.
+
+```tsx
+<Markdown preset={appMarkdown}>{content}</Markdown>
+
+<MarkdownEditor preset={appMarkdown} value={value} onChange={setValue} />
+
+const doc = compileMarkdown(source, { preset: appMarkdown })
+```
+
+The editor's preview mode delegates to the renderer with the same preset. What an author sees while editing is what a reader sees.
+
+## What a preset holds
+
+```ts
+defineMarkdownPreset({
+  extends: [basePreset],
+  profile: 'docs',
+  extensions: [gfm()],
+  components: { a: DocsLink },
+  classNames: { code: 'rounded bg-slate-100 px-1' },
+  policy: { skipHtml: true },
+  remarkPlugins: [],
+  rehypePlugins: [],
+  remarkRehypeOptions: {},
+})
+```
+
+`profile` names the dialect. It defaults to `gfm` when a `gfm` extension is present, and `commonmark` otherwise. It ends up on every compiled document, which is how a cache key or a diagnostic can say which dialect produced a tree.
+
+`policy` is the security and content surface, gathered into one object so it travels with the dialect. It holds `allowedElements`, `disallowedElements`, `allowElement`, `skipHtml`, `unwrapDisallowed` and `urlTransform`.
+
+A preset holds no React elements and no closures beyond the handlers you put in it. `isMarkdownPreset(value)` is the runtime guard.
+
+<RenderExample
+  title="A preset with components, applied through rendererProps"
+  markdown={'Read the [handbook](https://example.com).\n\n> Presets keep this styling in one place.\n'}
+  rendererProps={{ components: { a: BrandLink, blockquote: Quote } }}
+/>
+
+## Composing with extends
+
+Compose presets rather than copying them.
+
+```ts
+export const docsMarkdown = defineMarkdownPreset({
+  extends: [appMarkdown],
+  extensions: [callouts()],
+  components: { a: DocsLink },
+})
+```
+
+`extends` takes a list. Presets apply left to right, and then this preset's own fields apply last.
+
+A preset is a plain object with a structural contract rather than a shared runtime class, so one built anywhere in an application is accepted by the renderer, the editor and the template engine alike.
+
+## Merge rules
+
+Merging is deterministic, and there are exactly five rules. They come from the specification, section 6.3.
+
+**1. The preset is the baseline.** Everything else is layered onto it.
+
+**2. Local extensions append after preset extensions.** A locally passed extension runs after the preset's, unless rule 5 applies to it.
+
+```tsx
+<Markdown preset={appMarkdown} extensions={[callouts()]}>{content}</Markdown>
+```
+
+**3. Local components shallowly override matching preset components.** One key at a time, with no deep merging.
+
+```tsx
+// Keeps the preset's img and code, replaces only a.
+<Markdown preset={appMarkdown} components={{ a: SpecialLink }}>{content}</Markdown>
+```
+
+**4. A policy prop overrides the preset only when you pass it explicitly.** An absent prop inherits. Passing `undefined` is the same as not passing it, so a spread cannot silently erase a preset's policy.
+
+```tsx
+// skipHtml comes from the preset; urlTransform is replaced here.
+<Markdown preset={appMarkdown} urlTransform={myUrlTransform}>{content}</Markdown>
+```
+
+**5. Duplicate extensions are resolved by name.** A later extension with the same `name` replaces the earlier one in place, keeping the earlier one's position. A new name appends.
+
+Keeping the position matters, because ordering is part of what an extension does. Overriding one entry of a shared preset must not move the others.
+
+```ts
+// gfm() runs where the base preset put it, with the new options.
+const strictMarkdown = defineMarkdownPreset({
+  extends: [appMarkdown],
+  extensions: [gfm({ singleTilde: false })],
+})
+```
+
+`mergeExtensions(base, next)` is exported if you need to apply rule 5 yourself.
+
+There is no deep merging of arbitrary plugin options. If you want different options, pass a different extension instance.
+
+## A worked example
+
+```ts
+// markdown/base.ts
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import { AppLink, AppImage } from '../components'
+
+export const appMarkdown = defineMarkdownPreset({
+  profile: 'app',
+  extensions: [gfm()],
+  components: { a: AppLink, img: AppImage },
+  policy: { skipHtml: true },
+})
+```
+
+```ts
+// markdown/comments.ts
+import { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { appMarkdown } from './base'
+
+// User comments: same dialect, no images, plainer links.
+export const commentMarkdown = defineMarkdownPreset({
+  extends: [appMarkdown],
+  profile: 'comment',
+  components: { img: () => null },
+  policy: { skipHtml: true, disallowedElements: ['img'] },
+})
+```
+
+Two dialects, one definition of each, and a `profile` on every document that says which one produced it.
+
+## Related
+
+Writing your own extension is covered in [Extensions](/docs/extensions).
+
+Compiled documents carry the profile they were built with. See [Compiling](./compiling.mdx).
+
+The same preset configures editing. See [Editor basics](../editor/basics.mdx).

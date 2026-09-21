@@ -1,0 +1,105 @@
+---
+title: React Markdown Renderer
+description: Render Markdown as React with one component. Safe by default, unstyled by default, server-ready, and compatible with the react-markdown prop surface.
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+import Link from '@docusaurus/Link'
+import sites from '@site/src/sites'
+import { PackageJsonLd } from '@site/src/components/JsonLd'
+
+<PackageJsonLd name="renderer" description={frontMatter.description} path="/react-markdown-renderer" />
+
+# React Markdown renderer
+
+Turn a Markdown string into React elements with one component.
+
+```bash
+npm install @react-markdown-kit/renderer
+```
+
+```tsx
+import Markdown from '@react-markdown-kit/renderer'
+
+<Markdown>{content}</Markdown>
+```
+
+That is the whole first-use experience. No provider, no stylesheet, no account, no
+design system, no configuration.
+
+<RenderExample
+  markdown={`## Changelog\n\nShipped **today**.\n\n- Faster cold render\n- Smaller bundle\n\n> Upgrade at your leisure.`}
+  editable
+  title="Edit the Markdown and watch the output follow"
+/>
+
+## What you get by default
+
+**CommonMark**, parsed with micromark rather than regular expressions. 554 of the 652
+official examples match exactly, and 96% do once the raw-HTML examples the security
+policy intentionally drops are counted separately.
+
+**Safe rendering.** Raw HTML is not executed and unsafe URL schemes are blocked, using
+the same algorithm `react-markdown` uses.
+
+**Plain semantic HTML.** No classes, no inline styles, nothing to override.
+
+**Server rendering.** No `use client` directive, so it works in server components,
+during SSR and in static builds.
+
+## Custom components
+
+Map any element to your own component.
+
+```tsx
+<Markdown components={{ a: AppLink, img: AppImage, code: CodeBlock }}>
+  {content}
+</Markdown>
+```
+
+## GitHub Flavored Markdown
+
+Tables, task lists, strikethrough, autolinks and footnotes, through a native extension
+or the familiar plugin. Both are fixture-tested to produce the same output.
+
+```tsx
+import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+<Markdown preset={preset}>{content}</Markdown>
+```
+
+<RenderExample
+  gfm
+  editable
+  markdown={`| Metric | Before | After |\n| --- | ---: | ---: |\n| Cold render | 12.4 ms | 9.1 ms |\n\n- [x] tables\n- [x] task lists\n- [ ] ~~struck~~ text`}
+  title="GFM enabled"
+/>
+
+## Coming from react-markdown
+
+The prop surface is deliberately familiar: `children`, `components`, `remarkPlugins`,
+`rehypePlugins`, `remarkRehypeOptions`, `allowedElements`, `disallowedElements`,
+`allowElement`, `skipHtml`, `unwrapDisallowed` and `urlTransform`.
+
+All 39 prop comparisons against a pinned `react-markdown@10.1.0` produce identical
+markup. We still do not call it a drop-in replacement, because two things differ and
+you should see them before deciding.
+
+<Link className="button button--primary" to="/migrate-from-react-markdown">See the migration guide</Link>
+
+## Styling
+
+The package ships no styling dependency. Style the output with plain CSS, opt into the
+shipped typography and retint it with custom properties, pass your own utility classes
+per part, or replace elements with components from any library.
+
+<Link to="/docs/styling">All four approaches, with live examples</Link>
+
+## Next
+
+<Link to="/docs/getting-started">Getting started</Link> ·{' '}
+<Link href={sites.rendererDemo}>Try every option in the renderer demo</Link> ·{' '}
+<Link to="/react-markdown-editor">Add editing</Link> ·{' '}
+<Link to="/markdown-template-engine">Personalize the same document</Link>

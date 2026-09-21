@@ -1,0 +1,420 @@
+/*
+ * Optional styling for @react-markdown-kit/slides.
+ *
+ * Scoped to the kit's two roots, `.rmk-document` (the rendered deck) and
+ * `.rmk-editor` (the authoring surface), single-class specificity, no reset,
+ * every colour a --rmk-slide-* or --rmk-deck-* custom property. Nothing here
+ * is required: without it a deck is a stack of plain <section>s.
+ *
+ * Scaling has no script. Each slide is a size container with a fixed aspect
+ * ratio and its body sets the font size in `cqw`, so 1.72cqw is 22px on a
+ * 1280px-wide slide and everything the renderer sizes in `em` (headings,
+ * lists, code) follows. Browsers without container units get a fixed size.
+ */
+
+.rmk-document {
+  --rmk-slide-surface: #ffffff;
+  --rmk-slide-text: #1e1e1e;
+  --rmk-slide-inverse-surface: #1e1e1e;
+  --rmk-slide-inverse-text: #ffffff;
+  --rmk-slide-font-size: 1.72cqw;
+  --rmk-slide-padding: 3.75cqw;
+  --rmk-slide-radius: var(--rmk-radius, 4px);
+  --rmk-slide-shadow: none;
+  --rmk-slide-gap: var(--rmk-space, 1rem);
+  --rmk-deck-backdrop: #111111;
+  --rmk-deck-chrome: #222222;
+  --rmk-deck-chrome-text: #ffffff;
+  /* The control bar's row in present mode; the current slide is sized to what is left. */
+  --rmk-deck-controls-height: 2.75rem;
+}
+
+/* ------------------------------------------------------------ the stack */
+
+.rmk-document [data-rmk-deck] {
+  display: grid;
+  gap: var(--rmk-slide-gap);
+}
+
+.rmk-document [data-rmk-slide] {
+  container-type: inline-size;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+  background: var(--rmk-slide-surface);
+  color: var(--rmk-slide-text);
+  border-radius: var(--rmk-slide-radius);
+  box-shadow: var(--rmk-slide-shadow);
+}
+
+.rmk-document [data-rmk-deck-aspect='4:3'] [data-rmk-slide] {
+  aspect-ratio: 4 / 3;
+}
+
+.rmk-document [data-rmk-slide-body] {
+  --rmk-space: 1em;
+  --rmk-measure: none;
+  position: absolute;
+  inset: 0;
+  padding: var(--rmk-slide-padding);
+  font-size: var(--rmk-slide-font-size);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+/* The renderer's rhythm rule only reaches direct children of .rmk-document. */
+.rmk-document [data-rmk-slide-body] > * + *,
+.rmk-document [data-rmk-fragment] > * + * {
+  margin-block-start: var(--rmk-space);
+}
+
+.rmk-document [data-rmk-fragment] + * {
+  margin-block-start: var(--rmk-space);
+}
+
+@supports not (font-size: 1cqw) {
+  .rmk-document [data-rmk-slide-body] {
+    font-size: 1rem;
+    padding: 1.5rem;
+  }
+}
+
+/* ------------------------------------------------------------ class hooks */
+
+.rmk-document [data-rmk-slide-class~='left'] [data-rmk-slide-body] { text-align: start; }
+.rmk-document [data-rmk-slide-class~='center'] [data-rmk-slide-body] { text-align: center; }
+.rmk-document [data-rmk-slide-class~='right'] [data-rmk-slide-body] { text-align: end; }
+.rmk-document [data-rmk-slide-class~='top'] [data-rmk-slide-body] { justify-content: flex-start; }
+.rmk-document [data-rmk-slide-class~='middle'] [data-rmk-slide-body] { justify-content: center; }
+.rmk-document [data-rmk-slide-class~='bottom'] [data-rmk-slide-body] { justify-content: flex-end; }
+
+.rmk-document [data-rmk-slide-class~='inverse'] {
+  background: var(--rmk-slide-inverse-surface);
+  color: var(--rmk-slide-inverse-text);
+}
+
+/* ------------------------------------------------------------- background */
+
+.rmk-document [data-rmk-slide-background] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+}
+
+.rmk-document [data-rmk-slide-background]:not([src]) {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ notes */
+
+/* The `hidden` attribute already does this; stated so a reset cannot undo it. */
+.rmk-document [data-rmk-slide-notes][hidden] {
+  display: none;
+}
+
+/* ============================================================ present mode */
+/* `/present` sets data-rmk-deck-mode on the article, data-rmk-slide-state    */
+/* on each section and data-rmk-fragment-state on the current fragments; the  */
+/* controls bar, presenter panel and idle flag are its children.              */
+/*                                                                            */
+/* The article is a fixed grid of two rows: the current slide, then the       */
+/* control bar at --rmk-deck-controls-height. The slide is as wide as the     */
+/* article (100%, not 100vw, which counts the page scrollbar) or as tall as   */
+/* its row, whichever is smaller, so it never overlaps the bar.               */
+
+.rmk-document [data-rmk-deck][data-rmk-deck-mode='present'],
+.rmk-document [data-rmk-deck][data-rmk-deck-mode='presenter'] {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  margin: 0;
+  gap: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  place-items: center;
+  background: var(--rmk-deck-backdrop);
+  color: var(--rmk-deck-chrome-text);
+  outline: none;
+}
+
+.rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide],
+.rmk-document [data-rmk-deck-mode='presenter'] [data-rmk-slide] {
+  width: min(100%, calc((100dvh - var(--rmk-deck-controls-height)) * 16 / 9));
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.rmk-document [data-rmk-deck-mode='present'][data-rmk-deck-aspect='4:3'] [data-rmk-slide],
+.rmk-document [data-rmk-deck-mode='presenter'][data-rmk-deck-aspect='4:3'] [data-rmk-slide] {
+  width: min(100%, calc((100dvh - var(--rmk-deck-controls-height)) * 4 / 3));
+}
+
+.rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide]:not([data-rmk-slide-state='current']),
+.rmk-document [data-rmk-deck-mode='presenter'] [data-rmk-slide]:not([data-rmk-slide-state='current']):not([data-rmk-slide-preview]) {
+  display: none;
+}
+
+.rmk-document [data-rmk-fragment-state='hidden'] {
+  visibility: hidden;
+}
+
+/* ---------------------------------------------------------------- controls */
+
+.rmk-document [data-rmk-deck-controls] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-family: var(--rmk-font-body, inherit);
+  font-size: 0.875rem;
+  line-height: 1.2;
+  background: var(--rmk-deck-chrome);
+  color: var(--rmk-deck-chrome-text);
+  border-radius: var(--rmk-slide-radius);
+}
+
+.rmk-document [data-rmk-deck-controls] button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: var(--rmk-slide-radius);
+  padding: 0.3em 0.75em;
+  cursor: pointer;
+}
+
+.rmk-document [data-rmk-deck-controls] button:hover,
+.rmk-document [data-rmk-deck-controls] button:focus-visible {
+  background: var(--rmk-deck-chrome-text);
+  color: var(--rmk-deck-chrome);
+  outline: none;
+}
+
+.rmk-document [data-rmk-deck-controls] button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rmk-document [data-rmk-deck-counter] {
+  font-variant-numeric: tabular-nums;
+  padding-inline: 0.5em;
+}
+
+/* In present mode the bar is the grid's bottom row wherever it sits in the DOM. */
+.rmk-document [data-rmk-deck-mode='present'] [data-rmk-deck-controls],
+.rmk-document [data-rmk-deck-mode='presenter'] [data-rmk-deck-controls] {
+  order: 1;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--rmk-deck-controls-height);
+  border-radius: 0;
+  justify-content: center;
+  transition: opacity 0.3s ease;
+}
+
+/* The deck sets data-rmk-deck-idle after 2.5 s without pointer movement. */
+.rmk-document [data-rmk-deck-mode='present'][data-rmk-deck-idle] [data-rmk-deck-controls] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------- presenter */
+
+.rmk-document [data-rmk-deck-mode='presenter'] {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+.rmk-document [data-rmk-deck-mode='presenter'] [data-rmk-slide][data-rmk-slide-state='current'] {
+  grid-column: 1;
+  grid-row: 1;
+  width: min(100%, calc((100dvh - var(--rmk-deck-controls-height)) * 16 / 9));
+}
+
+.rmk-document [data-rmk-deck-mode='presenter'][data-rmk-deck-aspect='4:3'] [data-rmk-slide][data-rmk-slide-state='current'] {
+  width: min(100%, calc((100dvh - var(--rmk-deck-controls-height)) * 4 / 3));
+}
+
+.rmk-document [data-rmk-deck-presenter] {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+  justify-self: stretch;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  padding: 1rem;
+  min-height: 0;
+  overflow: hidden;
+  font-family: var(--rmk-font-body, inherit);
+}
+
+.rmk-document [data-rmk-deck-presenter] [data-rmk-slide-preview] {
+  width: 100%;
+  opacity: 0.85;
+}
+
+.rmk-document [data-rmk-deck-notes] {
+  overflow: auto;
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+
+.rmk-document [data-rmk-deck-notes] [data-rmk-slide-notes],
+.rmk-document [data-rmk-deck-notes] [data-rmk-slide-notes][hidden] {
+  display: block;
+}
+
+.rmk-document [data-rmk-deck-notes] > * + *,
+.rmk-document [data-rmk-deck-notes] [data-rmk-slide-notes] > * + * {
+  margin-block-start: 0.75em;
+}
+
+.rmk-document [data-rmk-deck-clock] {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+}
+
+/* ================================================================== editor */
+/* `/editor` renders a slide break as a labelled divider that counts slides,  */
+/* a marker as a captioned divider and a directive as an editable chip.       */
+
+.rmk-editor [data-rmk-surface='rich'] {
+  counter-reset: rmk-slide 1;
+}
+
+.rmk-editor [data-rmk-slide-break] {
+  position: relative;
+  margin-block: var(--rmk-space, 1rem);
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--rmk-border, currentColor);
+}
+
+/* A slide break is a row: the dashed line, then the label. The line stops
+   where the label starts, so no background has to mask it (the editor's
+   --rmk-surface is translucent). */
+.rmk-editor [data-rmk-slide-break='slide'] {
+  counter-increment: rmk-slide;
+  display: flex;
+  align-items: center;
+  height: auto;
+  border-top: 0;
+}
+
+.rmk-editor [data-rmk-slide-break='slide']::before {
+  content: '';
+  flex: 1;
+  border-top: 2px dashed var(--rmk-border, currentColor);
+}
+
+.rmk-editor [data-rmk-slide-break='slide']::after {
+  content: 'Slide ' counter(rmk-slide);
+  flex: none;
+  padding-inline-start: 0.75em;
+  font-family: var(--rmk-font-body, inherit);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--rmk-muted, currentColor);
+  user-select: none;
+}
+
+.rmk-editor [data-rmk-slide-marker] {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  margin-block: var(--rmk-space, 1rem);
+  font-family: var(--rmk-font-body, inherit);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rmk-muted, currentColor);
+  user-select: none;
+}
+
+.rmk-editor [data-rmk-slide-marker]::before,
+.rmk-editor [data-rmk-slide-marker]::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dotted var(--rmk-border, currentColor);
+}
+
+.rmk-editor [data-rmk-slide-directive] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-block: calc(var(--rmk-space, 1rem) / 2);
+  padding: 0.15em 0.75em;
+  font-family: var(--rmk-font-mono, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--rmk-muted, currentColor);
+  background: var(--rmk-surface, transparent);
+  border: 1px solid var(--rmk-border, currentColor);
+  border-radius: 999px;
+  cursor: text;
+}
+
+.rmk-editor [data-rmk-slide-directive] input {
+  font: inherit;
+  color: var(--rmk-text, inherit);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  min-width: 8ch;
+  outline: none;
+}
+
+/* The value is a button (click to edit) that reads as the chip's text. */
+.rmk-editor [data-rmk-slide-directive] button {
+  font: inherit;
+  color: var(--rmk-text, inherit);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: text;
+}
+
+/* The <hr> is what an unstyled editor shows; here the divider draws the line. */
+.rmk-editor [data-rmk-slide-break] hr {
+  margin: 0;
+  border: 0;
+  height: 0;
+}
+
+.rmk-editor [data-rmk-slide-break]:focus-visible,
+.rmk-editor [data-rmk-slide-marker]:focus-visible,
+.rmk-editor [data-rmk-slide-directive]:focus-within {
+  outline: 2px solid var(--rmk-focus, currentColor);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ print */
+/* Last on purpose: these share specificity with the controls (display: flex)
+   and presenter (display: grid) rules above, so they win only by order. */
+
+@media print {
+  .rmk-document [data-rmk-deck] {
+    display: block;
+  }
+  .rmk-document [data-rmk-slide] {
+    break-after: page;
+    break-inside: avoid;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .rmk-document [data-rmk-deck-controls],
+  .rmk-document [data-rmk-deck-presenter] {
+    display: none;
+  }
+}

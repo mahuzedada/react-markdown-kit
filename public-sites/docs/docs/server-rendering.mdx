@@ -1,0 +1,148 @@
+---
+title: Server rendering
+description: Render Markdown in React Server Components, SSR and static builds, and precompile documents at module scope.
+---
+
+# Server rendering
+
+```tsx
+import { readFile } from 'node:fs/promises'
+import Markdown from '@react-markdown-kit/renderer'
+
+export default async function Page() {
+  const content = await readFile('content/post.md', 'utf8')
+  return <article><Markdown>{content}</Markdown></article>
+}
+```
+
+No `"use client"`, no wrapper, no dynamic import. This is a server component,
+and the Markdown it renders ships no JavaScript to the browser.
+
+## Why it works
+
+The renderer entry carries no `"use client"` directive. React treats that
+directive as a module dependency boundary, so a module without one stays on the
+server side of the graph. The renderer also touches no browser global, which is
+what makes it safe in a static build with no DOM.
+
+That covers all four hosts:
+
+| Host | Status |
+| --- | --- |
+| Browser React application | Works |
+| Server-side rendering | Works |
+| React Server Components | Works, as a server component |
+| Static rendering with no browser globals | Works |
+
+Rendering is synchronous. There is no `MarkdownAsync` and no `MarkdownHooks`, so
+an async remark or rehype plugin will not run. See
+[compatibility](/docs/compatibility).
+
+## Precompile at module scope
+
+`compileMarkdown` turns source into a `MarkdownDocument`. Parsing is roughly
+80% of the total work, so hoisting it out of the request path is the largest
+win available.
+
+```tsx
+import Markdown, { compileMarkdown, defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+// Parsed once per process, not once per request.
+const CHANGELOG = compileMarkdown(
+  `## 1.4.0
+
+- Streaming exports
+- Smaller bundle
+`,
+  { preset },
+)
+
+export function Changelog() {
+  return <Markdown document={CHANGELOG} />
+}
+```
+
+Re-rendering from a document is about 2.8 times faster than re-parsing the
+string in the `examples/next-server-rendering` measurement.
+
+A `MarkdownDocument` is a plain JSON object with no methods. It survives
+`structuredClone`, an HTTP response, a queue and a cache, so it can come from
+anywhere:
+
+- a build step that compiles every MDX-free content file;
+- a database column holding the compiled form next to the source;
+- a fetch from a content service, compiled once upstream.
+
+```ts
+const document = JSON.parse(await redis.get(`post:${slug}`))
+return <Markdown document={document} />
+```
+
+Compile with the same extensions you render with. A dialect extension such as
+`gfm()` changes what the parser recognizes, so a document compiled without it
+has no table nodes for the renderer to draw later.
+
+## The editor is a client component
+
+The editor owns selection, undo history and keyboard handling, so it is
+interactive by nature. Mark your wrapper as a client component.
+
+```tsx
+'use client'
+
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+
+export function PostEditor({ value, onChange }) {
+  return <MarkdownEditor value={value} onChange={onChange} />
+}
+```
+
+This is the reason the editor is a separate package. Installing the renderer
+never pulls editor code or Lexical into a server bundle, and
+`tests/packaging.test.ts` asserts the dependency graph rather than trusting it.
+
+| Installation | What the bundle must not contain |
+| --- | --- |
+| Renderer only | Lexical, editor runtime |
+| Template plugin on a server | Anything that renders: the plugin calls no React, no Lexical, no browser global |
+| Editor | May depend on the renderer and on Lexical |
+
+A page that shows saved content and an editing route can therefore use the
+renderer on the server and load the editor only where editing happens.
+
+## Templates on the server
+
+`@react-markdown-kit/template` resolves without rendering. `template()` runs
+inside `compileMarkdown` and calls no React or browser global, so it runs in a
+route handler, a worker, a cron job or a CLI.
+
+```ts
+import { compileMarkdown } from '@react-markdown-kit/renderer'
+import { template } from '@react-markdown-kit/template'
+
+export async function POST(request: Request) {
+  const document = compileMarkdown(source, {
+    extensions: [template({ data: await request.json(), schema: ReceiptSchema })],
+  })
+  if (document.diagnostics.some((d) => d.severity === 'error')) {
+    return Response.json({ diagnostics: document.diagnostics }, { status: 422 })
+  }
+  return Response.json({ document })
+}
+```
+
+The client can render that document with `<Markdown document={...} />`, or the
+server can serialize it with `documentToMarkdown` for an email body. Both sides
+agree, because they exchange the same document.
+
+When the resolved output is personalized, read the
+[cache rule](/docs/security) before you put it behind a shared cache.
+
+## Example
+
+`examples/next-server-rendering` in the repository is the runnable version of
+this page. `app/page.tsx` reads a file with `node:fs` and renders it with no
+client directive anywhere. `app/precompiled.tsx` compiles at module scope and
+renders from the document per request.

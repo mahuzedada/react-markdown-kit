@@ -1,0 +1,71 @@
+/*
+ * Diagram canvas. The editor declares every `--rmk-diagram-*` property on
+ * `.rmk-editor`; the `html` prefix outranks that declaration whatever the
+ * bundle order. The drawing surface stays white by the kit's contract (shape
+ * colours are content), so dark mode inverts the surface, swatches and
+ * inline text input together through the filter the kit provides, and the
+ * static renderer figure gets the same treatment on its SVG.
+ */
+html .rmk-editor {
+  --rmk-diagram-accent: var(--primary);
+  --rmk-diagram-foreground: var(--foreground);
+  --rmk-diagram-muted-foreground: var(--muted-foreground);
+  --rmk-diagram-border: var(--border);
+  --rmk-diagram-divider: var(--border);
+  --rmk-diagram-chrome: var(--card);
+  --rmk-diagram-popover: var(--popover);
+  --rmk-diagram-popover-foreground: var(--popover-foreground);
+  --rmk-diagram-danger: var(--danger);
+  --rmk-diagram-success: var(--success);
+  --rmk-diagram-radius: var(--radius);
+  --rmk-diagram-control-radius: var(--radius);
+  --rmk-diagram-shadow: var(--shadow-3);
+  --rmk-diagram-font: var(--font-sans);
+  --rmk-diagram-hover: var(--accent);
+  --rmk-diagram-active: color-mix(in oklab, var(--primary) 14%, transparent);
+  --rmk-diagram-swatch-border: var(--input);
+  --rmk-diagram-resize-hover: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --rmk-diagram-grid: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+html[data-theme='dark'] .rmk-editor {
+  --rmk-diagram-dark-filter: invert(93%) hue-rotate(180deg);
+}
+
+html .rmk-document {
+  --rmk-diagram-grid: color-mix(in oklab, var(--foreground) 12%, transparent);
+}
+
+html[data-theme='dark'] .rmk-document {
+  --rmk-diagram-surface: color-mix(in oklab, var(--background), black 30%);
+}
+
+html[data-theme='dark'] .rmk-document [data-rmk-diagram] svg {
+  filter: invert(93%) hue-rotate(180deg);
+}
+
+/*
+ * Slides. The plugin declares every `--rmk-slide-*` and `--rmk-deck-*`
+ * property on `.rmk-document`; the `html` prefix outranks that declaration
+ * whatever the bundle order. A slide is a card in the theme's colours and an
+ * `inverse` slide swaps them, so both read in light and dark. Present mode
+ * keeps a dark backdrop in both modes, as a projector wants, and draws the
+ * control bar in the theme's chrome.
+ */
+html .rmk-document {
+  --rmk-slide-surface: var(--card);
+  --rmk-slide-text: var(--foreground);
+  --rmk-slide-inverse-surface: var(--foreground);
+  --rmk-slide-inverse-text: var(--background);
+  --rmk-slide-radius: var(--radius);
+  --rmk-slide-shadow: var(--shadow-3);
+  --rmk-deck-backdrop: color-mix(in oklab, var(--foreground) 92%, black);
+  --rmk-deck-chrome: color-mix(in oklab, var(--foreground) 82%, black);
+  --rmk-deck-chrome-text: var(--background);
+}
+
+html[data-theme='dark'] .rmk-document {
+  --rmk-deck-backdrop: color-mix(in oklab, var(--background), black 30%);
+  --rmk-deck-chrome: var(--card);
+  --rmk-deck-chrome-text: var(--foreground);
+}

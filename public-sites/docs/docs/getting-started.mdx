@@ -1,0 +1,121 @@
+---
+title: Getting started
+description: Install React Markdown Kit and render Markdown with one React component, then add editing and templates when you need them.
+sidebar_position: 1
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+import EditorExample from '@site/src/components/EditorExample'
+
+# Getting started
+
+```bash
+npm install @react-markdown-kit/renderer
+```
+
+```tsx
+import Markdown from '@react-markdown-kit/renderer'
+
+export function Article({ content }: { content: string }) {
+  return <Markdown>{content}</Markdown>
+}
+```
+
+That is the whole first-use experience. No provider, no stylesheet, no account, no design system.
+
+<RenderExample
+  editable
+  title="The renderer, running on this page"
+  markdown={'## Release notes\n\nWe shipped **two** things this week.\n\n1. A faster importer\n2. A [changelog](https://example.com)\n\n> Thanks for the reports.\n'}
+>
+  The right-hand pane is a real `Markdown` component, server-rendered with the rest of the page. Edit the source and watch it follow.
+</RenderExample>
+
+## What you get by default
+
+CommonMark, parsed with micromark rather than regular expressions.
+
+Raw HTML is not executed, and unsafe URL schemes are blocked. See [Security](/docs/security).
+
+Plain semantic HTML with no classes and no inline styles. See [Styling](/docs/styling).
+
+No `"use client"` on the renderer entry, so it works in server components and static rendering. See [Server rendering](/docs/server-rendering).
+
+## Turn on GitHub Flavored Markdown
+
+```tsx
+import { GfmMarkdown } from '@react-markdown-kit/renderer/gfm'
+
+<GfmMarkdown>{content}</GfmMarkdown>
+```
+
+<RenderExample
+  gfm
+  title="Tables, task lists and strikethrough"
+  markdown={'| Item | Status |\n| --- | --- |\n| Importer | done |\n| Exporter | ~~blocked~~ |\n\n- [x] Ship the parser\n- [ ] Ship the writer\n'}
+/>
+
+Tables, task lists, strikethrough, autolinks and footnotes are covered in [GFM](./renderer/gfm.mdx).
+
+## Use your own components
+
+```tsx
+<Markdown components={{ a: AppLink, img: AppImage, code: CodeBlock }}>
+  {content}
+</Markdown>
+```
+
+Any element can be replaced, and the override receives the element's props plus its source node. See [Components](./renderer/components.mdx).
+
+## Add editing
+
+The editor is a separate package. The renderer never requires it.
+
+```bash
+npm install @react-markdown-kit/editor
+```
+
+```tsx
+'use client'
+
+import { useState } from 'react'
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+
+export function Notes() {
+  const [value, setValue] = useState('# Notes\n\nStart writing.')
+  return <MarkdownEditor value={value} onChange={setValue} />
+}
+```
+
+<EditorExample
+  height={240}
+  title="Markdown in, Markdown out"
+  markdown={'## Notes\n\nEdit this document. The saved Markdown is shown underneath.\n\n- [ ] Try the toolbar\n- [ ] Switch to source mode\n'}
+/>
+
+You store Markdown, not editor JSON. See [Editor basics](./editor/basics.mdx).
+
+## Personalize the same document
+
+The template plugin resolves typed variables while the renderer parses.
+
+```tsx
+import { template } from '@react-markdown-kit/template'
+
+<Markdown extensions={[template({ data: { user: { name: 'Chatis' } } })]}>{'# Hello {{user.name}}'}</Markdown>
+```
+
+See [Templates](/docs/templates/basics).
+
+## Where to go next
+
+| You want to | Read |
+| --- | --- |
+| Replace elements with your own components | [Components](./renderer/components.mdx) |
+| Tables, task lists, footnotes | [GFM](./renderer/gfm.mdx) |
+| One Markdown dialect for the whole app | [Presets](./renderer/presets.mdx) |
+| Parse once, render many times | [Compiling](./renderer/compiling.mdx) |
+| Add rich editing | [Editor basics](./editor/basics.mdx) |
+| Know what editing does to your source | [Round-trip preservation](./editor/round-trip.mdx) |
+| Present Markdown as slides | [Slides](/docs/slides) |
+| Move off react-markdown | [Compatibility](/docs/compatibility) |

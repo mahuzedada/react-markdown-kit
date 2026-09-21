@@ -1,0 +1,184 @@
+---
+title: Editor basics
+description: Add rich, source and preview Markdown editing with MarkdownEditor, using controlled or uncontrolled value and a documentKey for document identity.
+---
+
+import EditorExample from '@site/src/components/EditorExample'
+
+# Editor basics
+
+```bash
+npm install @react-markdown-kit/editor
+```
+
+```tsx
+'use client'
+
+import { useState } from 'react'
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+import '@react-markdown-kit/editor/styles.css'
+
+export function Notes() {
+  const [value, setValue] = useState('# Notes\n\nStart writing.')
+  return <MarkdownEditor value={value} onChange={setValue} />
+}
+```
+
+`value` is a Markdown string. `onChange` gives you back a Markdown string. Your application stores Markdown, not editor JSON.
+
+<EditorExample
+  title="The default editor"
+  height={280}
+  markdown={'# Notes\n\nType here. The saved Markdown appears underneath.\n\n- [ ] Try the toolbar\n- [ ] Switch to source mode with the buttons on the right\n'}
+/>
+
+The stylesheet is optional. Without it the editor is unstyled and fully functional. See [Styling](/docs/styling).
+
+The editor needs a DOM, so it carries `"use client"`. The renderer does not. See [Server rendering](/docs/server-rendering).
+
+## Controlled and uncontrolled
+
+Controlled, when the value lives in your state:
+
+```tsx
+<MarkdownEditor value={value} onChange={setValue} />
+```
+
+Uncontrolled, when the editor owns the value and you only observe it:
+
+```tsx
+<MarkdownEditor defaultValue="# Hello" onChange={handleChange} />
+```
+
+With neither, the editor starts empty:
+
+```tsx
+<MarkdownEditor />
+```
+
+Pick one for the lifetime of the component. Switching between them logs an error in development.
+
+In controlled mode the parent normally echoes back the value it has received. An echoed value is recognised and ignored, so it never resets your selection or your undo history.
+
+A value that did not come from the editor is treated as a genuine external change, and replaces the content.
+
+Debounce persistence outside the editor. `onChange` fires per edit, and that is the right granularity for the component.
+
+## Three modes
+
+```ts
+type MarkdownEditorMode = 'rich' | 'source' | 'preview'
+```
+
+`rich` is WYSIWYG editing. `source` is the Markdown text. `preview` is read-only rendered output.
+
+All three project the same document, so switching modes never loses anything.
+
+Controlled:
+
+```tsx
+<MarkdownEditor mode={mode} onModeChange={setMode} value={value} onChange={setValue} />
+```
+
+Uncontrolled:
+
+```tsx
+<MarkdownEditor defaultMode="source" value={value} onChange={setValue} />
+```
+
+<EditorExample
+  title="Starting in source mode"
+  defaultMode="source"
+  height={260}
+  markdown={'## Source mode\n\nEdit the Markdown directly, then switch to rich mode.\n\n| Mode | Editable |\n| --- | --- |\n| rich | yes |\n| source | yes |\n| preview | no |\n'}
+/>
+
+Preview delegates to `@react-markdown-kit/renderer`. There is no second renderer inside the editor, so preview and your published page agree.
+
+## The preset
+
+Pass the same preset the renderer uses, and the editor writes the dialect your application reads.
+
+```tsx
+import { appMarkdown } from './markdown'
+
+<MarkdownEditor preset={appMarkdown} value={value} onChange={setValue} />
+```
+
+Without a preset the editor is CommonMark. With `gfm()` it edits tables, task lists, strikethrough, autolinks and footnotes. See [Presets](../renderer/presets.mdx).
+
+Extensions resolve on every render, so changing the dialect at runtime works.
+
+## Document identity
+
+`onChange` echoes are ordinary. Loading a different document is not.
+
+```tsx
+<MarkdownEditor
+  documentKey={note.id}
+  value={note.markdown}
+  onChange={setMarkdown}
+/>
+```
+
+Changing `documentKey` is a deliberate document replacement. The editor reloads the content and clears undo history, so the reader cannot undo their way into the previous note.
+
+Leave `documentKey` alone and an edit is an edit, whatever the value does.
+
+## The toolbar
+
+The default toolbar covers marks, block types, lists, links, images, horizontal rules, undo, redo and the mode switch.
+
+Remove it:
+
+```tsx
+<MarkdownEditor toolbar={false} value={value} onChange={setValue} />
+```
+
+Replace it with a render prop:
+
+```tsx
+<MarkdownEditor
+  value={value}
+  onChange={setValue}
+  toolbar={(items, editor) => (
+    <div>
+      {items.map((item) => (
+        <button key={item.id} type="button" onClick={item.run} aria-pressed={item.active}>
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )}
+/>
+```
+
+Each item has `id`, `label`, `icon`, `active`, `disabled`, `group` and `run()`. Labels come from `labels`, so editor chrome can be localized independently of the document.
+
+<EditorExample
+  title="No toolbar, keyboard only"
+  toolbar={false}
+  height={200}
+  markdown={'Bold with Ctrl or Cmd and B.\n\nA list still starts with `- `.\n'}
+/>
+
+For a toolbar built entirely from your own components, see [Headless editing](./headless.mdx).
+
+## Other props
+
+| Prop | Does |
+| --- | --- |
+| `readOnly` | Makes the surface non-editable |
+| `placeholder` | Shown while the document is empty |
+| `classNames` | Replaces the `rmk-` class on a part of the chrome |
+| `components` | Component overrides used by preview |
+| `labels` | Editor chrome strings |
+| `onUploadImage` | Application-owned image upload |
+| `onDiagnostics` | Called with parse diagnostics |
+| `aria-label` | Accessible name for the editing surface |
+
+## Related
+
+Editing is only safe to offer if saving does not damage the file. See [Round-trip preservation](./round-trip.mdx).
+
+Images need somewhere to live. See [Images](./images.mdx).

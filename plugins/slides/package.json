@@ -1,0 +1,97 @@
+{
+  "name": "@react-markdown-kit/slides",
+  "version": "0.1.0",
+  "description": "Slides from Markdown for React Markdown Kit, as a plugin: slides() reads a deck (slides split on ---, speaker notes after ???, fragments after --, <!-- key: value --> directives) and renders it as static sections; /present adds keyboard-driven present mode and /editor the authoring commands. No standalone API.",
+  "homepage": "https://docs.reactmarkdownkit.com/docs/slides",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mahuzedada/react-markdown-kit.git",
+    "directory": "plugins/slides"
+  },
+  "bugs": "https://github.com/mahuzedada/react-markdown-kit/issues",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "DIALECT.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./present": {
+      "types": "./dist/present.d.ts",
+      "default": "./dist/present.js"
+    },
+    "./editor": {
+      "types": "./dist/editor.d.ts",
+      "default": "./dist/editor.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@types/hast": "^3.0.4",
+    "@types/mdast": "^4.0.4",
+    "mdast-util-from-markdown": "^2.0.2",
+    "mdast-util-frontmatter": "^2.0.1"
+  },
+  "peerDependencies": {
+    "@lexical/utils": "^0.35.0",
+    "@react-markdown-kit/editor": "^0.1.0",
+    "@react-markdown-kit/renderer": "^0.1.0",
+    "lexical": "^0.35.0",
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@lexical/utils": {
+      "optional": true
+    },
+    "@react-markdown-kit/editor": {
+      "optional": true
+    },
+    "lexical": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "markdown",
+    "slides",
+    "presentation",
+    "deck",
+    "react",
+    "plugin",
+    "markdown-slides",
+    "markdown-presentation",
+    "marp-alternative",
+    "speaker-notes"
+  ],
+  "devDependencies": {
+    "@lexical/utils": "^0.35.0",
+    "@react-markdown-kit/editor": "workspace:*",
+    "@react-markdown-kit/renderer": "workspace:*",
+    "lexical": "^0.35.0"
+  }
+}

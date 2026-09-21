@@ -1,0 +1,99 @@
+/* Chrome for the Mermaid live editor. The canvas and the static SVG are styled
+   by the kit's own stylesheets and shared/kit.css. */
+
+.shell {
+  height: calc(100dvh - var(--site-header-height));
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--card);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}@media (max-width: 900px) {
+  .body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+  .col + .col { border-left: 0; border-top: 1px solid var(--border); }
+}
+
+.col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+.col + .col { border-left: 1px solid var(--border); }
+
+.colHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.badgeOk, .badgeWarn {
+  font-size: 0.66rem;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--radius-sm);
+}
+
+.badgeOk {
+  background: color-mix(in oklab, var(--success) 14%, transparent);
+  color: var(--success-text);
+}
+
+.badgeWarn {
+  background: color-mix(in oklab, var(--warning) 14%, transparent);
+  color: var(--warning-text);
+}
+
+/* The Mermaid source: a plain textarea, no editor chrome. */
+.code {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0.8rem;
+  border: 0;
+  outline: none;
+  resize: none;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--foreground);
+  background: transparent;
+  tab-size: 4;
+}
+
+.code:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+.problem {
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.78rem;
+  color: var(--warning-text);
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--warning) 8%, transparent);
+}
+
+/* The editor fills its pane; the canvas has its own tools, so the Markdown toolbar is off. */
+.editorWrap { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
+.editorWrap > :global(.rmk-editor) { flex: 1; min-height: 0; border: 0; border-radius: 0; }
+.editorWrap :global(.rmk-editor .rmk-content) { flex: 1; min-height: 0; overflow: auto; padding: 0.85rem 1.1rem; }
+
+.hint {
+  padding: 0.5rem 0.9rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}

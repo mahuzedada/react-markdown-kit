@@ -1,0 +1,309 @@
+/*
+ * Showcase mode. The components in showcase.tsx produce the structure; this
+ * file gives it a voice: a numbered editorial column, hairlines, one accent,
+ * mono labels for everything the components computed (line counts, hosts,
+ * progress). It reads the same --rmk-* variables the kit stylesheet does, so
+ * the theme controls in the Customise menu apply here too.
+ */
+
+.pg-showcase {
+  --sc-accent: var(--rmk-link, var(--primary));
+  --sc-ink: var(--foreground);
+  --sc-mute: var(--muted-foreground);
+  --sc-line: var(--border);
+  --sc-soft: var(--muted);
+  --sc-card: var(--card);
+  --sc-radius: var(--rmk-radius, 6px);
+  --sc-mono: var(--font-mono);
+  --sc-accent-soft: color-mix(in oklab, var(--sc-accent) 12%, transparent);
+  max-width: var(--rmk-measure, 68ch);
+  margin-inline: auto;
+  padding-block: 0.5rem 2rem;
+  color: var(--sc-ink);
+  font-family: var(--rmk-font-body, inherit);
+  font-size: 1rem;
+  line-height: 1.65;
+  counter-reset: sc-section;
+}
+
+.pg-showcase > * { margin-block: 0 1.1rem; }
+.pg-showcase > *:last-child { margin-bottom: 0; }
+
+/* Labels the components computed: small, mono, tracked. */
+.pg-showcase .sc-code-meta,
+.pg-showcase .sc-table-foot,
+.pg-showcase .sc-tasks-head,
+.pg-showcase .sc-host,
+.pg-showcase .sc-notes-label,
+.pg-showcase .sc-callout-label,
+.pg-showcase .sc-code-title {
+  font-family: var(--sc-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sc-mute);
+}
+
+/* Headings: h1 as a masthead, h2 numbered in the margin, anchors on hover. */
+.pg-showcase .sc-heading { position: relative; line-height: 1.15; letter-spacing: -0.02em; font-weight: 700; scroll-margin-top: 1rem; }
+.pg-showcase h1.sc-heading {
+  font-size: 2.1rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1.4rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 2px solid var(--sc-ink);
+  text-wrap: balance;
+}
+.pg-showcase h2.sc-heading {
+  font-size: 1.35rem;
+  margin-top: 2.4rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--sc-line);
+  counter-increment: sc-section;
+}
+.pg-showcase h2.sc-heading::before {
+  content: counter(sc-section, decimal-leading-zero);
+  display: inline-block;
+  margin-right: 0.7rem;
+  font-family: var(--sc-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--sc-accent);
+  vertical-align: 0.25em;
+}
+.pg-showcase h3.sc-heading { font-size: 1.08rem; margin-top: 1.8rem; }
+.pg-showcase h4.sc-heading, .pg-showcase h5.sc-heading, .pg-showcase h6.sc-heading {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sc-mute);
+  margin-top: 1.6rem;
+}
+.pg-showcase .sc-anchor {
+  margin-left: 0.4em;
+  color: var(--sc-accent);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+.pg-showcase .sc-heading:hover .sc-anchor, .pg-showcase .sc-anchor:focus-visible { opacity: 1; }
+
+/* Inline. */
+.pg-showcase p { margin-block: 0 1.1rem; }
+.pg-showcase strong { font-weight: 650; }
+.pg-showcase :not(pre) > code {
+  font-family: var(--sc-mono);
+  font-size: 0.86em;
+  padding: 0.1em 0.4em;
+  border-radius: calc(var(--sc-radius) * 0.6);
+  background: var(--sc-soft);
+  border: 1px solid var(--sc-line);
+}
+.pg-showcase del { color: var(--sc-mute); text-decoration-color: var(--destructive, currentColor); }
+.pg-showcase .sc-link {
+  color: var(--sc-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in oklab, var(--sc-accent) 45%, transparent);
+  transition: text-decoration-color var(--duration-fast) var(--ease-standard);
+}
+.pg-showcase .sc-link:hover { text-decoration-color: var(--sc-accent); }
+.pg-showcase .sc-host {
+  display: inline-block;
+  margin-left: 0.35em;
+  padding: 0.05em 0.4em;
+  border-radius: var(--radius-full, 999px);
+  background: var(--sc-accent-soft);
+  color: var(--sc-accent);
+  text-transform: none;
+  letter-spacing: 0.02em;
+  vertical-align: 0.1em;
+}
+.pg-showcase sup a { font-family: var(--sc-mono); font-size: 0.7em; color: var(--sc-accent); text-decoration: none; padding: 0 0.2em; }
+
+/* Lists. */
+.pg-showcase .sc-list, .pg-showcase ol { padding-left: 1.4rem; }
+.pg-showcase li { margin-block: 0.25rem; }
+.pg-showcase li::marker { color: var(--sc-accent); font-family: var(--sc-mono); font-size: 0.85em; }
+.pg-showcase .sc-tasks {
+  border: 1px solid var(--sc-line);
+  border-radius: var(--sc-radius);
+  background: var(--sc-card);
+  padding: 0.6rem 0.9rem 0.5rem;
+}
+.pg-showcase .sc-tasks-head { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.4rem; }
+.pg-showcase .sc-tasks-bar { flex: 1; height: 4px; border-radius: 999px; background: var(--sc-soft); overflow: hidden; }
+.pg-showcase .sc-tasks-bar > span { display: block; height: 100%; background: var(--sc-accent); transition: width var(--duration-slow) var(--ease-standard); }
+.pg-showcase .contains-task-list { list-style: none; padding-left: 0; }
+.pg-showcase .task-list-item { display: flex; align-items: baseline; gap: 0.6rem; }
+.pg-showcase .sc-check {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.05em;
+  height: 1.05em;
+  border-radius: calc(var(--sc-radius) * 0.6);
+  border: 1.5px solid var(--sc-mute);
+  font-size: 0.7em;
+  line-height: 1;
+  transform: translateY(0.15em);
+}
+.pg-showcase .sc-check-on { background: var(--sc-accent); border-color: var(--sc-accent); color: var(--primary-foreground); }
+
+/* Quotes and callouts. */
+.pg-showcase .sc-quote {
+  position: relative;
+  margin-inline: 0;
+  padding: 0.2rem 0 0.2rem 1.6rem;
+  border-left: 2px solid var(--sc-accent);
+  font-size: 1.05rem;
+  font-style: italic;
+  color: color-mix(in oklab, var(--sc-ink) 80%, var(--sc-mute));
+}
+.pg-showcase .sc-quote-mark {
+  position: absolute;
+  left: 0.45rem;
+  top: -0.35rem;
+  font-size: 2rem;
+  line-height: 1;
+  font-style: normal;
+  color: var(--sc-accent);
+  opacity: 0.6;
+}
+.pg-showcase .sc-quote .sc-quote { margin-top: 0.6rem; border-left-color: var(--sc-line); }
+.pg-showcase .sc-quote .sc-quote-mark { display: none; }
+.pg-showcase .sc-quote > p:last-child { margin-bottom: 0; }
+.pg-showcase .sc-callout {
+  --sc-callout: var(--sc-accent);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid color-mix(in oklab, var(--sc-callout) 35%, var(--sc-line));
+  border-left-width: 3px;
+  border-radius: var(--sc-radius);
+  background: color-mix(in oklab, var(--sc-callout) 7%, var(--sc-card));
+}
+.pg-showcase .sc-callout-warning { --sc-callout: var(--warning); }
+.pg-showcase .sc-callout-caution { --sc-callout: var(--destructive); }
+.pg-showcase .sc-callout-important { --sc-callout: var(--sc-accent); }
+.pg-showcase .sc-callout-glyph {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--sc-callout);
+  color: var(--primary-foreground);
+  font-family: var(--sc-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.pg-showcase .sc-callout-label { display: block; margin-bottom: 0.2rem; color: var(--sc-callout); }
+.pg-showcase .sc-callout-body > p:last-child { margin-bottom: 0; }
+
+/* Code windows. */
+.pg-showcase .sc-code {
+  margin-inline: 0;
+  border: 1px solid var(--sc-line);
+  border-radius: var(--sc-radius);
+  background: var(--sc-card);
+  overflow: hidden;
+}
+.pg-showcase .sc-code-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.45rem 0.6rem 0.45rem 0.9rem;
+  border-bottom: 1px solid var(--sc-line);
+  background: var(--sc-soft);
+}
+.pg-showcase .sc-code-title { color: var(--sc-ink); text-transform: none; letter-spacing: 0.02em; font-size: 0.76rem; }
+.pg-showcase .sc-code-meta { margin-left: auto; }
+.pg-showcase .sc-code-copy {
+  font: inherit;
+  font-family: var(--sc-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--sc-line);
+  border-radius: calc(var(--sc-radius) * 0.7);
+  background: var(--sc-card);
+  color: var(--sc-mute);
+  cursor: pointer;
+}
+.pg-showcase .sc-code-copy:hover { color: var(--sc-accent); border-color: var(--sc-accent); }
+.pg-showcase .sc-code-body {
+  margin: 0;
+  padding: 0.6rem 0;
+  overflow-x: auto;
+  background: transparent;
+  font-family: var(--sc-mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  tab-size: 2;
+}
+.pg-showcase .sc-code-body code { display: block; background: none; border: 0; padding: 0; font-size: inherit; }
+.pg-showcase .sc-line { display: flex; }
+.pg-showcase .sc-line-number {
+  flex: none;
+  width: 2.8rem;
+  padding-right: 0.9rem;
+  text-align: right;
+  color: var(--sc-mute);
+  opacity: 0.6;
+  user-select: none;
+}
+.pg-showcase .sc-line-text { flex: 1; padding-right: 1rem; white-space: pre; }
+.pg-showcase .sc-line:hover { background: var(--sc-accent-soft); }
+
+/* Tables. */
+.pg-showcase .sc-table { margin-inline: 0; border: 1px solid var(--sc-line); border-radius: var(--sc-radius); overflow: hidden; background: var(--sc-card); }
+.pg-showcase .sc-table-scroll { overflow-x: auto; }
+.pg-showcase .sc-table table { display: table; width: 100%; margin: 0; border-collapse: collapse; font-size: 0.92rem; }
+.pg-showcase .sc-table th {
+  text-align: left;
+  padding: 0.55rem 0.9rem;
+  background: var(--sc-soft);
+  border-bottom: 1px solid var(--sc-line);
+  font-family: var(--sc-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sc-mute);
+}
+.pg-showcase .sc-table td { padding: 0.5rem 0.9rem; border-bottom: 1px solid var(--sc-line); font-variant-numeric: tabular-nums; }
+.pg-showcase .sc-table tbody tr:last-child td { border-bottom: 0; }
+.pg-showcase .sc-table tbody tr:hover td { background: var(--sc-accent-soft); }
+.pg-showcase .sc-table-foot { padding: 0.4rem 0.9rem; border-top: 1px solid var(--sc-line); background: var(--sc-soft); }
+
+/* Figures. */
+.pg-showcase .sc-figure { display: block; margin-block: 0 1.1rem; }
+.pg-showcase .sc-figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--sc-line);
+  border-radius: var(--sc-radius);
+  padding: 0.3rem;
+  background: var(--sc-card);
+}
+.pg-showcase .sc-figure-caption { display: block; margin-top: 0.45rem; font-size: 0.8rem; color: var(--sc-mute); font-style: italic; }
+.pg-showcase p > .sc-figure { margin-bottom: 0; }
+
+/* Rule and notes. */
+.pg-showcase .sc-rule { display: flex; align-items: center; gap: 0.8rem; margin-block: 1.8rem; color: var(--sc-accent); font-size: 0.6rem; }
+.pg-showcase .sc-rule::before, .pg-showcase .sc-rule::after { content: ''; flex: 1; height: 1px; background: var(--sc-line); }
+.pg-showcase .sc-notes { margin-top: 2.2rem; padding-top: 0.9rem; border-top: 1px solid var(--sc-line); font-size: 0.88rem; color: var(--sc-mute); }
+.pg-showcase .sc-notes-label { display: block; margin-bottom: 0.4rem; color: var(--sc-accent); }
+.pg-showcase .sc-notes ol { padding-left: 1.4rem; margin: 0; }
+.pg-showcase .sc-notes p { margin: 0; }
+.pg-showcase .sc-notes .data-footnote-backref { text-decoration: none; color: var(--sc-accent); margin-left: 0.2em; }
+.pg-showcase .sr-only, .pg-showcase .sc-heading.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Diagrams, when that extension is on, sit in the same card language. */
+.pg-showcase [data-rmk-diagram] { border: 1px solid var(--sc-line); border-radius: var(--sc-radius); padding: 0.6rem; background: var(--sc-card); overflow-x: auto; }

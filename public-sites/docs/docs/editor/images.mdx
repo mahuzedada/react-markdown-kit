@@ -1,0 +1,154 @@
+---
+title: Images
+description: Handle image uploads in the Markdown editor with onUploadImage, where your application owns storage and blob URLs are never written to the document.
+---
+
+import EditorExample from '@site/src/components/EditorExample'
+
+# Images
+
+```tsx
+<MarkdownEditor
+  value={value}
+  onChange={setValue}
+  onUploadImage={async (file, context) => {
+    const asset = await uploadToMyStorage(file, { signal: context.signal })
+    return { src: asset.url, alt: asset.alt ?? '' }
+  }}
+/>
+```
+
+Your application chooses where the bytes go. The editor manages the UI state, the cancellation and the Markdown that ends up in the document.
+
+## Inserting an image by URL
+
+No configuration is needed for an image that already has a URL. The toolbar's image button asks for one, and `![alt](src)` works in source mode.
+
+<EditorExample
+  title="Images are in the default dialect"
+  height={280}
+  markdown={'![The project logo](/img/logo.svg "React Markdown Kit")\n\nAn image is a first-class node, so it survives a save.\n'}
+>
+  This is the fix for the first audit finding. The previous editor rendered `![alt](src)` as a literal exclamation mark followed by a link.
+</EditorExample>
+
+Reference images work too. `![alt][id]` keeps its definition, and the definition is preserved as written. See [Round-trip preservation](./round-trip.mdx).
+
+## Uploading a file
+
+`onUploadImage` is how a file becomes a URL.
+
+```ts
+type MarkdownUploadImage = (
+  file: File,
+  context: MarkdownUploadContext,
+) => Promise<MarkdownImageValue>
+
+interface MarkdownUploadContext {
+  readonly signal: AbortSignal
+  readonly documentKey?: string
+}
+
+interface MarkdownImageValue {
+  readonly src: string
+  readonly alt?: string
+  readonly title?: string
+}
+```
+
+Resolve with the URL your storage returned. The editor inserts the image at the selection.
+
+```tsx
+<MarkdownEditor
+  documentKey={note.id}
+  value={value}
+  onChange={setValue}
+  onUploadImage={async (file, { signal, documentKey }) => {
+    const body = new FormData()
+    body.append('file', file)
+    const response = await fetch(`/api/notes/${documentKey}/images`, {
+      method: 'POST',
+      body,
+      signal,
+    })
+    if (!response.ok) throw new Error('Upload failed')
+    const asset = await response.json()
+    return { src: asset.url, alt: file.name }
+  }}
+/>
+```
+
+`documentKey` is passed through so your endpoint knows which document the asset belongs to. That is what lets you clean up orphans later.
+
+## Cancellation
+
+`context.signal` is aborted when the editor unmounts. Pass it to `fetch`, or to whichever client your storage uses.
+
+An upload that outlives its editor has nowhere to put the result. Honouring the signal is how you avoid a write into a component that is gone.
+
+## Errors
+
+Reject the promise. Let it reach your own error reporting and your own toast.
+
+The editor does not invent an error message and does not insert anything on failure. Nothing enters the document unless the promise resolves.
+
+Calling `commands.uploadImage(file)` without `onUploadImage` configured rejects with an explanatory error, rather than failing silently.
+
+## Never persist a blob URL
+
+`URL.createObjectURL(file)` gives a URL that works in exactly one browser tab, for exactly as long as that page lives.
+
+Written into Markdown it is a broken image the moment the document is saved and reopened. It is also a leak, because the object stays alive until it is revoked.
+
+The editor never writes a `blob:` URL into a document. Only the `src` your handler resolves with reaches the Markdown.
+
+If you want an optimistic local preview while the upload runs, keep the blob URL in your own component state and insert the image when the upload resolves.
+
+## Your own drop zone or file picker
+
+Build the affordance you want and call the command.
+
+```tsx
+'use client'
+
+import { useMarkdownEditorContext } from '@react-markdown-kit/editor'
+
+function ImageDropZone({ children }) {
+  const editor = useMarkdownEditorContext()
+
+  return (
+    <div
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={async (event) => {
+        event.preventDefault()
+        const files = [...event.dataTransfer.files].filter((file) =>
+          file.type.startsWith('image/'),
+        )
+        for (const file of files) {
+          await editor.commands.uploadImage(file)
+        }
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+```
+
+`commands.uploadImage(file)` runs `onUploadImage` and inserts the result. `commands.insertImage({ src, alt, title })` inserts an image you already have a URL for.
+
+Both are available on the instance from `useMarkdownEditor` or `useMarkdownEditorContext`. See [Headless editing](./headless.mdx).
+
+## Alt text
+
+Alt text is content, not decoration. Return a real one from your handler when you can, and let authors edit it.
+
+An empty `alt` is correct for a purely decorative image. A missing one is not the same thing.
+
+The renderer passes `alt` straight through to your `img` component, so an accessible image component is one override away. See [Components](../renderer/components.mdx).
+
+## Rendering the result
+
+Images the editor writes are ordinary Markdown images. The renderer applies the same URL policy it applies to links, so an unsafe scheme is emptied before it reaches the DOM.
+
+If your assets live behind a CDN or need sizing, override `img` in the preset you share between the editor preview and the published page. See [Presets](../renderer/presets.mdx).

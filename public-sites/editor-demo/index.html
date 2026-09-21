@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Free Online Markdown Editor for React | React Markdown Kit</title>
+    <meta name="description" content="Free online Markdown editor for React with rich, source and preview modes. Plain Markdown in, plain Markdown out, no account, plus templates and diagrams." />
+    <link rel="canonical" href="https://editor.reactmarkdownkit.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="React Markdown Kit" />
+    <meta property="og:title" content="Free Online Markdown Editor for React | React Markdown Kit" />
+    <meta property="og:description" content="Free online Markdown editor for React with rich, source and preview modes. Plain Markdown in, plain Markdown out, no account, plus templates and diagrams." />
+    <meta property="og:url" content="https://editor.reactmarkdownkit.com/" />
+    <meta property="og:image" content="https://editor.reactmarkdownkit.com/social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Free Online Markdown Editor for React | React Markdown Kit" />
+    <meta name="twitter:description" content="Free online Markdown editor for React with rich, source and preview modes. Plain Markdown in, plain Markdown out, no account, plus templates and diagrams." />
+    <meta name="twitter:image" content="https://editor.reactmarkdownkit.com/social-card.png" />
+    <meta name="keywords" content="react markdown editor, markdown editor online, free markdown editor, wysiwyg markdown editor react, lexical markdown editor, markdown round trip, react markdown kit" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      // Colour mode before first paint: the saved choice, else the system's.
+      ;(function () {
+        try {
+          var theme = localStorage.getItem('theme')
+          if (theme !== 'light' && theme !== 'dark') {
+            theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          }
+          document.documentElement.dataset.theme = theme
+        } catch (error) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

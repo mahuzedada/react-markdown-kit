@@ -1,0 +1,155 @@
+---
+title: Round-trip preservation
+description: "What the editor guarantees about your source: no-op preservation, documented normalization on edit, opaque nodes for unsupported syntax, no silent loss."
+---
+
+import EditorExample from '@site/src/components/EditorExample'
+
+# Round-trip preservation
+
+Open a document in the editor, switch between rich, source and preview, and close it. The file on disk is byte-for-byte what it was.
+
+That is the contract this page is about. It is the reason the editor is safe to put in front of Markdown you already have.
+
+<EditorExample
+  title="Open it, look around, leave it alone"
+  height={300}
+  markdown={'Setext heading\n==============\n\nSee [the spec][ref] for details.\n\n<div class="callout">\n  <p>Raw HTML block.</p>\n</div>\n\n3. three\n4. four\n\n~~~js\nconst tildeFence = true\n~~~\n\nA Windows path `C:\\path\\to` and a note[^1].\n\n[ref]: https://example.com\n[^1]: The footnote body.\n'}
+>
+  The badge under the editor says `unchanged` until you type. Switch modes as much as you like and it stays that way.
+</EditorExample>
+
+## Why this needs saying
+
+Most Markdown WYSIWYG editors parse into an editing model and serialize back out. Anything the model cannot hold is lost on the way through, and the loss shows up as a diff nobody asked for.
+
+The editor this package replaces did exactly that. Its audit, `docs/AUDIT.md`, lists 22 constructs it damaged on save. A blank quote line gained a second marker. A backslash doubled. A tilde fence got escaped into prose. Reference links were never parsed at all.
+
+Each corruption stuck, and each save compounded it.
+
+All 22 of those cases are fixtures in this repository. The editor round-trips every one byte-identically, with GFM on and with GFM off, and the test fails the build if any of them stops.
+
+## The four guarantees
+
+### No-op preservation
+
+Importing and exporting a document must not change it. Not the bytes, not the blank lines, not the choice of fence character.
+
+The editor holds on to the original source and the byte span of every top-level block. A block you did not touch is written back from those bytes, not re-serialized from a tree.
+
+That is why `_emphasis_` does not become `*emphasis*`, and why four blank lines stay four blank lines.
+
+### Supported edits preserve meaning
+
+When you edit a construct the editor understands, the result means the same thing, and any normalization is documented.
+
+Edit one paragraph in a long document and only that paragraph's bytes change. The blocks on either side come back verbatim.
+
+<EditorExample
+  title="Edit one block, watch the others stay put"
+  height={320}
+  markdown={'Title\n=====\n\nEdit only this paragraph.\n\n~~~js\nconst untouched = true\n~~~\n\n- a\n\n  second para\n\n- b\n'}
+>
+  The setext heading stays setext. The tilde fence stays tilde. The loose list keeps its blank lines. Only the block you edited is rewritten.
+</EditorExample>
+
+### Unsupported syntax becomes an opaque node
+
+Some Markdown has no rich editing representation. Raw HTML, link definitions, footnote definitions, front matter, math, a third-party extension's node.
+
+None of it becomes prose. Each becomes an opaque node, which keeps two things: the parsed subtree, and the exact source slice it came from.
+
+An opaque node renders as a non-editable block showing its source. On save it writes back the bytes it was given, never a re-serialization.
+
+<EditorExample
+  title="HTML, definitions and footnotes survive edits around them"
+  height={360}
+  markdown={'Add a sentence to this paragraph.\n\n<figure class="diagram">\n  <img src="/architecture.svg" alt="">\n  <figcaption>How it fits together</figcaption>\n</figure>\n\nNow add one here too, next to a [reference link][docs].\n\n[docs]: https://example.com/docs "Title"\n\nAnd a footnote reference[^a].\n\n[^a]: Footnotes are definitions, so they are opaque too.\n'}
+>
+  Type in either paragraph. The HTML block, the link definition and the footnote definition come back exactly as written.
+</EditorExample>
+
+This is the fix for the audit's third finding. The previous editor degraded anything it did not understand into literal paragraph text, which then got re-escaped on the next save.
+
+### No silent loss
+
+If the editor cannot safely preserve a construct, it does not flatten it and it does not drop it.
+
+The fallback is visible. An opaque block you can see, or source mode, which is always available and always shows the real file.
+
+Parse problems arrive as diagnostics rather than as quiet repairs.
+
+```tsx
+<MarkdownEditor
+  value={value}
+  onChange={setValue}
+  onDiagnostics={(diagnostics) => report(diagnostics)}
+/>
+```
+
+## How it works
+
+**One parser for the whole document.** The editor parses with `compileMarkdown` from the renderer, the same micromark and mdast pipeline the renderer uses. There is no line-oriented regular expression transformer anywhere in the package. That protocol was the root cause of every finding in the audit.
+
+**Source spans.** Every top-level block is indexed by a canonical key and its exact byte range in the original source.
+
+**Dirty-region writing.** On save the writer aligns the edited blocks against that index. Unchanged blocks are copied from the original bytes. Only changed blocks are serialized.
+
+**Opaque nodes carry their source.** A node the bridge has no editing mapping for keeps the slice it came from and is written back from it.
+
+**All three modes project the same document.** Source mode does not unmount the document and rebuild it, so switching modes cannot lose what the rich surface could not show.
+
+## The 22 audited cases
+
+Each row corrupted on save in the previous editor. Each now round-trips byte-identically.
+
+| Case | What used to happen |
+| --- | --- |
+| Blank line inside a blockquote | A second marker was added |
+| Nested blockquote | Flattened and re-prefixed |
+| Backslash hard break | The backslash doubled on every save |
+| Windows path in text | Backslashes doubled |
+| Tilde fence | Tildes escaped, destroying the fence |
+| Double-backtick inline code | Backticks escaped |
+| Loose list with a second paragraph | A stray blank line appeared |
+| Setext heading | Kept as paragraph text plus a line break |
+| Indented code block | Shown as literal paragraph text |
+| Reference link | Never parsed |
+| Reference image | Never parsed |
+| Inline image | Rendered as a literal `!` plus a link |
+| Image with a title | Same |
+| Autolink | Kept as plain text |
+| HTML block | Raw source shown in prose |
+| HTML comment | Same |
+| Ordered list starting at 3 | Renumbered from 1 |
+| Soft line break | Turned into a hard break |
+| Underscore emphasis | Normalized to asterisks |
+| Thematic break variants | Every variant rewritten to `---` |
+| HTML entities | Double-escaped |
+| Runs of blank lines | Collapsed to one |
+
+The corpus lives in `fixtures/editor-roundtrip/corruption.json`, and the gate is `packages/editor/tests/roundtrip.test.ts`.
+
+## Two layers, two different promises
+
+Conflating these is how the old bugs went unnoticed, so the distinction is worth keeping.
+
+**The editor layer** is open, look around, close. Byte identity is required, 22 out of 22. That is what this page guarantees, and it works because unchanged regions are never re-serialized.
+
+**The serializer layer** is `documentToMarkdown(compileMarkdown(source))`. That path deliberately canonicalizes, so byte identity is neither expected nor wanted. What holds there is semantic stability, 22 out of 22, and idempotence, 22 out of 22. Saving twice never differs from saving once.
+
+Use the editor when the exact bytes matter. Use the serializer when you want a canonical form. See [Compiling](../renderer/compiling.mdx).
+
+## What is still normalized
+
+Editing a block rewrites that block. A heading you retype is written in the serializer's canonical form, which uses `-` bullets, `*` for strong and backtick fences.
+
+This is normalization of something you changed, not corruption of something you did not.
+
+If a commit diff of only-what-I-touched matters to your team, that is exactly what the dirty-region writer gives you.
+
+## Related
+
+The editor API is in [Editor basics](./basics.mdx).
+
+The same round-trip pipeline runs without React, which is how it is tested. See [Headless editing](./headless.mdx).

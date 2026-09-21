@@ -1,0 +1,155 @@
+/*
+ * Playground chrome. Hairlines, one accent, tabular numbers. The rendered
+ * Markdown itself is styled only by whatever the reader selected: nothing,
+ * the kit's `.rmk-document` stylesheet, or the demo utility classes.
+ */
+
+.shell {
+  --pg-line: var(--border);
+  --pg-soft: var(--muted);
+  --pg-ink: var(--foreground);
+  --pg-mute: var(--muted-foreground);
+  --pg-accent: var(--primary);
+  /* Full-bleed and exactly one viewport tall; the page scrolls past it. */
+  height: calc(100dvh - var(--site-header-height));
+  border-bottom: 1px solid var(--pg-line);
+  background: var(--card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Workbench: source and output, splitting whatever height the strips leave. */
+.work {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.22rem 0;
+  cursor: pointer;
+  line-height: 1.35;
+}
+.check input { margin: 0.2rem 0 0; accent-color: var(--pg-accent); flex: none; }
+.check small { display: block; color: var(--pg-mute); font-size: 0.72rem; }
+.check:has(input:disabled) { opacity: 0.45; cursor: default; }
+
+.segment {
+  display: inline-flex;
+  border: 1px solid var(--pg-line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 0.15rem 0 0.35rem;
+}
+.segment button {
+  font: inherit;
+  font-size: 0.74rem;
+  padding: 0.3rem 0.55rem;
+  border: 0;
+  background: transparent;
+  color: var(--pg-ink);
+  cursor: pointer;
+}
+.segment button + button { border-left: 1px solid var(--pg-line); }
+.segment .on { background: var(--pg-accent); color: var(--primary-foreground); }
+
+.sourcePane, .outPane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.sourcePane { border-right: 1px solid var(--pg-line); }
+
+.paneHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.35rem;
+  padding: 0.3rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pg-mute);
+}
+
+.textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0.9rem;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--pg-ink);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  tab-size: 2;
+}
+.textarea:focus { box-shadow: inset 3px 0 0 var(--pg-accent); }
+.dropping { outline: 2px dashed var(--pg-accent); outline-offset: -8px; }
+
+.tabs { display: flex; gap: 0.15rem; }
+.tab, .tabOn {
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.55rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--pg-mute);
+  cursor: pointer;
+}
+.tab:hover { color: var(--pg-ink); }
+.tabOn { color: var(--pg-ink); background: var(--pg-soft); }
+
+.output { padding: 1rem 1.1rem; flex: 1; overflow: auto; font-size: 0.94rem; }
+
+.codeView, .htmlView, .treeView {
+  flex: 1;
+  margin: 0;
+  padding: 0.9rem;
+  overflow: auto;
+  background: transparent;
+  color: var(--pg-ink);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.55;
+  white-space: pre;
+  tab-size: 2;
+}
+.htmlView { white-space: pre-wrap; word-break: break-word; }
+
+.note { padding: 0.6rem 0.9rem; font-size: 0.78rem; color: var(--pg-mute); border-top: 1px solid var(--border); }
+
+/* Status strip: numbers only, all tabular. */
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  padding: 0.5rem 0.9rem;
+  border-top: 1px solid var(--pg-line);
+  background: var(--pg-soft);
+  font-size: 0.74rem;
+  color: var(--pg-mute);
+  font-variant-numeric: tabular-nums;
+}
+.stat b { color: var(--pg-ink); font-weight: 600; }
+.status .method { margin-left: auto; }
+
+.mobileSwitch { display: none; }@media (max-width: 900px) {
+  .work { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
+  .sourcePane { border-right: 0; }
+  .work > [data-mobile-hidden] { display: none; }
+  .mobileSwitch { display: inline-flex; }
+  .status .method { margin-left: 0; }
+}
+

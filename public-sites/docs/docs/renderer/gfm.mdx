@@ -1,0 +1,139 @@
+---
+title: GFM
+description: Render GitHub Flavored Markdown tables, task lists, strikethrough, autolinks and footnotes through the native extension or through remark-gfm.
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+
+# GitHub Flavored Markdown
+
+```tsx
+import { GfmMarkdown } from '@react-markdown-kit/renderer/gfm'
+
+<GfmMarkdown>{content}</GfmMarkdown>
+```
+
+GFM adds tables, task lists, strikethrough, autolinks and footnotes on top of CommonMark. It is off by default, because CommonMark is the smaller promise.
+
+## Two routes
+
+**The native extension.** `gfm()` is a Markdown extension, so it also configures the editor and the template engine through a shared preset.
+
+```tsx
+import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const appMarkdown = defineMarkdownPreset({ extensions: [gfm()] })
+
+<Markdown preset={appMarkdown}>{content}</Markdown>
+```
+
+**The remark plugin.** The plugin you already use keeps working.
+
+```tsx
+import Markdown from '@react-markdown-kit/renderer'
+import remarkGfm from 'remark-gfm'
+
+<Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+```
+
+The two routes are fixture-tested to agree. `tests/gfm.test.ts` runs the same GFM corpus through both and compares the rendered HTML, so the plugin route is not a second-class path.
+
+Pick the extension when you want one dialect shared across the kit. Pick the plugin when you are migrating and want to change as little as possible.
+
+`GfmMarkdown` is the shorthand for the extension route, and takes every prop `Markdown` takes.
+
+### Strikethrough with one tilde
+
+`gfm()` takes one option.
+
+```ts
+gfm({ singleTilde: false })
+```
+
+The default is `true`, which is what GitHub, cmark-gfm and `remark-gfm` all do. With the default, `~x~` is struck through. Set it to `false` to require `~~x~~`.
+
+## Tables
+
+<RenderExample
+  gfm
+  editable
+  title="Tables, with per-column alignment"
+  markdown={'| Package | Role | Size |\n| :--- | :---: | ---: |\n| renderer | display | 24 kB |\n| editor | create | larger |\n| template | personalize | small |\n'}
+>
+  The second row sets alignment. `:---` is left, `:---:` is centre, `---:` is right.
+</RenderExample>
+
+A cell is an ordinary Markdown subtree, so emphasis, links and code work inside one.
+
+<RenderExample
+  gfm
+  title="A cell is not a special dialect"
+  markdown={'| Field | Default |\n| --- | --- |\n| `skipHtml` | **true** |\n| `urlTransform` | [defaultUrlTransform](https://example.com) |\n'}
+/>
+
+## Task lists
+
+<RenderExample
+  gfm
+  editable
+  title="Task lists"
+  markdown={'- [x] Parse with micromark\n- [x] Keep mdast as the document\n- [ ] Ship the migration codemod\n  - [ ] Nested items work too\n'}
+>
+  The checkboxes render disabled, because rendered Markdown is not a form. The editor makes them clickable.
+</RenderExample>
+
+The list carries `contains-task-list` and each item carries `task-list-item`, matching what GitHub and `remark-gfm` emit. Those are the only classes the renderer adds without being asked.
+
+## Strikethrough
+
+<RenderExample
+  gfm
+  title="Strikethrough"
+  markdown={'Status: ~~blocked~~ shipped.\n\nA single tilde ~also works~ by default.\n'}
+/>
+
+## Autolinks
+
+A bare URL becomes a link with no angle brackets and no link syntax.
+
+<RenderExample
+  gfm
+  title="Literal autolinks"
+  markdown={'Read https://example.com/spec for details.\n\nMail support@example.com with questions.\n\nAngle brackets still work: <https://example.com>\n'}
+/>
+
+URL policy still applies to an autolink. An unsafe scheme is emptied before it reaches the DOM. See [Security](/docs/security).
+
+## Footnotes
+
+<RenderExample
+  gfm
+  editable
+  title="Footnotes, with a generated back-reference"
+  markdown={'The parser is micromark[^why], not a set of regular expressions.\n\n[^why]: Line-oriented matching cannot see block structure, which is where the old corruptions came from.\n'}
+>
+  Numbering is derived from document order. The footnote section is rendered last, whatever order the definitions appear in.
+</RenderExample>
+
+A footnote definition is a block, so it can hold paragraphs, lists and code.
+
+## Everything at once
+
+<RenderExample
+  gfm
+  editable
+  title="One document, every GFM feature"
+  markdown={'## Weekly report\n\nOwner: https://example.com/team\n\n| Task | Owner | Done |\n| --- | --- | :---: |\n| Importer | Ada | yes |\n| Exporter | Grace | ~~no~~ |\n\n- [x] Land the parser[^1]\n- [ ] Land the writer\n\n[^1]: Shipped on Tuesday.\n'}
+/>
+
+## What GFM does not turn on
+
+Raw HTML stays inert. GFM does not change the security policy, and `skipHtml` still defaults to `true`.
+
+Heading anchors, emoji shortcodes and mentions are GitHub website features, not GFM syntax. Add them with a remark or rehype plugin.
+
+## Related
+
+Bundle `gfm()` with your components and policy in a [preset](./presets.mdx), then reuse it in the editor.
+
+The editor understands every GFM construct on this page, and writes them back unchanged. See [Round-trip preservation](../editor/round-trip.mdx).

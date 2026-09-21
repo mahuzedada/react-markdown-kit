@@ -1,0 +1,39 @@
+/*
+ * The handful of Tailwind-named utilities the playground's "Utility classes"
+ * mode uses, so the `classNames` prop can be demonstrated without shipping
+ * Tailwind. In an application these come from your utility framework.
+ */
+.pg-utility { line-height: 1.6; }
+.pg-utility .font-bold { font-weight: 700; }
+.pg-utility .tracking-tight { letter-spacing: -0.02em; }
+.pg-utility .mt-8 { margin-top: 2rem; }
+.pg-utility .mb-3 { margin-bottom: 0.75rem; }
+.pg-utility .mb-4 { margin-bottom: 1rem; }
+.pg-utility .my-8 { margin-block: 2rem; }
+.pg-utility .leading-7 { line-height: 1.75rem; }
+.pg-utility .underline { text-decoration: underline; }
+.pg-utility .decoration-2 { text-decoration-thickness: 2px; }
+.pg-utility .underline-offset-4 { text-underline-offset: 4px; }
+.pg-utility .rounded { border-radius: 0.25rem; }
+.pg-utility .rounded-lg { border-radius: 0.5rem; }
+.pg-utility .bg-stone-100 { background: #f5f5f4; color: #1c1917; }
+.pg-utility .bg-stone-900 { background: #1c1917; }
+.pg-utility .text-stone-100 { color: #f5f5f4; }
+.pg-utility .px-1 { padding-inline: 0.25rem; }
+.pg-utility .px-2 { padding-inline: 0.5rem; }
+.pg-utility .py-1 { padding-block: 0.25rem; }
+.pg-utility .p-4 { padding: 1rem; }
+.pg-utility .pl-4 { padding-left: 1rem; }
+.pg-utility .pl-6 { padding-left: 1.5rem; }
+.pg-utility .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.pg-utility .text-sm { font-size: 0.875rem; }
+.pg-utility .overflow-x-auto { overflow-x: auto; }
+.pg-utility .border-l-4 { border-left: 4px solid currentColor; }
+.pg-utility .italic { font-style: italic; }
+.pg-utility .w-full { width: 100%; }
+.pg-utility .border-collapse { border-collapse: collapse; }
+.pg-utility .border-b { border-bottom: 1px solid rgba(128, 128, 128, 0.4); }
+.pg-utility .border-b-2 { border-bottom: 2px solid currentColor; }
+.pg-utility .text-left { text-align: left; }
+.pg-utility .shadow { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.pg-utility pre.rounded-lg > code { background: transparent; color: inherit; padding: 0; }

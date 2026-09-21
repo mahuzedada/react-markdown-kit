@@ -1,0 +1,150 @@
+/*
+ * Styling for the doc-site example chrome only.
+ *
+ * Note what is NOT here: any style for the rendered Markdown itself. That
+ * comes from `@react-markdown-kit/renderer/styles.css` scoped to
+ * `.rmk-document`, which is the same opt-in stylesheet a consumer would use.
+ * The site styles its own furniture and nothing else.
+ */
+
+.example {
+  margin: 0 0 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--card);
+}
+
+.caption {
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+@media (max-width: 768px) {
+  .split { grid-template-columns: 1fr; }
+  .pane + .pane { border-top: 1px solid var(--border); }
+}
+
+.pane { min-width: 0; }
+.pane + .pane { border-left: 1px solid var(--border); }
+
+@media (max-width: 768px) {
+  .pane + .pane { border-left: 0; }
+}
+
+.paneLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.source {
+  margin: 0;
+  padding: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: transparent;
+  border: 0;
+  width: 100%;
+  min-height: 8rem;
+  color: var(--foreground);
+  resize: vertical;
+}
+
+textarea.source { outline-offset: -2px; }
+
+.output {
+  padding: 0.85rem;
+  font-size: 0.92rem;
+}
+
+.editorShell {
+  border-bottom: 1px solid var(--border);
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+
+.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.switch,
+.switchActive {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.switchActive {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.badgeOk,
+.badgeEdit {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--radius-sm);
+  text-transform: none;
+}
+
+.badgeOk {
+  background: color-mix(in oklab, var(--success) 14%, transparent);
+  color: var(--success-text);
+}
+
+.badgeEdit {
+  background: color-mix(in oklab, var(--warning) 14%, transparent);
+  color: var(--warning-text);
+}
+
+.note {
+  padding: 0.7rem 0.9rem;
+  font-size: 0.86rem;
+  border-top: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.details { padding: 0.5rem 0.9rem 0.8rem; font-size: 0.85rem; }
+.details summary { cursor: pointer; }
+.details .source { min-height: 0; padding-left: 0; }
+
+.diagnostics { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; }

@@ -1,0 +1,50 @@
+{
+  "//": "Shipped code. Maximum strictness, because these are the types consumers get.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@internal/*": [
+        "internal/*"
+      ],
+      "@react-markdown-kit/renderer": [
+        "packages/renderer/src/index.ts"
+      ],
+      "@react-markdown-kit/renderer/gfm": [
+        "packages/renderer/src/gfm.ts"
+      ],
+      "@react-markdown-kit/editor": [
+        "packages/editor/src/index.ts"
+      ],
+      "@react-markdown-kit/editor/lexical": [
+        "packages/editor/src/lexical.ts"
+      ],
+      "@react-markdown-kit/template": [
+        "plugins/template/src/index.ts"
+      ],
+      "@react-markdown-kit/template/editor": [
+        "plugins/template/src/editor.ts"
+      ],
+      "@react-markdown-kit/mermaid": [
+        "plugins/mermaid/src/index.ts"
+      ],
+      "@react-markdown-kit/mermaid/editor": [
+        "plugins/mermaid/src/editor.ts"
+      ],
+      "@react-markdown-kit/slides": [
+        "plugins/slides/src/index.ts"
+      ],
+      "@react-markdown-kit/slides/present": [
+        "plugins/slides/src/present.ts"
+      ],
+      "@react-markdown-kit/slides/editor": [
+        "plugins/slides/src/editor.ts"
+      ]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*", "plugins/*/src/**/*",
+    "internal/**/*"
+  ]
+}

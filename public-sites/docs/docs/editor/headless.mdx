@@ -1,0 +1,208 @@
+---
+title: Headless editing
+description: Build your own Markdown editor UI with useMarkdownEditor, MarkdownEditorProvider and MarkdownEditorContent, without importing a Lexical type.
+---
+
+import EditorExample from '@site/src/components/EditorExample'
+
+# Headless editing
+
+```tsx
+'use client'
+
+import {
+  useMarkdownEditor,
+  MarkdownEditorProvider,
+  MarkdownEditorContent,
+} from '@react-markdown-kit/editor'
+
+export function Composer({ value, onChange }) {
+  const editor = useMarkdownEditor({ value, onChange })
+
+  return (
+    <MarkdownEditorProvider editor={editor}>
+      <MyToolbar />
+      <MarkdownEditorContent aria-label="Message" />
+      <MyStatusBar />
+    </MarkdownEditorProvider>
+  )
+}
+```
+
+`<MarkdownEditor>` is a thin component over exactly these pieces. The default chrome has no private powers, so anything it does you can do.
+
+Use this when the editor has to sit inside your own layout. A CMS, a report builder, a chat composer, an admin tool, a panel in a larger page.
+
+## The four exports
+
+`useMarkdownEditor(options)` owns the value, the mode, the document identity and the parsing. It renders nothing and returns an editor instance.
+
+It takes the same options as `<MarkdownEditor>` minus the chrome: `value`, `defaultValue`, `onChange`, `mode`, `defaultMode`, `onModeChange`, `preset`, `extensions`, `readOnly`, `documentKey`, `onUploadImage` and `onDiagnostics`.
+
+`MarkdownEditorProvider` puts the instance in context.
+
+`MarkdownEditorContent` renders the surface for the active mode. It accepts `aria-label`, `aria-labelledby` and `aria-describedby`, and an `editor` prop if you would rather skip the provider.
+
+`useMarkdownEditorContext()` reads the instance from context. It throws a named error outside a provider, rather than returning null for you to check.
+
+## The editor instance
+
+```ts
+interface MarkdownEditorInstance {
+  getMarkdown(): string
+  getDocument(): MarkdownDocument
+  focus(): void
+  blur(): void
+  undo(): void
+  redo(): void
+  setMode(mode: MarkdownEditorMode): void
+  readonly mode: MarkdownEditorMode
+  readonly commands: MarkdownEditorCommands
+  readonly diagnostics: readonly MarkdownDiagnostic[]
+  readonly readOnly: boolean
+  getNativeEditor(): unknown
+}
+```
+
+`getMarkdown()` is the current source. `getDocument()` is the compiled `MarkdownDocument`, which you can hand straight to the renderer.
+
+## Commands
+
+Every default toolbar button is one of these verbs.
+
+```ts
+interface MarkdownEditorCommands {
+  toggleMark(mark: 'strong' | 'emphasis' | 'delete' | 'code'): void
+  setBlockType(type: 'paragraph' | 'heading1' | 'blockquote' | 'codeBlock' | ...): void
+  toggleBulletList(): void
+  toggleOrderedList(): void
+  toggleTaskList(): void
+  insertLink(url: string, options?: { title?: string; text?: string }): void
+  removeLink(): void
+  insertImage(image: { src: string; alt?: string; title?: string }): void
+  insertThematicBreak(): void
+  insertMarkdown(source: string): void
+  setMarkdown(source: string): void
+  uploadImage(file: File): Promise<void>
+}
+```
+
+`insertMarkdown` parses with the active preset and inserts at the selection. It is how a slash command or a snippet menu inserts a table.
+
+`setMarkdown` replaces the whole document.
+
+## A custom toolbar
+
+```tsx
+'use client'
+
+import { useMarkdownEditorContext } from '@react-markdown-kit/editor'
+import { Button, ButtonGroup } from './my-design-system'
+
+function MyToolbar() {
+  const editor = useMarkdownEditorContext()
+  const { commands } = editor
+
+  return (
+    <ButtonGroup aria-label="Formatting">
+      <Button onClick={() => commands.toggleMark('strong')}>Bold</Button>
+      <Button onClick={() => commands.toggleMark('emphasis')}>Italic</Button>
+      <Button onClick={() => commands.setBlockType('heading2')}>Heading</Button>
+      <Button onClick={() => commands.toggleBulletList()}>List</Button>
+      <Button onClick={() => commands.insertMarkdown('\n| a | b |\n| - | - |\n| 1 | 2 |\n')}>
+        Table
+      </Button>
+      <Button onClick={() => editor.undo()}>Undo</Button>
+      <Button onClick={() => editor.setMode('source')}>Markdown</Button>
+    </ButtonGroup>
+  )
+}
+```
+
+Nothing here is editor chrome from this package. Use whatever component library you already have.
+
+<EditorExample
+  title="The content surface with no toolbar at all"
+  toolbar={false}
+  height={220}
+  markdown={'Headless means this surface, plus whatever chrome you build around it.\n\n- Keyboard shortcuts still work\n- Undo and redo still work\n'}
+/>
+
+### Active state
+
+A custom toolbar built on `commands` can run every verb, but it does not get button highlighting for free.
+
+For highlighting without writing your own selection listener, use the `toolbar` render prop on `<MarkdownEditor>`. Each item arrives with `active`, `disabled`, `label`, `icon`, `group` and `run()`, and you supply the markup.
+
+```tsx
+<MarkdownEditor
+  value={value}
+  onChange={setValue}
+  toolbar={(items) =>
+    items.map((item) => (
+      <Button key={item.id} onClick={item.run} pressed={item.active} disabled={item.disabled}>
+        {item.icon}
+        {item.label}
+      </Button>
+    ))
+  }
+/>
+```
+
+That keeps your markup and loses only the default container.
+
+## A status bar
+
+```tsx
+function MyStatusBar() {
+  const editor = useMarkdownEditorContext()
+  return (
+    <footer>
+      <span>{editor.getMarkdown().length} characters</span>
+      {editor.diagnostics.length > 0 ? <span>{editor.diagnostics.length} notes</span> : null}
+    </footer>
+  )
+}
+```
+
+`getDocument()` gives you the tree, so a table of contents is a walk over `document.tree.children` looking for `heading` nodes.
+
+## No Lexical types required
+
+Lexical is how the rich surface is implemented. It is not the contract.
+
+Nothing this package exports requires a Lexical type to use. You can type every prop, every handler and the whole instance without `lexical` in your type path.
+
+A test in the package reads the published type declarations and fails if any of them imports from `lexical` or `@lexical/*`.
+
+The one escape hatch is deliberate:
+
+```ts
+const native = editor.getNativeEditor()
+```
+
+It returns `unknown`, so Lexical never leaks into your types by accident. You cast it yourself.
+
+`getNativeEditor()` carries weaker stability guarantees than everything else on the instance. The editing engine may be replaced in a future major version without that counting as a breaking change to the rest of the API.
+
+Use it for something the public commands genuinely cannot do, and expect to revisit it on a major upgrade. If you find yourself needing it often, that is worth reporting as a gap in `commands`.
+
+## Headless without React
+
+There is a lower level again, with no React and no DOM.
+
+```ts
+import { createMarkdownBridge } from '@react-markdown-kit/editor'
+
+const bridge = createMarkdownBridge({ preset: appMarkdown, headless: true })
+bridge.load(source)
+const out = bridge.getMarkdown()
+```
+
+This is the exact pipeline the React editor runs. It is useful on a server, in a worker and in tests. A round trip proved here holds in the browser, which is how the preservation gate is tested. See [Round-trip preservation](./round-trip.mdx).
+
+## Related
+
+The batteries-included component and its props are in [Editor basics](./basics.mdx).
+
+Styling the surface and your own chrome is in [Styling](/docs/styling).

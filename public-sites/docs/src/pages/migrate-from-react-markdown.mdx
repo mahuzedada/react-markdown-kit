@@ -1,0 +1,118 @@
+---
+title: Migrate from react-markdown
+description: "An evidence-backed migration guide from react-markdown 10 to React Markdown Kit: the three things that differ, and a codemod that refuses to guess."
+---
+
+import Link from '@docusaurus/Link'
+import { ArticleJsonLd } from '@site/src/components/JsonLd'
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path="/migrate-from-react-markdown" />
+
+# Migrate from react-markdown
+
+Read this before you switch. It says what differs, not only what matches.
+
+## We do not call this a drop-in replacement
+
+The prop surface matches and all 39 compared cases produce identical markup, but three
+things differ. Two of them can bite you silently, so they are listed first.
+
+## Three differences
+
+### `className` is ignored rather than rejected
+
+`react-markdown` 10 throws `Unexpected className prop, remove it`. This renderer has no
+`className` prop either, but ignores it at runtime. TypeScript rejects it, so TypeScript
+code fails loudly. **JavaScript code that still passes `className` will silently lose the
+wrapper.**
+
+Wrap the component instead.
+
+```diff
+-<Markdown className="prose">{content}</Markdown>
++<div className="prose">
++  <Markdown>{content}</Markdown>
++</div>
+```
+
+### `MarkdownAsync` and `MarkdownHooks` do not exist
+
+This renderer is synchronous only. If you use either export, or a remark or rehype
+plugin that does asynchronous work, stay on `react-markdown` for those call sites. The
+codemod leaves them alone and tells you.
+
+### `remarkPlugins` on a precompiled document
+
+A plugin that changes the *dialect*, such as `remark-gfm`, cannot apply to text that has
+already been parsed. Pass it when compiling, or use an extension on the preset.
+
+```diff
+-<Markdown remarkPlugins={[remarkGfm]} document={doc} />
++const doc = compileMarkdown(src, { preset: defineMarkdownPreset({ extensions: [gfm()] }) })
++<Markdown document={doc} />
+```
+
+Plugins that transform the tree still run on a precompiled document.
+
+## What matches
+
+Eleven props produce identical markup against a pinned `react-markdown@10.1.0`:
+`children`, `components`, `remarkPlugins`, `rehypePlugins`, `remarkRehypeOptions`,
+`allowedElements`, `disallowedElements`, `allowElement`, `skipHtml`, `unwrapDisallowed`
+and `urlTransform`. The default URL policy is the same algorithm and agrees on every
+probe URL.
+
+The matrix is generated from the test run, so it cannot drift from reality.
+
+<Link to="/docs/compatibility">The full matrix</Link>
+
+## The codemod
+
+Dry run by default. It changes imports and nothing else.
+
+```bash
+npx rmk-migrate 'src/**/*.tsx'          # report only
+npx rmk-migrate 'src/**/*.tsx' --write  # apply
+```
+
+It preserves your alias and quote style:
+
+```diff
+-import ReactMarkdown from "react-markdown"
++import ReactMarkdown from "@react-markdown-kit/renderer"
+```
+
+It refuses to guess. `MarkdownAsync`, `MarkdownHooks` and imports that reach into
+`react-markdown/lib/*` are left untouched with an explanation. It also flags `rehype-raw`
+used without `rehype-sanitize` rather than quietly carrying that setup across, because
+that combination executes author HTML.
+
+## Check against your own content first
+
+Render your real corpus through both implementations and compare the output. Nothing
+leaves your machine.
+
+```bash
+npx rmk-compare 'content/**/*.md' --gfm
+```
+
+```text
+3 document(s) compared
+  matching   3 (100%)
+  differing  0
+```
+
+It exits non-zero on a difference, so you can gate a pull request on it.
+
+## Suggested order
+
+1. Run `rmk-compare` on your content and read the differences.
+2. Run `rmk-migrate` as a dry run and read what it refuses to touch.
+3. Fix `className` call sites by hand.
+4. Apply with `--write`, then run your own tests.
+
+## Next
+
+<Link to="/docs/compatibility">Compatibility matrix</Link> ·{' '}
+<Link to="/react-markdown-renderer">Renderer overview</Link> ·{' '}
+<Link to="/docs/security">Security model</Link>

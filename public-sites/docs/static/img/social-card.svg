@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <rect width="1200" height="630" fill="#1c2127"/>
+  <rect x="64" y="64" width="72" height="72" rx="16" fill="#2d72d2"/>
+  <path d="M78 118V82h9l9.6 13.2L106.2 82h9v36h-9V96.4l-6.6 9h-2.7l-6.6-9V118z" fill="#fff"/>
+  <text x="64" y="270" font-family="ui-sans-serif, system-ui, sans-serif" font-size="68" font-weight="650" fill="#ffffff">React Markdown Kit</text>
+  <text x="64" y="350" font-family="ui-sans-serif, system-ui, sans-serif" font-size="40" fill="#abb3bf">Render Markdown. Add editing.</text>
+  <text x="64" y="404" font-family="ui-sans-serif, system-ui, sans-serif" font-size="40" fill="#abb3bf">Personalize the same document.</text>
+  <g font-family="ui-monospace, SFMono-Regular, monospace" font-size="27" fill="#8abbff">
+    <text x="64" y="512">@react-markdown-kit/renderer</text>
+    <text x="64" y="556">@react-markdown-kit/editor</text>
+    <text x="64" y="600">@react-markdown-kit/renderer/template</text>
+  </g>
+</svg>

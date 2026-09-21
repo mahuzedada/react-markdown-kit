@@ -1,0 +1,41 @@
+{
+  "name": "reactmarkdownkit",
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm build && pnpm build:sites",
+  "context": ".",
+  "dockerfile": "Dockerfile",
+  "composeFile": "compose.yml",
+  "nginxFile": "nginx.shipiru.conf",
+  "nginxSite": "reactmarkdownkit",
+  "container": "reactmarkdownkit",
+  "healthPath": "/",
+  "routeChecks": [
+    {
+      "url": "https://docs.reactmarkdownkit.com/",
+      "status": 200
+    },
+    {
+      "url": "https://mermaid.reactmarkdownkit.com/",
+      "status": 200
+    },
+    {
+      "url": "https://slides.reactmarkdownkit.com/",
+      "status": 200
+    },
+    {
+      "url": "https://renderer.reactmarkdownkit.com/",
+      "status": 200
+    },
+    {
+      "url": "https://editor.reactmarkdownkit.com/",
+      "status": 200
+    },
+    {
+      "url": "https://reactmarkdownkit.com/",
+      "status": 200
+    },
+    {
+      "url": "https://www.reactmarkdownkit.com/",
+      "status": 200
+    }
+  ]
+}

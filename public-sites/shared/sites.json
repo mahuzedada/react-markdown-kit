@@ -1,0 +1,9 @@
+{
+  "home": "https://reactmarkdownkit.com",
+  "docs": "https://docs.reactmarkdownkit.com",
+  "rendererDemo": "https://renderer.reactmarkdownkit.com",
+  "editorDemo": "https://editor.reactmarkdownkit.com",
+  "mermaidDemo": "https://mermaid.reactmarkdownkit.com",
+  "slidesDemo": "https://slides.reactmarkdownkit.com",
+  "github": "https://github.com/mahuzedada/react-markdown-kit"
+}

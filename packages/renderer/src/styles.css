@@ -1,0 +1,111 @@
+/*
+ * Optional typography for @react-markdown-kit/renderer.
+ *
+ * Opt in by importing this file and putting `.rmk-document` on a wrapper. It is
+ * scoped to that class, uses single-class specificity, ships no reset, and
+ * reads every value from a --rmk-* custom property you can override on any
+ * ancestor. Nothing here is required for the renderer to work.
+ */
+
+.rmk-document {
+  --rmk-font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --rmk-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --rmk-text: currentColor;
+  --rmk-muted: color-mix(in srgb, currentColor 65%, transparent);
+  --rmk-border: color-mix(in srgb, currentColor 15%, transparent);
+  --rmk-surface: color-mix(in srgb, currentColor 5%, transparent);
+  --rmk-link: currentColor;
+  --rmk-measure: 68ch;
+  --rmk-space: 1rem;
+  --rmk-radius: 4px;
+
+  color: var(--rmk-text);
+  font-family: var(--rmk-font-body);
+  line-height: 1.6;
+}
+
+/*
+ * Vertical rhythm. Element defaults are zeroed inside :where() so this owl
+ * selector, at the same single-class specificity and later in the file, is
+ * the one rule that decides spacing between blocks.
+ */
+.rmk-document :where(p),
+.rmk-document :where(h1),
+.rmk-document :where(h2),
+.rmk-document :where(h3),
+.rmk-document :where(h4),
+.rmk-document :where(h5),
+.rmk-document :where(h6),
+.rmk-document :where(ul),
+.rmk-document :where(ol),
+.rmk-document :where(blockquote),
+.rmk-document :where(pre) { margin-block: 0; }
+.rmk-document > * + * { margin-block-start: var(--rmk-space); }
+.rmk-document p { max-width: var(--rmk-measure); }
+
+.rmk-document h1,
+.rmk-document h2,
+.rmk-document h3,
+.rmk-document h4,
+.rmk-document h5,
+.rmk-document h6 {
+  line-height: 1.25;
+  text-wrap: balance;
+  font-weight: 600;
+}
+.rmk-document h1 { font-size: 2em; }
+.rmk-document h2 { font-size: 1.5em; }
+.rmk-document h3 { font-size: 1.25em; }
+.rmk-document h4 { font-size: 1.1em; }
+.rmk-document h5,
+.rmk-document h6 { font-size: 1em; }
+
+.rmk-document a { color: var(--rmk-link); text-underline-offset: 2px; }
+
+.rmk-document img { max-width: 100%; height: auto; }
+
+.rmk-document ul,
+.rmk-document ol { padding-inline-start: 1.5em; max-width: var(--rmk-measure); }
+.rmk-document li + li { margin-block-start: calc(var(--rmk-space) / 4); }
+.rmk-document li > ul,
+.rmk-document li > ol { margin-block-start: calc(var(--rmk-space) / 4); }
+.rmk-document li > input[type="checkbox"] { margin-inline-end: 0.5em; }
+
+.rmk-document blockquote {
+  margin-inline: 0;
+  padding-inline-start: var(--rmk-space);
+  border-inline-start: 3px solid var(--rmk-border);
+  color: var(--rmk-muted);
+}
+
+.rmk-document code {
+  font-family: var(--rmk-font-mono);
+  font-size: 0.9em;
+  background: var(--rmk-surface);
+  padding: 0.15em 0.35em;
+  border-radius: var(--rmk-radius);
+}
+
+.rmk-document pre {
+  padding: var(--rmk-space);
+  background: var(--rmk-surface);
+  border-radius: var(--rmk-radius);
+  overflow-x: auto;
+}
+.rmk-document pre code { background: none; padding: 0; font-size: 0.875em; }
+
+.rmk-document table {
+  border-collapse: collapse;
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+.rmk-document th,
+.rmk-document td {
+  border: 1px solid var(--rmk-border);
+  padding: 0.4em 0.7em;
+  text-align: start;
+}
+.rmk-document th { font-weight: 600; background: var(--rmk-surface); }
+
+.rmk-document hr { border: 0; border-block-start: 1px solid var(--rmk-border); }

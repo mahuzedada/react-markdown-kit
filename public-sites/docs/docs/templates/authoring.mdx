@@ -1,0 +1,119 @@
+---
+title: Authoring templates
+description: Edit a template in the rich editor with placeholder chips, sample-data previews and the insert-variable command.
+---
+
+import TemplateExample from '@site/src/components/TemplateExample'
+
+# Authoring templates
+
+Rendering a template is `<Markdown extensions={[template({ data })]}>`; see
+[Template basics](/docs/templates/basics). Authoring one is the same package's
+other extension, in the editor.
+
+## Editing a template
+
+Template awareness is an editor extension, not a set of editor props.
+
+```tsx
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { templateVariables } from '@react-markdown-kit/template/editor'
+
+<MarkdownEditor
+  value={source}
+  onChange={setSource}
+  extensions={[templateVariables({ template: report, previewData: sampleCustomer })]}
+/>
+```
+
+In rich mode every placeholder is a chip showing its label (from the
+template's variable metadata) and a sample-data preview. Typing a placeholder
+closes it into a chip as soon as the `}}` lands, except inside code. The
+toolbar gains an insert-variable button, and a custom toolbar can dispatch
+`INSERT_TEMPLATE_VARIABLE_COMMAND` from its own picker, built from the same
+`variables` map.
+
+| Option | Purpose |
+| --- | --- |
+| `variables` | Metadata per path: `label` and `group` for chips and pickers |
+| `previewData` | Sample values shown on the chips. Never written back |
+| `previewLocale` | Locale used for preview formatting only |
+| `previewTimeZone` | Time zone used for preview formatting only |
+| `formatters` | Extra formatters offered as suggestions and used for preview |
+
+`templateVariables()` is one extension in two halves under one name. The root
+entry exports the headless half (the `templateVariable` node, its round-trip
+serializer, and a renderer handler that shows an unresolved placeholder as
+`<span data-rmk-variable>`); `/editor` wraps it with the chip, the typing
+trigger and the command. Use whichever the surface needs; a preset that holds
+the editor one still renders and resolves correctly, and `template({ data })`
+resolves chips like any other placeholder.
+
+## Preview never rewrites the source
+
+This is the rule the whole feature is built around. A `templateVariable` node
+stores the authored text plus `path`, `formatter` and `argument`, and
+serializes from those alone. `previewData` is display only, and is not an input
+to serialization.
+
+```text
+Authored     Hello {{customer.name}}
+Rich mode    Hello [ Customer name ]
+Preview      Hello Acme
+Saved        Hello {{customer.name}}
+```
+
+Change the preview customer and the saved source is byte-for-byte what it was.
+A preview that could edit the template would turn one wrong click into a
+template that says Acme to every customer.
+
+The same guarantee holds when a preview fails. A sample value of the wrong type
+shows no preview, and the placeholder is untouched.
+
+<TemplateExample
+  title="Two customers, one saved template"
+  markdown={`Hello {{customer.name}},
+
+Your plan renews on {{renewsAt | date:"long"}} at {{price | currency:"USD"}} per seat.
+`}
+  datasets={[
+    {
+      label: 'Acme',
+      data: {
+        customer: { name: 'Acme Industrial' },
+        renewsAt: '2026-05-02T00:00:00Z',
+        price: 24,
+      },
+    },
+    {
+      label: 'Globex',
+      data: {
+        customer: { name: 'Globex' },
+        renewsAt: '2026-09-30T00:00:00Z',
+        price: 41.5,
+      },
+    },
+  ]}
+>
+  The left pane is what an author edits and what the database stores. The right
+  pane is what each customer receives.
+</TemplateExample>
+
+## Placeholders survive source mode
+
+Switching an editor to source mode shows the authored `{{customer.name}}`, not
+a preview value. Placeholders live inside `text` nodes, and the extension leaves
+inline code, fenced code and raw HTML alone. What the editor draws as a variable
+is exactly what the engine would resolve.
+
+## Building your own picker
+
+Compile the source with `templateVariables()` and no data. Every placeholder
+becomes a `templateVariable` node carrying `path`, `formatter` and `argument`,
+and the `variables` metadata you passed supplies labels and groups. Insert the
+user's choice with `INSERT_TEMPLATE_VARIABLE_COMMAND` on the native editor.
+
+## Next
+
+- [Formatting and localization](/docs/templates/formatting) for formatter names.
+- [Security](/docs/security) for what a runtime value is allowed to do.

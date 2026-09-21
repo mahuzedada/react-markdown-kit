@@ -1,0 +1,113 @@
+---
+title: Markdown Template Engine
+description: "Typed variables, runtime schemas, formatting and localization for Markdown templates. Values resolve inside the parser, so data cannot inject Markdown."
+---
+
+import TemplateExample from '@site/src/components/TemplateExample'
+import Link from '@docusaurus/Link'
+import sites from '@site/src/sites'
+import { PackageJsonLd } from '@site/src/components/JsonLd'
+
+<PackageJsonLd name="template" description={frontMatter.description} path="/markdown-template-engine" />
+
+# Markdown template engine
+
+Personalize a Markdown document with typed application data.
+
+```bash
+npm install @react-markdown-kit/renderer @react-markdown-kit/template
+```
+
+```tsx
+import Markdown from '@react-markdown-kit/renderer'
+import { template } from '@react-markdown-kit/template'
+
+<Markdown extensions={[template({ data: { user: { name: 'Chatis' } } })]}>
+  {'# Hello {{user.name}}'}
+</Markdown>
+```
+
+`template()` is a plugin, not an engine you call: the renderer parses with your preset
+and the plugin fills the tree in. `compileMarkdown` runs the same extension outside React,
+in a service, a worker, a CLI, an email job or a PDF pipeline.
+
+<TemplateExample
+  title="The source never changes, only the output"
+  gfm
+  markdown={`## Account review for {{customer.name}}\n\nRenews {{renewsAt | date:"long"}}.\n\n| Item | Amount |\n| --- | ---: |\n| Plan | {{amounts.plan \\| currency:"USD"}} |`}
+  datasets={[
+    { label: 'Acme', data: { customer: { name: 'Acme Industrial' }, renewsAt: '2026-11-01', amounts: { plan: 4800 } } },
+    { label: 'Cedarline', data: { customer: { name: 'Cedarline Mutual' }, renewsAt: '2027-02-15', amounts: { plan: 19200 } } },
+    { label: 'Acme in French', locale: 'fr-FR', data: { customer: { name: 'Acme Industrial' }, renewsAt: '2026-11-01', amounts: { plan: 4800 } } },
+  ]}
+/>
+
+## Data cannot inject structure
+
+This is the part that matters when authored documents meet runtime data.
+
+Values are placed structurally into a parsed syntax tree. They are never substituted into
+source text and re-parsed. A customer named `**Administrator**` renders as those literal
+characters.
+
+<TemplateExample
+  title="Hostile values stay literal"
+  markdown={`## Hello {{name}}\n\nSigned, {{name}}.`}
+  datasets={[
+    { label: 'Ordinary', data: { name: 'Dana Okafor' } },
+    { label: 'Bold attempt', data: { name: '**Administrator**' } },
+    { label: 'Heading attempt', data: { name: '\n# Pwned\n' } },
+    { label: 'Table attempt', data: { name: '\n| a | b |\n| --- | --- |\n| 1 | 2 |\n' } },
+    { label: 'Script attempt', data: { name: '<script>alert(1)</script>' } },
+  ]}
+>
+  No value can create a heading, a table row, a link destination, an HTML tag or a code
+  fence. That holds after the output is serialized back to Markdown and re-parsed
+  downstream, which is where a naive engine leaks.
+</TemplateExample>
+
+## Typed, then validated
+
+TypeScript generics catch mistakes at compile time.
+
+```ts
+template<ReportData>({ data })
+```
+
+Runtime schemas catch them at the boundary, through
+[Standard Schema](https://standardschema.dev), so Zod, Valibot and ArkType all work with
+no adapter and the package depends on none of them.
+
+```ts
+template({ data, schema: ReportSchema })
+```
+
+A missing required value is an error diagnostic and renders nothing (or your `fallback`).
+It never produces a document that looks publishable with a blank where a number should be.
+
+## Formatting and localization
+
+Six built-in formatters: `number`, `currency`, `percent`, `date`, `time` and `datetime`.
+Currency always carries an explicit code, because inferring it from a locale is how
+invoices go out in the wrong denomination.
+
+Formatting follows the `locale` and `timeZone` you pass; the authored source stays yours
+to choose per language.
+
+<Link to="/docs/templates/formatting">Formatting and localization</Link>
+
+## It renders through the same renderer
+
+Resolution happens inside the renderer's own compile step, so there is no stringify and
+reparse in between, and a compiled document can be cached and handed to `<Markdown
+document>` later.
+
+```ts
+const document = compileMarkdown(source, { preset, extensions: [template({ data })] })
+```
+
+## Next
+
+<Link to="/docs/templates/basics">Template docs</Link> ·{' '}
+<Link href={sites.editorDemo}>The editor demo</Link> ·{' '}
+<Link to="/docs/security">Security model</Link>

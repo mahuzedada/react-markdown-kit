@@ -1,0 +1,73 @@
+/* Chrome for the flagship demo. The rendered Markdown itself is styled only
+   by the kit's own `.rmk-document` stylesheet. */
+
+.shell {
+  /* Full-bleed and exactly one viewport tall; the page scrolls past it. */
+  height: calc(100dvh - var(--site-header-height));
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--card);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}@media (max-width: 900px) {
+  .body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+  .col + .col { border-left: 0; border-top: 1px solid var(--border); }
+}
+
+.col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.col + .col { border-left: 1px solid var(--border); }
+
+.colHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.badgeStable, .badgeLive {
+  font-size: 0.66rem;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--radius-sm);
+}
+
+.badgeStable {
+  background: color-mix(in oklab, var(--success) 14%, transparent);
+  color: var(--success-text);
+}
+
+.badgeLive {
+  background: color-mix(in oklab, var(--warning) 14%, transparent);
+  color: var(--warning-text);
+}
+
+.output { padding: 0.85rem 1.1rem; flex: 1; min-height: 0; overflow: auto; }
+
+/* The editor fills its pane; its toolbar stays put and only the content scrolls. */
+.editorWrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.editorWrap > :global(.rmk-editor) { flex: 1; min-height: 0; border: 0; border-radius: 0; }
+.editorWrap :global(.rmk-editor .rmk-content) { flex: 1; min-height: 0; overflow: auto; }
+.editorWrap :global(.rmk-editor .rmk-source-textarea) { flex: 1; min-height: 0; resize: none; }
+
+.diagnostics {
+  margin: 0;
+  padding: 0.8rem 0.8rem 0.8rem 1.9rem;
+  font-size: 0.82rem;
+  color: var(--danger-text);
+}
+

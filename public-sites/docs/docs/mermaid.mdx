@@ -1,0 +1,185 @@
+---
+title: Mermaid diagrams
+description: "Render a Mermaid flowchart from a fenced block as static SVG, and edit it on a canvas that saves plain Mermaid back. One plugin for the renderer and the editor."
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+import sites from '@site/src/sites'
+import { mermaid } from '@react-markdown-kit/mermaid'
+
+export const flow = `\`\`\`mermaid
+flowchart LR
+    web["CLIENT<br/>Web App<br/>React"] -->|REST| api["SERVICE<br/>API<br/>Kotlin"]
+    api --> db[(Postgres)]
+    style web fill:#a5d8ff,stroke:#1971c2
+    style api fill:#b2f2bb,stroke:#2f9e44
+\`\`\`
+`
+
+export const decision = `\`\`\`mermaid
+flowchart TD
+    user((User)) --> check{Valid?}
+    check -->|yes| save[Save]
+    check -->|no| err>Show error]
+    style save fill:#b2f2bb,stroke:#2f9e44
+    style err fill:#ffc9c9,stroke:#e03131
+\`\`\`
+`
+
+export const withLayout = `\`\`\`mermaid
+flowchart LR
+    a["Markdown"]
+    b(["React"])
+    a -->|render| b
+    style a fill:#a5d8ff,stroke:#1971c2
+    style b fill:#b2f2bb,stroke:#2f9e44
+    %% rmk-layout v1 {"canvasHeight":180,"nodes":{"a":{"x":24,"y":40,"width":160,"height":90,"strokeWidth":2},"b":{"x":330,"y":40,"width":170,"height":90,"strokeWidth":2}},"edges":{"a->b":{"routing":"elbow","elbow":0.5}}}
+\`\`\`
+`
+
+# Mermaid diagrams
+
+```bash
+npm install @react-markdown-kit/mermaid
+```
+
+```tsx
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { mermaid } from '@react-markdown-kit/mermaid'
+import '@react-markdown-kit/mermaid/styles.css' // optional: surface, dot grid, border, canvas
+
+const preset = defineMarkdownPreset({ extensions: [mermaid()] })
+
+<Markdown preset={preset}>{content}</Markdown>
+```
+
+Try it in the <a href={sites.mermaidDemo}>Mermaid live editor</a>: syntax on
+the left, the visual canvas on the right, plain Mermaid saved.
+
+A diagram is a fenced code block whose language is `mermaid` and whose body
+is a Mermaid flowchart. The document stays plain Markdown, and plain Mermaid:
+GitHub, GitLab, Notion and Obsidian render the same fence. `mermaid()` is the
+package's whole API. It turns the fence into a `diagram` node, the renderer
+draws that node as a static SVG, the template plugin keeps its text literal,
+and the editor opens it on a canvas.
+
+<RenderExample title="A three-box flow" markdown={flow} rendererProps={{ extensions: [mermaid()] }} />
+
+## The flowchart subset
+
+| Mermaid | Read as |
+| --- | --- |
+| `flowchart LR` / `graph TD`, any direction | Left-to-right or top-down auto layout |
+| `id[text]`, `id(text)` | Rectangle |
+| `id([text])`, `id((text))` | Ellipse |
+| `id{text}`, `id{{text}}` | Diamond |
+| `id[(text)]` | Cylinder |
+| `id[[text]]` | Queue |
+| `id>text]` | Note |
+| `-->`, `---`, `-.->`, `==>`, `<-->` | Arrow, line, arrow, arrow, bidirectional arrow |
+| `-->\|label\|`, `-- label -->` | Edge label |
+| `A & B --> C`, `A --> B --> C`, `;` | Groups, chains, several statements per line |
+| `subgraph … end` | Read through; grouping is not drawn |
+| `style id fill:…,stroke:…` | Colours |
+| `---` front matter with `title:` | Accessible name and caption |
+| `%%` comments, `classDef`, `class`, `click`, `linkStyle` | Ignored |
+
+<RenderExample title="Direction down, a decision" markdown={decision} rendererProps={{ extensions: [mermaid()] }} />
+
+Any other Mermaid diagram type (sequence, class, Gantt, pie, …) stays an
+ordinary code block: rendered as source, edited as text, never mistaken for
+something the canvas can open.
+
+## What the editor writes
+
+Mermaid has no syntax for where a box sits, how big it is, how thick its
+stroke is, how an edge bends, or free text on the canvas. So when a diagram
+is edited, the canvas writes the graph as ordinary Mermaid and the geometry
+as one layout annotation, a `%% rmk-layout v1 {…}` comment on the last
+line. Every other renderer ignores the comment; this plugin reads it back,
+so a drawing round-trips without loss. A hand-written flowchart with no
+annotation is auto-laid out, and an untouched fence is written back byte
+for byte.
+
+<RenderExample title="With a layout annotation: elbow routing and exact positions" markdown={withLayout} rendererProps={{ extensions: [mermaid()] }} />
+
+The annotation is a versioned format with a formal specification,
+`LAYOUT_ANNOTATION.md`, shipped with the package, and a JSON Schema,
+`LAYOUT_ANNOTATION_JSON_SCHEMA`, exported from the root. The payload is one
+JSON object: `nodes` keyed by Mermaid id with position, size, stroke width
+and text slots; `edges` keyed by endpoints (`a->b`, `a->b#2` for a second
+edge between the same nodes) with routing, waypoints and attach points;
+`texts` and `loose` for shapes Mermaid cannot express. The syntax stays
+authoritative for the graph and colours; the annotation never repeats them.
+
+Reading is fail-closed: an annotation with a wrong type, an unknown version
+or a second annotation in the same fence is rejected as a whole, the diagram
+is auto-laid out, and the compile result carries a `DIAGRAM_LAYOUT_INVALID`
+warning with the dotted path of the first problem (`nodes.web.x`). Members
+the reader does not know are ignored, so a later minor revision can add
+fields without breaking older readers. The writer emits a canonical form
+(fixed member order, compact JSON, numbers to two decimals), so a diff
+shows only what moved. `readLayoutAnnotation` and `writeLayoutAnnotation`
+are the reference reader and writer.
+
+## What the renderer emits
+
+```html
+<figure data-rmk-diagram="mermaid">
+  <svg viewBox="0 0 640 260" role="img" aria-label="Diagram">…</svg>
+</figure>
+```
+
+- **No script, no `foreignObject`, no external references.** Shapes are
+  `rect`, `ellipse`, `path` and `text`. Colours land as attributes; a value
+  that is not a colour is dropped by the parser.
+- **Server-renderable.** The SVG is hast, built with no DOM and no React, so
+  it works in a server component and in static rendering.
+- **Styled by the optional stylesheet only.** `data-rmk-diagram` is the hook;
+  the `classNames` prop's `diagram` part adds your own class to the figure.
+- **Unreadable input stays visible.** A flowchart the parser cannot read
+  renders as source inside the figure with `data-rmk-diagram-error` set and a
+  `DIAGRAM_INVALID` diagnostic on the compiled document.
+
+## Templates
+
+A placeholder inside a diagram is never resolved. The node is literal,
+exactly like a code block, so runtime data cannot reach a box's text, colour
+or geometry.
+
+## Editor
+
+`@react-markdown-kit/mermaid/editor` adds the canvas: the same extension
+under the same name, one more capability, so it replaces the renderer's
+`mermaid()` in a preset.
+
+```tsx
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { mermaid } from '@react-markdown-kit/mermaid/editor'
+
+const preset = defineMarkdownPreset({ extensions: [gfm(), mermaid()] })
+
+<MarkdownEditor preset={preset} value={value} onChange={setValue} />
+```
+
+The toolbar gains an insert-diagram button. Boxes, connectors and text are
+drawn by picking a tool and dragging; connectors bind to the boxes they touch
+and follow them; a selected connector toggles elbow routing and arrow
+direction; colours are one setting per shape. **Copy as Mermaid** copies the
+plain flowchart without the layout annotation.
+
+Only the `/editor` entry loads React and Lexical. A Node service that renders
+or templates diagrams imports the root entry and installs neither.
+
+## Legacy JSON fences
+
+The ```` ```diagram ```` skeleton and ```` ```drawing ```` payload formats from
+`@zuilib/text-editor` are still read, so existing documents render and open on
+the canvas. The first edit rewrites the block as ```` ```mermaid ````.
+
+## Programmatic API
+
+There is none beyond the plugin, on purpose: `mermaid(options?)`
+(`fallbackTitle` names an untitled drawing) and, on `/editor`, `style`
+(`clean` or hand-drawn `ink`) and `newBlockWidth`. The JSON Schemas for the
+legacy payloads are exported for validating generated JSON.

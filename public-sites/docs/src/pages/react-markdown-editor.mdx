@@ -1,0 +1,94 @@
+---
+title: React Markdown Editor
+description: A rich, source and preview Markdown editor for React that reads and writes plain Markdown, with a round trip that does not corrupt your documents.
+---
+
+import EditorExample from '@site/src/components/EditorExample'
+import Link from '@docusaurus/Link'
+import sites from '@site/src/sites'
+import { PackageJsonLd } from '@site/src/components/JsonLd'
+
+<PackageJsonLd name="editor" description={frontMatter.description} path="/react-markdown-editor" />
+
+# React Markdown editor
+
+Rich editing that stores plain Markdown.
+
+```bash
+npm install @react-markdown-kit/editor
+```
+
+```tsx
+'use client'
+
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+
+<MarkdownEditor value={value} onChange={setValue} />
+```
+
+<EditorExample
+  title="Edit above, watch the saved Markdown below"
+  markdown={`# Notes\n\nA **rich** editor that saves _Markdown_.\n\n- [x] lists\n- [ ] tables\n\n| a | b |\n| --- | --- |\n| 1 | 2 |`}
+/>
+
+## Markdown in, Markdown out
+
+Your application keeps storing Markdown strings. Nothing asks you to persist editor
+JSON or a proprietary format, so the same content still works with every other Markdown
+tool you use.
+
+## The round trip is the hard part
+
+Most Markdown editors quietly damage documents. Opening a file and closing it without
+typing anything rewrites parts of it, and the damage compounds on every save.
+
+This editor converts between a real CommonMark syntax tree and the editing model, then
+writes unchanged blocks back from their original source bytes. Opening a document and
+closing it changes nothing.
+
+The test corpus comes from an audit of a previous editor that had seven reproducible
+corruption bugs. All 22 cases now round-trip byte for byte.
+
+<EditorExample
+  title="Reference links, HTML and footnotes survive editing around them"
+  defaultMode="source"
+  markdown={`See [the guide][g] and [^1].\n\n<div class="callout">\n  Raw HTML block\n</div>\n\nEdit this paragraph, then switch to rich mode and back.\n\n[g]: https://example.com\n[^1]: A footnote.`}
+/>
+
+## Three modes
+
+`rich` for WYSIWYG, `source` for the raw Markdown, `preview` for read-only output.
+Preview delegates to `@react-markdown-kit/renderer`, so what you preview is exactly what
+your application will render.
+
+## Build your own interface
+
+The default editor ships a toolbar so it is useful immediately. When you need your own,
+drop to the headless API and keep the engine.
+
+```tsx
+const editor = useMarkdownEditor({ value, onChange })
+
+<MarkdownEditorProvider editor={editor}>
+  <MyToolbar />
+  <MarkdownEditorContent />
+</MarkdownEditorProvider>
+```
+
+No Lexical type appears in the public types, so your components never import the engine.
+
+<Link to="/docs/editor/headless">The headless API</Link>
+
+## Styling
+
+Zero styling dependencies. The editor is fully functional with no stylesheet loaded, and
+a test asserts it. Its chrome takes your class names, and its icons are inline SVG with
+no icon package.
+
+<Link to="/docs/styling">The styling contract</Link>
+
+## Next
+
+<Link to="/docs/editor/basics">Editor docs</Link> ·{' '}
+<Link to="/react-markdown-renderer">Just rendering</Link> ·{' '}
+<Link href={sites.editorDemo}>See it with templates, in the editor demo</Link>

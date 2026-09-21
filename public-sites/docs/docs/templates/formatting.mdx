@@ -1,0 +1,181 @@
+---
+title: Formatting and localization
+description: Format numbers, currency and dates with an explicit locale and time zone.
+---
+
+import TemplateExample from '@site/src/components/TemplateExample'
+
+# Formatting and localization
+
+```text
+{{revenue | currency:"USD"}}
+{{completion | percent}}
+{{createdAt | date:"medium"}}
+```
+
+A formatter runs on the value, returns a string, and that string is inserted as
+text. It is never re-parsed as Markdown, so a formatter cannot widen the
+injection surface.
+
+## The six built-in formatters
+
+| Formatter | Argument | Example | Value it accepts |
+| --- | --- | --- | --- |
+| `number` | fraction digits, 0 to 20 | `{{count \| number}}` | a finite number or a bigint |
+| `currency` | ISO 4217 code, required | `{{total \| currency:"USD"}}` | a finite number or a bigint |
+| `percent` | fraction digits, 0 to 20 | `{{rate \| percent:1}}` | a finite number, where `0.42` is 42% |
+| `date` | `full`, `long`, `medium` or `short` | `{{signedAt \| date:"long"}}` | a `Date`, an epoch number or an ISO string |
+| `time` | `full`, `long`, `medium` or `short` | `{{startsAt \| time:"short"}}` | a `Date`, an epoch number or an ISO string |
+| `datetime` | `full`, `long`, `medium` or `short` | `{{updatedAt \| datetime}}` | a `Date`, an epoch number or an ISO string |
+
+Date styles default to `medium`. All six use the platform `Intl` APIs, so
+output follows the same CLDR data the rest of your application uses.
+
+A wrong value type is a diagnostic, not a crash. `currency` applied to a `Date`
+produces `TEMPLATE_FORMATTER_VALUE_TYPE` and `ok: false`.
+
+## Currency is always explicit
+
+A locale says nothing about which currency an amount is in. `fr-FR` formats
+euros and Swiss francs identically well, and guessing would print the wrong
+symbol on an invoice.
+
+```text
+{{total | currency:"USD"}}   ✓
+{{total | currency}}         ✗ TEMPLATE_FORMATTER_ARGUMENT_REQUIRED
+```
+
+The code must be three letters. The locale decides symbol placement, digit
+grouping and the decimal separator. The data decides the currency.
+
+## Locale and time zone
+
+Both are options of `template()`.
+
+```ts
+template({ data, locale: 'fr-FR', timeZone: 'America/New_York' })
+```
+
+`timeZone` defaults to `UTC`, so the same data produces the same document on a
+laptop and on a build server. `locale` defaults to `en-US`.
+
+The same source, formatted for three locales:
+
+<TemplateExample
+  title="One source, three locales"
+  markdown={`## {{project.name}}
+
+Budget: {{budget | currency:"EUR"}}
+
+Completion: {{completion | percent}}
+
+Reviewed {{reviewedAt | date:"long"}}
+`}
+  datasets={[
+    {
+      label: 'en-US',
+      locale: 'en-US',
+      data: {
+        project: { name: 'Harbour migration' },
+        budget: 1284500.5,
+        completion: 0.62,
+        reviewedAt: '2026-02-17T09:30:00Z',
+      },
+    },
+    {
+      label: 'fr-FR',
+      locale: 'fr-FR',
+      data: {
+        project: { name: 'Harbour migration' },
+        budget: 1284500.5,
+        completion: 0.62,
+        reviewedAt: '2026-02-17T09:30:00Z',
+      },
+    },
+    {
+      label: 'de-DE',
+      locale: 'de-DE',
+      data: {
+        project: { name: 'Harbour migration' },
+        budget: 1284500.5,
+        completion: 0.62,
+        reviewedAt: '2026-02-17T09:30:00Z',
+      },
+    },
+  ]}
+>
+  The data and the template are identical across the three. Only the `locale`
+  option changes.
+</TemplateExample>
+
+## Custom formatters
+
+Pass them to `template()`, or ship them in an extension of your own so every
+template in the application gets them (see [Extensions](/docs/extensions)).
+
+```ts
+template({
+  data,
+  formatters: {
+    accountStatus(value) {
+      return formatAccountStatus(value)
+    },
+  },
+})
+```
+
+A formatter receives the value and a context of `argument`, `locale`,
+`timeZone` and `path`. The path is there for diagnostics; the value never
+appears in a message the kit produces.
+
+```ts
+import type { TemplateFormatter } from '@react-markdown-kit/template'
+
+const rounded: TemplateFormatter = (value, { locale, argument }) => {
+  if (typeof value !== 'number') throw new Error('rounded needs a number')
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: Number(argument ?? 0),
+  }).format(value)
+}
+```
+
+Layering runs built-ins first, then formatters contributed by other
+extensions in the same preset, then the `formatters` option. Later wins, so
+an application can replace `date` with its own house style without forking
+anything. `builtinFormatters` is exported for reference:
+
+```ts
+import { builtinFormatters } from '@react-markdown-kit/template'
+
+Object.keys(builtinFormatters)
+// ['number', 'currency', 'percent', 'date', 'time', 'datetime']
+```
+
+A formatter that throws becomes `TEMPLATE_FORMATTER_FAILED`. Throw
+`TemplateFormatterError` with a code of your choosing when you want a specific
+diagnostic instead.
+
+## Localized source
+
+Three concerns stay separate, and none of them is translation.
+
+| Concern | Who owns it |
+| --- | --- |
+| Document language | The authored source you pick for the reader's locale |
+| Runtime formatting | The `locale` and `timeZone` options |
+| Localized assets | Application data, such as a per-locale image URL |
+
+Keep one authored source per language and choose before compiling; the plugin
+formats with whatever `locale` you pass, whichever source it is applied to.
+The kit never machine-translates.
+
+```tsx
+const source = SOURCES[reader.locale] ?? SOURCES['en-US']
+
+<Markdown extensions={[template({ data, locale: reader.locale })]}>{source}</Markdown>
+```
+
+## Next
+
+- [Authoring](/docs/templates/authoring) for the editor extension.
+- [Template basics](/docs/templates/basics) for options and diagnostics.

@@ -1,0 +1,11 @@
+{
+  "//": "rootDir spans the repo because internal/ is build-time shared source (spec 3.3). Sibling packages resolve through node_modules to their BUILT types.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "../..",
+    "baseUrl": ".",
+    "paths": { "@internal/*": ["../../internal/*"] }
+  },
+  "include": ["src/**/*"]
+}

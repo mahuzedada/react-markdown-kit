@@ -1,0 +1,282 @@
+---
+title: Extensions
+description: The extension contract the whole kit composes through, how gfm() is built from it, and where remark and rehype still fit.
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+
+# Extensions
+
+```ts
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+export const appMarkdown = defineMarkdownPreset({ extensions: [gfm()] })
+```
+
+One preset states what Markdown means in your application. Pass it to the
+renderer, the editor and the template engine, and all three agree. Adding a
+feature means adding an extension to that list, not adding a prop to three
+components.
+
+## The contract
+
+An extension is a plain object. Nothing about it is class-based, and nothing
+about it is registered globally.
+
+```ts
+interface MarkdownExtension {
+  readonly name: string
+  readonly version?: string
+  readonly contractVersion?: 1
+  readonly capabilities?: {
+    readonly syntax?: SyntaxAdapter
+    readonly renderer?: RendererAdapter
+    readonly editor?: EditorAdapter
+    readonly template?: TemplateAdapter
+  }
+}
+```
+
+`name` is the identity. Merging, replacement and diagnostics all key on it.
+`contractVersion` is the adapter-shape version, currently `1`.
+
+An extension declares only the capabilities it has, and each package reads only
+the ones it understands.
+
+| Capability | Fields | Who reads it |
+| --- | --- | --- |
+| `syntax` | `micromarkExtensions`, `fromMarkdownExtensions`, `toMarkdownExtensions`, `nodeTypes`, `transform` | Renderer, editor and template engine |
+| `renderer` | `handlers`, `components`, `rehypePlugins` | Renderer |
+| `editor` | `nodes`, `plugins`, `commands` | Editor |
+| `template` | `literalNodeTypes`, `formatters`, `transform` | Template engine |
+
+The renderer ignores editor adapters. The template engine uses syntax and
+template adapters and never imports editor code. That is what lets a headless
+Node service load an editor-aware extension without installing the editor.
+
+## How gfm() is built
+
+The built-in dialect uses the same mechanism third-party extensions use. There
+is no privileged path.
+
+```ts
+export function gfm(options: GfmOptions = {}): MarkdownExtension {
+  return {
+    name: 'gfm',
+    version: '1',
+    contractVersion: 1,
+    capabilities: {
+      syntax: {
+        micromarkExtensions: [micromarkGfm({ singleTilde: options.singleTilde ?? false })],
+        fromMarkdownExtensions: [gfmFromMarkdown()],
+        toMarkdownExtensions: [gfmToMarkdown()],
+        nodeTypes: ['table', 'tableRow', 'tableCell', 'delete', 'footnoteDefinition', 'footnoteReference'],
+      },
+      template: { literalNodeTypes: [] },
+    },
+  }
+}
+```
+
+The three syntax fields are parse, build and serialize. Declaring all three is
+what makes a dialect round-trip: text in, tree, text back out, unchanged.
+
+`gfm()` ships once, from `@react-markdown-kit/renderer`. The template engine
+and the editor read the same preset, so one definition is the whole dialect.
+
+<RenderExample
+  title="The same extension, rendering"
+  gfm
+  markdown={`| Metric | Before | After |
+| --- | ---: | ---: |
+| Cold render | 12.4 ms | 9.1 ms |
+
+- [x] Ship tables
+- [ ] Ship footnotes
+
+~~Deprecated~~ replaced.
+`}
+/>
+
+## Writing one
+
+### A renderer-only extension
+
+The smallest useful extension contributes components.
+
+```ts
+import type { MarkdownExtension } from '@react-markdown-kit/renderer'
+import { ExternalLink } from './external-link'
+
+export function externalLinks(): MarkdownExtension {
+  return {
+    name: 'external-links',
+    version: '1',
+    contractVersion: 1,
+    capabilities: {
+      renderer: { components: { a: ExternalLink } },
+    },
+  }
+}
+```
+
+### A template-only extension
+
+Formatters can travel with an extension, so a team ships its house date format
+once and every template gets it.
+
+```ts
+import type { MarkdownExtension } from '@react-markdown-kit/template'
+
+export function houseFormats(): MarkdownExtension {
+  return {
+    name: 'house-formats',
+    version: '1',
+    contractVersion: 1,
+    capabilities: {
+      template: {
+        formatters: {
+          shortDate: (value, { locale, timeZone }) =>
+            new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeZone }).format(
+              new Date(value as string),
+            ),
+        },
+      },
+    },
+  }
+}
+```
+
+`literalNodeTypes` is the other half of the template adapter. Listing a node
+type there tells the engine never to scan its text for placeholders, which is
+how code blocks stay literal.
+
+### A multi-capability extension
+
+`template({ data })` from `@react-markdown-kit/template` is a `syntax.transform`
+that reads its siblings: every other extension's `template.literalNodeTypes`
+and `template.formatters` apply, which is how `mermaid()` keeps placeholders
+in a payload literal without the two packages knowing each other.
+
+`templateVariables()` from the same package declares four capabilities at once.
+`syntax` lifts
+`{{...}}` runs into a `templateVariable` node and serializes them back
+byte-for-byte. `template` marks that node literal so a chip never reaches the
+interpolator. `renderer` shows an unresolved placeholder as a chip. `editor`,
+added by `@react-markdown-kit/template/editor` under the same name, supplies
+the Lexical chip, the `{{` trigger and the insert command.
+
+A renderer that loads the editor's version draws the document and ignores the
+editor half. Nothing has to be configured for that to happen.
+
+### A shipped example: `mermaid()`
+
+[`@react-markdown-kit/mermaid`](/docs/mermaid) is built through this same
+contract and nothing else. Its `syntax` adapter lifts a ```` ```mermaid ````
+fence into a `diagram` node and serializes it back; its `renderer` adapter
+draws that node as a static SVG; its `template` adapter marks the payload
+literal; and `@react-markdown-kit/mermaid/editor` adds an `editor` adapter
+with a Lexical node, a canvas and a toolbar button. The root entry loads no
+React and no Lexical, so the same extension goes into a Node service's preset
+unchanged. The package exports nothing else: the plugin is the API.
+
+```ts
+import { mermaid } from '@react-markdown-kit/mermaid'
+
+export const appMarkdown = defineMarkdownPreset({ extensions: [gfm(), mermaid()] })
+```
+
+### A shipped example: `slides()`
+
+[`@react-markdown-kit/slides`](/docs/slides) shows the other shape an
+extension can take: it adds no fence and no inline syntax, and it never
+introduces a container node. A deck is plain CommonMark whose slides are
+separated by `---`. Its `syntax.transform` runs after parsing on the flat
+tree, re-typing a `???` or `--` paragraph to a `slideMarker` and a
+`<!-- key: value -->` comment to a `slideDirective`, and its `renderer`
+adapter contributes a handler for the mdast `root`: that handler groups the
+flat children into one `<article data-rmk-deck>` of `<section>`s while
+rendering every block through the renderer's own handlers, so headings,
+lists and a GFM table inside a slide are the same elements they are outside
+one. The tree stays flat, the file stays a document on GitHub, and
+`documentToMarkdown` writes every construct back to its spelling.
+`@react-markdown-kit/slides/present` replaces the `article` component with a
+client one, and `/editor` adds the `editor` adapter, all under the same
+`name`.
+
+```ts
+import { slides } from '@react-markdown-kit/slides'
+
+export const deckMarkdown = defineMarkdownPreset({ extensions: [gfm(), slides()] })
+```
+
+An extension that needs its own node in the editor uses
+`@react-markdown-kit/editor/lexical`: block adapters and inline adapters
+(mdast node in, editor node out, and back), plugins that register commands,
+toolbar contributions, and `useLexicalEditor()` for a decorator to reach the
+engine.
+
+## Composition rules
+
+```ts
+const base = defineMarkdownPreset({ extensions: [gfm()] })
+
+const docs = defineMarkdownPreset({
+  extends: [base],
+  extensions: [externalLinks()],
+})
+```
+
+- Preset extensions come first, then extensions passed to the component.
+- An extension whose `name` matches an existing one replaces it in place,
+  keeping the original position, so ordering stays stable.
+- `mergeExtensions(base, next)` applies the same rule if you need it yourself.
+- The `profile` recorded on a compiled document is `gfm` when a `gfm` extension
+  is present, otherwise `commonmark`.
+
+```tsx
+<Markdown preset={appMarkdown} extensions={[gfm({ singleTilde: true })]}>
+  {source}
+</Markdown>
+```
+
+That call replaces the preset's `gfm` rather than adding a second one.
+
+## remark and rehype
+
+The existing ecosystem stays supported. These are compatibility escape hatches,
+and they are not second-class.
+
+```tsx
+<Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+  {source}
+</Markdown>
+```
+
+`remarkRehypeOptions` reaches `remark-rehype`, including footnote labels and
+clobber prefixes. Plugin behaviour matches `react-markdown` on every case in the
+[compatibility matrix](/docs/compatibility).
+
+Two things to know.
+
+A remark plugin that changes the **dialect**, such as `remark-gfm`, registers
+parser extensions. Parsing happens before the render pipeline exists, so those
+registrations are collected and handed to the parser. That works for a string.
+It cannot work on an already-compiled document, because the text was parsed
+before the plugin existed. Compile with the same extensions you render with, or
+pass the string.
+
+A plugin is trusted application code. It is not sandboxed. The content policy
+still runs after plugins, so it filters what they produce, but the kit does not
+audit a plugin's behaviour.
+
+Prefer a kit extension when you want the feature to hold across the renderer,
+the editor and templates. Reach for remark or rehype when the feature already
+exists there and only rendering needs it.
+
+## Versioning
+
+`contractVersion` is `1`. It is bumped only when the adapter shapes change
+incompatibly, which lets a host detect an extension it cannot load rather than
+failing at render time. Third-party authoring is not frozen for v1, so treat
+adapter internals as stable-but-young and pin your versions.

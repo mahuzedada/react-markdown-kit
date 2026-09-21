@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+.env
+.env.*
+*.log
+.DS_Store
+test-results
+playwright-report

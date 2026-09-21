@@ -1,0 +1,121 @@
+.hero {
+  padding: 4rem 0 2.5rem;
+  text-align: center;
+  background-color: var(--background);
+  color: var(--foreground);
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--border) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--border) 45%, transparent) 1px, transparent 1px);
+  background-size: 40px 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* In dark mode the hero is a panel on the canvas, not the canvas itself. */
+:global(html[data-theme='dark']) .hero {
+  background-color: var(--card);
+}
+
+.hero h1 {
+  color: var(--foreground);
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  margin-bottom: 0.5rem;
+  text-wrap: balance;
+}
+
+.tagline {
+  font-size: clamp(1rem, 2.4vw, 1.25rem);
+  color: var(--muted-foreground);
+  max-width: 34rem;
+  margin: 0 auto 1.75rem;
+  text-wrap: balance;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.install {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius);
+  background: var(--muted);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.section {
+  padding: 2.5rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.sectionHead {
+  max-width: 42rem;
+  margin: 0 auto 1.5rem;
+  text-align: center;
+}
+
+.sectionHead h2 { margin-bottom: 0.4rem; text-wrap: balance; }
+.sectionHead p { color: var(--muted-foreground); margin: 0; }
+
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem;
+  background: var(--card);
+}
+
+.card h3 { font-size: 1rem; margin-bottom: 0.35rem; }
+.card p { font-size: 0.9rem; color: var(--muted-foreground); margin-bottom: 0.6rem; }
+.card code { font-size: 0.78rem; }
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1rem;
+  max-width: 54rem;
+  margin: 0 auto;
+}
+
+.fact {
+  text-align: center;
+  padding: 0.9rem;
+}
+
+.factValue {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.factLabel {
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+  margin-top: 0.25rem;
+}

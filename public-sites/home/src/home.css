@@ -1,0 +1,199 @@
+/* The home page: one narrow column, the theme's tokens, nothing else. */
+
+.home {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 5rem 1rem 3rem;
+}
+
+.home-hero {
+  margin-bottom: 3.5rem;
+}
+
+.home-logo {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.home h1 {
+  margin: 0 0 0.75rem;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.home-lede {
+  max-width: 34rem;
+  margin: 0 0 1.5rem;
+  font-size: 1.125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.home-button {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-height-md);
+  padding: 0 var(--button-padding-x-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: none;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.home-button:hover {
+  background: var(--accent);
+}
+
+.home-button--primary {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-color: var(--primary-border);
+}
+
+.home-button--primary:hover {
+  background: var(--primary);
+  filter: brightness(1.08);
+}
+
+.home-section {
+  margin-bottom: 3rem;
+}
+
+.home-section h2,
+.home .site-faq h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary-text);
+}
+
+.home-section p {
+  margin: 0;
+  color: var(--muted-foreground);
+}
+
+.home-section .site-code {
+  margin: 0 0 0.75rem;
+}
+
+.home-section .site-code + p {
+  margin-top: 1rem;
+}
+
+.home-packages {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.home-packages li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.15rem 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.home-package-name {
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.home-package-name:hover {
+  color: var(--primary-text);
+}
+
+.home-package-name code {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.home-package-what {
+  grid-column: 1;
+  font-size: 0.9rem;
+  color: var(--muted-foreground);
+}
+
+.home-package-links {
+  display: flex;
+  gap: 0.75rem;
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+  font-size: 0.9rem;
+}
+
+.home-package-links a {
+  color: var(--primary-text);
+  text-decoration: none;
+}
+
+.home-package-links a:hover {
+  text-decoration: underline;
+}
+
+.home-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.home-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.home-list a {
+  color: var(--primary-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.home-list a:hover {
+  text-decoration: underline;
+}
+
+.home-list span {
+  font-size: 0.9rem;
+  color: var(--muted-foreground);
+}
+
+.home .site-faq {
+  margin-bottom: 3rem;
+}
+
+@media (max-width: 480px) {
+  .home {
+    padding-top: 3rem;
+  }
+
+  .home h1 {
+    font-size: 1.6rem;
+  }
+}
+
+/* The shared footer follows the page's narrower column. */
+.site-footer {
+  max-width: 40rem;
+}

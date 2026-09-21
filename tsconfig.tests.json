@@ -1,0 +1,8 @@
+{
+  "//": "Tests and fixtures. Same strictness except noUncheckedIndexedAccess, which test scaffolding that parses HTML with regular expressions trips on constantly without catching real bugs. Shipped code keeps it on.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["tests/**/*", "packages/*/tests/**/*", "plugins/*/tests/**/*", "fixtures/**/*.ts"]
+}

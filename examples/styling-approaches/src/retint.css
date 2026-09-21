@@ -1,0 +1,9 @@
+/* Panel 2: the shipped theme, retinted by overriding custom properties. */
+.retinted {
+  --rmk-text: #14202b;
+  --rmk-link: #0f6f6b;
+  --rmk-surface: #eef4f3;
+  --rmk-border: #cfe0dd;
+  --rmk-font-body: 'Iowan Old Style', Georgia, serif;
+  --rmk-measure: 60ch;
+}

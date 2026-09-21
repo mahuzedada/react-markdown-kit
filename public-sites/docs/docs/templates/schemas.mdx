@@ -1,0 +1,128 @@
+---
+title: Schemas and types
+description: Validate template data at runtime with any Standard Schema validator, and type it at compile time from the same schema.
+---
+
+import TemplateExample from '@site/src/components/TemplateExample'
+
+# Schemas and types
+
+```ts
+import { z } from 'zod'
+import { template } from '@react-markdown-kit/template'
+
+const ReportSchema = z.object({
+  customer: z.object({ name: z.string() }),
+  revenue: z.number(),
+})
+
+template({ schema: ReportSchema, data: { customer: { name: 'Acme' }, revenue: 50_000 } })
+```
+
+`template()` accepts any validator implementing
+[Standard Schema](https://standardschema.dev), the shared interface designed by
+contributors from Zod, Valibot and ArkType. When `schema` is given, `data` is
+typed from it, so TypeScript rejects a call that omits `revenue` or spells the
+customer key wrong. Without a schema, `data` is whatever you pass, and a
+generic parameter types it: `template<ReportData>({ data })`.
+
+## Generics are compile time, schemas are runtime
+
+| | Generic type parameter | Standard Schema |
+| --- | --- | --- |
+| When it runs | `tsc`, and your editor | Every compilation |
+| Catches | A wrong literal in your own code | A wrong value from an API, a database or a user |
+| Cost at runtime | None | One validation pass |
+| Failure mode | A type error | An error diagnostic, and nothing rendered |
+
+Data that crosses a network boundary is `unknown` no matter what the type says.
+Validate it.
+
+Valibot and ArkType work the same way, with the same property and no adapter:
+
+```ts
+import * as v from 'valibot'
+const ReportSchema = v.object({ customer: v.object({ name: v.string() }), revenue: v.number() })
+```
+
+```ts
+import { type } from 'arktype'
+const ReportSchema = type({ customer: { name: 'string' }, revenue: 'number' })
+```
+
+`@react-markdown-kit/template` depends on none of these libraries. It reads the
+`~standard` property structurally, so your validator is the only one installed.
+
+## What a rejection looks like
+
+Validation failure is terminal. Resolving against rejected data would produce a
+publishable-looking document from data nobody vouched for, so the document
+becomes the `fallback` (nothing by default) and the diagnostics say why:
+
+```ts
+// [{ code: 'TEMPLATE_SCHEMA_INVALID', severity: 'error', path: 'revenue', message: ... }]
+```
+
+Each validator issue becomes one diagnostic with the offending data path.
+Messages carry the path and not the value, so they are safe to log.
+
+Resolution is synchronous. A validator that returns a Promise produces
+`TEMPLATE_SCHEMA_ASYNC` rather than a half-resolved document. Do the async
+work before you compile.
+
+## Schemas stay optional
+
+Without a schema, a missing value still produces `TEMPLATE_REQUIRED_VALUE` and
+an empty document. A schema upgrades the failure from "the template noticed"
+to "the boundary rejected it".
+
+<TemplateExample
+  title="Missing data fails, it does not half-render"
+  markdown={`## Statement for {{customer.name}}
+
+Balance: {{balance | currency:"EUR"}}
+`}
+  datasets={[
+    { label: 'Complete', data: { customer: { name: 'Northwind' }, balance: 1240.5 } },
+    { label: 'Missing balance', data: { customer: { name: 'Northwind' } } },
+  ]}
+>
+  The second dataset fails, so the pane lists diagnostics instead of a
+  document with a blank where the money should be.
+</TemplateExample>
+
+## Presentation metadata is separate
+
+Runtime validation and editor UX are different concerns, so labels live in
+`variables` rather than in the schema. No validator has to learn kit-specific
+annotations.
+
+```ts
+template({
+  data,
+  schema: ReportSchema,
+  variables: {
+    'customer.name': { label: 'Customer name', group: 'Customer' },
+    revenue: { label: 'Revenue', group: 'Financials' },
+  },
+})
+```
+
+The same map feeds `templateVariables({ variables })` in the editor, described
+in [Authoring](/docs/templates/authoring). Two fields change resolution:
+
+```ts
+variables: {
+  'customer.vatNumber': { required: false },
+  'report.title': { default: 'Monthly report' },
+}
+```
+
+`required: false` lets a missing value resolve to empty text with a warning.
+`default` supplies a value when the data has none, and implies the variable is
+optional. Everything else is required by default.
+
+## Next
+
+- [Formatting and localization](/docs/templates/formatting) for the built-in formatters.
+- [Template basics](/docs/templates/basics) for options and diagnostics.

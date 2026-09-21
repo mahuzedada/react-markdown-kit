@@ -1,0 +1,508 @@
+/*
+ * Optional styling for @react-markdown-kit/mermaid.
+ *
+ * Scoped to the kit's two roots, `.rmk-document` (rendered output) and
+ * `.rmk-editor` (the canvas), single-class specificity, no reset, every value
+ * a --rmk-* custom property. Shape colours are content: they live in the
+ * drawing payload and reach the SVG as attributes, never from here.
+ */
+
+.rmk-document {
+  --rmk-diagram-surface: #ffffff;
+  --rmk-diagram-plate: #ffffff;
+  --rmk-diagram-grid: color-mix(in srgb, #1e1e1e 12%, transparent);
+}
+
+.rmk-document [data-rmk-diagram] {
+  margin-inline: 0;
+  padding: calc(var(--rmk-space) / 2);
+  border: 1px solid var(--rmk-border);
+  border-radius: var(--rmk-radius);
+  background-color: var(--rmk-diagram-surface);
+  background-image: radial-gradient(var(--rmk-diagram-grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+  overflow-x: auto;
+}
+
+.rmk-document [data-rmk-diagram] svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  font-family: var(--rmk-font-body);
+}
+
+/* `width: content` fits the shapes; `text` and `full` span the column. */
+.rmk-document [data-rmk-diagram] svg[data-width="content"] { width: auto; }
+.rmk-document [data-rmk-diagram] figcaption {
+  margin-block-start: calc(var(--rmk-space) / 2);
+  font-size: 0.85em;
+  color: var(--rmk-muted);
+}
+
+/* A payload that did not parse keeps its source visible, never hidden. */
+.rmk-document [data-rmk-diagram][data-rmk-diagram-error] {
+  border-style: dashed;
+  background-image: none;
+}
+.rmk-document [data-rmk-diagram][data-rmk-diagram-error] pre { margin: 0; }
+
+/* ======================================================================== */
+/* The canvas (`@react-markdown-kit/mermaid/editor`).                       */
+/*                                                                            */
+/* Ported from @zuilib/text-editor (MIT). Every colour, radius and shadow of  */
+/* the canvas chrome is a `--rmk-diagram-*` custom property declared on       */
+/* `.rmk-editor`, with defaults that follow the editor's own `--rmk-*`        */
+/* tokens; override them on `.rmk-editor` or any ancestor. The drawing area   */
+/* itself stays white so stored shape colours are theme-agnostic: a dark      */
+/* theme sets `--rmk-diagram-dark-filter: invert(93%) hue-rotate(180deg)`     */
+/* and the surface, swatches and inline text input invert together.          */
+/* ======================================================================== */
+
+.rmk-editor {
+  --rmk-diagram-accent: #2563eb;
+  --rmk-diagram-accent-soft: color-mix(in srgb, var(--rmk-diagram-accent) 14%, transparent);
+  --rmk-diagram-accent-ring: color-mix(in srgb, var(--rmk-diagram-accent) 12%, transparent);
+  --rmk-diagram-accent-border: color-mix(in srgb, var(--rmk-diagram-accent) 50%, var(--rmk-diagram-border));
+  --rmk-diagram-accent-glow: color-mix(in srgb, var(--rmk-diagram-accent) 55%, transparent);
+  --rmk-diagram-foreground: var(--rmk-text, currentColor);
+  --rmk-diagram-muted-foreground: var(--rmk-muted, color-mix(in srgb, currentColor 55%, transparent));
+  --rmk-diagram-border: var(--rmk-border, color-mix(in srgb, currentColor 18%, transparent));
+  --rmk-diagram-divider: color-mix(in srgb, currentColor 15%, transparent);
+  --rmk-diagram-chrome: Canvas;
+  --rmk-diagram-popover: Canvas;
+  --rmk-diagram-popover-foreground: var(--rmk-diagram-foreground);
+  --rmk-diagram-danger: #dc2626;
+  --rmk-diagram-danger-soft: color-mix(in srgb, var(--rmk-diagram-danger) 12%, transparent);
+  --rmk-diagram-success: #15803d;
+  --rmk-diagram-radius: var(--rmk-radius, 4px);
+  --rmk-diagram-control-radius: var(--rmk-radius, 4px);
+  --rmk-diagram-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --rmk-diagram-handle-shadow: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.25));
+  --rmk-diagram-font: var(--rmk-font-body, ui-sans-serif, system-ui, sans-serif);
+  --rmk-diagram-surface: #ffffff;
+  --rmk-diagram-surface-translucent: color-mix(in srgb, var(--rmk-diagram-surface) 85%, transparent);
+  --rmk-diagram-grid: rgba(0, 0, 0, 0.09);
+  --rmk-diagram-grid-size: 20px;
+  --rmk-diagram-dark-filter: none;
+  --rmk-diagram-hover: color-mix(in srgb, currentColor 8%, transparent);
+  --rmk-diagram-active: color-mix(in srgb, currentColor 12%, transparent);
+  --rmk-diagram-swatch-border: rgba(0, 0, 0, 0.18);
+  --rmk-diagram-resize-hover: rgba(0, 0, 0, 0.06);
+}
+
+.rmk-editor .rmk-diagram {
+  margin-block: 1rem;
+}
+
+.rmk-editor .rmk-diagram-canvas {
+  position: relative;
+  border: 1px solid var(--rmk-diagram-border);
+  border-radius: var(--rmk-diagram-radius);
+  background: var(--rmk-diagram-chrome);
+  color: var(--rmk-diagram-foreground);
+  font-family: var(--rmk-diagram-font);
+  outline: none;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.rmk-editor .rmk-diagram-canvas.is-editable:focus-within {
+  border-color: var(--rmk-diagram-accent-border);
+  box-shadow: 0 0 0 3px var(--rmk-diagram-accent-ring);
+}
+
+.rmk-editor .rmk-diagram-canvas.is-editable:focus-within .rmk-diagram-surface {
+  touch-action: none;
+}
+
+.rmk-editor .rmk-diagram-canvas.is-content-width {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.rmk-editor .rmk-diagram-stage {
+  position: relative;
+}
+
+.rmk-editor .rmk-diagram-surface {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  /*
+   * A finger on an idle canvas scrolls the page; once the canvas is
+   * active (tapped, so focused) touches draw and drag. Mouse input is
+   * unaffected either way.
+   */
+  touch-action: pan-y pinch-zoom;
+  font-family: var(--rmk-diagram-font);
+  background-color: var(--rmk-diagram-surface);
+  background-image: radial-gradient(circle, var(--rmk-diagram-grid) 1px, transparent 1px);
+  background-size: var(--rmk-diagram-grid-size) var(--rmk-diagram-grid-size);
+  filter: var(--rmk-diagram-dark-filter);
+}
+
+/* Selection chrome inside the SVG: everything is drawn in `currentColor` */
+.rmk-editor .rmk-diagram-selection,
+.rmk-editor .rmk-diagram-bind-target {
+  color: var(--rmk-diagram-accent);
+}
+
+.rmk-editor .rmk-diagram-handle {
+  fill: var(--rmk-diagram-surface);
+  stroke: currentColor;
+  filter: var(--rmk-diagram-handle-shadow);
+}
+
+.rmk-editor .rmk-diagram-ghost {
+  opacity: 0.55;
+  transition: opacity 0.12s ease;
+}
+
+.rmk-editor .rmk-diagram-ghost:hover {
+  opacity: 1;
+}
+
+.rmk-editor .rmk-diagram-label-plate {
+  fill: var(--rmk-diagram-surface);
+}
+
+.rmk-editor .rmk-diagram-shape {
+  transition: filter 0.12s ease;
+}
+
+.rmk-editor .rmk-diagram-canvas.is-editable .rmk-diagram-shape:hover:not(.is-selected) {
+  filter: drop-shadow(0 0 2.5px var(--rmk-diagram-accent-glow));
+}
+
+.rmk-editor .rmk-diagram-bind-target {
+  animation: rmk-diagram-pulse 0.9s ease-in-out infinite alternate;
+}
+
+/* One keyframe each: the end state is the element's own computed style. */
+@keyframes rmk-diagram-pulse {
+  from {
+    stroke-opacity: 0.55;
+  }
+}
+
+@keyframes rmk-diagram-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+/* Header: tools row (+ contextual properties), same idiom as the editor toolbar */
+.rmk-editor .rmk-diagram-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem 0.5rem;
+  padding: 0.375rem 0.625rem;
+  border-block-end: 1px solid var(--rmk-diagram-border);
+  background: var(--rmk-diagram-chrome);
+}
+
+.rmk-editor .rmk-diagram-toolbar-group {
+  display: flex;
+  /* Narrow canvases: the tools flow onto a second line rather than being clipped */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.rmk-editor .rmk-diagram-toolbar-group-end {
+  margin-inline-start: auto;
+}
+
+.rmk-editor .rmk-diagram-toolbar-divider {
+  width: 1px;
+  height: 1.125rem;
+  margin: 0 0.375rem;
+  background: var(--rmk-diagram-divider);
+}
+
+.rmk-editor .rmk-diagram-tool {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--rmk-diagram-control-radius);
+  background: transparent;
+  color: inherit;
+  opacity: 0.65;
+  cursor: pointer;
+  transition: background-color 0.12s ease, opacity 0.12s ease;
+}
+
+.rmk-editor .rmk-diagram-tool:hover {
+  opacity: 1;
+  background: var(--rmk-diagram-hover);
+}
+
+.rmk-editor .rmk-diagram-tool:focus-visible {
+  outline: 2px solid var(--rmk-focus, currentColor);
+  outline-offset: 1px;
+}
+
+.rmk-editor .rmk-diagram-tool.is-active {
+  opacity: 1;
+  color: var(--rmk-diagram-accent);
+  background: var(--rmk-diagram-accent-soft);
+}
+
+.rmk-editor .rmk-diagram-tool.is-success {
+  opacity: 1;
+  color: var(--rmk-diagram-success);
+}
+
+.rmk-editor .rmk-diagram-tool-danger {
+  color: var(--rmk-diagram-danger);
+}
+
+.rmk-editor .rmk-diagram-tool-danger:hover {
+  background: var(--rmk-diagram-danger-soft);
+}
+
+.rmk-editor .rmk-diagram-tool-more {
+  width: 2.25rem;
+}
+
+.rmk-editor .rmk-diagram-caret {
+  position: absolute;
+  inset-inline-end: 0.25rem;
+  bottom: 0.25rem;
+  width: 0;
+  height: 0;
+  border-inline-start: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 0.7;
+}
+
+.rmk-editor .rmk-diagram-more {
+  position: relative;
+}
+
+.rmk-editor .rmk-diagram-popover {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  inset-inline-start: 0;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 9.5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--rmk-diagram-border);
+  border-radius: var(--rmk-diagram-control-radius);
+  background: var(--rmk-diagram-popover);
+  color: var(--rmk-diagram-popover-foreground);
+  box-shadow: var(--rmk-diagram-shadow);
+  animation: rmk-diagram-pop 0.12s ease-out;
+}
+
+.rmk-editor .rmk-diagram-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border: none;
+  border-radius: var(--rmk-diagram-control-radius);
+  background: transparent;
+  color: inherit;
+  font-size: 0.8125rem;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.rmk-editor .rmk-diagram-popover-item:hover {
+  background: var(--rmk-diagram-hover);
+}
+
+.rmk-editor .rmk-diagram-popover-item.is-active {
+  color: var(--rmk-diagram-accent);
+  background: var(--rmk-diagram-accent-soft);
+}
+
+/*
+ * Properties: the color for the selection (or for the next shape when
+ * nothing is selected) plus contextual connector options. Inline in the
+ * tools row, so showing them never changes the row height, and only
+ * visible while the canvas is active (focused).
+ */
+.rmk-editor .rmk-diagram-props-host {
+  display: none;
+  align-items: center;
+}
+
+.rmk-editor .rmk-diagram-canvas:focus-within .rmk-diagram-props-host {
+  display: flex;
+}
+
+.rmk-editor .rmk-diagram-props {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-inline-start: 0.5rem;
+  border-inline-start: 1px solid var(--rmk-diagram-divider);
+}
+
+.rmk-editor .rmk-diagram-props-group {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.rmk-editor .rmk-diagram-props-group + .rmk-diagram-props-group {
+  padding-inline-start: 0.5rem;
+  border-inline-start: 1px solid var(--rmk-diagram-divider);
+}
+
+.rmk-editor .rmk-diagram-swatch {
+  width: 1rem;
+  height: 1rem;
+  margin: 0 0.125rem;
+  padding: 0;
+  border: 2px solid var(--rmk-diagram-swatch-border);
+  border-radius: 999px;
+  cursor: pointer;
+  filter: var(--rmk-diagram-dark-filter);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.rmk-editor .rmk-diagram-swatch:hover {
+  transform: scale(1.12);
+}
+
+.rmk-editor .rmk-diagram-swatch.is-active {
+  box-shadow: 0 0 0 2px var(--rmk-diagram-chrome), 0 0 0 3.5px var(--rmk-diagram-accent);
+}
+
+/* Empty state */
+.rmk-editor .rmk-diagram-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  color: var(--rmk-diagram-muted-foreground);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Inline text editing */
+.rmk-editor .rmk-diagram-overlay {
+  position: absolute;
+  inset: 0;
+  transform-origin: top left;
+  pointer-events: none;
+}
+
+.rmk-editor .rmk-diagram-text-input {
+  position: absolute;
+  z-index: 6;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  outline: 1.5px dashed var(--rmk-diagram-accent);
+  outline-offset: 3px;
+  background: var(--rmk-diagram-surface-translucent);
+  color: inherit;
+  font-family: var(--rmk-diagram-font);
+  resize: none;
+  overflow: hidden;
+  box-sizing: content-box;
+  pointer-events: auto;
+  filter: var(--rmk-diagram-dark-filter);
+}
+
+.rmk-editor .rmk-diagram-text-input::placeholder {
+  color: currentColor;
+  opacity: 0.35;
+}
+
+/* Canvas height grip (bottom-right) */
+.rmk-editor .rmk-diagram-resize {
+  position: absolute;
+  right: 0.375rem;
+  bottom: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: var(--rmk-diagram-control-radius);
+  color: var(--rmk-diagram-foreground);
+  opacity: 0.35;
+  cursor: ns-resize;
+  touch-action: none;
+  filter: var(--rmk-diagram-dark-filter);
+  transition: opacity 0.12s ease, background-color 0.12s ease;
+}
+
+.rmk-editor .rmk-diagram-resize:hover {
+  opacity: 0.9;
+  background: var(--rmk-diagram-resize-hover);
+}
+
+/*
+ * Ink drawing style (`mermaid({ style: 'ink' })`). Geometry is handled by
+ * the renderer (core/ink.ts); the stylesheet only switches the face:
+ * Recursive on its casual/cursive axes when the host loads it, the regular
+ * font otherwise.
+ */
+.rmk-editor .rmk-diagram-canvas.is-ink {
+  --rmk-diagram-font: 'Recursive', ui-sans-serif, system-ui, sans-serif;
+  --rmk-diagram-grid: rgba(0, 0, 0, 0.06);
+}
+
+.rmk-editor .rmk-diagram-canvas.is-ink .rmk-diagram-surface text,
+.rmk-editor .rmk-diagram-canvas.is-ink .rmk-diagram-text-input {
+  font-variation-settings: 'CASL' 1, 'CRSV' 1, 'MONO' 0, 'wght' 440, 'slnt' -3;
+  letter-spacing: 0.01em;
+}
+
+/* Coarse pointers: 44px targets, and hover-revealed controls shown by default */
+@media (pointer: coarse) {
+  .rmk-editor .rmk-diagram-tool {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .rmk-editor .rmk-diagram-popover-item {
+    min-height: 2.75rem;
+  }
+
+  .rmk-editor .rmk-diagram-swatch {
+    position: relative;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0 0.25rem;
+  }
+
+  .rmk-editor .rmk-diagram-swatch::before,
+  .rmk-editor .rmk-diagram-resize::before {
+    content: '';
+    position: absolute;
+    inset: -0.75rem;
+  }
+
+  .rmk-editor .rmk-diagram-swatch::before {
+    inset: -0.625rem;
+  }
+}
+
+/* Phones: editable text renders at 16px or more, so iOS does not zoom on focus */
+@media (max-width: 40rem) {
+  .rmk-editor .rmk-diagram-popover-item {
+    font-size: max(16px, 1em);
+  }
+}

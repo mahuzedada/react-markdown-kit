@@ -1,0 +1,167 @@
+---
+title: Components
+description: Replace any rendered element with your own React component, and read the source node metadata each override receives.
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+
+export function DocsLink(props) {
+  const external = props.href?.startsWith('http')
+  return (
+    <a {...props} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>
+      {props.children}
+      {external ? ' ↗' : null}
+    </a>
+  )
+}
+
+export function CaptionedImage({ src, alt, title }) {
+  return (
+    <span style={{ display: 'block' }}>
+      <img src={src} alt={alt} style={{ maxWidth: '240px', borderRadius: 6 }} />
+      {title ? (
+        <span style={{ display: 'block', fontSize: '0.8rem', opacity: 0.7 }}>{title}</span>
+      ) : null}
+    </span>
+  )
+}
+
+export function LabelledCode({ className, node, children }) {
+  const language = className?.replace('language-', '')
+  const meta = node?.data?.meta
+  return (
+    <>
+      {language ? (
+        <span style={{ fontSize: '0.75rem', letterSpacing: '0.05em', opacity: 0.7 }}>
+          {language}
+          {meta ? ` · ${meta}` : ''}
+        </span>
+      ) : null}
+      <code className={className}>{children}</code>
+    </>
+  )
+}
+
+# Components
+
+```tsx
+<Markdown components={{ a: AppLink, img: AppImage, code: CodeBlock }}>
+  {content}
+</Markdown>
+```
+
+The `components` prop maps an element name to a React component. Every element the renderer emits can be replaced. This is the escape hatch of last resort, and it always works.
+
+## Overriding a link
+
+A link override is the usual first one. It routes internal links through your router and marks external ones.
+
+```tsx
+function DocsLink(props: ComponentProps<'a'>) {
+  const external = props.href?.startsWith('http')
+  return <a {...props} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined} />
+}
+
+<Markdown components={{ a: DocsLink }}>{content}</Markdown>
+```
+
+<RenderExample
+  title="External links get an arrow and rel=noreferrer"
+  markdown={'Read the [specification](https://example.com/spec) or the [changelog](/docs/getting-started).\n'}
+  rendererProps={{ components: { a: DocsLink } }}
+/>
+
+## Overriding an image
+
+An image override is where you add lazy loading, a CDN, sizing or a caption.
+
+```tsx
+function CaptionedImage({ src, alt, title }: ComponentProps<'img'>) {
+  return (
+    <span className="figure">
+      <img src={src} alt={alt} loading="lazy" />
+      {title ? <span className="caption">{title}</span> : null}
+    </span>
+  )
+}
+```
+
+A lone image sits inside a paragraph, and a `p` cannot legally contain a `figure`. Use inline elements here, or override `p` as well and unwrap it yourself.
+
+<RenderExample
+  title="The image title becomes a caption"
+  markdown={'![The React Markdown Kit logo](/img/logo.svg "Figure 1. The project logo")\n'}
+  rendererProps={{ components: { img: CaptionedImage } }}
+/>
+
+## Overriding code
+
+A fenced code block renders as `pre` wrapping `code`. Override `code` for syntax highlighting, and `pre` for the surrounding chrome.
+
+The language is on `className` as `language-js`. The rest of the info string is on `node.data.meta`.
+
+```tsx
+function LabelledCode({ className, node, children }) {
+  const language = className?.replace('language-', '')
+  const meta = node?.data?.meta
+  return (
+    <>
+      {language ? <span>{language}{meta ? ` · ${meta}` : ''}</span> : null}
+      <code className={className}>{children}</code>
+    </>
+  )
+}
+```
+
+<RenderExample
+  title="Language and info string, read off the node"
+  markdown={'```ts title="server.ts"\nexport const port = 8080\n```\n'}
+  rendererProps={{ components: { code: LabelledCode } }}
+/>
+
+Inline code reaches the same component with no `className`, so check for a language before treating it as a block.
+
+## What an override receives
+
+An override is called with three kinds of prop.
+
+**The element's own HTML props.** An `a` gets `href` and `title`. An `img` gets `src`, `alt` and `title`. A fenced `code` gets `className`.
+
+**`children`.** Already-rendered React children, except for void elements such as `img` and `hr`.
+
+**`node`.** The hast element this component was built from.
+
+`node` carries the metadata that has no HTML prop:
+
+| Field | Holds |
+| --- | --- |
+| `node.tagName` | The element name, such as `h2` |
+| `node.properties` | Every attribute, before React renaming |
+| `node.data.meta` | The rest of a code fence info string |
+| `node.position` | Start and end offsets in the Markdown source |
+| `node.children` | The unrendered child nodes |
+
+`node.position` is useful for linking a rendered heading back to its line in the source. That is how an editor preview highlights the block you are typing in.
+
+## Overrides apply everywhere
+
+There is one parser for the whole document, so a table cell is an ordinary subtree. Your `a` override runs inside a heading, a list item, a table cell and a footnote alike.
+
+<RenderExample
+  gfm
+  title="One override, four contexts"
+  markdown={'## A [heading link](https://example.com)\n\n- A [list link](https://example.com)\n\n| Cell |\n| --- |\n| A [table link](https://example.com) |\n'}
+  rendererProps={{ components: { a: DocsLink } }}
+/>
+
+## Stability
+
+`node` is the hast element, and hast is a public, versioned format. Treat `node.properties` and `node.position` as stable.
+
+Extensions may introduce their own node types and contribute their own components. See [Extensions](/docs/extensions).
+
+## Related
+
+Reuse one set of overrides across the renderer, the editor preview and templates with a [preset](./presets.mdx).
+
+Styling without replacing components is covered in [Styling](/docs/styling), including the `classNames` prop.

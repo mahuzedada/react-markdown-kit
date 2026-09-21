@@ -1,0 +1,80 @@
+{
+  "name": "@react-markdown-kit/renderer",
+  "version": "0.1.0",
+  "description": "Render Markdown as React. Safe by default, unstyled by default, extensible.",
+  "homepage": "https://docs.reactmarkdownkit.com/react-markdown-renderer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mahuzedada/react-markdown-kit.git",
+    "directory": "packages/renderer"
+  },
+  "bugs": "https://github.com/mahuzedada/react-markdown-kit/issues",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./gfm": {
+      "types": "./dist/gfm.d.ts",
+      "default": "./dist/gfm.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@types/hast": "^3.0.4",
+    "@types/mdast": "^4.0.4",
+    "hast-util-to-jsx-runtime": "^2.3.2",
+    "html-url-attributes": "^3.0.1",
+    "mdast-util-from-markdown": "^2.0.2",
+    "mdast-util-gfm": "^3.0.0",
+    "mdast-util-to-hast": "^13.2.0",
+    "mdast-util-to-markdown": "^2.1.2",
+    "micromark-extension-gfm": "^3.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.1",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0",
+    "vfile": "^6.0.3"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "keywords": [
+    "react",
+    "markdown",
+    "renderer",
+    "commonmark",
+    "gfm",
+    "mdast",
+    "remark",
+    "react-markdown-alternative",
+    "markdown-renderer",
+    "streaming-markdown",
+    "ai-chat",
+    "server-components"
+  ],
+  "bin": {
+    "rmk-migrate": "./dist/codemod/migrate.mjs",
+    "rmk-compare": "./dist/codemod/compare.mjs"
+  }
+}
