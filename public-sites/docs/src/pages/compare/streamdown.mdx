@@ -1,0 +1,307 @@
+---
+title: "React Markdown Kit vs Streamdown"
+description: "React Markdown Kit vs Streamdown for AI chat UIs, compared on install size, GFM, security defaults, streaming, server rendering, plugins and migration."
+---
+
+import Link from '@docusaurus/Link'
+import RenderExample from '@site/src/components/RenderExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+import CompareTable, { gzipDifference, measuredOn } from '@site/src/components/CompareTable'
+
+export const PATH = '/compare/streamdown'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'React Markdown renderer', path: '/react-markdown-renderer' },
+  { name: 'vs Streamdown' },
+]
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/renderer'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+export const theirs = 'https://github.com/vercel/streamdown'
+
+export const FAQ = [
+  {
+    question: 'Which is smaller for an AI chat UI, Streamdown or React Markdown Kit?',
+    answer:
+      'React Markdown Kit. One import of @react-markdown-kit/renderer 0.1.0 with the GFM preset is smaller gzipped than one import of streamdown 2.6.0, measured by scripts/compare-bundles.mjs and committed to docs/data/bundle-sizes.json. Streamdown carries syntax highlighting, styling and a hardened rehype pipeline in that number.',
+  },
+  {
+    question: 'Does React Markdown Kit handle partial Markdown from a model?',
+    answer:
+      'Yes, and it is tested. packages/renderer/tests/streaming.test.tsx is 59 tests that feed seven documents token by token and assert that no prefix throws, the closed prefix stays byte-identical, nothing is duplicated, and the last prefix matches a one-shot render.',
+  },
+  {
+    question: 'Do I need Tailwind to render Markdown from an AI model?',
+    answer:
+      'Not with React Markdown Kit. It emits no class names by default and ships no stylesheet you must load. Streamdown documents a Tailwind @source directive and a set of shadcn/ui CSS custom properties as part of its installation.',
+  },
+]
+
+export const streamingSource = `Here is the summary you asked for.
+
+| Metric | Value |
+| --- | ---: |
+| tokens | 812 |
+
+\`\`\`ts
+const partial = {
+  answer: 42,
+`
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
+
+# React Markdown Kit vs Streamdown for AI chat
+
+Streamdown is Vercel's Markdown component for AI output. Its readme presents it as a
+replacement for `react-markdown` designed for AI-powered streaming, and it powers the AI
+Elements message component. `@react-markdown-kit/renderer` is a general React
+Markdown renderer whose streaming behaviour is pinned by tests. The two answer the same
+question with different amounts of product in the box.
+
+Same section order as every comparison page here: install size, GFM, security defaults,
+streaming, server rendering, plugins, migration. Facts about Streamdown come from its
+readme and its published package at version 2.6.0,
+<Link href={theirs}>vercel/streamdown</Link>. Facts about the kit link to the test or the
+generated table that produced them.
+
+## Install size
+
+Bytes a browser downloads for one import, measured from published tarballs by
+<Link href={blob('scripts/compare-bundles.mjs')}>`scripts/compare-bundles.mjs`</Link> and
+committed to
+<Link href={blob('docs/data/bundle-sizes.json')}>`docs/data/bundle-sizes.json`</Link> on
+{measuredOn}. React and React DOM are external in every row, CSS is counted separately
+and never added into the JavaScript number, and 1 KB is 1024 bytes.
+
+<CompareTable
+  ids={['kit-renderer', 'kit-renderer-gfm', 'streamdown']}
+  caption="One import, minified and gzipped"
+  licenses
+/>
+
+The kit with GFM is {gzipDifference('streamdown', 'kit-renderer-gfm')} smaller gzipped
+than Streamdown for the entry that was measured,
+`import { Streamdown } from 'streamdown'`. Read that as a difference in scope, not as a
+defect: Streamdown's published dependencies include `marked`, `remend`, `remark-gfm`,
+`rehype-raw`, `rehype-sanitize`, `rehype-harden`, `clsx` and `tailwind-merge`, and the
+component ships styled output. The kit renders unstyled elements and leaves the rest to
+you.
+
+Streamdown is also the only package compared here that is not MIT: the measured tarball
+declares Apache-2.0.
+
+Two costs sit outside the JavaScript number on the Streamdown side, both from its
+installation instructions: a Tailwind `@source` line pointing at
+`node_modules/streamdown/dist/*.js`, and a set of shadcn/ui CSS custom properties without
+which, the readme says, components may render with missing backgrounds or borders. The
+kit emits no class names unless you ask for them
+(<Link to="/docs/styling">styling</Link>,
+<Link href={blob('docs/STYLING.md')}>`docs/STYLING.md`</Link>).
+
+## GFM
+
+Both render GitHub Flavored Markdown. Streamdown lists tables, task lists and
+strikethrough as built-in features and depends on `remark-gfm`. The kit takes one line.
+
+```tsx
+import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+<Markdown preset={preset}>{content}</Markdown>
+```
+
+The kit's GFM is asserted by
+<Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link>: 68 cases derived from
+the GFM spec, each run through the native `gfm()` extension, through
+`remarkPlugins={[remarkGfm]}`, and through plain CommonMark, where the first two must be
+byte-identical and the third must not produce the GFM markup. CommonMark itself is
+covered example by example in
+<Link href={blob('tests/commonmark.test.ts')}>`tests/commonmark.test.ts`</Link>. No
+conformance suite is run here against Streamdown.
+
+Streamdown adds things the renderer does not have in the box: KaTeX math, Shiki syntax
+highlighting, and Mermaid, each as an optional `@streamdown/*` plugin package in 2.6.0.
+The kit has a Mermaid plugin of its own that draws flowcharts only and loads no
+Mermaid.js (<Link to="/react-mermaid">Mermaid in React Markdown</Link>). It ships no math
+and no syntax highlighting; a rehype plugin covers both.
+
+## Security defaults
+
+Streamdown's readme lists "Security-first" and names `rehype-harden`, and its published
+dependencies include `rehype-raw`, `rehype-sanitize` and `rehype-harden`. Raw HTML
+therefore goes through a sanitizer rather than being inert. This page does not test that
+pipeline, so it reports the dependency list and the readme, nothing more.
+
+The kit's default is that raw HTML is never markup until you opt in.
+
+| Default | React Markdown Kit |
+| --- | --- |
+| Raw HTML in the source | Visible escaped text. `skipHtml: true` removes it. Neither executes it |
+| Opting in | `rehype-raw` then `rehype-sanitize`, in that order, passed by you |
+| URLs | `http`, `https`, `irc`, `ircs`, `mailto`, `xmpp` allowed, everything else emptied |
+| A precompiled document | Same policy, so it is not a bypass |
+
+Each row is a test in
+<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>the renderer security tests</Link>,
+and the model is written up in <Link to="/docs/security">the security model</Link>.
+
+For model output specifically, the difference that matters is what a hallucinated
+`<script>` or a `javascript:` link does. On the kit it is text and an empty `href`, with
+no plugin installed and no configuration to get wrong.
+
+## Streaming
+
+This is Streamdown's reason to exist, and it is the section where the kit has the
+evidence rather than the feature list.
+
+Streamdown's readme describes streaming-optimized rendering with unterminated block
+parsing built on `remend`, and memoized rendering for efficient updates. It also exposes
+`animated` and `isAnimating` props for the AI SDK's streaming status.
+
+**React Markdown Kit passes, with no option to set.**
+<Link href={blob('packages/renderer/tests/streaming.test.tsx')}>`packages/renderer/tests/streaming.test.tsx`</Link>
+is 59 tests. Seven documents are fed token by token, where words stay whole and every
+whitespace and punctuation character is its own token, so a fence arrives as three
+separate backticks. Every prefix is asserted on four properties:
+
+1. no prefix throws,
+2. the HTML of the closed prefix is byte-identical at every later prefix,
+3. nothing from the closed prefix is duplicated,
+4. the last prefix renders exactly like the whole document rendered once.
+
+The cases are an unclosed code fence, half-written emphasis and strong, a table mid-row,
+a list mid-item, a heading with no trailing newline, a link with an unclosed bracket, and
+a fenced block that closes late. The same run is repeated through `compileMarkdown`, and
+a mounted React root is grown token by token to check that a precompiled document
+re-renders as it grows and ends byte-identical to a root that only ever saw the finished
+document. One test asserts the heading element is reused across growth rather than
+recreated.
+
+Half-written constructs degrade to the characters typed so far: `**str` is the text
+`**str`, `[text](` is the text `[text](`, and a table is a paragraph until its delimiter
+row is complete. An open fence never leaks its contents as markup, so a model writing
+Markdown inside a fence does not flash headings. Two prefixes legitimately rewrite output
+that already rendered, and both are pinned by tests rather than hidden: a paragraph
+becomes a heading when a setext underline arrives, and a GFM autolink points at the
+truncated host while the URL is still being typed.
+
+<RenderExample
+  title="A prefix a model would produce mid-answer, rendered on this page"
+  markdown={streamingSource}
+  gfm
+  editable
+>
+  The fence is still open. Its contents render as code, the finished table above it is
+  untouched, and deleting characters from the end never throws.
+</RenderExample>
+
+The design difference is what an incomplete construct looks like. Streamdown suppresses
+it. The kit shows the literal characters and guarantees the closed prefix above does not
+move. If you want suppression, do it in your component by trimming the tail before you
+hand the string over; the kit does not do it for you.
+
+## Server rendering
+
+Streamdown's published `dist/index.js` begins with `"use client"`, so the component runs
+on the client. Its documented usage is a React client component driven by the AI SDK's
+`useChat`.
+
+The kit renders on the server with no DOM. Its conformance suites call
+`renderToStaticMarkup`, and
+<Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link> installs the
+packed tarball into a consumer with no Lexical and renders there
+(<Link to="/docs/server-rendering">server rendering</Link>). The same component works in
+a React server component, during SSR and in a static build, which matters when the chat
+transcript is also a page you want indexed.
+
+The second server-side difference is `compileMarkdown`. A `MarkdownDocument` compiled
+once renders many times without parsing again: on the reference machine in
+<Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link> a 10 KB document
+takes 16.80 ms from a string and 5.99 ms precompiled, 2.8x faster, because parsing is
+roughly 80% of the work. A finished chat message is exactly the case for it.
+
+The counterweight, measured against `react-markdown@10.1.0` and not against Streamdown:
+**1 KB is 1.21x slower** (2.69 ms against 2.23 ms), 10 KB is at parity (16.22 ms against
+16.25 ms), 100 KB is 0.89x (206.96 ms against 233.36 ms). Short messages are the 1 KB
+case, and that row is an open regression tracked in
+<Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link>. Reproduce with
+`pnpm bench`. No benchmark against Streamdown is published here.
+
+## Plugins
+
+Streamdown takes a `plugins` object of `@streamdown/*` packages: `code`, `mermaid`,
+`math`, `cjk` in the readme example. Each is installed separately and each adds its own
+Tailwind `@source` line.
+
+The kit takes `remarkPlugins`, `rehypePlugins` and `remarkRehypeOptions`, compared prop
+for prop against `react-markdown` at 4 of 4, 3 of 3 and 3 of 3 identical
+(<Link href={blob('docs/COMPATIBILITY.md')}>`docs/COMPATIBILITY.md`</Link>), so anything
+in the unified ecosystem works. It also has extensions, which register micromark syntax,
+mdast handlers, hast handlers and editor behaviour in one declaration, so the renderer,
+the editor and a compile-only server read the same thing
+(<Link to="/docs/extensions">extensions</Link>).
+
+That is the structural difference. Streamdown gives you a finished chat surface.
+The kit gives you a document contract that the renderer, the editor
+(<Link to="/react-markdown-editor">editor</Link>), the Mermaid plugin and the template
+plugin all share, and you assemble the surface.
+
+## Migration
+
+There is no codemod for this direction. `rmk-migrate` and `rmk-compare` handle
+`react-markdown` only
+(<Link href={blob('packages/renderer/src/codemod/compare.mjs')}>`compare.mjs`</Link>).
+
+```diff
+-import { Streamdown } from 'streamdown'
+-import 'streamdown/styles.css'
++import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
++
++const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+-<Streamdown>{part.text}</Streamdown>
++<Markdown preset={preset}>{part.text}</Markdown>
+```
+
+What you give up, and should plan for.
+
+- **Styling.** Streamdown ships styled output. The kit emits no class names by default,
+  so you bring a stylesheet or the opt-in `classNames` hooks
+  (<Link to="/docs/styling">styling</Link>).
+- **Syntax highlighting and math.** Shiki and KaTeX come with Streamdown's plugin
+  packages. Here they are a rehype plugin you choose.
+- **Mermaid.** The kit's plugin renders flowcharts only and loads no Mermaid.js
+  (<Link to="/react-mermaid">Mermaid in React Markdown</Link>).
+- **`animated` and `isAnimating`.** No equivalent. The kit re-renders whatever string
+  you pass and guarantees the closed prefix does not move.
+
+What you gain: a smaller bundle, raw HTML inert with no pipeline to configure, server
+rendering, a precompiled document path, and the streaming behaviour written down as 59
+tests you can run.
+
+## FAQ
+
+<dl>
+  {FAQ.map((item) => (
+    <div key={item.question}>
+      <dt><strong>{item.question}</strong></dt>
+      <dd>{item.answer}</dd>
+    </div>
+  ))}
+</dl>
+
+## Next
+
+<Link href={sites.rendererDemo}>Renderer playground</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/renderer on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
+
+<Link to="/react-markdown-alternative">react-markdown alternative</Link> ·{' '}
+<Link to="/compare/react-markdown">vs react-markdown</Link> ·{' '}
+<Link to="/compare/markdown-to-jsx">vs markdown-to-jsx</Link> ·{' '}
+<Link to="/react-markdown-renderer">Renderer overview</Link> ·{' '}
+<Link to="/docs/security">Security model</Link>
