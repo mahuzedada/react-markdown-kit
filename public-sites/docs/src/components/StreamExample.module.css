@@ -1,0 +1,137 @@
+/*
+ * Chrome for the token-by-token replay on /streaming-markdown.
+ *
+ * As with Example.module.css, nothing here styles the rendered Markdown. That
+ * comes from `@react-markdown-kit/renderer/styles.css`, scoped to
+ * `.rmk-document`.
+ */
+
+.example {
+  margin: 0 0 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--card);
+}
+
+.caption {
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.scrub {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.scrubLabel {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+@media (max-width: 768px) {
+  .split { grid-template-columns: 1fr; }
+  .pane + .pane { border-top: 1px solid var(--border); }
+}
+
+.pane { min-width: 0; }
+.pane + .pane { border-left: 1px solid var(--border); }
+
+@media (max-width: 768px) {
+  .pane + .pane { border-left: 0; }
+}
+
+.paneLabel {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.source {
+  margin: 0;
+  padding: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: transparent;
+  border: 0;
+  min-height: 14rem;
+  color: var(--foreground);
+}
+
+.caret {
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  vertical-align: text-bottom;
+  background: var(--primary);
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret { animation: none; }
+}
+
+@keyframes blink {
+  to { visibility: hidden; }
+}
+
+.output {
+  padding: 0.85rem;
+  font-size: 0.92rem;
+  min-height: 14rem;
+}
+
+.note {
+  padding: 0.7rem 0.9rem;
+  font-size: 0.86rem;
+  border-top: 1px solid var(--border);
+  color: var(--foreground);
+}

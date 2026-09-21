@@ -1,0 +1,289 @@
+---
+id: render-markdown-in-react
+slug: /guides/render-markdown-in-react
+title: "How to Render Markdown in React"
+sidebar_label: Render Markdown in React
+description: "How to render Markdown in React with one component: GFM, custom components, links, code blocks, security defaults and server rendering, each shown live."
+---
+
+import Link from '@docusaurus/Link'
+import RenderExample from '@site/src/components/RenderExample'
+import sites from '@site/src/sites'
+import { FaqJsonLd } from '@site/src/components/JsonLd'
+
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const FAQ = [
+  {
+    question: 'How do I render Markdown in React?',
+    answer:
+      'Install @react-markdown-kit/renderer and pass the Markdown string as children of the Markdown component. There is no provider, no stylesheet and no configuration, and the output is plain semantic HTML with no classes.',
+  },
+  {
+    question: 'How do I render Markdown tables and task lists in React?',
+    answer:
+      'Tables, task lists, strikethrough, autolinks and footnotes are GitHub Flavored Markdown. Turn them on with defineMarkdownPreset({ extensions: [gfm()] }) and pass the preset, or pass remark-gfm in remarkPlugins if you already use it.',
+  },
+  {
+    question: 'Is it safe to render Markdown from users in React?',
+    answer:
+      'Raw HTML is not executed by default and is rendered as visible escaped text, and URL schemes outside http, https, irc, ircs, mailto and xmpp are emptied. Both defaults are asserted in packages/renderer/tests/render.dom.test.tsx. Plugins and components you pass are your own trusted code.',
+  },
+  {
+    question: 'Can I render Markdown in a React server component?',
+    answer:
+      'Yes. The renderer entry carries no use client directive and touches no browser global, so it renders in a server component, during SSR and in a static build, shipping no JavaScript for the Markdown itself.',
+  },
+]
+
+<FaqJsonLd items={FAQ} />
+
+# How to render Markdown in React
+
+Every example on this page is rendered by `@react-markdown-kit/renderer`
+itself, server-rendered with the page, so the output is in the HTML before any
+JavaScript runs. The left pane is the source, the right pane is the output.
+
+```bash
+npm install @react-markdown-kit/renderer
+```
+
+## Render a Markdown string
+
+Pass the string as children. That is the whole first-use experience: no
+provider, no stylesheet, no configuration.
+
+```tsx
+import Markdown from '@react-markdown-kit/renderer'
+
+export function Post({ content }: { content: string }) {
+  return <Markdown>{content}</Markdown>
+}
+```
+
+<RenderExample
+  editable
+  title="Edit the source and watch the output follow"
+  markdown={`## Release notes\n\nShipped **today** after a *long* review.\n\n1. Faster cold render\n2. Smaller payload\n\n> Upgrade at your leisure.`}
+/>
+
+The output is plain semantic HTML: `h2`, `p`, `strong`, `ol`, `blockquote`. No
+classes, no inline styles, nothing to override. Style it with your own CSS, or
+opt into the shipped typography: <Link to="/docs/styling">four ways to style
+it</Link>.
+
+The parser is micromark, not regular expressions. 554 of the 652 official
+CommonMark examples match byte for byte, and 96% match once the raw-HTML
+examples the security policy drops on purpose are counted separately
+(<Link href={blob('tests/commonmark.test.ts')}>`tests/commonmark.test.ts`</Link>).
+
+## Render tables and task lists with GFM
+
+Tables, task lists, strikethrough, autolinks and footnotes are GitHub Flavored
+Markdown, so they are off until you ask for them.
+
+```tsx
+import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+export function Post({ content }: { content: string }) {
+  return <Markdown preset={preset}>{content}</Markdown>
+}
+```
+
+Build the preset once at module scope. Building it inside the component creates
+a new preset on every render.
+
+<RenderExample
+  gfm
+  editable
+  title="GFM on: tables, task lists, strikethrough"
+  markdown={`| Document | Cold render | Ratio |\n| --- | ---: | ---: |\n| 1 KB | 2.69 ms | 1.21x |\n| 100 KB | 206.96 ms | 0.89x |\n\n- [x] tables\n- [x] task lists\n- [ ] ~~struck~~ text`}
+>
+  The numbers in this table are the real benchmark results, from{' '}
+  <Link href={blob('benchmarks/README.md')}>benchmarks/README.md</Link>. Ratios
+  are kit divided by baseline, so 0.89x is faster than `react-markdown@10.1.0`
+  and 1.21x is slower.
+</RenderExample>
+
+`remarkPlugins={[remarkGfm]}` works too, and is fixture-tested to produce the
+same output as the native extension
+(<Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link>). The
+extension is smaller, since it does not load a remark plugin.
+<Link to="/docs/renderer/gfm">GFM reference</Link>.
+
+## Replace elements with your own components
+
+Map an element name to a component. The component receives the usual props plus
+the source node.
+
+```tsx
+import Markdown from '@react-markdown-kit/renderer'
+import { Callout } from './Callout'
+
+const components = {
+  h2: (props) => <h2 className="section-heading" {...props} />,
+  blockquote: Callout,
+}
+
+<Markdown components={components}>{content}</Markdown>
+```
+
+<RenderExample
+  title="h2 and blockquote replaced by components"
+  markdown={`## A section\n\n> A quote rendered by a component.\n\nOrdinary paragraph.`}
+  rendererProps={{
+    components: {
+      h2: (props) => <h2 style={{ letterSpacing: '0.04em', textTransform: 'uppercase' }} {...props} />,
+      blockquote: (props) => (
+        <aside style={{ borderLeft: '3px solid currentColor', paddingLeft: '0.8rem', opacity: 0.85 }} {...props} />
+      ),
+    },
+  }}
+/>
+
+Define the `components` object outside the component too. A new object on every
+render remounts every overridden element.
+<Link to="/docs/renderer/components">Components reference</Link>.
+
+## Links
+
+Markdown links become `<a>`. To route them through your framework's link
+component, or to mark external links, override `a`.
+
+```tsx
+import NextLink from 'next/link'
+
+const components = {
+  a: ({ href = '', children, ...rest }) =>
+    href.startsWith('/') ? (
+      <NextLink href={href} {...rest}>{children}</NextLink>
+    ) : (
+      <a href={href} target="_blank" rel="noreferrer noopener" {...rest}>{children}</a>
+    ),
+}
+```
+
+Whatever the override does, the URL has already passed the default policy:
+`javascript:` and other unlisted schemes arrive as an empty string.
+
+<RenderExample
+  title="Links, including one the policy empties"
+  markdown={`An [ordinary link](https://example.com), a [relative one](/docs/styling),\nan autolink <https://example.com/feed>, and a [hostile one](javascript:alert(1)).`}
+>
+  The last link renders with nothing to navigate to. The rule is
+  `defaultUrlTransform`, which is exported so an override can call it.
+</RenderExample>
+
+## Code blocks
+
+A fenced block renders as `<pre><code class="language-ts">`. Override `code` to
+add highlighting, a copy button or a filename bar.
+
+```tsx
+const components = {
+  code: ({ className = '', children, ...rest }) => {
+    const language = /language-(\w+)/.exec(className)?.[1]
+    return <code className={className} data-language={language} {...rest}>{children}</code>
+  },
+}
+```
+
+<RenderExample
+  title="A fenced block keeps its info string"
+  markdown={"Inline `code` stays inline.\n\n```ts\nconst preset = defineMarkdownPreset({ extensions: [gfm()] })\n```"}
+>
+  The info string after the opening fence becomes `class="language-ts"`, which
+  is the hook every highlighter expects.
+</RenderExample>
+
+Highlighting is not built in. Bringing your own highlighter keeps it out of the
+bundle of every page that renders Markdown without code.
+
+## Render Markdown you did not write
+
+Two defaults do the work, and both are asserted in
+<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>`packages/renderer/tests/render.dom.test.tsx`</Link>.
+
+1. **Raw HTML is not executed.** It renders as visible escaped text. `skipHtml`
+   removes it instead. Neither option executes it.
+2. **URL schemes are filtered.** `http`, `https`, `irc`, `ircs`, `mailto` and
+   `xmpp` pass; everything else is emptied. A colon after the first `/`, `?` or
+   `#` is part of a path, so relative URLs are untouched.
+
+<RenderExample
+  title="Hostile source, default settings"
+  markdown={`Hello <img src=x onerror="alert(1)"> world.\n\n<script>alert('nope')</script>\n\n[Click me](javascript:alert(1))`}
+>
+  The tags are text. The script does not run. The link has no destination. The
+  same policy runs on a precompiled document, so compiling is not a bypass
+  (<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L107')}>test</Link>).
+</RenderExample>
+
+Narrow the output further with `allowedElements`, `disallowedElements` or
+`allowElement`. If a document genuinely needs HTML, opt in with `rehype-raw`
+**and** `rehype-sanitize` in that order.
+<Link to="/docs/security">Security model</Link>.
+
+## Render Markdown on the server
+
+The renderer entry has no `use client` directive and touches no browser global,
+so the same component works in a React server component, during SSR and in a
+static build. No JavaScript ships for the Markdown itself.
+
+```tsx
+// app/posts/[slug]/page.tsx
+import { readFile } from 'node:fs/promises'
+import Markdown from '@react-markdown-kit/renderer'
+
+export default async function Page({ params }) {
+  const content = await readFile(`content/${params.slug}.md`, 'utf8')
+  return <Markdown>{content}</Markdown>
+}
+```
+
+Parse once for a document that does not change. `compileMarkdown` returns plain
+JSON that survives a cache, a queue or an HTTP boundary, and re-rendering from
+it is about 2.8 times faster in the benchmark
+(<Link href={blob('benchmarks/README.md')}>results</Link>).
+
+```tsx
+import Markdown, { compileMarkdown } from '@react-markdown-kit/renderer'
+
+const TERMS = compileMarkdown(await readFile('content/terms.md', 'utf8'))
+
+export default function Page() {
+  return <Markdown document={TERMS} />
+}
+```
+
+<Link to="/docs/server-rendering">Server rendering</Link> ·{' '}
+<Link to="/nextjs-markdown">Markdown in Next.js</Link>
+
+## Render Markdown that is still being written
+
+If the string grows one token at a time, as it does behind a model, hand the
+renderer the longer string each time. Every prefix renders, and the finished
+blocks above stay byte-identical
+(<Link href={blob('packages/renderer/tests/streaming.test.tsx')}>streaming tests</Link>).
+<Link to="/streaming-markdown">Streaming Markdown in React</Link>.
+
+## FAQ
+
+<dl>
+  {FAQ.map((item) => (
+    <div key={item.question}>
+      <dt><strong>{item.question}</strong></dt>
+      <dd>{item.answer}</dd>
+    </div>
+  ))}
+</dl>
+
+## Next
+
+<Link href={sites.rendererDemo}>Renderer demo</Link> ·{' '}
+<Link href="https://www.npmjs.com/package/@react-markdown-kit/renderer">@react-markdown-kit/renderer on npm</Link> ·{' '}
+<Link to="/react-markdown-renderer">React Markdown renderer</Link> ·{' '}
+<Link to="/docs/compatibility">Compatibility with react-markdown</Link> ·{' '}
+<Link to="/migrate-from-react-markdown">Migrate from react-markdown</Link>
