@@ -1,18 +1,54 @@
 ---
 title: "Markdown Template Engine for React"
-description: "Typed variables, runtime schemas, formatting and localization for Markdown templates. Values resolve inside the parser, so data cannot inject Markdown."
+description: "A Markdown template engine for React: typed variables, runtime schemas, formatters and locales, resolved inside the parser so data cannot inject Markdown."
 ---
 
-import TemplateExample from '@site/src/components/TemplateExample'
 import Link from '@docusaurus/Link'
+import TemplateExample from '@site/src/components/TemplateExample'
 import sites from '@site/src/sites'
-import { PackageJsonLd } from '@site/src/components/JsonLd'
+import { PackageJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
 
-<PackageJsonLd name="template" description={frontMatter.description} path="/markdown-template-engine" />
+export const PATH = '/markdown-template-engine'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'Templates', path: '/docs/templates/basics' },
+  { name: 'Markdown template engine' },
+]
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/template'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const FAQ = [
+  {
+    question: 'Is there a Markdown template engine that does not re-parse the output?',
+    answer:
+      'Yes. @react-markdown-kit/template resolves {{placeholders}} while the renderer parses, so a value is placed into the syntax tree as text and the document is never stringified and parsed a second time. There is no engine object to call: template({ data }) is a renderer extension.',
+  },
+  {
+    question: 'Can template data inject Markdown or HTML?',
+    answer:
+      'No. A value becomes a text node, so it cannot create a heading, a list, a table row, a link destination, an HTML tag or a code fence, and it still cannot after the document is serialized back to Markdown and re-parsed with GFM. That is asserted by 152 cases in injection.test.ts, template-serialization-safety.test.ts and template-security-independent.test.ts.',
+  },
+  {
+    question: 'Does it work outside React?',
+    answer:
+      'Yes. The root entry imports no React and no Lexical, so compileMarkdown with the same extension runs in a Node service, a worker, a CLI, an email job or a PDF pipeline. scripts/pack-check.mjs resolves a template from the packed tarball in a project with no Lexical installed.',
+  },
+  {
+    question: 'Which validation libraries work with the schema option?',
+    answer:
+      'Any validator that implements Standard Schema, which includes Zod, Valibot and ArkType. The package depends on none of them and detects the validator structurally, so no adapter is needed. Async validators are diagnosed rather than silently awaited.',
+  },
+]
+
+<PackageJsonLd name="template" description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
 
 # Markdown template engine
 
-Personalize a Markdown document with typed application data.
+Personalize a Markdown document with typed application data. Placeholders are
+resolved inside the parser, so a value can never become Markdown structure.
 
 ```bash
 npm install @react-markdown-kit/renderer @react-markdown-kit/template
@@ -42,6 +78,69 @@ in a service, a worker, a CLI, an email job or a PDF pipeline.
   ]}
 />
 
+Both panes above are live. The left one is the authored source and is the same string in
+every dataset. The right one is a real `<Markdown>` rendering the document that
+`compileMarkdown` produced. A formatter inside a table cell keeps its escaped pipe, which
+<Link href={blob('tests/template-table-formatters.test.ts#L25')}>`template-table-formatters.test.ts`</Link>
+covers.
+
+## Typed, then validated
+
+TypeScript generics catch mistakes at compile time.
+
+```ts
+template<ReportData>({ data })
+```
+
+Runtime schemas catch them at the boundary, through
+[Standard Schema](https://standardschema.dev), so Zod, Valibot and ArkType all work with
+no adapter and the package depends on none of them.
+
+```ts
+template({ data, schema: ReportSchema })
+```
+
+A validator is detected structurally, by its `~standard` member, so nothing is
+imported and nothing is registered.
+<Link href={blob('plugins/template/tests/schema.test.ts#L59')}>`schema.test.ts`</Link>
+runs the same template against two Standard Schema vendors, one reporting issue paths as
+arrays the way Zod does and one reporting them as objects and coercing the way Valibot
+does, and asserts that resolution reads the validator's output rather than the raw input,
+that issue paths become diagnostic paths, and that an async validator is diagnosed
+instead of being awaited.
+
+A missing required value is an error diagnostic and renders nothing, or your `fallback`.
+It never produces a document that looks publishable with a blank where a number should be
+(<Link href={blob('plugins/template/tests/resolve.test.ts#L53')}>missing-value tests</Link>).
+
+<Link to="/docs/templates/schemas">Schemas and types</Link>
+
+## Formatting and localization
+
+Six built-in formatters: `number`, `currency`, `percent`, `date`, `time` and `datetime`.
+
+```text
+{{revenue | currency:"USD"}}
+{{renewsAt | date:"long"}}
+{{share | percent:1}}
+```
+
+Two rules have their own tests because both are expensive when wrong.
+
+- **Currency always carries an explicit ISO 4217 code.** `{{revenue | currency}}` is an
+  error, not a guess from the locale. `currency:"USD"` in `fr-FR` renders `$US`, not
+  euros
+  (<Link href={blob('plugins/template/tests/formatters.test.ts#L22')}>currency tests</Link>).
+- **The time zone is explicit and defaults to `UTC`**, so a report does not change
+  depending on which machine rendered it
+  (<Link href={blob('plugins/template/tests/formatters.test.ts#L82')}>date and time tests</Link>).
+
+`locale` and `timeZone` are options on `template()`. The authored source stays yours to
+choose per language; switch the third dataset above to see the same source rendered for
+`fr-FR`.
+
+<Link to="/docs/templates/formatting">Formatting and localization</Link>
+
 ## Data cannot inject structure
 
 This is the part that matters when authored documents meet runtime data.
@@ -62,39 +161,44 @@ characters.
   ]}
 >
   No value can create a heading, a table row, a link destination, an HTML tag or a code
-  fence. That holds after the output is serialized back to Markdown and re-parsed
-  downstream, which is where a naive engine leaks.
+  fence.
 </TemplateExample>
 
-## Typed, then validated
+Three test files hold that claim, and they run 152 cases between them:
 
-TypeScript generics catch mistakes at compile time.
+| What is asserted | Where |
+| --- | --- |
+| 22 hostile values in a heading and a paragraph keep the document's node types and their own characters, and survive a serialize and re-parse | <Link href={blob('plugins/template/tests/injection.test.ts#L21')}>`injection.test.ts`</Link> (77) |
+| 12 line-start constructs, in 5 authored contexts, cannot become structure after `documentToMarkdown` and a GFM re-parse | <Link href={blob('tests/template-serialization-safety.test.ts#L16')}>`template-serialization-safety.test.ts`</Link> (62) |
+| The same claim written again without the plugin's own helpers, plus prototype-chain paths | <Link href={blob('tests/template-security-independent.test.ts')}>`template-security-independent.test.ts`</Link> (13) |
 
-```ts
-template<ReportData>({ data })
+Run them yourself:
+
+```bash
+pnpm test -- plugins/template/tests/injection.test.ts \
+  tests/template-serialization-safety.test.ts \
+  tests/template-security-independent.test.ts
 ```
 
-Runtime schemas catch them at the boundary, through
-[Standard Schema](https://standardschema.dev), so Zod, Valibot and ArkType all work with
-no adapter and the package depends on none of them.
+Three more rules come from the same design:
 
-```ts
-template({ data, schema: ReportSchema })
-```
+- **Code contexts are literal.** A `{{path}}` inside inline code, a fenced block or an
+  indented block is documentation about a template, not a binding, and is left alone
+  (<Link href={blob('plugins/template/tests/literal-contexts.test.ts#L15')}>literal-context tests</Link>).
+  That is why this page can be written with the engine installed.
+- **A URL binding is all or nothing.** A placeholder must be the entire link
+  destination, and the resolved value still passes the protocol policy, so
+  `javascript:` never lands in an `href`
+  (<Link href={blob('plugins/template/tests/links.test.ts#L97')}>destination policy tests</Link>).
+- **Prototype-chain paths never resolve.** `__proto__`, `constructor` and `prototype`
+  are refused at resolve time and nothing is written to `Object.prototype`
+  (<Link href={blob('plugins/template/tests/paths.test.ts#L41')}>path tests</Link>).
 
-A missing required value is an error diagnostic and renders nothing (or your `fallback`).
-It never produces a document that looks publishable with a blank where a number should be.
+Diagnostics name the path and never the runtime value, so they are safe to log
+(<Link href={blob('plugins/template/tests/links.test.ts#L115')}>test</Link>).
 
-## Formatting and localization
-
-Six built-in formatters: `number`, `currency`, `percent`, `date`, `time` and `datetime`.
-Currency always carries an explicit code, because inferring it from a locale is how
-invoices go out in the wrong denomination.
-
-Formatting follows the `locale` and `timeZone` you pass; the authored source stays yours
-to choose per language.
-
-<Link to="/docs/templates/formatting">Formatting and localization</Link>
+<Link to="/docs/security">Security model</Link> ·{' '}
+<Link to="/compare/handlebars">Why string interpolation differs</Link>
 
 ## It renders through the same renderer
 
@@ -106,8 +210,51 @@ document>` later.
 const document = compileMarkdown(source, { preset, extensions: [template({ data })] })
 ```
 
+When you need Markdown text back, for an email body or a file on disk, serialize the
+compiled document. Serializing re-escapes, so a value of `**Administrator**` comes back
+out as `\*\*Administrator\*\*` and keeps the literal reading it was given
+(<Link href={blob('plugins/template/tests/to-markdown.test.ts#L13')}>serializer tests</Link>).
+
+```ts
+import { compileMarkdown, documentToMarkdown } from '@react-markdown-kit/renderer'
+
+const document = compileMarkdown(source, { extensions: [template({ data })] })
+await writeFile('report.md', await documentToMarkdown(document))
+```
+
+## Authoring the template
+
+`@react-markdown-kit/template/editor` turns every placeholder into a chip in the rich
+editor, with a label and a sample-data preview, and adds an insert-variable command to
+the toolbar. Preview data changes what the author sees and never what is saved.
+
+```tsx
+import { templateVariables } from '@react-markdown-kit/template/editor'
+
+<MarkdownEditor
+  value={source}
+  onChange={setSource}
+  extensions={[templateVariables({ variables, previewData: sample })]}
+/>
+```
+
+<Link to="/docs/templates/authoring">Authoring templates</Link>
+
+## FAQ
+
+{FAQ.map((item) => (
+  <section key={item.question}>
+    <h3>{item.question}</h3>
+    <p>{item.answer}</p>
+  </section>
+))}
+
 ## Next
 
+<Link to="/personalized-markdown">Personalized Markdown</Link> ·{' '}
+<Link to="/docs/guides/markdown-template-variables">Markdown template variables</Link> ·{' '}
+<Link to="/compare/handlebars">Compared with Handlebars and Mustache</Link> ·{' '}
 <Link to="/docs/templates/basics">Template docs</Link> ·{' '}
 <Link href={sites.editorDemo}>The editor demo</Link> ·{' '}
-<Link to="/docs/security">Security model</Link>
+<Link href={npm}>@react-markdown-kit/template on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
