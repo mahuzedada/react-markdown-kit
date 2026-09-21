@@ -46,6 +46,7 @@ const config: Config = {
     // sites carry the same tag in their index.html; tests/seo-surface.test.ts
     // asserts it on every host.
     { tagName: 'meta', attributes: { name: 'google-site-verification', content: 'OeinVf8DkV6qubXo57xz7nxQyV2n5RQWJ7xaf7E0JUY' } },
+    { tagName: 'meta', attributes: { name: 'msvalidate.01', content: '2B64E1F8A84336B6ADCDC7C6804331D5' } },
   ],
   markdown: { hooks: { onBrokenMarkdownLinks: 'throw' } },
 

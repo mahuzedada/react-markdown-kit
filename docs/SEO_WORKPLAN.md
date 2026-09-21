@@ -408,11 +408,10 @@ Listed so the agent does not attempt them and so the human knows what remains.
   failed; the READMEs, the release workflow and the SEO pages are only
   local until it is pushed. Topics, description and website are set.
 - npm login if `npm whoami` fails.
-- Bing Webmaster Tools: sign in, add the six hosts (or import them from
-  Search Console), put the `msvalidate.01` meta tag next to the Google one
-  on every host, and submit the sitemaps. Search Console properties exist
-  and verify once the tag is deployed; submit each host's sitemap there and
-  record baseline positions once impressions appear.
+- Record baseline positions in `docs/SEO_LOG.md` once Search Console shows
+  impressions. All six properties are verified with sitemaps submitted
+  (2026-09-21); the six Bing Webmaster sites verify from the `msvalidate.01`
+  tag on the next deploy, then need their sitemaps submitted.
 - Validating the keyword shortlist in Google Keyword Planner.
 - Outreach to listicle authors (Strapi, Eddyter, Froala, Refine, Windmill,
   Contentful, medevel), replies on remarkjs discussion #1148 and

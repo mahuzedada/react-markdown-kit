@@ -38,6 +38,7 @@ const SITES: readonly Site[] = [
 ]
 
 const GOOGLE_SITE_VERIFICATION = 'OeinVf8DkV6qubXo57xz7nxQyV2n5RQWJ7xaf7E0JUY'
+const BING_SITE_VERIFICATION = '2B64E1F8A84336B6ADCDC7C6804331D5'
 
 const built = (site: Site): boolean => existsSync(join(root, site.dir, 'index.html'))
 
@@ -120,11 +121,12 @@ for (const site of SITES) {
       if (site.name !== 'docs') expect(html).toContain('<meta name="robots" content="noindex" />')
     })
 
-    it('carries the Search Console ownership tag on its root page', () => {
-      // One account-level token verifies all six URL-prefix properties
-      // (docs/SEO_WORKPLAN.md section 8). Losing it unverifies the host.
+    it('carries the Search Console and Bing Webmaster ownership tags on its root page', () => {
+      // One account-level token per engine verifies all six properties
+      // (docs/SEO_WORKPLAN.md section 8). Losing either unverifies the host.
       const html = readFileSync(join(dir, 'index.html'), 'utf8')
       expect(meta(html, 'name', 'google-site-verification')).toBe(GOOGLE_SITE_VERIFICATION)
+      expect(meta(html, 'name', 'msvalidate.01')).toBe(BING_SITE_VERIFICATION)
     })
 
     it('serves the shared llms.txt files', () => {
