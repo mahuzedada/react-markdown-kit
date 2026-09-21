@@ -109,6 +109,8 @@
   cursor: pointer;
 }
 .tab:hover { color: var(--pg-ink); }
+.tab:disabled { opacity: 0.45; cursor: default; }
+.tab:disabled:hover { color: var(--pg-mute); }
 .tabOn { color: var(--pg-ink); background: var(--pg-soft); }
 
 .output { padding: 1rem 1.1rem; flex: 1; overflow: auto; font-size: 0.94rem; }

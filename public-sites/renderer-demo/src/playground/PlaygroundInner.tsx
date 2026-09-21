@@ -14,6 +14,7 @@ import { buildProps } from './buildProps'
 import { SHOWCASE_CLASS_NAME } from './showcase'
 import { formatBytes, formatMs, prettyHtml, timeMedian, treeJson, wordCount } from './measure'
 import { DEFAULT_STATE, type OutputTab, type PlaygroundState } from './state'
+import { useShareLink } from './useShareLink'
 import styles from './Playground.module.css'
 
 import '@react-markdown-kit/renderer/styles.css'
@@ -41,6 +42,8 @@ interface Timings {
  * The renderer demo: Markdown on the left, a live `<Markdown>` on the right,
  * with the HTML it produces, the document it parsed and the code that made it
  * one tab away. One document, one configuration; the reader edits the text.
+ * The document also lives in the URL hash (./useShareLink.ts), so "Copy link"
+ * hands someone else the exact document on screen.
  */
 export default function PlaygroundInner(): ReactNode {
   const [state, setState] = useState<PlaygroundState>(DEFAULT_STATE)
@@ -92,11 +95,23 @@ export default function PlaygroundInner(): ReactNode {
     setState((current) => ({ ...current, ...changes }))
   }, [])
 
+  const setSource = useCallback((next: string) => {
+    setState((current) => ({ ...current, source: next }))
+  }, [])
+
+  const { link, unreadable } = useShareLink({
+    source: state.source,
+    setSource,
+    pristine: state.source === DEFAULT_STATE.source,
+  })
+
   const copy = useCallback((label: string, text: string) => {
-    void navigator.clipboard.writeText(text).then(() => {
+    const done = (): void => {
       setCopied(label)
-      window.setTimeout(() => setCopied(undefined), 1400)
-    })
+      window.setTimeout(() => setCopied((current) => (current === label ? undefined : current)), 1400)
+    }
+    if (typeof navigator.clipboard?.writeText !== 'function') return
+    navigator.clipboard.writeText(text).then(done, () => undefined)
   }, [])
 
   const onDrop = (event: DragEvent<HTMLTextAreaElement>): void => {
@@ -122,9 +137,18 @@ export default function PlaygroundInner(): ReactNode {
         <section className={styles.sourcePane} data-mobile-hidden={mobilePane !== 'source' ? '' : undefined}>
           <div className={styles.paneHead}>
             <span>Markdown</span>
-            <span>
+            <span className={styles.tabs}>
               <button type="button" className={styles.tab} onClick={() => copy('markdown', state.source)}>
                 {copied === 'markdown' ? 'Copied' : 'Copy'}
+              </button>
+              <button
+                type="button"
+                className={styles.tab}
+                disabled={link === undefined}
+                title="Put this document in the address bar and copy the link"
+                onClick={() => link !== undefined && copy('link', link)}
+              >
+                {copied === 'link' ? 'Link copied' : 'Copy link'}
               </button>
             </span>
           </div>
@@ -141,7 +165,11 @@ export default function PlaygroundInner(): ReactNode {
             onDragLeave={() => setDropping(false)}
             onDrop={onDrop}
           />
-          <div className={styles.note}>Type, paste, or drop a .md file here.</div>
+          <div className={styles.note}>
+            {unreadable
+              ? 'This link could not be read in this browser, so the sample is shown. The address bar still holds the shared link; editing replaces it.'
+              : 'Type, paste, or drop a .md file here. Copy link puts the whole document in the URL; nothing is uploaded.'}
+          </div>
         </section>
 
         <section className={styles.outPane} data-mobile-hidden={mobilePane !== 'output' ? '' : undefined}>
