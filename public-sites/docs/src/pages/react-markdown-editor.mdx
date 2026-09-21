@@ -1,94 +1,324 @@
 ---
-title: "React Markdown Editor with round trip"
-description: A rich, source and preview Markdown editor for React that reads and writes plain Markdown, with a round trip that does not corrupt your documents.
+title: "React Markdown Editor: three modes"
+description: "A React Markdown editor with rich, source and preview modes that stores plain Markdown, where 22 of 22 audited documents survive a save byte for byte."
 ---
 
-import EditorExample from '@site/src/components/EditorExample'
 import Link from '@docusaurus/Link'
+import EditorExample from '@site/src/components/EditorExample'
 import sites from '@site/src/sites'
-import { PackageJsonLd } from '@site/src/components/JsonLd'
+import { PackageJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+import corpus from '../../../../fixtures/editor-roundtrip/corruption.json'
+import bundles from '../../../../docs/data/bundle-sizes.json'
 
-<PackageJsonLd name="editor" description={frontMatter.description} path="/react-markdown-editor" />
+export const PATH = '/react-markdown-editor'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'Editor', path: '/docs/editor/basics' },
+  { name: 'React Markdown editor' },
+]
+
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/editor'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const cases = corpus.cases.length
+export const kb = (bytes) => `${(bytes / 1024).toFixed(1)} KB`
+export const row = (id) => bundles.results.find((entry) => entry.id === id)
+export const editorBundle = row('kit-editor')
+
+export const FAQ = [
+  {
+    question: 'Is there a WYSIWYG Markdown editor for React?',
+    answer:
+      `Yes. @react-markdown-kit/editor has a rich mode that edits the document visually, a source mode that shows the Markdown text, and a read-only preview. All three project the same document, and the value the component gives you is always a Markdown string.`,
+  },
+  {
+    question: 'Does the React Markdown editor change my file when I only open it?',
+    answer:
+      `No. Opening a document, switching modes and closing it writes the same bytes back. Unchanged blocks are copied from the original source rather than re-serialized, and all ${cases} documents in the audit corpus are asserted byte-identical in packages/editor/tests/roundtrip.test.ts.`,
+  },
+  {
+    question: 'Can I use my own toolbar and my own components?',
+    answer:
+      'Yes. Pass toolbar={false} to remove the default chrome, pass a render prop to keep the command items and supply your own markup, or drop to useMarkdownEditor, MarkdownEditorProvider and MarkdownEditorContent and build the whole interface yourself.',
+  },
+  {
+    question: 'How large is the editor bundle?',
+    answer:
+      `The measured import closure of @react-markdown-kit/editor ${editorBundle.version} is ${kb(editorBundle.gzipBytes)} gzipped, with React external and the renderer included, from scripts/compare-bundles.mjs. The renderer alone is far smaller, so render-only pages never load the editor.`,
+  },
+]
+
+export const firstDoc = `# Release notes
+
+A **rich** editor that saves plain _Markdown_.
+
+- [x] tables
+- [ ] task lists
+
+| Area | Status |
+| --- | --- |
+| Editor | shipping |
+`
+
+export const preserveDoc = `Setext heading
+==============
+
+See [the spec][ref] and a note[^1].
+
+<div class="callout">
+  <p>Raw HTML block.</p>
+</div>
+
+3. three
+4. four
+
+~~~js
+const tildeFence = true
+~~~
+
+[ref]: https://example.com
+[^1]: The footnote body.
+`
+
+export const toolbarDoc = `## Try the toolbar
+
+Select a word and press the bold button, or use Ctrl and B.
+
+Insert a link, a list or a rule, then read the Markdown below.
+`
+
+<PackageJsonLd name="editor" description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
 
 # React Markdown editor
 
-Rich editing that stores plain Markdown.
+`@react-markdown-kit/editor` is a React Markdown editor with three modes: rich, source
+and preview. Your application passes a Markdown string in and gets a Markdown string
+back. Nothing asks you to store editor JSON.
 
 ```bash
-npm install @react-markdown-kit/editor
+npm install @react-markdown-kit/editor @react-markdown-kit/renderer
 ```
 
 ```tsx
 'use client'
 
+import { useState } from 'react'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
+import '@react-markdown-kit/editor/styles.css'
 
-<MarkdownEditor value={value} onChange={setValue} />
+export function Notes() {
+  const [value, setValue] = useState('# Notes\n\nStart writing.')
+  return <MarkdownEditor value={value} onChange={setValue} />
+}
 ```
 
+That is the whole integration. The editor below is that component, running on this page.
+The pane underneath is the exact string `onChange` gives you.
+
 <EditorExample
-  title="Edit above, watch the saved Markdown below"
-  markdown={`# Notes\n\nA **rich** editor that saves _Markdown_.\n\n- [x] lists\n- [ ] tables\n\n| a | b |\n| --- | --- |\n| 1 | 2 |`}
+  title="Edit above; the saved Markdown is underneath"
+  markdown={firstDoc}
+  height={340}
 />
+
+## The three modes
+
+```ts
+type MarkdownEditorMode = 'rich' | 'source' | 'preview'
+```
+
+- **rich** edits the document visually. Marks, headings, lists, tables, links and images
+  are real nodes, not text you have to escape.
+- **source** is the Markdown itself, always available, always the real file.
+- **preview** is read-only output rendered by `@react-markdown-kit/renderer`. There is no
+  second renderer inside the editor, so the preview and your published page agree.
+
+All three project the same document, so switching modes cannot lose what one surface
+could not show. Control the mode with `mode` and `onModeChange`, or set a starting mode
+with `defaultMode`.
+
+<Link to="/docs/editor/basics">Editor basics</Link>
 
 ## Markdown in, Markdown out
 
-Your application keeps storing Markdown strings. Nothing asks you to persist editor
-JSON or a proprietary format, so the same content still works with every other Markdown
-tool you use.
+`value` is a Markdown string. `onChange` hands back a Markdown string. Your database
+column does not change, your static files do not change, and every other Markdown tool
+you use keeps working on the same content.
 
-## The round trip is the hard part
+The dialect is a preset shared with the renderer, so the editor writes what your pages
+read:
 
-Most Markdown editors quietly damage documents. Opening a file and closing it without
-typing anything rewrites parts of it, and the damage compounds on every save.
+```tsx
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
 
-This editor converts between a real CommonMark syntax tree and the editing model, then
-writes unchanged blocks back from their original source bytes. Opening a document and
-closing it changes nothing.
+const appMarkdown = defineMarkdownPreset({ extensions: [gfm()] })
 
-The test corpus comes from an audit of a previous editor that had seven reproducible
-corruption bugs. All 22 cases now round-trip byte for byte.
+<MarkdownEditor preset={appMarkdown} value={value} onChange={setValue} />
+```
+
+Without a preset the editor is CommonMark. With `gfm()` it edits tables, task lists,
+strikethrough, autolinks and footnotes.
+<Link to="/docs/renderer/presets">Presets</Link>
+
+## The round trip, with the evidence
+
+The risk with any rich editor is that opening a file and saving it rewrites parts of it
+you never touched. This editor keeps the original source and the byte span of every
+top-level block, then writes unchanged blocks back from those bytes instead of
+re-serializing them.
+
+The corpus is
+<Link href={blob('fixtures/editor-roundtrip/corruption.json')}>`fixtures/editor-roundtrip/corruption.json`</Link>:
+{cases} documents that a previous line-oriented editor damaged on save, recorded in
+<Link href={blob('docs/AUDIT.md')}>`docs/AUDIT.md`</Link>.
+
+| Layer | What is asserted | Result | Test |
+| --- | --- | --- | --- |
+| Editor: open, switch modes, close | The bytes are identical | {cases} of {cases} | <Link href={blob('packages/editor/tests/roundtrip.test.ts')}>`packages/editor/tests/roundtrip.test.ts`</Link> |
+| Editor, with GFM off | The bytes are identical | {cases} of {cases} | <Link href={blob('packages/editor/tests/roundtrip.test.ts')}>same file</Link> |
+| Serializer: `documentToMarkdown(compileMarkdown(source))` | The meaning is unchanged | {cases} of {cases} | <Link href={blob('tests/roundtrip.test.ts')}>`tests/roundtrip.test.ts`</Link> |
+| Serializer | Saving twice equals saving once | {cases} of {cases} | <Link href={blob('tests/roundtrip.test.ts')}>same file</Link> |
+| Serializer | The bytes are identical | 14 of {cases} | <Link href={blob('tests/roundtrip.test.ts')}>same file</Link> |
+
+The last row is deliberate, not a gap. The serializer canonicalizes: a setext heading
+becomes ATX, a `~~~` fence becomes a backtick fence. The editor path does not, because it
+never re-serializes a block you did not edit.
 
 <EditorExample
-  title="Reference links, HTML and footnotes survive editing around them"
-  defaultMode="source"
-  markdown={`See [the guide][g] and [^1].\n\n<div class="callout">\n  Raw HTML block\n</div>\n\nEdit this paragraph, then switch to rich mode and back.\n\n[g]: https://example.com\n[^1]: A footnote.`}
+  title="Setext, tilde fences, raw HTML, definitions and a footnote, all left alone"
+  markdown={preserveDoc}
+  height={380}
+>
+  The badge says `unchanged` until you type. Switch modes as much as you like.
+</EditorExample>
+
+<Link to="/markdown-round-trip">The round-trip test suite, and how to run it on your own documents</Link>
+
+## Toolbar
+
+The default toolbar covers marks, block types, lists, links, images, thematic breaks,
+undo, redo and the mode switch. Icons are inline SVG, so there is no icon package.
+
+```tsx
+<MarkdownEditor toolbar={false} value={value} onChange={setValue} />
+```
+
+```tsx
+<MarkdownEditor
+  value={value}
+  onChange={setValue}
+  toolbar={(items) =>
+    items.map((item) => (
+      <MyButton key={item.id} onClick={item.run} pressed={item.active} disabled={item.disabled}>
+        {item.icon}
+        {item.label}
+      </MyButton>
+    ))
+  }
+/>
+```
+
+Each item carries `id`, `label`, `icon`, `active`, `disabled`, `group` and `run()`.
+Labels come from the `labels` prop, so the chrome can be localized without touching the
+document.
+
+<EditorExample
+  title="The default toolbar"
+  markdown={toolbarDoc}
+  height={300}
 />
 
-## Three modes
+## Headless
 
-`rich` for WYSIWYG, `source` for the raw Markdown, `preview` for read-only output.
-Preview delegates to `@react-markdown-kit/renderer`, so what you preview is exactly what
-your application will render.
-
-## Build your own interface
-
-The default editor ships a toolbar so it is useful immediately. When you need your own,
-drop to the headless API and keep the engine.
+When the editor has to live inside your own layout, keep the engine and drop the chrome.
 
 ```tsx
 const editor = useMarkdownEditor({ value, onChange })
 
 <MarkdownEditorProvider editor={editor}>
   <MyToolbar />
-  <MarkdownEditorContent />
+  <MarkdownEditorContent aria-label="Notes" />
 </MarkdownEditorProvider>
 ```
 
-No Lexical type appears in the public types, so your components never import the engine.
+`editor.commands` holds every verb the default toolbar uses: `toggleMark`,
+`setBlockType`, `toggleBulletList`, `insertLink`, `insertImage`, `insertMarkdown`,
+`setMarkdown` and the rest. No Lexical type appears in the public types, and a test in
+the package reads the published declarations and fails if any of them imports from
+`lexical` or `@lexical/*`.
 
-<Link to="/docs/editor/headless">The headless API</Link>
+There is a level below React as well, with no DOM at all:
 
-## Styling
+```ts
+import { createMarkdownBridge } from '@react-markdown-kit/editor'
 
-Zero styling dependencies. The editor is fully functional with no stylesheet loaded, and
-a test asserts it. Its chrome takes your class names, and its icons are inline SVG with
-no icon package.
+const bridge = createMarkdownBridge({ preset: appMarkdown, headless: true })
+bridge.load(source)
+const out = bridge.getMarkdown()
+```
 
+That is the same pipeline the React editor runs, which is why the round trip can be
+proved in a test rather than described in a README.
+
+<Link to="/docs/editor/headless">The headless API</Link> ·{' '}
+<Link to="/docs/guides/lexical-markdown-editor">Build a Lexical Markdown editor</Link>
+
+## Images
+
+Your application owns storage. The editor owns the insertion, the pending state and the
+cancellation.
+
+```tsx
+<MarkdownEditor
+  documentKey={note.id}
+  value={value}
+  onChange={setValue}
+  onUploadImage={async (file, { signal, documentKey }) => {
+    const asset = await uploadToMyStorage(file, { signal, documentKey })
+    return { src: asset.url, alt: file.name }
+  }}
+/>
+```
+
+`context.signal` aborts when the editor unmounts. A rejected promise inserts nothing. A
+`blob:` URL is never written into a document, so a saved file cannot contain a link that
+only worked in one tab. Images that already have a URL need no configuration at all:
+`![alt](src)` is in the default dialect, and reference images keep their definitions.
+
+<Link to="/docs/editor/images">Images and uploads</Link>
+
+## Styling and server rendering
+
+The stylesheet is optional. The editor is fully functional with no stylesheet loaded and
+a test asserts it; its chrome takes your class names through `classNames`.
 <Link to="/docs/styling">The styling contract</Link>
+
+The editor owns selection, undo history and keyboard handling, so it is a client
+component and carries `"use client"`. The renderer is not, which is why they are separate
+packages: a server-rendered page that only displays Markdown never pulls Lexical into its
+bundle. <Link to="/docs/server-rendering">Server rendering</Link>
+
+## FAQ
+
+{FAQ.map((item) => (
+  <section key={item.question}>
+    <h3>{item.question}</h3>
+    <p>{item.answer}</p>
+  </section>
+))}
 
 ## Next
 
-<Link to="/docs/editor/basics">Editor docs</Link> ·{' '}
-<Link to="/react-markdown-renderer">Just rendering</Link> ·{' '}
-<Link href={sites.editorDemo}>See it with templates, in the editor demo</Link>
+<Link href={sites.editorDemo}>Open the free online editor</Link> ·{' '}
+<Link href={`${sites.editorDemo}#round-trip`}>Paste a document and read the diff</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/editor on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
+
+<Link to="/markdown-round-trip">Lossless Markdown editing</Link> ·{' '}
+<Link to="/compare/mdxeditor">Compared with MDXEditor</Link> ·{' '}
+<Link to="/compare/milkdown">Compared with Milkdown</Link> ·{' '}
+<Link to="/docs/guides/lexical-markdown-editor">Lexical Markdown editor guide</Link> ·{' '}
+<Link to="/react-markdown-renderer">Rendering only</Link>

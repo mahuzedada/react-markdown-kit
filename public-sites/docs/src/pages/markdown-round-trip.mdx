@@ -1,0 +1,278 @@
+---
+title: "Lossless Markdown editing: round trip"
+description: "The Markdown round trip explained: what a lossless Markdown editor must preserve, the 22-document corpus behind the claim, and how to run it on your files."
+---
+
+import Link from '@docusaurus/Link'
+import EditorExample from '@site/src/components/EditorExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+import corpus from '../../../../fixtures/editor-roundtrip/corruption.json'
+
+export const PATH = '/markdown-round-trip'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'Editor', path: '/react-markdown-editor' },
+  { name: 'Markdown round trip' },
+]
+
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/editor'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const cases = corpus.cases
+export const total = cases.length
+
+export const FAQ = [
+  {
+    question: 'What is a Markdown round trip?',
+    answer:
+      `A round trip is opening a Markdown document in an editor and saving it again. It is lossless when the saved file is the same as the file you opened. The corpus here holds ${total} documents that a line-oriented editor changed on save, and the editor package asserts byte identity for every one of them.`,
+  },
+  {
+    question: 'Why do Markdown editors corrupt files?',
+    answer:
+      'Most convert Markdown into an editing model and serialize the whole document back out on every save. Anything the model cannot hold is lost, and anything the serializer spells differently is rewritten, including blocks nobody touched. Line-oriented regular expression importers add a second class of damage, because they never parse constructs such as reference links at all.',
+  },
+  {
+    question: 'How do I test round-trip fidelity on my own documents?',
+    answer:
+      'Load each file through createMarkdownBridge with headless set to true, read the Markdown back, and compare the strings. The bridge needs no DOM, so it runs in plain Node, in a test or in a script over a directory of files. There is a working script on this page.',
+  },
+  {
+    question: 'Is byte identity always the right goal?',
+    answer:
+      'No. It is the right goal for a block you did not edit. A block you did edit is rewritten in the serializer canonical form, which uses dash bullets, double asterisks for strong and backtick fences. That is normalization of something you changed, not corruption of something you did not.',
+  },
+]
+
+export const editedDoc = `Title
+=====
+
+Edit only this paragraph and watch the rest.
+
+~~~js
+const tildeFence = true
+~~~
+
+- a
+
+  second para
+
+- b
+`
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
+
+# Lossless Markdown editing: the round-trip test suite
+
+A Markdown round trip is one operation: open a file in an editor, save it, compare. It
+is lossless when the two files are the same bytes. Most rich Markdown editors are not
+tested against that, so the damage is found by a code reviewer in a diff nobody asked
+for.
+
+This page is the evidence behind the round-trip claim in
+`@react-markdown-kit/editor`: what goes wrong elsewhere, what the suite asserts, and how
+to run the same suite against your own documents.
+
+## What breaks, and why
+
+The corpus comes from an audit of a production editor, written up in
+<Link href={blob('docs/AUDIT.md')}>`docs/AUDIT.md`</Link>. The audited editor is not
+named here as a warning about one package, because the cause is a design that many
+editors share: it had **no Markdown parser**. Import and export ran through a
+transformer protocol that matches Markdown line by line with regular expressions.
+
+Everything below follows from that single choice.
+
+| Class of failure | What the audit found |
+| --- | --- |
+| Constructs that are never parsed | Reference links and reference images survived only as dead literal text |
+| Constructs outside the preset | `![alt](src)` rendered as a literal exclamation mark followed by a link |
+| Unsupported syntax degraded into prose | Raw HTML blocks and indented code appeared as paragraph text, and were then re-escaped on the next save |
+| Escaping applied to text that was not text | Backslashes, tildes and backticks were escaped, which destroyed fences and Windows paths |
+| Structure regenerated instead of preserved | An ordered list starting at 3 was renumbered from 1; blank-line runs were collapsed |
+| Semantics changed | A CommonMark soft break became a hard line break |
+
+Seven of those were reproducible corruptions that stuck, and compounded on the next
+save. This is the table from the audit.
+
+| Input | Audited output | Correct |
+| --- | --- | --- |
+| `> a` then `>` then `> b` | a second `>` added to the blank quote line | unchanged |
+| `> a` then `>` then `> > b` | the nested quote flattened and re-prefixed | unchanged |
+| `a\` then `b` (backslash hard break) | the backslash doubled | unchanged |
+| `C:\path\to` | the backslashes doubled | unchanged |
+| a `~~~js` fence | the tildes escaped, destroying the fence | unchanged, or a backtick fence |
+| a double-backtick inline code span | the backticks escaped | unchanged |
+| a loose list with a second paragraph | a stray blank line before the next item | unchanged |
+
+Each one is now a fixture. The corpus grew to {total} documents, listed in
+<Link href={blob('fixtures/editor-roundtrip/corruption.json')}>`fixtures/editor-roundtrip/corruption.json`</Link>,
+where every case carries the source and a note saying what used to happen to it.
+
+## Two layers, two different promises
+
+Conflating these is how the original bugs went unnoticed, so the suite keeps them apart.
+
+**The editor layer** is open, look around, close. Byte identity is required. The editor
+retains the original source and the byte span of every top-level block, and writes
+unchanged blocks back from those bytes rather than re-serializing them.
+
+**The serializer layer** is `documentToMarkdown(compileMarkdown(source))`. That path
+canonicalizes on purpose, so byte identity is neither expected nor wanted. What must hold
+there is that the meaning is unchanged, and that saving twice equals saving once.
+Idempotence is the property the audit was really about, because the damage it found
+compounded on every save.
+
+| Layer | Assertion | Result | Test |
+| --- | --- | --- | --- |
+| Editor, GFM on | Bytes identical | {total} of {total} | <Link href={blob('packages/editor/tests/roundtrip.test.ts')}>`packages/editor/tests/roundtrip.test.ts`</Link> |
+| Editor, GFM off | Bytes identical | {total} of {total} | <Link href={blob('packages/editor/tests/roundtrip.test.ts')}>same file</Link> |
+| Editor, 16 extra cases beyond the corpus | Bytes identical | 16 of 16 | <Link href={blob('packages/editor/tests/roundtrip.test.ts')}>same file</Link> |
+| Serializer | Meaning unchanged | {total} of {total} | <Link href={blob('tests/roundtrip.test.ts')}>`tests/roundtrip.test.ts`</Link> |
+| Serializer | Saving twice equals saving once | {total} of {total} | <Link href={blob('tests/roundtrip.test.ts')}>same file</Link> |
+| Serializer | Bytes identical | 14 of {total} | <Link href={blob('tests/roundtrip.test.ts')}>same file</Link> |
+
+Both suites fail the build if a case stops passing. The serializer test also prints the
+per-case table and holds a list of the cases that are byte-identical today; that list may
+grow and must not shrink, so losing byte identity is a failure even when the meaning
+survives.
+
+## The {total} documents
+
+Every case is a real construct, not a synthetic string.
+
+<table>
+  <thead>
+    <tr>
+      <th>Case</th>
+      <th>Source</th>
+      <th>What used to happen</th>
+    </tr>
+  </thead>
+  <tbody>
+    {cases.map((entry) => (
+      <tr key={entry.name}>
+        <td><code>{entry.name}</code></td>
+        <td><code>{JSON.stringify(entry.source)}</code></td>
+        <td>{entry.why}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+The rows in that table are read from the fixture at build time, so the page cannot drift
+from the suite.
+
+## See it
+
+Edit one block below. The others come back exactly as they were written: the setext
+heading stays setext, the tilde fence stays tilde, the loose list keeps its blank lines.
+
+<EditorExample
+  title="Edit one paragraph; nothing else moves"
+  markdown={editedDoc}
+  height={360}
+/>
+
+For a document of your own, the editor demo has a panel that does the whole round trip
+and diffs it line by line.
+<Link href={`${sites.editorDemo}#round-trip`}>Paste Markdown, save it, read the diff</Link>.
+
+## Run it against your own documents
+
+The round trip needs no browser. `createMarkdownBridge` with `headless: true` is the same
+pipeline the React editor runs, built on `@lexical/headless`, so it works in plain Node.
+
+```bash
+npm install @react-markdown-kit/editor @react-markdown-kit/renderer
+```
+
+```js
+// roundtrip.mjs: node roundtrip.mjs docs/**/*.md
+import { readFileSync } from 'node:fs'
+import { createMarkdownBridge } from '@react-markdown-kit/editor'
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+let changed = 0
+for (const file of process.argv.slice(2)) {
+  const source = readFileSync(file, 'utf8')
+  const bridge = createMarkdownBridge({ preset, headless: true })
+  bridge.load(source)
+  const saved = bridge.getMarkdown()
+  if (saved !== source) {
+    changed += 1
+    console.log(`${file}: ${source.length} bytes in, ${saved.length} bytes out`)
+  }
+}
+console.log(`${process.argv.length - 2 - changed} unchanged, ${changed} changed`)
+```
+
+Use the same preset your application renders with. A file that comes back changed is
+worth reading closely: either it uses a construct your preset does not enable, or it is a
+bug worth reporting.
+
+As a test, the shape is three lines:
+
+```ts
+import { describe, expect, it } from 'vitest'
+import { createMarkdownBridge } from '@react-markdown-kit/editor'
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+const roundTrip = (source: string): string => {
+  const bridge = createMarkdownBridge({ preset, headless: true })
+  bridge.load(source)
+  return bridge.getMarkdown()
+}
+
+describe('our content', () => {
+  for (const file of files) {
+    it(`${file} survives a save`, () => {
+      const source = readFileSync(file, 'utf8')
+      expect(roundTrip(source)).toBe(source)
+    })
+  }
+})
+```
+
+The corpus itself is plain JSON with a `cases` array of `{ name, source, why }`. Nothing
+in it is specific to this package, so it also runs against any other editor that can
+import and export a Markdown string.
+
+## What is still normalized
+
+Editing a block rewrites that block, in the serializer canonical form: `-` bullets, `**`
+for strong, backtick fences, ATX headings. A block you did not edit is not touched, so a
+commit diff shows what you changed and nothing else.
+
+If you want the canonical form for a whole document on purpose, that is the serializer
+path: `documentToMarkdown(compileMarkdown(source))`.
+<Link to="/docs/renderer/compiling">Compiling</Link>
+
+## FAQ
+
+{FAQ.map((item) => (
+  <section key={item.question}>
+    <h3>{item.question}</h3>
+    <p>{item.answer}</p>
+  </section>
+))}
+
+## Next
+
+<Link href={sites.editorDemo}>Editor demo with the diff panel</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/editor on npm</Link> ·{' '}
+<Link href={blob('docs/AUDIT.md')}>The audit</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
+
+<Link to="/react-markdown-editor">React Markdown editor</Link> ·{' '}
+<Link to="/docs/editor/round-trip">Round-trip reference</Link> ·{' '}
+<Link to="/compare/mdxeditor">Compared with MDXEditor</Link> ·{' '}
+<Link to="/compare/milkdown">Compared with Milkdown</Link>
