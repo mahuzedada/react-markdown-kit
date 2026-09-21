@@ -142,6 +142,19 @@ writing a single new page.
     footer, the docs index, the home hub and llms.txt. 50 pages, 0 problems.
   - "C 3.3 follow-ups" had no defined content left; the four Mermaid pages
     exist. Removed from the open list.
+- 2026-09-21: every milestone (A to E) is done and deployed. Off-repo work
+  done from the browser: the GitHub repository carries 12 topics (`react`,
+  `markdown`, `markdown-editor`, `markdown-renderer`, `mermaid`,
+  `mermaid-editor`, `slides`, `lexical`, `streaming-markdown`,
+  `react-markdown`, `flowchart`, `typescript`), a description naming every
+  package and the apex as its website. Six URL-prefix properties exist in
+  Google Search Console, one per host; every host's root page carries the
+  account's `google-site-verification` meta tag (`index.html` of the five
+  Vite sites, `headTags` in `docusaurus.config.ts`) and
+  `tests/seo-surface.test.ts` asserts it. Bing Webmaster Tools needs a
+  sign-in (OAuth), so it stays in section 8. What is left is section 8 and
+  the data-driven work in `docs/SEO_PLAN.md` sections 6 and 7, which waits on
+  Search Console impressions.
 
 ## 0. Ground rules
 
@@ -390,12 +403,16 @@ page depends on a feature.
 
 Listed so the agent does not attempt them and so the human knows what remains.
 
-- Create the GitHub remote and push; set repository topics; then tell the
-  agent so it can fill the `repository` links and enable the release
-  workflow. There is no remote configured today.
+- Push `main` to github.com/mahuzedada/react-markdown-kit. The remote was
+  created 2026-09-20 with a single "proof of concept" commit whose CI run
+  failed; the READMEs, the release workflow and the SEO pages are only
+  local until it is pushed. Topics, description and website are set.
 - npm login if `npm whoami` fails.
-- Google Search Console and Bing Webmaster verification for six hosts,
-  sitemap submission, and recording baseline positions.
+- Bing Webmaster Tools: sign in, add the six hosts (or import them from
+  Search Console), put the `msvalidate.01` meta tag next to the Google one
+  on every host, and submit the sitemaps. Search Console properties exist
+  and verify once the tag is deployed; submit each host's sitemap there and
+  record baseline positions once impressions appear.
 - Validating the keyword shortlist in Google Keyword Planner.
 - Outreach to listicle authors (Strapi, Eddyter, Froala, Refine, Windmill,
   Contentful, medevel), replies on remarkjs discussion #1148 and

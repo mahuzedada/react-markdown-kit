@@ -40,7 +40,13 @@ const config: Config = {
 
   // Milestone A item 5: og:type on every page. The preset emits the other
   // Open Graph tags; tests/seo-surface.test.ts checks all of them.
-  headTags: [{ tagName: 'meta', attributes: { property: 'og:type', content: 'website' } }],
+  headTags: [
+    { tagName: 'meta', attributes: { property: 'og:type', content: 'website' } },
+    // Search Console ownership (docs/SEO_WORKPLAN.md section 8). The five Vite
+    // sites carry the same tag in their index.html; tests/seo-surface.test.ts
+    // asserts it on every host.
+    { tagName: 'meta', attributes: { name: 'google-site-verification', content: 'OeinVf8DkV6qubXo57xz7nxQyV2n5RQWJ7xaf7E0JUY' } },
+  ],
   markdown: { hooks: { onBrokenMarkdownLinks: 'throw' } },
 
   i18n: { defaultLocale: 'en', locales: ['en'] },
