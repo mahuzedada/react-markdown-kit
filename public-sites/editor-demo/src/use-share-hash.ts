@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { decodeShareHash, encodeShareHash, shareUrl } from './share'
+import { decodeShareHash, encodeShareHash, pageBase, shareUrl, writeShareHash } from '../../shared/share'
 
 /*
  * The URL hash as the document (docs/SEO_WORKPLAN.md, milestone D item 2).
- * The same hook shape the Mermaid demo uses, over the same hash format.
+ * The same hook shape the Mermaid demo uses, over the same hash format. The
+ * codec is `public-sites/shared/share.ts`, the one module every demo shares.
  */
 
 /** How long after the last keystroke the URL hash follows the document. */
@@ -14,11 +15,6 @@ export interface ShareState {
   readonly link: string | undefined
   /** The page opened with a hash it could not read (corrupt, or `#pako:` without the streams API). */
   readonly unreadable: boolean
-}
-
-/** This page without its query, so a shared link opens the full site. */
-function pageBase(): string {
-  return `${location.origin}${location.pathname}`
 }
 
 /**
@@ -70,11 +66,7 @@ export function useShareHash(source: string, setSource: (source: string) => void
       if (source === initial && (location.hash === '' || unreadable)) return
       written.current = next
       setUnreadable(false)
-      try {
-        history.replaceState(null, '', `#${next}`)
-      } catch {
-        // A sandboxed frame refuses; the copy link button still works.
-      }
+      writeShareHash(next)
     }, HASH_DEBOUNCE_MS)
     return () => {
       cancelled = true
