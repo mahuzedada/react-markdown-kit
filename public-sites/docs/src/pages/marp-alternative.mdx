@@ -1,12 +1,12 @@
 ---
-title: Marp and Slidev Alternative Inside a React App
+title: "Marp and Slidev Alternative for React"
 description: "A Marp and Slidev alternative for React: render Markdown decks inside your own app with present mode and speaker notes, and no PDF or PPTX export."
 ---
 
 import Link from '@docusaurus/Link'
 import RenderExample from '@site/src/components/RenderExample'
 import sites from '@site/src/sites'
-import { ArticleJsonLd, JsonLd } from '@site/src/components/JsonLd'
+import { ArticleJsonLd, BreadcrumbJsonLd, JsonLd } from '@site/src/components/JsonLd'
 import { slides } from '@react-markdown-kit/slides'
 import '@react-markdown-kit/slides/styles.css'
 import '@site/src/css/slides-examples.css'
@@ -37,6 +37,14 @@ export const faq = [
 ]
 
 <ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path="/marp-alternative" />
+
+<BreadcrumbJsonLd
+  trail={[
+    { name: 'React Markdown Kit', path: '/' },
+    { name: 'Markdown presentations in React', path: '/docs/slides' },
+    { name: 'Marp and Slidev alternative' },
+  ]}
+/>
 
 <JsonLd
   data={{

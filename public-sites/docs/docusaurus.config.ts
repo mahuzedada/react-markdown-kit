@@ -130,6 +130,21 @@ const config: Config = {
             { label: 'Styling', to: '/docs/styling' },
             { label: 'Security', to: '/docs/security' },
             { label: 'Next.js', to: '/nextjs-markdown' },
+            { label: 'Streaming Markdown', to: '/streaming-markdown' },
+            { label: 'Slides', to: '/docs/slides' },
+          ],
+        },
+        {
+          title: 'Compare',
+          items: [
+            { label: 'react-markdown alternative', to: '/react-markdown-alternative' },
+            { label: 'vs react-markdown', to: '/compare/react-markdown' },
+            { label: 'vs markdown-to-jsx', to: '/compare/markdown-to-jsx' },
+            { label: 'vs Streamdown', to: '/compare/streamdown' },
+            { label: 'Editor vs MDXEditor', to: '/compare/mdxeditor' },
+            { label: 'Editor vs Milkdown', to: '/compare/milkdown' },
+            { label: 'Templating vs Handlebars', to: '/compare/handlebars' },
+            { label: 'Marp and Slidev alternative', to: '/marp-alternative' },
           ],
         },
         {
@@ -137,6 +152,7 @@ const config: Config = {
           items: [
             { label: 'Compatibility matrix', to: '/docs/compatibility' },
             { label: 'Migrating', to: '/migrate-from-react-markdown' },
+            { label: 'Lossless round trip', to: '/markdown-round-trip' },
             { label: 'Home', href: sites.home },
             { label: 'GitHub', href: sites.github },
           ],

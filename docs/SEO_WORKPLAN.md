@@ -35,6 +35,19 @@ writing a single new page.
   hub, the Mermaid demo and `llms.txt`. Next: C 3.1 renderer pages, D items
   2 to 4 for the renderer, editor and slides demos, D1 streaming check, D6
   `compare-bundles`.
+- 2026-09-20 (not deployed): Milestone C items 3.1, 3.2, 3.4 and 3.5 done.
+  New routes: `/react-markdown-alternative`, `/compare/react-markdown`,
+  `/compare/markdown-to-jsx`, `/compare/streamdown`, `/streaming-markdown`,
+  `/docs/guides/render-markdown-in-react`, `/markdown-round-trip`,
+  `/compare/mdxeditor`, `/compare/milkdown`,
+  `/docs/guides/lexical-markdown-editor`, `/personalized-markdown`,
+  `/compare/handlebars`, `/docs/guides/markdown-template-variables` and
+  `/marp-alternative`. All of them are in `sidebars.ts` or the footer, in
+  `llms.txt` and `llms-full.txt`, on the home hub and on the docs index; the
+  reference pages under `/docs/renderer`, `/docs/editor` and `/docs/templates`
+  carry a "Read next" link to their funnel. `node scripts/seo-report.mjs`
+  reports 49 pages and 0 problems. Next: deploy, then C 3.3 follow-ups and
+  the remaining D items.
 
 ## 0. Ground rules
 

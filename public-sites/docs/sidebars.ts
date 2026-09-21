@@ -27,7 +27,17 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Guides',
-      items: ['styling', 'security', 'server-rendering', 'extensions', 'mermaid', 'slides'],
+      items: [
+        'guides/render-markdown-in-react',
+        'styling',
+        'security',
+        'server-rendering',
+        'extensions',
+        'guides/lexical-markdown-editor',
+        'guides/markdown-template-variables',
+        'mermaid',
+        'slides',
+      ],
     },
     { type: 'doc', id: 'compatibility', label: 'Compatibility' },
   ],

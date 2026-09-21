@@ -119,3 +119,24 @@
   color: var(--muted-foreground);
   margin-top: 0.25rem;
 }
+
+/* The guide and comparison indexes: one route per row, link then summary. */
+.links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0.6rem 1.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.links li {
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+}
+
+.links span {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}

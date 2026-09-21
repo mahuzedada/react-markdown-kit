@@ -110,7 +110,7 @@ const EVIDENCE: readonly Evidence[] = [
   },
 ]
 
-const GUIDES: readonly Evidence[] = [
+const MERMAID_GUIDES: readonly Evidence[] = [
   {
     href: docsUrl('/react-mermaid'),
     label: 'Mermaid in React, no Mermaid.js',
@@ -130,6 +130,97 @@ const GUIDES: readonly Evidence[] = [
     href: docsUrl('/edit-ai-generated-mermaid'),
     label: 'Fix AI-generated Mermaid',
     what: 'Paste model output, drag the layout right, copy it back with positions kept in a comment.',
+  },
+]
+
+const RENDERER_PAGES: readonly Evidence[] = [
+  {
+    href: docsUrl('/docs/guides/render-markdown-in-react'),
+    label: 'How to render Markdown in React',
+    what: 'GFM, custom components, links, code blocks, security defaults and server rendering, each shown live.',
+  },
+  {
+    href: docsUrl('/streaming-markdown'),
+    label: 'Streaming Markdown in React',
+    what: 'Every partial prefix renders and finished blocks stay byte-identical; the two exceptions are named.',
+  },
+  {
+    href: docsUrl('/react-markdown-alternative'),
+    label: 'react-markdown alternative',
+    what: '39 of 39 prop comparisons render identical markup, and the three differences come with a codemod.',
+  },
+]
+
+const EDITOR_PAGES: readonly Evidence[] = [
+  {
+    href: docsUrl('/markdown-round-trip'),
+    label: 'Lossless Markdown editing',
+    what: 'What a round trip has to preserve, the 22-document corpus, and how to run it on your own files.',
+  },
+  {
+    href: docsUrl('/docs/guides/lexical-markdown-editor'),
+    label: 'Lexical Markdown editor',
+    what: 'Why Lexical, how @react-markdown-kit/editor wraps it, and when to drop to the headless API.',
+  },
+]
+
+const TEMPLATE_PAGES: readonly Evidence[] = [
+  {
+    href: docsUrl('/docs/guides/markdown-template-variables'),
+    label: 'Markdown template variables',
+    what: 'Placeholder syntax in a .md file, and why a resolved value cannot create Markdown structure.',
+  },
+  {
+    href: docsUrl('/personalized-markdown'),
+    label: 'Personalized Markdown',
+    what: 'Write the customer report once, resolve typed variables per customer and locale.',
+  },
+]
+
+const SLIDES_PAGES: readonly Evidence[] = [
+  {
+    href: docsUrl('/docs/slides'),
+    label: 'Markdown presentations in React',
+    what: 'Slides split on ---, speaker notes after ???, fragments after --, present mode, one plugin.',
+  },
+  {
+    href: docsUrl('/marp-alternative'),
+    label: 'Marp and Slidev alternative',
+    what: 'A deck rendered inside your own React app, with no PDF or PPTX export.',
+  },
+]
+
+/** One page per compared library. Byte counts on them come from docs/data/bundle-sizes.json. */
+const COMPARISONS: readonly Evidence[] = [
+  {
+    href: docsUrl('/compare/react-markdown'),
+    label: 'vs react-markdown',
+    what: 'Install size, GFM, security defaults, streaming, server rendering, plugins and migration.',
+  },
+  {
+    href: docsUrl('/compare/markdown-to-jsx'),
+    label: 'vs markdown-to-jsx',
+    what: 'The same rows, against the smaller renderer that parses with regular expressions.',
+  },
+  {
+    href: docsUrl('/compare/streamdown'),
+    label: 'vs Streamdown',
+    what: 'The same rows, for an AI chat UI that renders tokens as they arrive.',
+  },
+  {
+    href: docsUrl('/compare/mdxeditor'),
+    label: 'Editor vs MDXEditor',
+    what: 'Editing model, output format, round trip, bundle size, server rendering and migration.',
+  },
+  {
+    href: docsUrl('/compare/milkdown'),
+    label: 'Editor vs Milkdown',
+    what: 'The same rows, against the ProseMirror editor and its plugin system.',
+  },
+  {
+    href: docsUrl('/compare/handlebars'),
+    label: 'Templating vs Handlebars',
+    what: 'String interpolation before parsing, against placeholders resolved inside the parser.',
   },
 ]
 
@@ -242,13 +333,73 @@ export default function Landing(): ReactNode {
         </ul>
       </section>
 
-      <section className="home-section" aria-labelledby="home-guides">
-        <h2 id="home-guides">Mermaid guides</h2>
+      <section className="home-section" aria-labelledby="home-renderer-guides">
+        <h2 id="home-renderer-guides">Renderer guides</h2>
         <ul className="home-list">
-          {GUIDES.map((guide) => (
+          {RENDERER_PAGES.map((guide) => (
             <li key={guide.href}>
               <a href={guide.href}>{guide.label}</a>
               <span>{guide.what}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="home-section" aria-labelledby="home-editor-guides">
+        <h2 id="home-editor-guides">Editor guides</h2>
+        <ul className="home-list">
+          {EDITOR_PAGES.map((guide) => (
+            <li key={guide.href}>
+              <a href={guide.href}>{guide.label}</a>
+              <span>{guide.what}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="home-section" aria-labelledby="home-template-guides">
+        <h2 id="home-template-guides">Template guides</h2>
+        <ul className="home-list">
+          {TEMPLATE_PAGES.map((guide) => (
+            <li key={guide.href}>
+              <a href={guide.href}>{guide.label}</a>
+              <span>{guide.what}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="home-section" aria-labelledby="home-guides">
+        <h2 id="home-guides">Mermaid guides</h2>
+        <ul className="home-list">
+          {MERMAID_GUIDES.map((guide) => (
+            <li key={guide.href}>
+              <a href={guide.href}>{guide.label}</a>
+              <span>{guide.what}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="home-section" aria-labelledby="home-slides-guides">
+        <h2 id="home-slides-guides">Slides guides</h2>
+        <ul className="home-list">
+          {SLIDES_PAGES.map((guide) => (
+            <li key={guide.href}>
+              <a href={guide.href}>{guide.label}</a>
+              <span>{guide.what}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="home-section" aria-labelledby="home-comparisons">
+        <h2 id="home-comparisons">Comparisons</h2>
+        <ul className="home-list">
+          {COMPARISONS.map((item) => (
+            <li key={item.href}>
+              <a href={item.href}>{item.label}</a>
+              <span>{item.what}</span>
             </li>
           ))}
         </ul>
