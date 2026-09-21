@@ -1,6 +1,6 @@
 ---
 title: "React Markdown Renderer: one component"
-description: Render Markdown as React with one component. Safe by default, unstyled by default, server-ready, and compatible with the react-markdown prop surface.
+description: "The React Markdown renderer turns a Markdown string into React elements with one component: safe by default, unstyled by default, and server-ready."
 ---
 
 import Link from '@docusaurus/Link'
@@ -190,7 +190,7 @@ export default async function Page({ params }) {
 }
 ```
 
-Parsing is roughly 80% of the work, so a document that does not change should
+Parsing is about two thirds of the work, so a document that does not change should
 be parsed once. `compileMarkdown` returns plain JSON that survives a cache, a
 queue or an HTTP boundary, and re-rendering from it is about 2.8 times faster
 in the benchmark (<Link href={blob('benchmarks/README.md')}>results</Link>).

@@ -19,6 +19,7 @@ export const crumbs = [
 export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/renderer'
 export const blob = (path) => `${sites.github}/blob/main/${path}`
 export const theirs = 'https://github.com/vercel/streamdown'
+export const remend = 'https://github.com/vercel/streamdown/tree/main/packages/remend#supported-syntax'
 
 export const FAQ = [
   {
@@ -117,8 +118,11 @@ const preset = defineMarkdownPreset({ extensions: [gfm()] })
 The kit's GFM is asserted by
 <Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link>: 68 cases derived from
 the GFM spec, each run through the native `gfm()` extension, through
-`remarkPlugins={[remarkGfm]}`, and through plain CommonMark, where the first two must be
-byte-identical and the third must not produce the GFM markup. CommonMark itself is
+`remarkPlugins={[remarkGfm]}`, and through plain CommonMark, where the first two must
+agree after normalizing attribute order, entity spelling and whitespace between block
+tags (<Link href={blob('tests/helpers/html.ts')}>`tests/helpers/html.ts`</Link>) and the
+third must not produce the GFM markup, unless the case is one of the 12 that assert
+something is *not* GFM, which are named in the test so the exemption cannot spread. CommonMark itself is
 covered example by example in
 <Link href={blob('tests/commonmark.test.ts')}>`tests/commonmark.test.ts`</Link>. No
 conformance suite is run here against Streamdown.
@@ -199,10 +203,14 @@ truncated host while the URL is still being typed.
   untouched, and deleting characters from the end never throws.
 </RenderExample>
 
-The design difference is what an incomplete construct looks like. Streamdown suppresses
-it. The kit shows the literal characters and guarantees the closed prefix above does not
-move. If you want suppression, do it in your component by trimming the tail before you
-hand the string over; the kit does not do it for you.
+The design difference is what an incomplete construct looks like. Streamdown completes
+it through <Link href={remend}>`remend`</Link>, which closes an open `**`, `~~` or
+`` ` `` and swaps an unfinished link destination for `streamdown:incomplete-link`
+(<Link href={`${theirs}#features`}>their features list</Link>), so half-typed syntax
+renders as finished formatting that changes when the real delimiter arrives. The kit
+shows the literal characters and guarantees the closed prefix above does not move. If
+you want completion, run `remend` over the string before you hand it to the kit; the kit
+does not do it for you.
 
 ## Server rendering
 
@@ -222,7 +230,7 @@ The second server-side difference is `compileMarkdown`. A `MarkdownDocument` com
 once renders many times without parsing again: on the reference machine in
 <Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link> a 10 KB document
 takes 16.80 ms from a string and 5.99 ms precompiled, 2.8x faster, because parsing is
-roughly 80% of the work. A finished chat message is exactly the case for it.
+about two thirds of the work. A finished chat message is exactly the case for it.
 
 The counterweight, measured against `react-markdown@10.1.0` and not against Streamdown:
 **1 KB is 1.21x slower** (2.69 ms against 2.23 ms), 10 KB is at parity (16.22 ms against

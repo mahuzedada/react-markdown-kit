@@ -189,7 +189,8 @@ Three more rules come from the same design:
 - **A URL binding is all or nothing.** A placeholder must be the entire link
   destination, and the resolved value still passes the protocol policy, so
   `javascript:` never lands in an `href`
-  (<Link href={blob('plugins/template/tests/links.test.ts#L97')}>destination policy tests</Link>).
+  (<Link href={blob('plugins/template/tests/links.test.ts#L72')}>partial-URL tests</Link> and
+  <Link href={blob('plugins/template/tests/links.test.ts#L97')}>destination policy tests</Link>).
 - **Prototype-chain paths never resolve.** `__proto__`, `constructor` and `prototype`
   are refused at resolve time and nothing is written to `Object.prototype`
   (<Link href={blob('plugins/template/tests/paths.test.ts#L41')}>path tests</Link>).

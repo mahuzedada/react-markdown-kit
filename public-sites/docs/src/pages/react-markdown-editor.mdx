@@ -45,7 +45,7 @@ export const FAQ = [
   {
     question: 'How large is the editor bundle?',
     answer:
-      `The measured import closure of @react-markdown-kit/editor ${editorBundle.version} is ${kb(editorBundle.gzipBytes)} gzipped, with React external and the renderer included, from scripts/compare-bundles.mjs. The renderer alone is far smaller, so render-only pages never load the editor.`,
+      `The measured import closure of @react-markdown-kit/editor ${editorBundle.version} is ${kb(editorBundle.gzipBytes)} gzipped, with React external and the renderer included, from scripts/compare-bundles.mjs. The renderer alone is ${kb(row('kit-renderer').gzipBytes)} gzipped, so render-only pages never load the editor.`,
   },
 ]
 
@@ -246,9 +246,11 @@ const editor = useMarkdownEditor({ value, onChange })
 
 `editor.commands` holds every verb the default toolbar uses: `toggleMark`,
 `setBlockType`, `toggleBulletList`, `insertLink`, `insertImage`, `insertMarkdown`,
-`setMarkdown` and the rest. No Lexical type appears in the public types, and a test in
-the package reads the published declarations and fails if any of them imports from
-`lexical` or `@lexical/*`.
+`setMarkdown` and the rest. No Lexical type appears on the root entry, and a test asserts
+that `src/index.ts` and `src/types.ts` import nothing from `lexical` or `@lexical/*`
+(<Link href={blob('packages/editor/tests/styling.test.tsx')}>`packages/editor/tests/styling.test.tsx`</Link>).
+The opt-in `@react-markdown-kit/editor/lexical` entry is the exception, for extension
+authors.
 
 There is a level below React as well, with no DOM at all:
 

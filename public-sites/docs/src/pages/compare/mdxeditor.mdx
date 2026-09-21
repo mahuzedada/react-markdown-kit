@@ -241,9 +241,12 @@ pipeline the renderer uses, and keeps mdast as the document representation.
 `@lexical/markdown` and its line-oriented transformer protocol are not used anywhere in
 the package, because that protocol is the root cause listed in the audit.
 
-**Whether Lexical is in your types.** Nothing this kit exports requires a Lexical type.
-A test reads the published type declarations and fails if any of them imports from
-`lexical` or `@lexical/*`. The single escape hatch, `editor.getNativeEditor()`, returns
+**Whether Lexical is in your types.** Nothing the root entry exports requires a Lexical
+type. A test asserts that `src/index.ts` and `src/types.ts` import nothing from `lexical`
+or `@lexical/*`
+(<Link href={blob('packages/editor/tests/styling.test.tsx')}>test</Link>). The opt-in
+`@react-markdown-kit/editor/lexical` entry is the exception, for extension authors. The
+single escape hatch, `editor.getNativeEditor()`, returns
 `unknown`, so you cast it yourself and the engine never leaks into your types by
 accident. That keeps the door open to replacing the engine later without a breaking
 change to the rest of the API.

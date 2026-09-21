@@ -116,8 +116,11 @@ import remarkGfm from 'remark-gfm'
 What the kit can show is the conformance run.
 <Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link> asserts 68 cases derived
 from the GFM spec three ways: through `gfm()`, through `remarkPlugins={[remarkGfm]}`, and
-through plain CommonMark, where the first two must be byte-identical and the third must
-not produce the GFM markup.
+through plain CommonMark, where the first two must agree after normalizing attribute
+order, entity spelling and whitespace between block tags
+(<Link href={blob('tests/helpers/html.ts')}>`tests/helpers/html.ts`</Link>) and the third
+must not produce the GFM markup, unless the case is one of the 12 that assert something
+is *not* GFM, which are named in the test so the exemption cannot spread.
 <Link href={blob('tests/commonmark.test.ts')}>`tests/commonmark.test.ts`</Link> runs every
 example from CommonMark 0.31.2. This repository runs no conformance suite against
 `markdown-to-jsx`, so its compliance is reported here as its readme states it and not as
@@ -162,7 +165,10 @@ bypass.
   markdown={htmlSource}
 >
   The tags are text. On `markdown-to-jsx` defaults, `b` and `div` would be real elements
-  and the `img` tag's leading angle bracket would be neutralized by `tagfilter`.
+  and the `img` tag would mount as a real `<img src="x">` with the `onerror` attribute
+  dropped. `tagfilter` does not cover `img`; it escapes `script`, `iframe`, `style`,
+  `title`, `textarea`, `xmp`, `noembed`, `noframes` and `plaintext`
+  (<Link href={`${theirs}#raw-html-sanitization`}>their readme</Link>).
 </RenderExample>
 
 Different goals. Pick `markdown-to-jsx` if authors are meant to write HTML in the

@@ -42,7 +42,7 @@ an async remark or rehype plugin will not run. See
 ## Precompile at module scope
 
 `compileMarkdown` turns source into a `MarkdownDocument`. Parsing is roughly
-80% of the total work, so hoisting it out of the request path is the largest
+two thirds of the total work, so hoisting it out of the request path is the largest
 win available.
 
 ```tsx

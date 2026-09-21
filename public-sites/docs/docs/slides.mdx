@@ -146,10 +146,10 @@ Type \`---\` on its own line and press Enter to start a slide.
 {/* Links to the evidence for a claim, in the repository. */}
 export const blob = (path) => `${sites.github}/blob/main/${path}`
 
-# Slides from Markdown
+# Markdown presentations in React
 
-Markdown presentations in React, from the same file the rest of your app renders as a
-document. `@react-markdown-kit/slides` is one plugin with three entries: the deck, the
+A deck comes from the same file the rest of your app renders as a document.
+`@react-markdown-kit/slides` is one plugin with three entries: the deck, the
 deck plus present mode, and the deck plus the editor commands. There is no new app to
 deploy, no export step, and no second copy of the content.
 
@@ -358,24 +358,14 @@ with the node's source range, and every code is exported as
 ## What the renderer emits
 
 ```html
-<article data-rmk-deck="" data-rmk-deck-slides="3" data-rmk-deck-aspect="16:9" data-rmk-deck-title="Q3 review">
-  <section data-rmk-slide="2" data-rmk-slide-title="Numbers" aria-roledescription="slide" aria-label="Numbers"
-           id="slide-numbers" data-rmk-slide-name="numbers" data-rmk-slide-class="center middle" data-rmk-slide-fragments="1">
-    <img data-rmk-slide-background="" src="https://example.com/bg.jpg" alt="">
-    <div data-rmk-slide-body="">
-      <h2>Numbers</h2>
-      <p>Revenue is up.</p>
-      <div data-rmk-fragment="1"><p>So are costs.</p></div>
-    </div>
-    <aside data-rmk-slide-notes="" hidden=""><p>Pause before the second line.</p></aside>
-  </section>
-</article>
+<section data-rmk-slide="2" data-rmk-slide-title="Numbers" aria-roledescription="slide" aria-label="Numbers" id="slide-numbers" data-rmk-slide-name="numbers" data-rmk-slide-class="center middle" data-rmk-slide-fragments="2"><img data-rmk-slide-background="" src="https://example.com/bg.jpg" alt=""/><div data-rmk-slide-body=""><h2>Numbers</h2><p>Intro.</p><div data-rmk-fragment="1"><p>One.</p></div><div data-rmk-fragment="2"><p>Two.</p></div></div><aside data-rmk-slide-notes="" hidden=""><p>say this</p></aside></section>
 ```
 
 - **No script, no class, no inline style, no id other than
   `slide-<name>`.** Optional attributes appear only when set, and
   <a href={blob('plugins/slides/tests/extension.test.tsx')}>extension.test.tsx</a> asserts
-  the markup above character for character.
+  the deck's markup, attribute order included, character for character for a three-slide
+  deck; the block above is slide 2 of it, copied from that expectation.
 - **Server-renderable.** The deck is built as hast by a handler for the mdast
   `root`, so it works in a server component and in static rendering. The
   decks on this page were rendered when the site was built, and
@@ -451,7 +441,7 @@ cannot set a slide's properties. List `slides()` before `template()`.
 
 | Entry | Loads | Adds |
 | --- | --- | --- |
-| `@react-markdown-kit/slides` | nothing beyond the parser | the extension: dialect, diagnostics, the static deck, serialization |
+| `@react-markdown-kit/slides` | nothing beyond the parser (<a href={blob('tests/packaging.test.ts')}>packaging.test.ts</a>) | the extension: dialect, diagnostics, the static deck, serialization |
 | `@react-markdown-kit/slides/present` | React | a client `article` component: present mode, keyboard and pointer navigation, fragments, presenter view, deep links, cross-window sync |
 | `@react-markdown-kit/slides/editor` | React and Lexical | the present entry plus editor nodes, the Enter shortcut and the four toolbar commands |
 

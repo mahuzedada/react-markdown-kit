@@ -273,7 +273,7 @@ const document = compileMarkdown(partialText, { preset })
   (<Link href={streaming(350)}>test</Link>).
 
 Re-rendering from a compiled document is about 2.8 times faster than
-re-rendering from a string, because parsing is roughly 80% of the work
+re-rendering from a string, because parsing is about two thirds of the work
 (<Link href={blob('benchmarks/README.md')}>benchmark results</Link>,
 <Link href={blob('benchmarks/run.mjs')}>`benchmarks/run.mjs`</Link>). That
 payoff applies to a document you re-render often, such as one already finished

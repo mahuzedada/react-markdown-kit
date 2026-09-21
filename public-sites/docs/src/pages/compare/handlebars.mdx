@@ -109,7 +109,7 @@ The pane below is the real output of replacing the placeholders in the source
 and parsing the result, with the value escaped the way Handlebars escapes it by
 default ([HTML escaping](https://handlebarsjs.com/guide/#html-escaping):
 `&`, `<`, `>`, `"`, `'`, `` ` `` and `=`). The substitution runs on this page;
-edit the left pane to try your own value.
+the left pane is its result, and you can edit it to see how the parser reads it.
 
 <RenderExample
   title="Value spliced into the source, then parsed"
@@ -179,8 +179,8 @@ out because at that point it knows the context
 | Number, date and currency formatting | Bring your own helper | Built in, locale and time zone aware (<Link href={blob('plugins/template/tests/formatters.test.ts#L22')}>tests</Link>) |
 | Runtime validation of the data | Bring your own | `schema` takes any [Standard Schema](https://standardschema.dev) validator (<Link href={blob('plugins/template/tests/schema.test.ts#L59')}>tests</Link>) |
 | Behaviour when a value is missing | Renders empty by default | Error diagnostic; the document becomes `fallback` or nothing (<Link href={blob('plugins/template/tests/resolve.test.ts#L53')}>tests</Link>) |
-| Placeholders inside code blocks | Replaced | Left literal (<Link href={blob('plugins/template/tests/literal-contexts.test.ts#L15')}>13 cases</Link>) |
-| Prototype-chain paths | Handlebars ships [runtime options to control prototype access](https://handlebarsjs.com/api-reference/runtime-options.html#options-to-control-prototype-access) | Refused at parse and again at lookup (<Link href={blob('plugins/template/tests/paths.test.ts#L41')}>33 cases</Link>) |
+| Placeholders inside code blocks | Replaced | Left literal (<Link href={blob('plugins/template/tests/literal-contexts.test.ts#L15')}>6 code-context cases</Link>) |
+| Prototype-chain paths | Handlebars ships [runtime options to control prototype access](https://handlebarsjs.com/api-reference/runtime-options.html#options-to-control-prototype-access) | Refused at parse and again at lookup (<Link href={blob('plugins/template/tests/paths.test.ts#L41')}>18 prototype-path cases</Link> in a 33-case file) |
 | Output | A string you still have to render | A compiled document, or Markdown text through `documentToMarkdown` |
 
 The evidence column runs as one command:

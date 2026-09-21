@@ -7,12 +7,13 @@ import Link from '@docusaurus/Link'
 import RenderExample from '@site/src/components/RenderExample'
 import sites from '@site/src/sites'
 import { ArticleJsonLd, BreadcrumbJsonLd, JsonLd } from '@site/src/components/JsonLd'
-import { slides } from '@react-markdown-kit/slides'
+import { slides as presentSlides } from '@react-markdown-kit/slides/present'
 import '@react-markdown-kit/slides/styles.css'
 import '@site/src/css/slides-examples.css'
 
-{/* Built once per page load: an array created inside JSX would remount the deck. */}
-export const headless = [slides()]
+{/* Built once per page load: an array created inside JSX would remount the deck.
+    The present entry binds a React component, and the docs site owns its own hashes. */}
+export const present = [presentSlides({ hashRouting: false })]
 
 {/* Links to the evidence for a claim, in the repository. */}
 export const blob = (path) => `${sites.github}/blob/main/${path}`
@@ -134,7 +135,7 @@ The deck below is not a screenshot. It was rendered when this page was built, by
 same renderer that draws this paragraph. Click Present, then use the arrow keys.
 
 <div className="slides-examples">
-<RenderExample title="A three-slide deck, rendered in this page" markdown={deck} rendererProps={{ extensions: headless }}>
+<RenderExample title="A three-slide deck, rendered in this page" markdown={deck} rendererProps={{ extensions: present }}>
   The static stack shows every slide at once. Present mode covers the viewport; Escape brings this page back.
 </RenderExample>
 </div>
@@ -147,7 +148,7 @@ same renderer that draws this paragraph. Click Present, then use the arrow keys.
 | `<!-- _class: lead -->` on one slide | `<!-- class: center, middle -->`, one directive per comment |
 | `<!-- theme: gaia -->` | a stylesheet of yours, set through `--rmk-slide-*` properties |
 | notes in an HTML comment | a paragraph that is exactly `???`, then the notes |
-| fragments through a theme's list syntax | a paragraph that is exactly `--` between the blocks to reveal |
+| fragments from the list marker, `*` for bullets and `)` for ordered lists ([fragmented list](https://marpit.marp.app/fragmented-list)) | a paragraph that is exactly `--` between the blocks to reveal |
 | background images through `![bg](…)` | `<!-- background: … -->`, run through the renderer's URL policy |
 | front matter for the whole deck | front matter for the whole deck: `title`, `aspect`, `class`, `background` |
 
@@ -190,7 +191,8 @@ accept is reported as a diagnostic with its source range, not swallowed.
 - **Markup you can style.** The deck emits no class, no inline style and no id beyond
   `slide-<name>`, so your stylesheet needs nothing from the kit.
 - **No runtime for the static deck.** The root entry loads nothing beyond the parser.
-  React comes in with the present entry, Lexical only with the editor entry.
+  React comes in with the present entry, Lexical only with the editor entry
+  (<a href={blob('tests/packaging.test.ts')}>packaging.test.ts</a>).
 
 ## Questions
 

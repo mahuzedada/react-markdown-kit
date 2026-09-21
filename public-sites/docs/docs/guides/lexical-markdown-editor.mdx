@@ -27,7 +27,7 @@ export const FAQ = [
   {
     question: 'Does using this editor put Lexical in my types?',
     answer:
-      'No. Nothing the root entry exports requires a Lexical type, and a test reads the published type declarations and fails if any of them imports from lexical or @lexical/*. The escape hatch, editor.getNativeEditor(), returns unknown, so you cast it yourself.',
+      'No. Nothing the root entry exports requires a Lexical type, and a test asserts that src/index.ts and src/types.ts import nothing from lexical or @lexical/* (packages/editor/tests/styling.test.tsx). The opt-in @react-markdown-kit/editor/lexical entry is the exception, for extension authors. The escape hatch, editor.getNativeEditor(), returns unknown, so you cast it yourself.',
   },
   {
     question: 'When should I go headless?',
@@ -165,8 +165,11 @@ it, and the file is unchanged, for 22 of 22 audited documents
 
 ## Lexical stays out of your types
 
-Nothing on the root entry names Lexical. A test in the package reads the published type
-declarations and fails if any of them imports from `lexical` or `@lexical/*`.
+Nothing on the root entry names Lexical. A test asserts that `src/index.ts` and
+`src/types.ts` import nothing from `lexical` or `@lexical/*`
+(<Link href={blob('packages/editor/tests/styling.test.tsx')}>`packages/editor/tests/styling.test.tsx`</Link>).
+The opt-in `@react-markdown-kit/editor/lexical` entry is the exception, for extension
+authors.
 
 When you genuinely need the engine:
 
@@ -297,6 +300,10 @@ why a round trip proved here holds in the browser.
 ))}
 
 ## Related
+
+<Link href={sites.editorDemo}>Try the editor demo</Link> ·{' '}
+<Link href="https://www.npmjs.com/package/@react-markdown-kit/editor">`@react-markdown-kit/editor` on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
 
 <Link to="/react-markdown-editor">React Markdown editor</Link> ·{' '}
 <Link to="/markdown-round-trip">Lossless Markdown editing</Link> ·{' '}

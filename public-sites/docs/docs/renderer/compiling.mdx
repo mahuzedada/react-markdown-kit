@@ -26,7 +26,7 @@ You do not need this to render Markdown. Reach for it when the same document is 
 
 ## Why it exists
 
-Parsing is roughly 80% of the work of rendering Markdown. Doing it once is the whole point.
+Parsing is about two thirds of the work of rendering Markdown. Doing it once is the whole point.
 
 It also gives the renderer, the editor and the template plugin something to exchange. The renderer parses, the editor edits, and the template engine resolves variables, all against the same tree. Without a shared document each package would need its own parser, and they would disagree.
 

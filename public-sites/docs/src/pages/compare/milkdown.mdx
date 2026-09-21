@@ -254,10 +254,12 @@ Lexical is what this kit is built on, and the kit treats it as an implementation
   pipeline the renderer uses. `@lexical/markdown` and its line-oriented transformer
   protocol are not used anywhere in the package. That protocol is the root cause listed
   in the audit, and avoiding it is what makes byte identity reachable.
-- **Lexical is not in your types.** Nothing the package exports requires a Lexical type,
-  and a test reads the published type declarations and fails if any of them imports from
-  `lexical` or `@lexical/*`. The one escape hatch, `editor.getNativeEditor()`, returns
-  `unknown`.
+- **Lexical is not in your types.** Nothing the root entry exports requires a Lexical
+  type, and a test asserts that `src/index.ts` and `src/types.ts` import nothing from
+  `lexical` or `@lexical/*`
+  (<Link href={blob('packages/editor/tests/styling.test.tsx')}>test</Link>). The opt-in
+  `@react-markdown-kit/editor/lexical` entry is the exception, for extension authors. The
+  one escape hatch, `editor.getNativeEditor()`, returns `unknown`.
 
 So the engine choice is reversible here and load-bearing there. Neither is better in the
 abstract; it decides what you can extend and what you can replace.

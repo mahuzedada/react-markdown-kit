@@ -33,7 +33,7 @@ export const FAQ = [
   {
     question: 'How do I make repeat requests skip the Markdown parse?',
     answer:
-      'Call compileMarkdown once at module scope and pass the resulting document to the renderer. Parsing is roughly 80% of the work, so re-rendering from a compiled document is about 2.8 times faster in benchmarks/run.mjs.',
+      'Call compileMarkdown once at module scope and pass the resulting document to the renderer. Parsing is about two thirds of the work, so re-rendering from a compiled document is about 2.8 times faster in benchmarks/run.mjs.',
   },
 ]
 
@@ -103,7 +103,7 @@ you import once in the root layout if you want the typography:
 
 ## Precompile what does not change
 
-Parsing is roughly 80% of the work. Hoist it out of the request path and
+Parsing is about two thirds of the work. Hoist it out of the request path and
 re-render from the compiled document, which is about 2.8 times faster in the
 benchmark (<Link href={blob('benchmarks/README.md')}>results</Link>,
 <Link href={blob('benchmarks/run.mjs')}>`benchmarks/run.mjs`</Link>).
@@ -167,8 +167,11 @@ stay byte-identical while the next one is written
 
 The editor is interactive, so it is a client component. That is precisely why
 it is a separate package: installing the renderer never drags editor code into
-a server bundle, and a packaging test asserts it against the real tarball
-(<Link href={blob('tests/packaging.test.ts')}>`tests/packaging.test.ts`</Link>).
+a server bundle, and a packaging test asserts it against the renderer's own
+modules
+(<Link href={blob('tests/packaging.test.ts#L205')}>`tests/packaging.test.ts`</Link>).
+<Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link> packs
+the real npm tarballs and installs them into clean consumer fixtures in CI.
 
 ```tsx
 'use client'

@@ -113,9 +113,12 @@ const preset = defineMarkdownPreset({ extensions: [gfm()] })
 Both routes are asserted to agree.
 <Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link> runs 68 cases derived
 from the GFM spec three ways: through the native `gfm()` extension, through
-`remarkPlugins={[remarkGfm]}`, and through plain CommonMark. The first two must produce
-byte-identical markup and the third must not produce the GFM markup, so a case that would
-pass without GFM cannot sit in the corpus.
+`remarkPlugins={[remarkGfm]}`, and through plain CommonMark. The first two must agree
+after normalizing attribute order, entity spelling and whitespace between block tags
+(<Link href={blob('tests/helpers/html.ts')}>`tests/helpers/html.ts`</Link>) and the third
+must not produce the GFM markup, so a case that would pass without GFM cannot sit in the
+corpus unless it is one of the 12 cases that assert something is *not* GFM, which are
+named in the test so the exemption cannot spread.
 <Link href={blob('tests/compatibility.test.tsx')}>`tests/compatibility.test.tsx`</Link>
 compares `remark-gfm` output between the two packages directly, and the four
 `remarkPlugins` cases match.
@@ -201,7 +204,7 @@ The kit adds a second path: compile once, render many times.
 renders without parsing again. On the reference machine in
 <Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link> a 10 KB document
 takes 16.80 ms from a string and 5.99 ms from a precompiled document, 2.8x faster,
-because parsing is roughly 80% of the work.
+because parsing is about two thirds of the work.
 
 Speed on one render is the other way round. Both sides parsing GFM, same process, median
 after five warm-up calls: **1 KB is 1.21x slower** than `react-markdown` (2.69 ms against

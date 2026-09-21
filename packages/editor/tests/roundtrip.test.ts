@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { createMarkdownBridge } from '@react-markdown-kit/editor'
-import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import { defineMarkdownPreset, gfm, type MarkdownPreset } from '@react-markdown-kit/renderer'
 import corruption from '../../../fixtures/editor-roundtrip/corruption.json' with { type: 'json' }
 
 interface CorruptionCase {
@@ -21,8 +21,8 @@ interface CorruptionCase {
 const cases = corruption.cases as readonly CorruptionCase[]
 const gfmPreset = defineMarkdownPreset({ extensions: [gfm()] })
 
-function roundTrip(source: string, preset = gfmPreset): string {
-  const bridge = createMarkdownBridge({ preset, headless: true })
+function roundTrip(source: string, preset?: MarkdownPreset): string {
+  const bridge = createMarkdownBridge(preset ? { preset, headless: true } : { headless: true })
   bridge.load(source)
   return bridge.getMarkdown()
 }
@@ -34,13 +34,13 @@ describe('corruption corpus', () => {
 
   for (const testCase of cases) {
     it(`${testCase.name} round-trips byte-identically (${testCase.why})`, () => {
-      expect(roundTrip(testCase.source)).toBe(testCase.source)
+      expect(roundTrip(testCase.source, gfmPreset)).toBe(testCase.source)
     })
   }
 
   for (const testCase of cases) {
     it(`${testCase.name} round-trips byte-identically without GFM`, () => {
-      expect(roundTrip(testCase.source, undefined as never)).toBe(testCase.source)
+      expect(roundTrip(testCase.source)).toBe(testCase.source)
     })
   }
 })
@@ -66,7 +66,7 @@ describe('round-trip beyond the corpus', () => {
   ]
   for (const [name, source] of extra) {
     it(`${name} round-trips byte-identically`, () => {
-      expect(roundTrip(source)).toBe(source)
+      expect(roundTrip(source, gfmPreset)).toBe(source)
     })
   }
 })

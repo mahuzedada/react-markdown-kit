@@ -32,7 +32,7 @@ export const FAQ = [
   {
     question: 'Do placeholders inside code blocks get replaced?',
     answer:
-      'Not with @react-markdown-kit/template. A placeholder inside inline code, a fenced block or an indented block is left exactly as written, so a page can document template syntax while the plugin is installed. Thirteen cases in literal-contexts.test.ts assert it.',
+      'Not with @react-markdown-kit/template. A placeholder inside inline code, a fenced block or an indented block is left exactly as written, so a page can document template syntax while the plugin is installed. Six cases in the code-contexts block of literal-contexts.test.ts assert it, out of 13 cases in the file.',
   },
 ]
 
@@ -103,8 +103,7 @@ import { compileMarkdown } from '@react-markdown-kit/renderer'
 const document = compileMarkdown(source, { extensions: [template({ data })] })
 ```
 
-Edit the left pane below and switch the dataset. The source is the same string
-for every customer.
+Switch the dataset below. The source is the same string for every customer.
 
 <TemplateExample
   title="One source, two readers, one locale change"
@@ -170,7 +169,7 @@ Your plan renews on {{plan.renewsAt | date:"long"}} for {{plan.price \\| currenc
 - **Code is literal.** A placeholder inside inline code, a fenced block or an
   indented block is never bound, and it does not even need the variable to
   exist
-  (<Link href={blob('plugins/template/tests/literal-contexts.test.ts#L15')}>13 literal-context cases</Link>).
+  (<Link href={blob('plugins/template/tests/literal-contexts.test.ts#L15')}>6 code-context cases</Link>).
 - **A URL binding is all or nothing.** `[Open]({{links.account}})` works;
   `[Open](https://app.example/{{id}})` is a `TEMPLATE_PARTIAL_URL` error,
   because a half-built URL is where a protocol check stops being possible

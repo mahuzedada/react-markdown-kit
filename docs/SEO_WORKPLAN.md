@@ -48,6 +48,77 @@ writing a single new page.
   carry a "Read next" link to their funnel. `node scripts/seo-report.mjs`
   reports 49 pages and 0 problems. Next: deploy, then C 3.3 follow-ups and
   the remaining D items.
+- 2026-09-20 (not deployed): review fixes across the Milestone C pages, and
+  the Milestone D ledger. Milestone D is done: item 1's streaming verdict is
+  **passes**, so `/streaming-markdown` is published and no `docs/STREAMING.md`
+  was needed (`packages/renderer/tests/streaming.test.tsx`, 59 tests); items 2
+  and 5 are the share-link hash and the round-trip diff panel in the editor
+  demo and the share link in the renderer demo; item 3 is the Mermaid badge;
+  item 4 is `?embed=1` for the Mermaid and slides demos; item 6 is
+  `scripts/compare-bundles.mjs` and the committed `docs/data/bundle-sizes.json`
+  that the comparison pages read through `CompareTable.tsx`. Milestone C 3.1,
+  3.2, 3.4 and 3.5 pages all exist: the 14 routes listed in the bullet above.
+  The review fixes in this commit: `/compare/streamdown` now says Streamdown
+  *completes* an incomplete construct through `remend` rather than suppressing
+  it, and links their features list; `/compare/markdown-to-jsx` states the
+  measured `img` behaviour and the real `tagfilter` tag list; the three
+  comparison pages no longer say the native and plugin GFM routes are
+  "byte-identical", because `tests/gfm.test.ts` compares through the tolerant
+  normalizer in `tests/helpers/html.ts`, and they name the 12 cases the
+  plain-CommonMark run exempts; `/nextjs-markdown` cites
+  `tests/packaging.test.ts` for the source check and `scripts/pack-check.mjs`
+  for the tarball install; the unbacked "the extension is smaller" sentence is
+  gone from `/docs/guides/render-markdown-in-react`; "roughly 80% of the work"
+  is now "about two thirds" everywhere, which is what
+  `benchmarks/README.md` measures (16.80 ms against 5.99 ms at 10 KB);
+  `/react-markdown-renderer` has a one-sentence description carrying its
+  primary term; `packages/editor/tests/roundtrip.test.ts` really runs the
+  GFM-off column instead of falling through to the default preset (61 tests
+  pass); the Lexical-types claim is scoped to the root entry and links
+  `packages/editor/tests/styling.test.tsx` on all five pages that make it; the
+  corruption fixture's `why` strings name "the audited editor" instead of the
+  product, and the three placeholder rows describe a real failure; the editor
+  FAQ gives the renderer's measured 36.8 KB instead of "far smaller";
+  `/docs/guides/lexical-markdown-editor` ends with demo, npm and source links;
+  the template guide no longer claims its left pane is editable and counts 6
+  code-context cases out of 13 in the file; `/compare/handlebars` counts 18
+  prototype-path cases in a 33-case file and describes its pane honestly;
+  `/markdown-template-engine` cites both link test blocks; `/marp-alternative`
+  builds its deck from `@react-markdown-kit/slides/present` so Present really
+  works, describes Marp fragments as coming from the list marker, and links
+  `tests/packaging.test.ts`; `/docs/slides` shows slide 2 of the deck the test
+  asserts, carries the primary term in its h1 and links the packaging test.
+  `pnpm typecheck`, `pnpm test` (1625 tests), `pnpm build` and
+  `pnpm build:sites` pass; `tests/seo-surface.test.ts` and
+  `tests/seo-links.test.ts` pass and `node scripts/seo-report.mjs` reports 49
+  pages and 0 problems. What remains:
+  - Not deployed, as instructed. The six sites are built but `make deploy` was
+    not run, so none of the 14 new routes is live yet.
+  - `/docs/slides` has title "Markdown Presentations in React" and h1
+    "Markdown presentations in React", so they now match; the deck's "Q3
+    review" heading no longer leaks as the page's h1.
+  - The byte counts now in `public-sites/shared/llms/llms.txt` and
+    `llms-full.txt` (36.8/35.5/48.5/46.4/27.8/152.2/110.3/163.1/104.9 KB
+    gzipped) are typed into prose from `docs/data/bundle-sizes.json`, unlike
+    the comparison pages, which read the JSON through `CompareTable.tsx`. A
+    rerun of `scripts/compare-bundles.mjs` updates the pages but not the two
+    llms files. A generator for the llms files, or a test asserting the
+    numbers against the JSON, would close this.
+  - Same drift risk for the benchmark figures (1.21x at 1 KB, parity at 10 KB,
+    0.89x at 100 KB, 2.8x precompiled) in `llms.txt` and
+    `public-sites/home/src/Landing.tsx`. Those predate this change and come
+    from `benchmarks/README.md`, not from a committed data file.
+  - The docs index page (`docs.reactmarkdownkit.com/`) emits only
+    `SoftwareSourceCode` JSON-LD, with no `WebSite` or `BreadcrumbList`.
+    Pre-existing and not flagged by the report.
+  - The navbar in `public-sites/docs/docusaurus.config.ts` was left alone; it
+    already carries ten items. The comparison pages are reachable site-wide
+    through a new Compare column in the footer, plus the home hub, the docs
+    index and the renderer funnel.
+  - `/compare` has no index route, so every breadcrumb trail on a comparison
+    page runs `/` -> the funnel -> the page rather than through `/compare`. A
+    `/compare` index would be a small follow-up.
+  - C 3.3 follow-ups, then deploy.
 
 ## 0. Ground rules
 

@@ -49,7 +49,7 @@ configuration. Tracked, not yet done.
 | From a source string | 16.80 ms |
 | From a precompiled `MarkdownDocument` | 5.99 ms |
 
-2.8x faster to re-render, because parsing is roughly 80% of the work and
+2.8x faster to re-render, because parsing is about two thirds of the work and
 `compileMarkdown` does it once. This is the architectural payoff of the shared
 document contract, and it is the path the template engine already uses.
 

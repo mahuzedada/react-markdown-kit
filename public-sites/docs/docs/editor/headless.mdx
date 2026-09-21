@@ -174,7 +174,7 @@ Lexical is how the rich surface is implemented. It is not the contract.
 
 Nothing this package exports requires a Lexical type to use. You can type every prop, every handler and the whole instance without `lexical` in your type path.
 
-A test in the package reads the published type declarations and fails if any of them imports from `lexical` or `@lexical/*`.
+A test asserts that `src/index.ts` and `src/types.ts` import nothing from `lexical` or `@lexical/*` ([`packages/editor/tests/styling.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/packages/editor/tests/styling.test.tsx)). The opt-in `@react-markdown-kit/editor/lexical` entry is the exception, for extension authors.
 
 The one escape hatch is deliberate:
 

@@ -9,7 +9,7 @@ server/client boundary. The Markdown rendering ships zero JavaScript to the
 browser.
 
 **Precompiling pays.** `app/precompiled.tsx` compiles at module scope and
-renders from the document per request. Parsing is roughly 80% of the work, so
+renders from the document per request. Parsing is about two thirds of the work, so
 this is about 2.8x faster to re-render. The document is plain JSON, so it can
 also come from a build step or a cache.
 
