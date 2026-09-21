@@ -1,0 +1,315 @@
+---
+id: markdown-template-variables
+slug: /guides/markdown-template-variables
+title: "Markdown template variables and safety"
+sidebar_label: Markdown template variables
+description: "How to put Markdown template variables in a .md file, what plain Markdown can do, and how a typed, injection-safe plugin resolves them inside the parser."
+---
+
+import Link from '@docusaurus/Link'
+import TemplateExample from '@site/src/components/TemplateExample'
+import sites from '@site/src/sites'
+import { FaqJsonLd } from '@site/src/components/JsonLd'
+
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const FAQ = [
+  {
+    question: 'Can Markdown have variables?',
+    answer:
+      'Not on its own. CommonMark and GitHub Flavored Markdown have no variable, no placeholder and no expression syntax, so a variable is always something a tool adds on top of the Markdown, either before parsing or during it.',
+  },
+  {
+    question: 'How do I inject variables into a .md file?',
+    answer:
+      'Write a placeholder the parser treats as ordinary text, such as {{user.name}}, keep it in the file, and resolve it at render time. Editing the .md file itself, by string replacement before parsing, is the approach that lets a value become Markdown structure.',
+  },
+  {
+    question: 'What is the syntax for placeholders in Markdown?',
+    answer:
+      'There is no standard one. Double braces are the common convention, shared by Handlebars, Mustache, Jinja and this plugin, because a brace has no meaning in Markdown, so the placeholder survives parsing as plain text.',
+  },
+  {
+    question: 'Do placeholders inside code blocks get replaced?',
+    answer:
+      'Not with @react-markdown-kit/template. A placeholder inside inline code, a fenced block or an indented block is left exactly as written, so a page can document template syntax while the plugin is installed. Thirteen cases in literal-contexts.test.ts assert it.',
+  },
+]
+
+<FaqJsonLd items={FAQ} />
+
+# Markdown template variables
+
+Three questions come up whenever someone wants one Markdown file to say
+different things for different readers. Here are the short answers, then the
+way this kit does it.
+
+**Can Markdown have variables?** No. Neither CommonMark nor GitHub Flavored
+Markdown defines a variable, a placeholder or an expression, so every
+"variable" you have seen in a `.md` file was added by a tool around Markdown,
+not by Markdown.
+
+**How do I inject variables into a `.md` file?** Put a placeholder in the file
+that the parser reads as ordinary text, such as `{{user.name}}`, and resolve it
+when the document is rendered rather than by rewriting the file.
+
+**What are placeholders in Markdown?** A convention, not a feature. Double
+braces are the usual choice, because `{` and `}` mean nothing in Markdown, so
+`{{user.name}}` is parsed as literal text and stays intact through every
+Markdown tool that touches the file.
+
+## The two places a variable can be resolved
+
+There are only two, and the choice decides what a value is allowed to do.
+
+| | Before parsing | Inside the parser |
+| --- | --- | --- |
+| How it works | Replace the placeholder in the source string, then parse the result | Parse the source once, then put the value into the tree as text |
+| A value of `**Administrator**` | Becomes bold | Keeps its asterisks as characters |
+| A value starting with `#` at line start | Becomes a heading | Stays text |
+| A value containing `](http://…)` | Can close the author's link and open its own | Stays text |
+| Tools in this family | Handlebars, Mustache, Jinja, `sed`, template literals | `@react-markdown-kit/template` |
+
+The first column is not a bug in those tools. They template strings, and
+Markdown is a string. It only becomes a problem when the values are not
+written by the same person who wrote the document.
+<Link to="/compare/handlebars">Markdown templating versus Handlebars</Link>
+goes through that comparison with the tests.
+
+## The plugin's way
+
+```bash
+npm install @react-markdown-kit/renderer @react-markdown-kit/template
+```
+
+```tsx
+import Markdown from '@react-markdown-kit/renderer'
+import { template } from '@react-markdown-kit/template'
+
+const source = '# Hello {{user.name}}\n\nYour balance is {{balance | currency:"USD"}}.'
+
+<Markdown extensions={[template({ data: { user: { name: 'Ada' }, balance: 4200 } })]}>
+  {source}
+</Markdown>
+```
+
+There is no engine object. `template({ data })` is a renderer extension, so the
+renderer parses your source with your preset and the plugin fills the parsed
+tree in. The same extension runs outside React:
+
+```ts
+import { compileMarkdown } from '@react-markdown-kit/renderer'
+
+const document = compileMarkdown(source, { extensions: [template({ data })] })
+```
+
+Edit the left pane below and switch the dataset. The source is the same string
+for every customer.
+
+<TemplateExample
+  title="One source, two readers, one locale change"
+  gfm
+  markdown={`## Welcome back, {{user.firstName}}
+
+Your plan renews on {{plan.renewsAt | date:"long"}} for {{plan.price \\| currency:"USD"}}.
+
+- Seats in use: {{usage.seats | number}}
+- Storage used: {{usage.storage | percent:1}}
+`}
+  datasets={[
+    {
+      label: 'Ada',
+      data: {
+        user: { firstName: 'Ada' },
+        plan: { renewsAt: '2026-11-01', price: 480 },
+        usage: { seats: 14, storage: 0.623 },
+      },
+    },
+    {
+      label: 'Grace',
+      data: {
+        user: { firstName: 'Grace' },
+        plan: { renewsAt: '2027-02-15', price: 19200 },
+        usage: { seats: 1280, storage: 0.0941 },
+      },
+    },
+    {
+      label: 'Ada in French',
+      locale: 'fr-FR',
+      data: {
+        user: { firstName: 'Ada' },
+        plan: { renewsAt: '2026-11-01', price: 480 },
+        usage: { seats: 14, storage: 0.623 },
+      },
+    },
+  ]}
+>
+  The `locale` option moves the date, the grouping separator and the percent
+  sign. The currency code never moves: it is written in the template.
+</TemplateExample>
+
+## Placeholder syntax
+
+```text
+{{path.to.value}}
+{{path.to.value | formatter}}
+{{path.to.value | formatter:"argument"}}
+```
+
+- **Paths** are dotted property names and array indexes, read as own
+  properties only. `__proto__`, `constructor` and `prototype` are refused at
+  resolve time and nothing is written to `Object.prototype`
+  (<Link href={blob('plugins/template/tests/paths.test.ts#L41')}>path tests</Link>).
+- **Formatters** are `number`, `currency`, `percent`, `date`, `time` and
+  `datetime`, plus any you pass in `formatters`. `currency` requires an
+  explicit ISO 4217 code; a locale never implies one
+  (<Link href={blob('plugins/template/tests/formatters.test.ts#L22')}>currency tests</Link>).
+- **Escaping.** Write `\{{not.a.placeholder}}` to keep the braces literal; the
+  backslash is removed and nothing is bound
+  (<Link href={blob('plugins/template/tests/literal-contexts.test.ts#L54')}>escape tests</Link>).
+- **Code is literal.** A placeholder inside inline code, a fenced block or an
+  indented block is never bound, and it does not even need the variable to
+  exist
+  (<Link href={blob('plugins/template/tests/literal-contexts.test.ts#L15')}>13 literal-context cases</Link>).
+- **A URL binding is all or nothing.** `[Open]({{links.account}})` works;
+  `[Open](https://app.example/{{id}})` is a `TEMPLATE_PARTIAL_URL` error,
+  because a half-built URL is where a protocol check stops being possible
+  (<Link href={blob('plugins/template/tests/links.test.ts#L72')}>partial-URL tests</Link>).
+
+## Required, optional and missing
+
+A placeholder with no value is an error by default. On any error the document
+becomes your `fallback`, or nothing at all, so a report never goes out with a
+blank where an amount should be.
+
+```tsx
+<Markdown
+  extensions={[
+    template({
+      data,
+      variables: { 'plan.price': { required: true }, 'user.middleName': { required: false } },
+      fallback: 'This report is temporarily unavailable.',
+      onDiagnostics: (diagnostics) => logger.warn('report', { diagnostics }),
+    }),
+  ]}
+>
+  {source}
+</Markdown>
+```
+
+Every diagnostic carries a stable code and the data path it concerns, never the
+runtime value, so diagnostics are safe to log. `TEMPLATE_REQUIRED_VALUE` is an
+error; `TEMPLATE_OPTIONAL_VALUE_MISSING` is a warning that resolves to empty
+text. The full list is in <Link to="/docs/templates/basics">Template basics</Link>.
+
+## Why a value cannot become structure
+
+A resolved value is inserted as a text node in an already-parsed tree. Nothing
+re-parses it. Every newline inside a value becomes a space first, because a
+block construct needs only line-start position to form, and the document is
+re-escaped on serialization, so the guarantee survives a round trip through
+Markdown text.
+
+<TemplateExample
+  title="The same template with values from a sign-up form"
+  gfm
+  markdown={`## Report for {{customer.name}}
+
+Prepared for {{customer.contact}}.
+`}
+  datasets={[
+    { label: 'Ordinary', data: { customer: { name: 'Acme Industrial', contact: 'Dana Okafor' } } },
+    {
+      label: 'Heading attempt',
+      data: { customer: { name: '\n# Account suspended\n', contact: 'Dana Okafor' } },
+    },
+    {
+      label: 'Table attempt',
+      data: { customer: { name: '\n| a | b |\n| --- | --- |\n| 1 | 2 |\n', contact: 'Dana Okafor' } },
+    },
+    {
+      label: 'HTML attempt',
+      data: { customer: { name: '<script>alert(1)</script>', contact: 'Dana Okafor' } },
+    },
+  ]}
+>
+  Switching dataset changes the words and never the shape: two blocks, a
+  heading and a paragraph, in every case.
+</TemplateExample>
+
+That claim is 152 test cases:
+<Link href={blob('plugins/template/tests/injection.test.ts#L21')}>`injection.test.ts`</Link>
+(22 hostile values, 77 cases),
+<Link href={blob('tests/template-serialization-safety.test.ts#L16')}>`template-serialization-safety.test.ts`</Link>
+(12 line-start constructs in 5 authored contexts, 62 cases) and
+<Link href={blob('tests/template-security-independent.test.ts')}>`template-security-independent.test.ts`</Link>
+(13 cases, written without the plugin's own helpers).
+
+```bash
+pnpm test -- plugins/template/tests/injection.test.ts \
+  tests/template-serialization-safety.test.ts \
+  tests/template-security-independent.test.ts
+```
+
+## Typing the data
+
+TypeScript catches a wrong shape at compile time:
+
+```ts
+template<ReportData>({ data })
+```
+
+A runtime schema catches it at the boundary. The `schema` option takes any
+[Standard Schema](https://standardschema.dev) validator, an interface Zod,
+Valibot and ArkType all implement, and the validator is detected by its
+`~standard` member, so no adapter is needed and the package depends on none of
+them. Two vendors, one with array issue paths and one with object issue paths,
+are run against the same template in
+<Link href={blob('plugins/template/tests/schema.test.ts#L59')}>`schema.test.ts`</Link>.
+
+```ts
+import { z } from 'zod'
+
+const ReportSchema = z.object({ customer: z.object({ name: z.string() }) })
+
+template({ data, schema: ReportSchema })
+```
+
+<Link to="/docs/templates/schemas">Schemas and types</Link>
+
+## Getting the Markdown back out
+
+When the output is an email body or a file rather than React elements,
+serialize the compiled document:
+
+```ts
+import { compileMarkdown, documentToMarkdown } from '@react-markdown-kit/renderer'
+
+const document = compileMarkdown(source, { extensions: [template({ data })] })
+await writeFile('report.md', await documentToMarkdown(document))
+```
+
+The root entry imports no React and no Lexical, so this runs in a service, a
+worker, a CLI or a PDF job
+(<Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link>
+resolves a template from the packed tarball with no Lexical installed).
+
+## FAQ
+
+{FAQ.map((item) => (
+  <section key={item.question}>
+    <h3>{item.question}</h3>
+    <p>{item.answer}</p>
+  </section>
+))}
+
+## Next
+
+<Link to="/markdown-template-engine">Markdown template engine</Link> ·{' '}
+<Link to="/personalized-markdown">Personalized Markdown</Link> ·{' '}
+<Link to="/compare/handlebars">Compared with Handlebars and Mustache</Link> ·{' '}
+<Link to="/docs/templates/basics">Template basics</Link> ·{' '}
+<Link to="/docs/templates/authoring">Authoring in the editor</Link> ·{' '}
+<Link href={sites.editorDemo}>Editor demo</Link> ·{' '}
+<Link href="https://www.npmjs.com/package/@react-markdown-kit/template">@react-markdown-kit/template on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>

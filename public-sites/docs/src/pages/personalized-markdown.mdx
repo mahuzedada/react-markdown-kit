@@ -1,0 +1,293 @@
+---
+title: "Personalized Markdown: one document"
+description: "Personalized Markdown in React: write the customer report once, resolve typed variables per customer and locale, and never rewrite the authored source."
+---
+
+import Link from '@docusaurus/Link'
+import TemplateExample from '@site/src/components/TemplateExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+
+export const PATH = '/personalized-markdown'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'Markdown template engine', path: '/markdown-template-engine' },
+  { name: 'Personalized Markdown' },
+]
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/template'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const FAQ = [
+  {
+    question: 'What is personalized Markdown?',
+    answer:
+      'One authored Markdown document with placeholders, rendered once per reader with that reader’s data. The source file is never rewritten: @react-markdown-kit/template resolves the placeholders while the renderer parses, so one template serves every customer.',
+  },
+  {
+    question: 'How do I render a different Markdown document per customer?',
+    answer:
+      'Compile the same source with a different data object: compileMarkdown(source, { extensions: [template({ data: customer })] }). Pass locale and timeZone alongside the data to move dates, number grouping and percent signs without touching the template.',
+  },
+  {
+    question: 'Can a customer’s own name break the layout of the report?',
+    answer:
+      'No. A resolved value becomes a text node in a parsed tree, so it cannot open a heading, a table row, a link or an HTML tag, and it still cannot after the document is serialized back to Markdown and re-parsed. 152 test cases assert it.',
+  },
+  {
+    question: 'Can the same template produce an email or a PDF?',
+    answer:
+      'Yes. The root entry imports no React and no Lexical, so compileMarkdown plus documentToMarkdown produces resolved Markdown text in a Node service, a worker, a CLI or a PDF pipeline, from the same file the React app renders.',
+  },
+]
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
+
+export const report = `![{{brand.logoAlt}}]({{brand.logoUrl}})
+
+## {{period}} account review for {{customer.name}}
+
+Prepared for {{customer.contact}} on {{preparedAt | date:"long"}}.
+
+| Line | Amount |
+| --- | ---: |
+| Plan, {{plan.seats \\| number}} seats | {{plan.price \\| currency:"USD"}} |
+| Overage | {{plan.overage \\| currency:"USD"}} |
+| **Total** | **{{plan.total \\| currency:"USD"}}** |
+
+Usage sat at {{usage.share | percent:1}} of the included quota. The plan renews
+on {{plan.renewsAt | date:"long"}}.
+
+[Open the account]({{links.account}})
+`
+
+export const acme = {
+  brand: { logoAlt: 'Acme Industrial', logoUrl: '/img/logo.svg' },
+  period: 'Q3 2026',
+  customer: { name: 'Acme Industrial', contact: 'Dana Okafor' },
+  preparedAt: '2026-10-01',
+  plan: { seats: 140, price: 4800, overage: 312.4, total: 5112.4, renewsAt: '2026-11-01' },
+  usage: { share: 0.623 },
+  links: { account: 'https://app.example.com/accounts/acme' },
+}
+
+export const cedarline = {
+  brand: { logoAlt: 'Cedarline Mutual', logoUrl: '/img/logo.svg' },
+  period: 'Q3 2026',
+  customer: { name: 'Cedarline Mutual', contact: 'Sam Reyes' },
+  preparedAt: '2026-10-01',
+  plan: { seats: 1280, price: 19200, overage: 0, total: 19200, renewsAt: '2027-02-15' },
+  usage: { share: 0.0941 },
+  links: { account: 'https://app.example.com/accounts/cedarline' },
+}
+
+export const hostile = {
+  ...acme,
+  customer: {
+    name: '\n# This account is suspended\n\nWire payment to [our new bank](https://attacker.example/pay).\n',
+    contact: '**Administrator** | <script>alert(1)</script>',
+  },
+}
+
+# Personalized Markdown: one document, every customer
+
+A customer report is written once, by a person, in Markdown. It is read
+thousands of times, each time with different numbers. Personalized Markdown is
+that split made explicit: the document is an authored file in version control,
+and the values arrive at render time.
+
+```bash
+npm install @react-markdown-kit/renderer @react-markdown-kit/template
+```
+
+## The customer report
+
+This is the flagship example from
+<Link href={blob('docs/SPEC.md')}>the specification</Link>, section 13.4, built
+here with the kit. The left pane is the file a person wrote. The right pane is
+a real `<Markdown>` rendering the document `compileMarkdown` produced. Switch
+the customer, then switch the locale.
+
+<TemplateExample
+  title="Quarterly account review"
+  gfm
+  markdown={report}
+  datasets={[
+    { label: 'Acme Industrial', data: acme },
+    { label: 'Cedarline Mutual', data: cedarline },
+    { label: 'Acme in French', locale: 'fr-FR', data: acme },
+    { label: 'Cedarline in German', locale: 'de-DE', data: cedarline },
+  ]}
+>
+  Nothing in the left pane changes between datasets, including the logo, the
+  account link and the table. The `fr-FR` and `de-DE` datasets move the date
+  format, the grouping separator and the percent sign. They do not move the
+  currency, which is written into the template as `currency:"USD"`.
+</TemplateExample>
+
+Four kinds of binding appear in that one document.
+
+- **Text**, in a heading and in a paragraph: `{{customer.name}}` and
+  `{{customer.contact}}`.
+- **Formatted numbers and dates**: `{{plan.price | currency:"USD"}}`,
+  `{{preparedAt | date:"long"}}`, `{{usage.share | percent:1}}`. Inside a table
+  cell the pipe is escaped as `\|`, which
+  <Link href={blob('tests/template-table-formatters.test.ts#L25')}>`template-table-formatters.test.ts`</Link>
+  covers.
+- **An image**, alt text and source together:
+  `![{{brand.logoAlt}}]({{brand.logoUrl}})`.
+- **A link destination**: `[Open the account]({{links.account}})`. The
+  placeholder has to be the whole destination, so the resolved URL can be
+  checked against the protocol policy before it becomes an `href`
+  (<Link href={blob('plugins/template/tests/links.test.ts#L97')}>destination policy tests</Link>).
+
+## The code
+
+```ts
+import { compileMarkdown } from '@react-markdown-kit/renderer'
+import { gfmPreset } from '@react-markdown-kit/renderer/gfm'
+import { template } from '@react-markdown-kit/template'
+
+const source = await readFile('templates/account-review.md', 'utf8')
+
+export function reportFor(customer: Customer) {
+  return compileMarkdown(source, {
+    preset: gfmPreset,
+    extensions: [template({ data: customer.data, locale: customer.locale, timeZone: 'UTC' })],
+  })
+}
+```
+
+In React, hand the compiled document straight to `<Markdown>`:
+
+```tsx
+<Markdown preset={gfmPreset} document={reportFor(customer)} />
+```
+
+`compileMarkdown` is the parse and the resolution. `<Markdown document>` renders
+a document that has already been through both, so a report compiled in a
+request handler can be rendered without parsing it again.
+
+## One source of truth, per customer output
+
+The property that makes this worth doing is that the authored file is never
+rewritten. There is no per-customer copy to drift, no branch in the document
+for the customer who has no overage, and no "regenerate the templates" step.
+`git log` on `account-review.md` is the full history of what every customer
+was told.
+
+That also means the template is reviewable by the people who own the wording.
+`@react-markdown-kit/template/editor` gives them the same file with every
+placeholder as a labelled chip and a sample-data preview, and saves plain
+template syntax back
+(<Link to="/docs/templates/authoring">Authoring templates</Link>).
+
+## Customer data is not trusted input
+
+Names, contact fields and company names come from sign-up forms. In a template
+engine that replaces text before parsing, those fields are Markdown source. In
+this one they are values.
+
+<TemplateExample
+  title="The same report with a hostile customer name"
+  gfm
+  markdown={report}
+  datasets={[
+    { label: 'Ordinary', data: acme },
+    { label: 'Hostile name and contact', data: hostile },
+  ]}
+>
+  The second dataset tries to end the paragraph, open a heading, add a payment
+  link, start a table cell and inject a script tag. Every character of it is
+  rendered, as characters, in the place the template put it. Both datasets
+  compile to the same six blocks in the same order, the logo first and the
+  account link last, with no diagnostics.
+</TemplateExample>
+
+Values are placed structurally into a parsed tree, never substituted into the
+source text, and every newline in a value becomes a space, because line-start
+position is all a block construct needs. The guarantee survives serialization:
+a resolved document written back to Markdown and re-parsed with GFM has the
+same node types it had before.
+
+That is 152 test cases across three files:
+<Link href={blob('plugins/template/tests/injection.test.ts#L21')}>`injection.test.ts`</Link>
+(22 hostile values, 77 cases),
+<Link href={blob('tests/template-serialization-safety.test.ts#L16')}>`template-serialization-safety.test.ts`</Link>
+(12 line-start constructs in 5 authored contexts, 62 cases) and
+<Link href={blob('tests/template-security-independent.test.ts')}>`template-security-independent.test.ts`</Link>
+(13 cases). Run them with:
+
+```bash
+pnpm test -- plugins/template/tests/injection.test.ts \
+  tests/template-serialization-safety.test.ts \
+  tests/template-security-independent.test.ts
+```
+
+<Link to="/compare/handlebars">How that differs from Handlebars and Mustache</Link>
+
+## Validate the data before the report exists
+
+A report with a blank where an amount should be is worse than no report. A
+missing required value is an error, and on any error the document becomes your
+`fallback` or nothing
+(<Link href={blob('plugins/template/tests/resolve.test.ts#L53')}>missing-value tests</Link>).
+
+```ts
+import { z } from 'zod'
+
+const ReviewData = z.object({
+  period: z.string(),
+  customer: z.object({ name: z.string(), contact: z.string() }),
+  plan: z.object({ seats: z.number(), price: z.number(), total: z.number() }),
+  links: z.object({ account: z.string().url() }),
+})
+
+template({ data, schema: ReviewData, fallback: 'This report is temporarily unavailable.' })
+```
+
+`schema` takes any [Standard Schema](https://standardschema.dev) validator, an
+interface Zod, Valibot and ArkType all implement. The validator is recognized
+by its `~standard` member, so no adapter is needed and the package depends on
+none of them
+(<Link href={blob('plugins/template/tests/schema.test.ts#L59')}>schema tests</Link>).
+
+## The same template as an email or a PDF
+
+The root entry imports no React and no Lexical, so the report can be produced
+by a job as well as by the app:
+
+```ts
+import { compileMarkdown, documentToMarkdown } from '@react-markdown-kit/renderer'
+
+const document = compileMarkdown(source, { preset: gfmPreset, extensions: [template({ data })] })
+await sendEmail({ to: customer.email, markdown: await documentToMarkdown(document) })
+```
+
+Serialization re-escapes the resolved values, so the Markdown that leaves the
+process reads the same way the rendered document did
+(<Link href={blob('plugins/template/tests/to-markdown.test.ts#L13')}>serializer tests</Link>).
+<Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link>
+resolves a template from the packed tarball in a project with no Lexical
+installed.
+
+## FAQ
+
+{FAQ.map((item) => (
+  <section key={item.question}>
+    <h3>{item.question}</h3>
+    <p>{item.answer}</p>
+  </section>
+))}
+
+## Next
+
+<Link to="/markdown-template-engine">Markdown template engine</Link> ·{' '}
+<Link to="/docs/guides/markdown-template-variables">Markdown template variables</Link> ·{' '}
+<Link to="/compare/handlebars">Compared with Handlebars and Mustache</Link> ·{' '}
+<Link to="/docs/templates/schemas">Schemas and types</Link> ·{' '}
+<Link href={sites.editorDemo}>Editor demo</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/template on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
