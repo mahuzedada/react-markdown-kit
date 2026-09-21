@@ -2,6 +2,9 @@ import type { ReactNode } from 'react'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../shared/Seo'
 
+/** The suite the round-trip claims on this page point at. */
+const ROUNDTRIP_TEST = `${sites.github}/blob/main/packages/editor/tests/roundtrip.test.ts`
+
 /*
  * The crawlable copy of editor.reactmarkdownkit.com. It targets the searches
  * in docs/SEO_PLAN.md 4.2: "react markdown editor online / free", "wysiwyg
@@ -70,6 +73,12 @@ const FAQ: readonly FaqItem[] = [
     more: { href: docsUrl('/docs/editor/round-trip'), label: 'The round-trip suite.' },
   },
   {
+    question: 'Can I check the round trip on my own Markdown?',
+    answer:
+      'Yes. Paste a document into the round-trip panel on this page. The editor opens it and saves it back, and the panel shows a line diff or says the two are identical.',
+    more: { href: ROUNDTRIP_TEST, label: 'The same bridge the test suite runs.' },
+  },
+  {
     question: 'What is the editor built on?',
     answer:
       'Lexical. The React component wraps a Lexical editor, and a headless API exposes the same engine without the toolbar and chrome.',
@@ -89,16 +98,24 @@ const FAQ: readonly FaqItem[] = [
   },
 ]
 
-export default function Landing(): ReactNode {
+export interface LandingProps {
+  /**
+   * The round-trip panel, passed by the client app. The prerendered
+   * `index.html` carries the copy around it without it (src/static.tsx).
+   */
+  readonly roundTrip?: ReactNode
+}
+
+export default function Landing({ roundTrip }: LandingProps): ReactNode {
   return (
     <article className="site-landing">
       <header className="site-hero">
         <span className="site-eyebrow">Free, open source, no account</span>
         <h1>{TITLE}</h1>
         <p className="site-lede">
-          A rich text editor that reads and writes plain Markdown. Write in rich, source or
-          preview mode, add typed variables and Mermaid diagrams, and save the same string you
-          opened.
+          A rich text editor that reads and writes plain Markdown. It is free, needs no account and
+          runs in your browser. Write in rich, source or preview mode, add typed variables and
+          Mermaid diagrams, and save the same string you opened.
         </p>
         <p className="site-hero-links">
           <a href={docsUrl('/react-markdown-editor')}>Editor docs</a>
@@ -180,6 +197,28 @@ export default function Landing(): ReactNode {
           </p>
         </div>
 
+        <section id="round-trip">
+          <span className="site-eyebrow">Round trip</span>
+          <h2>Paste Markdown, save it, read the diff</h2>
+          <p>
+            Paste a document below. The editor opens it and saves it straight back through the same
+            headless bridge as{' '}
+            <a href={ROUNDTRIP_TEST}>
+              <code>packages/editor/tests/roundtrip.test.ts</code>
+            </a>
+            , then the panel diffs what you pasted against what was saved, line by line. When the two
+            match it says so. The box starts with constructs that another editor corrupted in the
+            audit: a setext heading, a list starting at 3, a nested quote, double backtick code,
+            underscore emphasis and a reference link.
+          </p>
+          {roundTrip}
+          <p>
+            That suite runs 22 audited documents in CI and fails the build if one comes back changed.{' '}
+            <a href={docsUrl('/docs/editor/round-trip')}>Round trip</a> lists the cases and what each
+            one used to break.
+          </p>
+        </section>
+
         <h2>About this editor</h2>
         <ul>
           <li>
@@ -191,6 +230,11 @@ export default function Landing(): ReactNode {
             The flowchart is editable in place. Drag a box and the saved Markdown is still plain
             Mermaid, with one layout comment, while the placeholders around it stay untouched. The{' '}
             <a href={sites.mermaidDemo}>Mermaid editor</a> shows that on its own.
+          </li>
+          <li>
+            "Copy link" puts the whole document in the URL hash, compressed, and hands you the link.
+            Nothing is uploaded and no account is involved; opening the link restores the document in
+            the editor.
           </li>
           <li>
             Installing the renderer alone pulls no editor code and no Lexical, and the template and

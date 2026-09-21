@@ -1,9 +1,10 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import Markdown, { compileMarkdown, defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
 import { template } from '@react-markdown-kit/template'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
 import { mermaid } from '@react-markdown-kit/mermaid/editor'
 import { templateVariables } from '@react-markdown-kit/template/editor'
+import { useShareHash } from './use-share-hash'
 import styles from './KitDemo.module.css'
 
 import '@react-markdown-kit/renderer/styles.css'
@@ -52,14 +53,40 @@ const CUSTOMER = {
   },
 }
 
+type CopyState = 'copied' | 'blocked' | undefined
+
+/** How long the button reports the copy before going back to its label. */
+const COPIED_MS = 1500
+
 /**
  * The editor, with both plugins, wired the way a real application would wire
  * them: the editor authors a template with placeholders as chips and a
  * diagram on a canvas, and the renderer shows the same document resolved for
  * one customer. Edit on the left and the right follows.
+ *
+ * The document also lives in the URL hash (src/share.ts), so "Copy link"
+ * hands over a link that carries it. Nothing is uploaded.
  */
 export default function KitDemo(): ReactNode {
   const [source, setSource] = useState(INITIAL)
+  const [copied, setCopied] = useState<CopyState>(undefined)
+  const { link, unreadable } = useShareHash(source, setSource, INITIAL)
+
+  const copyLink = useCallback(() => {
+    if (link === undefined) return
+    const report = (state: CopyState): void => {
+      setCopied(state)
+      setTimeout(() => setCopied((current) => (current === state ? undefined : current)), COPIED_MS)
+    }
+    if (typeof navigator.clipboard?.writeText !== 'function') {
+      report('blocked')
+      return
+    }
+    navigator.clipboard.writeText(link).then(
+      () => report('copied'),
+      () => report('blocked'),
+    )
+  }, [link])
 
   // The source is recompiled as the author types, with the template plugin
   // filling it in for the customer.
@@ -85,11 +112,33 @@ export default function KitDemo(): ReactNode {
         <div className={styles.col}>
           <div className={styles.colHead}>
             <span>Authored template</span>
-            <span className={styles.badgeStable}>saved as Markdown, placeholders and all</span>
+            <span className={styles.actions}>
+              <span className={styles.badgeStable}>saved as Markdown, placeholders and all</span>
+              <button
+                type="button"
+                className={styles.action}
+                disabled={link === undefined}
+                title="Copies a link with this document in the URL hash. Nothing is uploaded."
+                onClick={copyLink}
+              >
+                {copied === 'copied' ? 'Copied' : 'Copy link'}
+              </button>
+            </span>
           </div>
           <div className={styles.editorWrap}>
             <MarkdownEditor preset={preset} extensions={editorExtensions} value={source} onChange={setSource} />
           </div>
+          {copied === 'blocked' ? (
+            <p className={styles.note}>
+              This browser would not write to the clipboard. The address bar holds the same link.
+            </p>
+          ) : null}
+          {unreadable ? (
+            <p className={styles.note}>
+              This link could not be read in this browser, so the example document is shown. The address bar still
+              holds the shared link; editing replaces it.
+            </p>
+          ) : null}
         </div>
 
         <div className={styles.col}>
