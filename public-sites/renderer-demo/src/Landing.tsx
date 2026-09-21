@@ -67,6 +67,11 @@ const FAQ: readonly FaqItem[] = [
     more: { href: docsUrl('/docs/renderer/gfm'), label: 'GFM options.' },
   },
   {
+    question: 'Can I share the Markdown I am testing?',
+    answer:
+      'Yes. Copy link compresses the whole document into the URL hash, so the link opens this playground with your Markdown already in the source pane. Nothing is uploaded.',
+  },
+  {
     question: 'How fast is it?',
     answer:
       'On a 1 KB document it is 1.21x slower than react-markdown, at parity at 10 KB and 0.89x at 100 KB. A precompiled document re-renders 2.8x faster than parsing again.',
@@ -176,6 +181,11 @@ export default function Landing(): ReactNode {
             that rendering a precompiled document skips the parse, and they are not a benchmark. The{' '}
             <a href={`${sites.github}/tree/main/benchmarks`}>benchmark methodology</a> explains how the
             kit is actually compared.
+          </li>
+          <li>
+            <strong>Copy link</strong> above the source pane compresses the document into the URL
+            hash and copies the address, so a colleague opens this page with your exact Markdown
+            already loaded and nothing is uploaded.
           </li>
           <li>
             Want to edit as well as render? Open the <a href={sites.editorDemo}>editor demo</a>.
