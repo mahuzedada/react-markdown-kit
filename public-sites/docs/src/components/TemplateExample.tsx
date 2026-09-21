@@ -1,6 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import Markdown, { compileMarkdown, defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
 import { template } from '@react-markdown-kit/template'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import Button from '@zuilib/primitives/button'
+import Disclosure from '@zuilib/primitives/disclosure'
 import styles from './Example.module.css'
 
 const gfmPreset = defineMarkdownPreset({ extensions: [gfm()] })
@@ -55,20 +58,21 @@ export default function TemplateExample({
   }, [markdown, useGfm, active])
 
   return (
-    <figure className={styles.example}>
+    <ActivityScope feature="template-example" as="figure" className={styles.example}>
       {title !== undefined && <figcaption className={styles.caption}>{title}</figcaption>}
 
       <div className={styles.switcher} role="group" aria-label="Sample data">
         {datasets.map((dataset, at) => (
-          <button
+          <Button
             key={dataset.label}
-            type="button"
-            className={at === index ? styles.switchActive : styles.switch}
+            variant={at === index ? 'solid' : 'outline'}
+            size="sm"
+            track="dataset"
             aria-pressed={at === index}
             onClick={() => setIndex(at)}
           >
             {dataset.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -99,12 +103,19 @@ export default function TemplateExample({
         </div>
       </div>
 
-      <details className={styles.details}>
-        <summary>Data passed to <code>template()</code></summary>
+      <Disclosure
+        track="data"
+        className={styles.details}
+        title={
+          <>
+            Data passed to <code>template()</code>
+          </>
+        }
+      >
         <pre className={styles.source}>{JSON.stringify(active?.data ?? {}, null, 2)}</pre>
-      </details>
+      </Disclosure>
 
       {children !== undefined && <div className={styles.note}>{children}</div>}
-    </figure>
+    </ActivityScope>
   )
 }

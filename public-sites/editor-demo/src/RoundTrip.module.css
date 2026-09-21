@@ -26,22 +26,9 @@
 }
 
 .input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.6rem 0.7rem;
   font-family: var(--font-mono);
   font-size: 0.8rem;
   line-height: 1.5;
-  color: var(--foreground);
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  resize: vertical;
-}
-
-.input:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 40%, transparent);
 }
 
 .result {

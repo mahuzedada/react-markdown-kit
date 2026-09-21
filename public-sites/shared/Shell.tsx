@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import Button from '@zuilib/primitives/button'
 import sites from './sites.json'
 
 type Theme = 'light' | 'dark'
@@ -18,6 +20,15 @@ function applyTheme(theme: Theme): void {
     // Storage can be unavailable; the attribute alone is enough for this visit.
   }
 }
+
+const SITE_LINKS: readonly { label: string; href: string; track: string; site?: Site }[] = [
+  { label: 'Renderer demo', href: sites.rendererDemo, track: 'renderer', site: 'renderer' },
+  { label: 'Editor demo', href: sites.editorDemo, track: 'editor', site: 'editor' },
+  { label: 'Mermaid editor', href: sites.mermaidDemo, track: 'mermaid', site: 'mermaid' },
+  { label: 'Slides demo', href: sites.slidesDemo, track: 'slides', site: 'slides' },
+  { label: 'Docs', href: sites.docs, track: 'docs' },
+  { label: 'GitHub', href: sites.github, track: 'github' },
+]
 
 export interface ShellProps {
   readonly site: Site
@@ -46,31 +57,32 @@ export function Shell({ site, children }: ShellProps): ReactNode {
   return (
     <>
       {children}
-      <footer className="site-footer">
-        <a className="site-brand" href={sites.home}>
-          <img src="/logo.svg" alt="" />
-          React Markdown Kit
-        </a>
-        <nav className="site-nav" aria-label="Sites">
-          <a href={sites.rendererDemo} aria-current={site === 'renderer' ? 'page' : undefined}>
-            Renderer demo
+      <ActivityScope feature="footer">
+        <footer className="site-footer">
+          <a className="site-brand" href={sites.home} data-zui-tag="brand">
+            <img src="/logo.svg" alt="" />
+            React Markdown Kit
           </a>
-          <a href={sites.editorDemo} aria-current={site === 'editor' ? 'page' : undefined}>
-            Editor demo
-          </a>
-          <a href={sites.mermaidDemo} aria-current={site === 'mermaid' ? 'page' : undefined}>
-            Mermaid editor
-          </a>
-          <a href={sites.slidesDemo} aria-current={site === 'slides' ? 'page' : undefined}>
-            Slides demo
-          </a>
-          <a href={sites.docs}>Docs</a>
-          <a href={sites.github}>GitHub</a>
-          <button type="button" className="site-toggle" onClick={toggle} aria-label="Toggle colour mode">
-            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-          </button>
-        </nav>
-      </footer>
+          <nav className="site-nav" aria-label="Sites">
+            {SITE_LINKS.map((link) => (
+              <Button
+                key={link.track}
+                as="a"
+                href={link.href}
+                variant="ghost"
+                size="sm"
+                track={link.track}
+                aria-current={link.site === site ? 'page' : undefined}
+              >
+                {link.label}
+              </Button>
+            ))}
+            <Button variant="ghost" size="sm" track="theme" onClick={toggle} aria-label="Toggle colour mode">
+              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            </Button>
+          </nav>
+        </footer>
+      </ActivityScope>
     </>
   )
 }

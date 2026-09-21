@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import Link from '@docusaurus/Link'
 import Layout from '@theme/Layout'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import Button from '@zuilib/primitives/button'
 import CodeBlock from '@theme/CodeBlock'
 import RenderExample from '@site/src/components/RenderExample'
 import TemplateExample from '@site/src/components/TemplateExample'
@@ -141,14 +143,14 @@ export default function Home(): ReactNode {
             displaying Markdown to authoring and personalizing it without changing how
             anything is stored.
           </p>
-          <div className={styles.actions}>
-            <Link className="button button--primary button--lg" to="/docs/getting-started">
+          <ActivityScope feature="hero" as="div" className={styles.actions}>
+            <Button as={Link} size="lg" track="get-started" to="/docs/getting-started">
               Get started
-            </Link>
-            <Link className="button button--secondary button--lg" href={sites.rendererDemo}>
+            </Button>
+            <Button as={Link} size="lg" variant="outline" track="renderer-demo" href={sites.rendererDemo}>
               Try the renderer demo
-            </Link>
-          </div>
+            </Button>
+          </ActivityScope>
           <code className={styles.install}>npm i @react-markdown-kit/renderer</code>
         </div>
       </header>

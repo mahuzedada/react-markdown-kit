@@ -99,24 +99,6 @@ textarea.source { outline-offset: -2px; }
   border-bottom: 1px solid var(--border);
 }
 
-.switch,
-.switchActive {
-  font: inherit;
-  font-size: 0.8rem;
-  padding: 0.25rem 0.7rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--foreground);
-  cursor: pointer;
-}
-
-.switchActive {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-
 .badgeOk,
 .badgeEdit {
   font-size: 0.68rem;
@@ -143,8 +125,8 @@ textarea.source { outline-offset: -2px; }
   color: var(--foreground);
 }
 
-.details { padding: 0.5rem 0.9rem 0.8rem; font-size: 0.85rem; }
-.details summary { cursor: pointer; }
+/* The Disclosure sits flush in the figure: a rule above, not a card of its own. */
+.details { border: 0; border-top: 1px solid var(--border); border-radius: 0; box-shadow: none; font-size: 0.85rem; }
 .details .source { min-height: 0; padding-left: 0; }
 
 .diagnostics { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; }

@@ -24,6 +24,7 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
+    "@zuilib/primitives": "0.4.0",
     "jsdom": "^25.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

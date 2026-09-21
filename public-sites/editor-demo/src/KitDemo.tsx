@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import Markdown, { compileMarkdown, defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
 import { template } from '@react-markdown-kit/template'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import Button from '@zuilib/primitives/button'
 import { mermaid } from '@react-markdown-kit/mermaid/editor'
 import { templateVariables } from '@react-markdown-kit/template/editor'
 import { useShareHash } from './use-share-hash'
@@ -107,62 +109,66 @@ export default function KitDemo(): ReactNode {
   )
 
   return (
-    <div className={styles.shell}>
-      <div className={styles.body}>
-        <div className={styles.col}>
-          <div className={styles.colHead}>
-            <span>Authored template</span>
-            <span className={styles.actions}>
-              <span className={styles.badgeStable}>saved as Markdown, placeholders and all</span>
-              <button
-                type="button"
-                className={styles.action}
-                disabled={link === undefined}
-                title="Copies a link with this document in the URL hash. Nothing is uploaded."
-                onClick={copyLink}
-              >
-                {copied === 'copied' ? 'Copied' : 'Copy link'}
-              </button>
-            </span>
-          </div>
-          <div className={styles.editorWrap}>
-            <MarkdownEditor preset={preset} extensions={editorExtensions} value={source} onChange={setSource} />
-          </div>
-          {copied === 'blocked' ? (
-            <p className={styles.note}>
-              This browser would not write to the clipboard. The address bar holds the same link.
-            </p>
-          ) : null}
-          {unreadable ? (
-            <p className={styles.note}>
-              This link could not be read in this browser, so the example document is shown. The address bar still
-              holds the shared link; editing replaces it.
-            </p>
-          ) : null}
-        </div>
-
-        <div className={styles.col}>
-          <div className={styles.colHead}>
-            <span>Resolved for {CUSTOMER.label}</span>
-            <span className={styles.badgeLive}>follows every edit</span>
-          </div>
-          {result.ok ? (
-            <div className={`${styles.output} rmk-document`}>
-              <Markdown preset={preset} document={result.document} />
+    <ActivityScope feature="editor-workbench">
+      <div className={styles.shell}>
+        <div className={styles.body}>
+          <div className={styles.col}>
+            <div className={styles.colHead}>
+              <span>Authored template</span>
+              <span className={styles.actions}>
+                <span className={styles.badgeStable}>saved as Markdown, placeholders and all</span>
+                <Button
+                  variant="outline"
+                  tone="primary"
+                  size="sm"
+                  track="copy-link"
+                  disabled={link === undefined}
+                  title="Copies a link with this document in the URL hash. Nothing is uploaded."
+                  onClick={copyLink}
+                >
+                  {copied === 'copied' ? 'Copied' : 'Copy link'}
+                </Button>
+              </span>
             </div>
-          ) : (
-            <ul className={styles.diagnostics}>
-              {result.diagnostics.map((diagnostic, index) => (
-                <li key={`${diagnostic.code}-${index}`}>
-                  <code>{diagnostic.code}</code>{' '}
-                  {diagnostic.path === undefined ? '' : <code>{diagnostic.path}</code>}{' '}
-                  {diagnostic.message}
-                </li>
-              ))}
-            </ul>
-          )}
+            <div className={styles.editorWrap}>
+              <MarkdownEditor preset={preset} extensions={editorExtensions} value={source} onChange={setSource} />
+            </div>
+            {copied === 'blocked' ? (
+              <p className={styles.note}>
+                This browser would not write to the clipboard. The address bar holds the same link.
+              </p>
+            ) : null}
+            {unreadable ? (
+              <p className={styles.note}>
+                This link could not be read in this browser, so the example document is shown. The address bar still
+                holds the shared link; editing replaces it.
+              </p>
+            ) : null}
+          </div>
+
+          <div className={styles.col}>
+            <div className={styles.colHead}>
+              <span>Resolved for {CUSTOMER.label}</span>
+              <span className={styles.badgeLive}>follows every edit</span>
+            </div>
+            {result.ok ? (
+              <div className={`${styles.output} rmk-document`}>
+                <Markdown preset={preset} document={result.document} />
+              </div>
+            ) : (
+              <ul className={styles.diagnostics}>
+                {result.diagnostics.map((diagnostic, index) => (
+                  <li key={`${diagnostic.code}-${index}`}>
+                    <code>{diagnostic.code}</code>{' '}
+                    {diagnostic.path === undefined ? '' : <code>{diagnostic.path}</code>}{' '}
+                    {diagnostic.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </ActivityScope>
   )
 }

@@ -28,37 +28,6 @@
   min-height: 0;
 }
 
-.check {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.22rem 0;
-  cursor: pointer;
-  line-height: 1.35;
-}
-.check input { margin: 0.2rem 0 0; accent-color: var(--pg-accent); flex: none; }
-.check small { display: block; color: var(--pg-mute); font-size: 0.72rem; }
-.check:has(input:disabled) { opacity: 0.45; cursor: default; }
-
-.segment {
-  display: inline-flex;
-  border: 1px solid var(--pg-line);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin: 0.15rem 0 0.35rem;
-}
-.segment button {
-  font: inherit;
-  font-size: 0.74rem;
-  padding: 0.3rem 0.55rem;
-  border: 0;
-  background: transparent;
-  color: var(--pg-ink);
-  cursor: pointer;
-}
-.segment button + button { border-left: 1px solid var(--pg-line); }
-.segment .on { background: var(--pg-accent); color: var(--primary-foreground); }
-
 .sourcePane, .outPane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .sourcePane { border-right: 1px solid var(--pg-line); }
 
@@ -79,6 +48,7 @@
 .textarea {
   flex: 1;
   width: 100%;
+  box-sizing: border-box;
   min-height: 0;
   margin: 0;
   padding: 0.9rem;
@@ -95,23 +65,13 @@
 .textarea:focus { box-shadow: inset 3px 0 0 var(--pg-accent); }
 .dropping { outline: 2px dashed var(--pg-accent); outline-offset: -8px; }
 
-.tabs { display: flex; gap: 0.15rem; }
-.tab, .tabOn {
-  font: inherit;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 0.3rem 0.55rem;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--pg-mute);
-  cursor: pointer;
-}
-.tab:hover { color: var(--pg-ink); }
-.tab:disabled { opacity: 0.45; cursor: default; }
-.tab:disabled:hover { color: var(--pg-mute); }
-.tabOn { color: var(--pg-ink); background: var(--pg-soft); }
+.actions { display: flex; align-items: center; gap: 0.25rem; }
+
+/* The output tabs wrap the head and the panels, so they fill the pane. */
+.outTabs, .panels, .panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+/* Tabs spaces its panels from the list; here the pane head already does. */
+.panels { margin-top: 0; }
+.paneHead [data-slot='checkbox-field'] { text-transform: none; letter-spacing: 0; }
 
 .output { padding: 1rem 1.1rem; flex: 1; overflow: auto; font-size: 0.94rem; }
 

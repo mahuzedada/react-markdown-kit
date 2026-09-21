@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
 import { createMarkdownBridge } from '@react-markdown-kit/editor'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import { cn } from '@zuilib/primitives/lib/cn'
+import Textarea from '@zuilib/primitives/textarea'
 import { diffLines, hunks, summarize, type DiffRow } from './diff'
 import { sites } from '../../shared/Shell'
 import styles from './RoundTrip.module.css'
@@ -117,61 +120,66 @@ export default function RoundTrip(): ReactNode {
   const identical = result?.kind === 'ok' && groups.length === 0
 
   return (
-    <div className={styles.panel}>
-      <label className={styles.field}>
-        <span className={styles.label}>Paste Markdown</span>
-        <textarea
-          className={styles.input}
-          value={pasted}
-          spellCheck={false}
-          rows={12}
-          onChange={(event) => setPasted(event.target.value)}
-        />
-      </label>
+    <ActivityScope feature="round-trip">
+      <div className={styles.panel}>
+        <label className={styles.field}>
+          <span className={styles.label}>Paste Markdown</span>
+          <Textarea
+            track="pasted-markdown"
+            fullWidth
+            resize="vertical"
+            textareaClassName={cn(styles.input)}
+            value={pasted}
+            spellCheck={false}
+            rows={12}
+            onChange={(event) => setPasted(event.target.value)}
+          />
+        </label>
 
-      <div className={styles.result} aria-live="polite">
-        {result === undefined ? (
-          <p className={styles.status}>Opening and saving…</p>
-        ) : result.kind === 'failed' ? (
-          <p className={`${styles.status} ${styles.error}`}>
-            The editor could not open this document: {result.message}
-          </p>
-        ) : identical ? (
-          <p className={`${styles.status} ${styles.same}`}>
-            Identical. {characters(pasted)} in, {characters(result.outcome.saved)} out, 0 lines changed.
-          </p>
-        ) : (
-          <>
-            <p className={`${styles.status} ${styles.changed}`}>
-              {lineWord(result.outcome.removed)} removed, {lineWord(result.outcome.added)} added.{' '}
-              {characters(pasted)} in, {characters(result.outcome.saved)} out.
+        <div className={styles.result} aria-live="polite">
+          {result === undefined ? (
+            <p className={styles.status}>Opening and saving…</p>
+          ) : result.kind === 'failed' ? (
+            <p className={`${styles.status} ${styles.error}`}>
+              The editor could not open this document: {result.message}
             </p>
-            <div className={styles.diff}>
-              <table className={styles.table}>
-                <caption className={styles.caption}>
-                  Pasted on the left, saved on the right, with {CONTEXT} lines of context.
-                </caption>
-                {groups.map((group, index) => (
-                  <tbody key={`${index}-${group[0]?.text ?? ''}`} className={styles.hunk}>
-                    {group.map((row, position) => (
-                      <Row key={`${row.kind}-${row.left ?? ''}-${row.right ?? ''}-${position}`} row={row} />
-                    ))}
-                  </tbody>
-                ))}
-              </table>
-            </div>
-          </>
-        )}
-      </div>
+          ) : identical ? (
+            <p className={`${styles.status} ${styles.same}`}>
+              Identical. {characters(pasted)} in, {characters(result.outcome.saved)} out, 0 lines changed.
+            </p>
+          ) : (
+            <>
+              <p className={`${styles.status} ${styles.changed}`}>
+                {lineWord(result.outcome.removed)} removed, {lineWord(result.outcome.added)} added.{' '}
+                {characters(pasted)} in, {characters(result.outcome.saved)} out.
+              </p>
+              <div className={styles.diff}>
+                <table className={styles.table}>
+                  <caption className={styles.caption}>
+                    Pasted on the left, saved on the right, with {CONTEXT} lines of context.
+                  </caption>
+                  {groups.map((group, index) => (
+                    <tbody key={`${index}-${group[0]?.text ?? ''}`} className={styles.hunk}>
+                      {group.map((row, position) => (
+                        <Row key={`${row.kind}-${row.left ?? ''}-${row.right ?? ''}-${position}`} row={row} />
+                      ))}
+                    </tbody>
+                  ))}
+                </table>
+              </div>
+            </>
+          )}
+        </div>
 
-      <p className={styles.note}>
-        The document is opened and saved by the same headless bridge as{' '}
-        <a href={ROUNDTRIP_TEST}>
-          <code>packages/editor/tests/roundtrip.test.ts</code>
-        </a>
-        , with the same GFM preset. That suite runs 22 audited documents in CI and requires every one
-        back byte for byte. Everything here runs in this page; nothing is uploaded.
-      </p>
-    </div>
+        <p className={styles.note}>
+          The document is opened and saved by the same headless bridge as{' '}
+          <a href={ROUNDTRIP_TEST} data-zui-tag="roundtrip-test-link">
+            <code>packages/editor/tests/roundtrip.test.ts</code>
+          </a>
+          , with the same GFM preset. That suite runs 22 audited documents in CI and requires every one
+          back byte for byte. Everything here runs in this page; nothing is uploaded.
+        </p>
+      </div>
+    </ActivityScope>
   )
 }

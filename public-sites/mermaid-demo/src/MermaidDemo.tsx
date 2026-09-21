@@ -9,6 +9,11 @@ import styles from './MermaidDemo.module.css'
 import '@react-markdown-kit/renderer/styles.css'
 import '@react-markdown-kit/editor/styles.css'
 import '@react-markdown-kit/mermaid/styles.css'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import Button from '@zuilib/primitives/button'
+import Input from '@zuilib/primitives/input'
+import { cn } from '@zuilib/primitives/lib/cn'
+import Textarea from '@zuilib/primitives/textarea'
 
 // The editor entry's `mermaid()` carries the canvas; the same preset also
 // renders, because the renderer reads only the capabilities it understands.
@@ -173,94 +178,105 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
   }, [])
 
   return (
-    <div className={styles.shell}>
-      <div className={styles.body}>
-        <div className={styles.col}>
-          <div className={styles.colHead}>
-            <span>Mermaid code</span>
-            <span className={styles.actions}>
-              {status.kind === 'ok' ? (
-                <span className={styles.badgeOk}>{status.hasLayout ? 'flowchart + rmk-layout v1' : 'flowchart, auto layout'}</span>
-              ) : (
-                <span className={styles.badgeWarn}>
-                  {status.kind === 'invalid' ? 'cannot read' : status.kind === 'layout-invalid' ? 'layout rejected, auto layout' : 'not a flowchart'}
-                </span>
-              )}
-              <button type="button" className={styles.action} disabled={link === undefined} onClick={() => link !== undefined && copy('link', link, linkField.current)}>
-                {copied === 'link' ? 'Copied' : 'Copy link'}
-              </button>
-              <button type="button" className={styles.action} aria-expanded={shareOpen} aria-controls="mermaid-share" onClick={() => setShareOpen((open) => !open)}>
-                Share
-              </button>
-            </span>
-          </div>
-          {shareOpen ? (
-            <div id="mermaid-share" className={styles.share}>
-              <label className={styles.shareRow}>
-                <span className={styles.shareLabel}>Link</span>
-                <input ref={linkField} className={styles.shareField} readOnly value={link ?? ''} aria-label="Link to this diagram" onFocus={(event) => event.target.select()} />
-                <button type="button" className={styles.action} disabled={link === undefined} onClick={() => link !== undefined && copy('link', link, linkField.current)}>
-                  {copied === 'link' ? 'Copied' : 'Copy'}
-                </button>
-              </label>
-              <label className={styles.shareRow}>
-                <span className={styles.shareLabel}>Badge</span>
-                <textarea ref={badgeField} className={styles.shareField} readOnly rows={2} value={badge ?? ''} aria-label="Badge Markdown for a README" onFocus={(event) => event.target.select()} />
-                <button type="button" className={styles.action} disabled={badge === undefined} onClick={() => badge !== undefined && copy('badge', badge, badgeField.current)}>
-                  {copied === 'badge' ? 'Copied' : 'Copy'}
-                </button>
-              </label>
-              <label className={styles.shareRow}>
-                <span className={styles.shareLabel}>Embed</span>
-                <textarea ref={embedField} className={styles.shareField} readOnly rows={2} value={iframe ?? ''} aria-label="Embed HTML for a page" onFocus={(event) => event.target.select()} />
-                <button type="button" className={styles.action} disabled={iframe === undefined} onClick={() => iframe !== undefined && copy('embed', iframe, embedField.current)}>
-                  {copied === 'embed' ? 'Copied' : 'Copy'}
-                </button>
-              </label>
-              <p className={styles.shareNote}>
-                The diagram, layout comment included, is compressed into the URL hash. Nothing is uploaded. The badge is{' '}
-                <a href="/badge.svg">/badge.svg</a>; the embed is this editor with <code>?embed=1</code>, without the site chrome.
-              </p>
+    <ActivityScope feature="mermaid-editor">
+      <div className={styles.shell}>
+        <div className={styles.body}>
+          <div className={styles.col}>
+            <div className={styles.colHead}>
+              <span>Mermaid code</span>
+              <span className={styles.actions}>
+                {status.kind === 'ok' ? (
+                  <span className={styles.badgeOk}>{status.hasLayout ? 'flowchart + rmk-layout v1' : 'flowchart, auto layout'}</span>
+                ) : (
+                  <span className={styles.badgeWarn}>
+                    {status.kind === 'invalid' ? 'cannot read' : status.kind === 'layout-invalid' ? 'layout rejected, auto layout' : 'not a flowchart'}
+                  </span>
+                )}
+                <Button variant="outline" tone="primary" size="sm" track="copy-link" disabled={link === undefined} onClick={() => link !== undefined && copy('link', link, linkField.current)}>
+                  {copied === 'link' ? 'Copied' : 'Copy link'}
+                </Button>
+                <Button
+                  variant={shareOpen ? 'solid' : 'outline'}
+                  tone="primary"
+                  size="sm"
+                  track="share"
+                  aria-expanded={shareOpen}
+                  aria-controls="mermaid-share"
+                  onClick={() => setShareOpen((open) => !open)}
+                >
+                  Share
+                </Button>
+              </span>
             </div>
-          ) : null}
-          <textarea
-            className={styles.code}
-            value={code}
-            spellCheck={false}
-            aria-label="Mermaid source"
-            onChange={(event) => setCode(event.target.value)}
-          />
-          {unreadable ? (
-            <p className={styles.problem}>
-              This link could not be read in this browser, so the default diagram is shown. The address bar still holds the shared link;
-              editing replaces it.
-            </p>
-          ) : null}
-          {status.kind === 'ok' ? null : <p className={styles.problem}>{status.message}</p>}
-        </div>
+            {shareOpen ? (
+              <div id="mermaid-share" className={styles.share}>
+                <div className={styles.shareRow}>
+                  <span className={styles.shareLabel}>Link</span>
+                  <Input ref={linkField} track="share-link-field" size="sm" fullWidth inputClassName={cn(styles.mono)} readOnly value={link ?? ''} aria-label="Link to this diagram" onFocus={(event) => event.target.select()} />
+                  <Button variant="outline" tone="primary" size="sm" track="copy-share-link" disabled={link === undefined} onClick={() => link !== undefined && copy('link', link, linkField.current)}>
+                    {copied === 'link' ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
+                <div className={styles.shareRow}>
+                  <span className={styles.shareLabel}>Badge</span>
+                  <Textarea ref={badgeField} track="share-badge-field" resize="none" fullWidth textareaClassName={cn(styles.mono)} readOnly rows={2} value={badge ?? ''} aria-label="Badge Markdown for a README" onFocus={(event) => event.target.select()} />
+                  <Button variant="outline" tone="primary" size="sm" track="copy-badge" disabled={badge === undefined} onClick={() => badge !== undefined && copy('badge', badge, badgeField.current)}>
+                    {copied === 'badge' ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
+                <div className={styles.shareRow}>
+                  <span className={styles.shareLabel}>Embed</span>
+                  <Textarea ref={embedField} track="share-embed-field" resize="none" fullWidth textareaClassName={cn(styles.mono)} readOnly rows={2} value={iframe ?? ''} aria-label="Embed HTML for a page" onFocus={(event) => event.target.select()} />
+                  <Button variant="outline" tone="primary" size="sm" track="copy-embed" disabled={iframe === undefined} onClick={() => iframe !== undefined && copy('embed', iframe, embedField.current)}>
+                    {copied === 'embed' ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
+                <p className={styles.shareNote}>
+                  The diagram, layout comment included, is compressed into the URL hash. Nothing is uploaded. The badge is{' '}
+                  <a href="/badge.svg">/badge.svg</a>; the embed is this editor with <code>?embed=1</code>, without the site chrome.
+                </p>
+              </div>
+            ) : null}
+            <textarea
+              className={styles.code}
+              value={code}
+              spellCheck={false}
+              aria-label="Mermaid source"
+              data-zui-tag="source"
+              onChange={(event) => setCode(event.target.value)}
+            />
+            {unreadable ? (
+              <p className={styles.problem}>
+                This link could not be read in this browser, so the default diagram is shown. The address bar still holds the shared link;
+                editing replaces it.
+              </p>
+            ) : null}
+            {status.kind === 'ok' ? null : <p className={styles.problem}>{status.message}</p>}
+          </div>
 
-        <div className={styles.col}>
-          <div className={styles.colHead}>
-            <span>Visual editor</span>
-            <span className={styles.badgeOk}>drag to edit, writes Mermaid back</span>
-          </div>
-          <div className={styles.editorWrap}>
-            <MarkdownEditor preset={preset} value={markdown} onChange={onEditorChange} toolbar={false} aria-label="Diagram canvas" />
-          </div>
-          <div className={styles.hint}>
-            {embed ? (
-              <>
-                Drag boxes, bind connectors, resize the canvas. Every change lands in the code pane as Mermaid.{' '}
-                <a href={fullEditor} target="_blank" rel="noopener">
-                  Open in the full editor
-                </a>
-              </>
-            ) : (
-              'Click the diagram to focus it, then pick a tool. Drag boxes, bind connectors, resize the canvas. Every change lands in the code pane as Mermaid.'
-            )}
+          <div className={styles.col}>
+            <div className={styles.colHead}>
+              <span>Visual editor</span>
+              <span className={styles.badgeOk}>drag to edit, writes Mermaid back</span>
+            </div>
+            <div className={styles.editorWrap}>
+              <MarkdownEditor preset={preset} value={markdown} onChange={onEditorChange} toolbar={false} aria-label="Diagram canvas" />
+            </div>
+            <div className={styles.hint}>
+              {embed ? (
+                <>
+                  Drag boxes, bind connectors, resize the canvas. Every change lands in the code pane as Mermaid.{' '}
+                  <a href={fullEditor} target="_blank" rel="noopener" data-zui-tag="open-full-editor">
+                    Open in the full editor
+                  </a>
+                </>
+              ) : (
+                'Click the diagram to focus it, then pick a tool. Drag boxes, bind connectors, resize the canvas. Every change lands in the code pane as Mermaid.'
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </ActivityScope>
   )
 }

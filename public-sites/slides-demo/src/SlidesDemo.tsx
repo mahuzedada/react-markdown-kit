@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Markdown, compileMarkdown, defineMarkdownPreset, gfm, type MarkdownPreset } from '@react-markdown-kit/renderer'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import Button from '@zuilib/primitives/button'
 import { slides } from '@react-markdown-kit/slides/editor'
 import { SAMPLE_DECK } from './sample-deck'
 import { renderToolbar } from './toolbar'
@@ -187,75 +189,77 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
         : 'ok'
 
   return (
-    <div className={styles.shell}>
-      <header className={styles.header}>
-        <div className={styles.heading}>
-          <span className={styles.eyebrow}>Deck</span>
-          <h2 className={styles.title}>{meta.title === '' ? 'Untitled deck' : meta.title}</h2>
-        </div>
-        <span className={styles.badgeOk}>
-          {meta.count} {meta.count === 1 ? 'slide' : 'slides'}
-        </span>
-        <span className={worst === 'ok' || worst === 'info' ? styles.badgeOk : styles.badgeWarn}>
-          {problems.length === 0 ? 'no problems' : `${problems.length} ${problems.length === 1 ? 'note' : 'notes'} from the parser`}
-        </span>
-        <div className={styles.actions} role="group" aria-label="Deck actions">
-          <button type="button" className={styles.action} onClick={() => void share()}>
-            Share
-          </button>
-          <button type="button" className={styles.action} onClick={() => void openPresenter()}>
-            Presenter window
-          </button>
-          <button type="button" className={styles.action} onClick={() => window.print()}>
-            Print
-          </button>
-          <button type="button" className={styles.actionQuiet} onClick={reset}>
-            Reset
-          </button>
-        </div>
-        <output className={styles.status} aria-live="polite">
-          {status}
-        </output>
-      </header>
+    <ActivityScope feature="slides-workbench">
+      <div className={styles.shell}>
+        <header className={styles.header}>
+          <div className={styles.heading}>
+            <span className={styles.eyebrow}>Deck</span>
+            <h2 className={styles.title}>{meta.title === '' ? 'Untitled deck' : meta.title}</h2>
+          </div>
+          <span className={styles.badgeOk}>
+            {meta.count} {meta.count === 1 ? 'slide' : 'slides'}
+          </span>
+          <span className={worst === 'ok' || worst === 'info' ? styles.badgeOk : styles.badgeWarn}>
+            {problems.length === 0 ? 'no problems' : `${problems.length} ${problems.length === 1 ? 'note' : 'notes'} from the parser`}
+          </span>
+          <div className={styles.actions} role="group" aria-label="Deck actions">
+            <Button variant="outline" size="sm" track="share" onClick={() => void share()}>
+              Share
+            </Button>
+            <Button variant="outline" size="sm" track="presenter-window" onClick={() => void openPresenter()}>
+              Presenter window
+            </Button>
+            <Button variant="outline" size="sm" track="print" onClick={() => window.print()}>
+              Print
+            </Button>
+            <Button variant="ghost" size="sm" track="reset" onClick={reset}>
+              Reset
+            </Button>
+          </div>
+          <output className={styles.status} aria-live="polite">
+            {status}
+          </output>
+        </header>
 
-      {notice === undefined ? null : <p className={styles.notice}>{notice}</p>}
+        {notice === undefined ? null : <p className={styles.notice}>{notice}</p>}
 
-      <div className={styles.body}>
-        <div className={styles.col}>
-          <div className={styles.colHead}>
-            <span>Markdown</span>
-            <span className={styles.badgeOk}>rich editor, writes the file back</span>
-          </div>
-          <div className={styles.editorWrap}>
-            <MarkdownEditor preset={preset} value={source} onChange={setSource} toolbar={renderToolbar} aria-label="Deck source" />
-          </div>
-          <div className={styles.hint}>
-            Type <code>---</code>, <code>--</code> or <code>???</code> on a line and press Enter, or use the Slides buttons. Switch to
-            Markdown source to see the file.
-          </div>
-        </div>
-
-        <div className={styles.col}>
-          <div className={styles.colHead}>
-            <span>Deck</span>
-            <span className={styles.badgeOk}>static sections; Present makes them a show</span>
-          </div>
-          <div className={styles.deckWrap} ref={deckRef}>
-            <div className="rmk-document">
-              <Markdown preset={preset} document={document} />
+        <div className={styles.body}>
+          <div className={styles.col}>
+            <div className={styles.colHead}>
+              <span>Markdown</span>
+              <span className={styles.badgeOk}>rich editor, writes the file back</span>
+            </div>
+            <div className={styles.editorWrap}>
+              <MarkdownEditor preset={preset} value={source} onChange={setSource} toolbar={renderToolbar} aria-label="Deck source" />
+            </div>
+            <div className={styles.hint}>
+              Type <code>---</code>, <code>--</code> or <code>???</code> on a line and press Enter, or use the Slides buttons. Switch to
+              Markdown source to see the file.
             </div>
           </div>
-          {problems.length === 0 ? null : (
-            <ul className={styles.problems} aria-label="Parser notes">
-              {problems.slice(0, 3).map((problem, index) => (
-                <li key={`${problem.code}-${index}`}>
-                  <code>{problem.code}</code> {problem.message}
-                </li>
-              ))}
-            </ul>
-          )}
+
+          <div className={styles.col}>
+            <div className={styles.colHead}>
+              <span>Deck</span>
+              <span className={styles.badgeOk}>static sections; Present makes them a show</span>
+            </div>
+            <div className={styles.deckWrap} ref={deckRef}>
+              <div className="rmk-document">
+                <Markdown preset={preset} document={document} />
+              </div>
+            </div>
+            {problems.length === 0 ? null : (
+              <ul className={styles.problems} aria-label="Parser notes">
+                {problems.slice(0, 3).map((problem, index) => (
+                  <li key={`${problem.code}-${index}`}>
+                    <code>{problem.code}</code> {problem.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </ActivityScope>
   )
 }

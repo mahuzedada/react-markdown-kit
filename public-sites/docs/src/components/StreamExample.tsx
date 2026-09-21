@@ -1,5 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import Button from '@zuilib/primitives/button'
+import Slider from '@zuilib/primitives/slider'
 import styles from './StreamExample.module.css'
 
 const gfmPreset = defineMarkdownPreset({ extensions: [gfm()] })
@@ -64,30 +67,33 @@ export default function StreamExample({
   const done = shown >= tokens.length
 
   return (
-    <figure className={styles.example}>
+    <ActivityScope feature="stream-example" as="figure" className={styles.example}>
       {title !== undefined && <figcaption className={styles.caption}>{title}</figcaption>}
       <div className={styles.controls}>
-        <button
-          type="button"
-          className={styles.button}
+        <Button
+          variant="outline"
+          size="sm"
+          track="replay"
           onClick={() => {
             setShown(0)
             setPlaying(true)
           }}
         >
           Replay from the first token
-        </button>
-        <button
-          type="button"
-          className={styles.button}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          track={playing ? 'pause' : 'play'}
           onClick={() => setPlaying((current) => !current)}
           disabled={done && !playing}
         >
           {playing ? 'Pause' : 'Play'}
-        </button>
-        <button
-          type="button"
-          className={styles.button}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          track="step"
           onClick={() => {
             setPlaying(false)
             setShown((current) => Math.min(current + 1, tokens.length))
@@ -95,23 +101,25 @@ export default function StreamExample({
           disabled={done}
         >
           One token
-        </button>
-        <label className={styles.scrub}>
-          <span className={styles.scrubLabel}>Token</span>
-          <input
-            type="range"
+        </Button>
+        <div className={styles.scrub}>
+          <Slider
+            track="scrub"
+            size="sm"
+            fullWidth={false}
+            aria-label="Token"
             min={0}
             max={tokens.length}
             value={shown}
-            onChange={(event) => {
+            onValueChange={(value) => {
               setPlaying(false)
-              setShown(Number(event.target.value))
+              setShown(value)
             }}
           />
           <span className={styles.count}>
             {shown} / {tokens.length}
           </span>
-        </label>
+        </div>
       </div>
       <div className={styles.split}>
         <div className={styles.pane}>
@@ -129,6 +137,6 @@ export default function StreamExample({
         </div>
       </div>
       {children !== undefined && <div className={styles.note}>{children}</div>}
-    </figure>
+    </ActivityScope>
   )
 }

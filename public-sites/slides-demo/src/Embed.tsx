@@ -54,7 +54,7 @@ export default function Embed(): ReactNode {
           <Markdown preset={PRESET}>{source}</Markdown>
         </div>
       )}
-      <a className={styles.open} href={link} target="_blank" rel="noopener noreferrer">
+      <a className={styles.open} href={link} target="_blank" rel="noopener noreferrer" data-zui-tag="embed:open-full-demo">
         Open in React Markdown Kit
       </a>
     </div>

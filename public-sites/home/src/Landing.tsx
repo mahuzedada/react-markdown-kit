@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import Button from '@zuilib/primitives/button'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, softwareSourceCode, type FaqItem } from '../../shared/Seo'
 import size from '../../../docs/data/mermaid-size.json'
@@ -276,17 +278,17 @@ export default function Landing(): ReactNode {
           Add Markdown to the React app you already have. Rendering, editing, diagrams and slides
           are solved, and the file stays plain Markdown, so you keep building your product.
         </p>
-        <div className="home-actions">
-          <a className="home-button home-button--primary" href={docsUrl('/docs/getting-started')}>
+        <ActivityScope feature="hero" as="div" className="home-actions">
+          <Button as="a" href={docsUrl('/docs/getting-started')} track="get-started">
             Get started
-          </a>
-          <a className="home-button" href={sites.docs}>
+          </Button>
+          <Button as="a" href={sites.docs} variant="outline" track="docs">
             Docs
-          </a>
-          <a className="home-button" href={sites.github}>
+          </Button>
+          <Button as="a" href={sites.github} variant="outline" track="github">
             GitHub
-          </a>
-        </div>
+          </Button>
+        </ActivityScope>
       </header>
 
       <section className="home-section" aria-labelledby="home-install">

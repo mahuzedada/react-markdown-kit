@@ -27,6 +27,23 @@ body {
   background: var(--background);
 }
 
+/*
+ * The primitives load without Tailwind's preflight (zui-no-preflight.css),
+ * which leaves two of its resets to the app. Their parts are sized as
+ * border-box, and every part carries a data-slot; only the parts themselves
+ * are reset, never what they contain (a tab panel holds rendered Markdown).
+ * A Button rendered as a link also keeps the browser's underline.
+ */
+[data-slot],
+[data-slot]::before,
+[data-slot]::after {
+  box-sizing: border-box;
+}
+
+a[data-slot='button'] {
+  text-decoration: none;
+}
+
 .site-footer {
   display: flex;
   flex-wrap: wrap;
@@ -61,25 +78,7 @@ body {
   margin-left: auto;
 }
 
-.site-nav a,
-.site-toggle {
-  padding: 0.35rem 0.6rem;
-  font: inherit;
-  font-size: 0.9rem;
-  color: var(--foreground);
-  text-decoration: none;
-  background: none;
-  border: 0;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.site-nav a:hover,
-.site-toggle:hover {
-  background: var(--accent);
-}
-
-.site-nav a[aria-current='page'] {
+.site-nav [aria-current='page'] {
   color: var(--primary-text);
   font-weight: 600;
 }

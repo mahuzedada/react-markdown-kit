@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@zuilib/primitives": "0.4.0",
     "@zuilib/tokens": "0.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

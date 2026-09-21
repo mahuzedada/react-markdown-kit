@@ -10,6 +10,11 @@ import {
 } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import Markdown, { compileMarkdown } from '@react-markdown-kit/renderer'
+import { ActivityScope } from '@zuilib/primitives/activity'
+import Button from '@zuilib/primitives/button'
+import Checkbox from '@zuilib/primitives/checkbox'
+import { cn } from '@zuilib/primitives/lib/cn'
+import Tabs from '@zuilib/primitives/tabs'
 import { buildProps } from './buildProps'
 import { SHOWCASE_CLASS_NAME } from './showcase'
 import { formatBytes, formatMs, prettyHtml, timeMedian, treeJson, wordCount } from './measure'
@@ -131,124 +136,135 @@ export default function PlaygroundInner(): ReactNode {
     [document, keepPositions, source.length],
   )
 
+  const tabIndex = TABS.findIndex(([tab]) => tab === state.tab)
+
   return (
-    <div className={styles.shell}>
-      <div className={styles.work}>
-        <section className={styles.sourcePane} data-mobile-hidden={mobilePane !== 'source' ? '' : undefined}>
-          <div className={styles.paneHead}>
-            <span>Markdown</span>
-            <span className={styles.tabs}>
-              <button type="button" className={styles.tab} onClick={() => copy('markdown', state.source)}>
-                {copied === 'markdown' ? 'Copied' : 'Copy'}
-              </button>
-              <button
-                type="button"
-                className={styles.tab}
-                disabled={link === undefined}
-                title="Put this document in the address bar and copy the link"
-                onClick={() => link !== undefined && copy('link', link)}
-              >
-                {copied === 'link' ? 'Link copied' : 'Copy link'}
-              </button>
-            </span>
-          </div>
-          <textarea
-            className={`${styles.textarea} ${dropping ? styles.dropping : ''}`}
-            value={state.source}
-            spellCheck={false}
-            aria-label="Markdown source"
-            onChange={onSourceChange}
-            onDragOver={(event) => {
-              event.preventDefault()
-              setDropping(true)
-            }}
-            onDragLeave={() => setDropping(false)}
-            onDrop={onDrop}
-          />
-          <div className={styles.note}>
-            {unreadable
-              ? 'This link could not be read in this browser, so the sample is shown. The address bar still holds the shared link; editing replaces it.'
-              : 'Type, paste, or drop a .md file here. Copy link puts the whole document in the URL; nothing is uploaded.'}
-          </div>
-        </section>
-
-        <section className={styles.outPane} data-mobile-hidden={mobilePane !== 'output' ? '' : undefined}>
-          <div className={styles.paneHead}>
-            <div className={styles.tabs} role="tablist">
-              {TABS.map(([tab, label]) => (
-                <button
-                  key={tab}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === state.tab}
-                  className={tab === state.tab ? styles.tabOn : styles.tab}
-                  onClick={() => patch({ tab })}
+    <ActivityScope feature="playground">
+      <div className={styles.shell}>
+        <div className={styles.work}>
+          <section className={styles.sourcePane} data-mobile-hidden={mobilePane !== 'source' ? '' : undefined}>
+            <div className={styles.paneHead}>
+              <span>Markdown</span>
+              <span className={styles.actions}>
+                <Button variant="ghost" size="sm" track="copy-markdown" onClick={() => copy('markdown', state.source)}>
+                  {copied === 'markdown' ? 'Copied' : 'Copy'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  track="copy-link"
+                  disabled={link === undefined}
+                  title="Put this document in the address bar and copy the link"
+                  onClick={() => link !== undefined && copy('link', link)}
                 >
-                  {label}
-                </button>
-              ))}
+                  {copied === 'link' ? 'Link copied' : 'Copy link'}
+                </Button>
+              </span>
             </div>
-            {state.tab === 'code' && (
-              <button type="button" className={styles.tab} onClick={() => copy('code', built.code)}>
-                {copied === 'code' ? 'Copied' : 'Copy'}
-              </button>
-            )}
-            {state.tab === 'html' && (
-              <button type="button" className={styles.tab} onClick={() => copy('html', html)}>
-                {copied === 'html' ? 'Copied' : 'Copy'}
-              </button>
-            )}
-            {state.tab === 'tree' && treeText !== undefined && (
-              <label className={styles.check} style={{ padding: 0, textTransform: 'none', letterSpacing: 0 }}>
-                <input type="checkbox" checked={keepPositions} onChange={(event) => setKeepPositions(event.target.checked)} />
-                <span>positions</span>
-              </label>
-            )}
-          </div>
-
-          {state.tab === 'rendered' && (
-            <div className={`${styles.output} ${wrapperClassName}`} style={built.wrapperStyle}>
-              {element}
+            <textarea
+              className={`${styles.textarea} ${dropping ? styles.dropping : ''}`}
+              value={state.source}
+              spellCheck={false}
+              aria-label="Markdown source"
+              data-zui-tag="source"
+              onChange={onSourceChange}
+              onDragOver={(event) => {
+                event.preventDefault()
+                setDropping(true)
+              }}
+              onDragLeave={() => setDropping(false)}
+              onDrop={onDrop}
+            />
+            <div className={styles.note}>
+              {unreadable
+                ? 'This link could not be read in this browser, so the sample is shown. The address bar still holds the shared link; editing replaces it.'
+                : 'Type, paste, or drop a .md file here. Copy link puts the whole document in the URL; nothing is uploaded.'}
             </div>
-          )}
+          </section>
 
-          {state.tab === 'html' && <pre className={styles.htmlView}>{prettyHtml(html)}</pre>}
+          <section className={styles.outPane} data-mobile-hidden={mobilePane !== 'output' ? '' : undefined}>
+            <Tabs
+              className={cn(styles.outTabs)}
+              variant="pills"
+              size="sm"
+              track="output"
+              selectedIndex={tabIndex}
+              onSelectedIndexChange={(index) => patch({ tab: TABS[index]?.[0] ?? 'rendered' })}
+            >
+              <div className={styles.paneHead}>
+                <Tabs.List>
+                  {TABS.map(([tab, label]) => (
+                    <Tabs.Tab key={tab}>{label}</Tabs.Tab>
+                  ))}
+                </Tabs.List>
+                {state.tab === 'code' && (
+                  <Button variant="ghost" size="sm" track="copy-code" onClick={() => copy('code', built.code)}>
+                    {copied === 'code' ? 'Copied' : 'Copy'}
+                  </Button>
+                )}
+                {state.tab === 'html' && (
+                  <Button variant="ghost" size="sm" track="copy-html" onClick={() => copy('html', html)}>
+                    {copied === 'html' ? 'Copied' : 'Copy'}
+                  </Button>
+                )}
+                {state.tab === 'tree' && treeText !== undefined && (
+                  <Checkbox size="sm" track="tree-positions" label="positions" checked={keepPositions} onCheckedChange={setKeepPositions} />
+                )}
+              </div>
 
-          {state.tab === 'tree' && (
-            <pre className={styles.treeView}>
-              {treeText ?? `The tree is shown for documents under ${formatBytes(TREE_LIMIT)}. This one is ${formatBytes(source.length)}.`}
-            </pre>
-          )}
-
-          {state.tab === 'code' && <pre className={styles.codeView}>{built.code}</pre>}
-        </section>
-      </div>
-
-      <div className={styles.status}>
-        <div className={`${styles.segment} ${styles.mobileSwitch}`}>
-          {(['source', 'output'] as const).map((pane) => (
-            <button key={pane} type="button" className={pane === mobilePane ? styles.on : ''} onClick={() => setMobilePane(pane)}>
-              {pane}
-            </button>
-          ))}
+              <Tabs.Panels className={cn(styles.panels)}>
+                <Tabs.Panel className={cn(styles.output, wrapperClassName)} style={built.wrapperStyle} data-zui-private="">
+                  {element}
+                </Tabs.Panel>
+                <Tabs.Panel className={cn(styles.panel)}>
+                  <pre className={styles.htmlView}>{prettyHtml(html)}</pre>
+                </Tabs.Panel>
+                <Tabs.Panel className={cn(styles.panel)}>
+                  <pre className={styles.treeView}>
+                    {treeText ?? `The tree is shown for documents under ${formatBytes(TREE_LIMIT)}. This one is ${formatBytes(source.length)}.`}
+                  </pre>
+                </Tabs.Panel>
+                <Tabs.Panel className={cn(styles.panel)}>
+                  <pre className={styles.codeView}>{built.code}</pre>
+                </Tabs.Panel>
+              </Tabs.Panels>
+            </Tabs>
+          </section>
         </div>
-        <span className={styles.stat}>
-          <b>{formatBytes(state.source.length)}</b> · {wordCount(state.source)} words
-        </span>
-        <span className={styles.stat}>
-          parse <b>{timings === undefined ? '…' : formatMs(timings.parse)}</b>
-        </span>
-        <span className={styles.stat}>
-          render from source <b>{timings === undefined ? '…' : formatMs(timings.renderFromSource)}</b>
-        </span>
-        <span className={styles.stat}>
-          from compiled document <b>{timings === undefined ? '…' : formatMs(timings.renderFromDocument)}</b>
-        </span>
-        <span className={styles.stat}>
-          diagnostics <b>{document.diagnostics.length}</b>
-        </span>
-        <span className={`${styles.stat} ${styles.method}`}>medians, measured in this browser</span>
+
+        <div className={styles.status}>
+          <div className={`${styles.actions} ${styles.mobileSwitch}`} role="group" aria-label="Pane">
+            {(['source', 'output'] as const).map((pane) => (
+              <Button
+                key={pane}
+                variant={pane === mobilePane ? 'solid' : 'outline'}
+                size="sm"
+                track={`pane-${pane}`}
+                aria-pressed={pane === mobilePane}
+                onClick={() => setMobilePane(pane)}
+              >
+                {pane === 'source' ? 'Source' : 'Output'}
+              </Button>
+            ))}
+          </div>
+          <span className={styles.stat}>
+            <b>{formatBytes(state.source.length)}</b> · {wordCount(state.source)} words
+          </span>
+          <span className={styles.stat}>
+            parse <b>{timings === undefined ? '…' : formatMs(timings.parse)}</b>
+          </span>
+          <span className={styles.stat}>
+            render from source <b>{timings === undefined ? '…' : formatMs(timings.renderFromSource)}</b>
+          </span>
+          <span className={styles.stat}>
+            from compiled document <b>{timings === undefined ? '…' : formatMs(timings.renderFromDocument)}</b>
+          </span>
+          <span className={styles.stat}>
+            diagnostics <b>{document.diagnostics.length}</b>
+          </span>
+          <span className={`${styles.stat} ${styles.method}`}>medians, measured in this browser</span>
+        </div>
       </div>
-    </div>
+    </ActivityScope>
   )
 }

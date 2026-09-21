@@ -6,7 +6,9 @@
  * "New slide" writes the same `---` through its own node, and `preview` is
  * hidden because the right pane already is the preview. The buttons reuse
  * the editor stylesheet's `rmk-toolbar*` classes, so they look like the
- * default toolbar; the slides group also shows its labels as text.
+ * default toolbar; the slides group also shows its labels as text. Each
+ * button carries a `data-zui-tag`, so the activity capture reports it like
+ * a primitive.
  */
 import type { MarkdownToolbarItem, MarkdownToolbarRenderer } from '@react-markdown-kit/editor'
 import styles from './SlidesDemo.module.css'
@@ -51,6 +53,7 @@ export const renderToolbar: MarkdownToolbarRenderer = (items) => (
               title={item.label}
               disabled={item.disabled}
               data-rmk-toolbar-item={item.id}
+              data-zui-tag={`toolbar-${item.id}`}
               onMouseDown={(event) => {
                 event.preventDefault()
               }}

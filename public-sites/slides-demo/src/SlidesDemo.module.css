@@ -55,35 +55,6 @@
   margin-left: auto;
 }
 
-.action,
-.actionQuiet {
-  font: inherit;
-  font-size: 0.82rem;
-  padding: 0.35rem 0.75rem;
-  color: var(--foreground);
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.action:hover,
-.actionQuiet:hover {
-  background: var(--accent);
-}
-
-.action:focus-visible,
-.actionQuiet:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 1px;
-}
-
-.actionQuiet {
-  color: var(--muted-foreground);
-  background: transparent;
-  border-color: transparent;
-}
-
 .status {
   flex-basis: 100%;
   min-height: 0;

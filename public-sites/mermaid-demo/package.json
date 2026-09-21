@@ -13,6 +13,7 @@
     "@react-markdown-kit/editor": "workspace:*",
     "@react-markdown-kit/mermaid": "workspace:*",
     "@react-markdown-kit/renderer": "workspace:*",
+    "@zuilib/primitives": "0.4.0",
     "@zuilib/tokens": "0.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

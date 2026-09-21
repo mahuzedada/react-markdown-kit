@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import { ActivityScope } from '@zuilib/primitives/activity'
 import styles from './Example.module.css'
 
 const gfmPreset = defineMarkdownPreset({ extensions: [gfm()] })
@@ -37,7 +38,7 @@ export default function RenderExample({
   const value = editable ? source : markdown
 
   return (
-    <figure className={styles.example}>
+    <ActivityScope feature="render-example" as="figure" className={styles.example}>
       {title !== undefined && <figcaption className={styles.caption}>{title}</figcaption>}
       <div className={styles.split}>
         <div className={styles.pane}>
@@ -51,6 +52,7 @@ export default function RenderExample({
               spellCheck={false}
               onChange={(event) => setSource(event.target.value)}
               aria-label="Markdown source"
+              data-zui-tag="source"
             />
           ) : (
             <pre className={styles.source}>{markdown}</pre>
@@ -69,6 +71,6 @@ export default function RenderExample({
         </div>
       </div>
       {children !== undefined && <div className={styles.note}>{children}</div>}
-    </figure>
+    </ActivityScope>
   )
 }

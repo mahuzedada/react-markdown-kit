@@ -39,35 +39,6 @@
   gap: 0.5rem;
 }
 
-.home-button {
-  display: inline-flex;
-  align-items: center;
-  height: var(--control-height-md);
-  padding: 0 var(--button-padding-x-md);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--foreground);
-  text-decoration: none;
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.home-button:hover {
-  background: var(--accent);
-}
-
-.home-button--primary {
-  color: var(--primary-foreground);
-  background: var(--primary);
-  border-color: var(--primary-border);
-}
-
-.home-button--primary:hover {
-  background: var(--primary);
-  filter: brightness(1.08);
-}
-
 .home-section {
   margin-bottom: 3rem;
 }

@@ -73,7 +73,7 @@ const config: Config = {
           // properties mapped onto the tokens, then the Infima-to-token map.
           // Order matters: each layer overrides the last.
           customCss: [
-            require.resolve('@zuilib/tokens/tokens.css'),
+            require.resolve('@zuilib/primitives/zui-no-preflight.css'),
             require.resolve('../shared/foundry.css'),
             require.resolve('@react-markdown-kit/mermaid/styles.css'),
             require.resolve('../shared/kit.css'),

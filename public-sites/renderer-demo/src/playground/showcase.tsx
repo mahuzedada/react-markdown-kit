@@ -124,7 +124,7 @@ function CodeWindow({ node, children, ...props }: WithNode<ComponentProps<'pre'>
           {title !== undefined && language !== undefined ? `${language} · ` : ''}
           {lines.length} {lines.length === 1 ? 'line' : 'lines'}
         </span>
-        <button type="button" className="sc-code-copy" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+        <button type="button" className="sc-code-copy" data-zui-tag="sample-code-copy" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
       </figcaption>
       <pre {...props} className="sc-code-body">
         <code className={language === undefined ? undefined : `language-${language}`}>

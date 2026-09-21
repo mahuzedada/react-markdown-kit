@@ -364,3 +364,9 @@ code {
   --rmk-measure: none;
 }
 .rmk-document > *:first-child { margin-block-start: 0; }
+
+/* The primitives load without Tailwind's preflight, so a Button rendered as
+   a link keeps the browser's underline unless something removes it. */
+a[data-slot='button'] {
+  text-decoration: none;
+}

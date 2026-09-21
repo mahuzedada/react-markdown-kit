@@ -33,6 +33,7 @@ export default function ColorModeToggle({ className, buttonClassName, value, onC
         className={buttonClasses}
         type="button"
         onClick={() => onChange(resolvedColorMode(value) === 'dark' ? 'light' : 'dark')}
+        data-zui-tag="navbar:theme"
         disabled={!isBrowser}
         title={translate({
           message: 'Switch between dark and light mode',

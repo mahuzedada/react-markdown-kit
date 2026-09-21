@@ -45,30 +45,6 @@
   min-width: 0;
 }
 
-.action {
-  padding: 0.15rem 0.55rem;
-  font: inherit;
-  font-size: 0.7rem;
-  letter-spacing: 0.03em;
-  text-transform: none;
-  color: var(--primary-text);
-  background: transparent;
-  border: 1px solid var(--primary-border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.action:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--primary) 10%, transparent);
-}
-
-.action:disabled {
-  color: var(--muted-foreground);
-  border-color: var(--border);
-  cursor: default;
-}
-
 .note {
   margin: 0;
   padding: 0.4rem 0.8rem;
