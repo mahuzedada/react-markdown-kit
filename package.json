@@ -14,7 +14,8 @@
     "pack:check": "node scripts/pack-check.mjs",
     "bench": "node benchmarks/run.mjs",
     "seo:report": "node scripts/seo-report.mjs",
-    "size:mermaid": "node scripts/mermaid-size.mjs"
+    "size:mermaid": "node scripts/mermaid-size.mjs",
+    "size:bundles": "node scripts/compare-bundles.mjs"
   },
   "devDependencies": {
     "@react-markdown-kit/renderer": "workspace:*",

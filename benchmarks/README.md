@@ -60,11 +60,61 @@ emphasis runs, unclosed emphasis, a 400-column table row, thousands of links,
 and a 10,000-character backslash run. All complete in roughly 100 ms or less.
 No input in the corpus causes quadratic behaviour.
 
+## Bundle sizes
+
+`scripts/compare-bundles.mjs` measures what a browser downloads for one import
+of the kit and of each competitor. It is a separate harness from `run.mjs`
+because it needs the network: every package, including the kit's own, is
+installed from a tarball into a temporary directory, then bundled by the
+esbuild that ships under Vite.
+
+```bash
+pnpm size:bundles                                  # refresh docs/data/bundle-sizes.json
+node scripts/compare-bundles.mjs --only=kit-renderer,react-markdown
+node scripts/compare-bundles.mjs --date=2026-09-20 # otherwise HEAD's commit date
+```
+
+The output is `docs/data/bundle-sizes.json`, committed so docs pages can read
+it. Every row carries the version measured, the entry expression bundled, the
+minified and gzipped bytes, the license, the peer `react` range and whether the
+package ships types. A package that fails to install or bundle gets an `error`
+string instead of a number.
+
+Method, which any published table has to state alongside the numbers:
+
+- esbuild, ESM, `platform: browser`, `target: es2020`, minified, tree shaken.
+- `react` and `react-dom` are external. An app pays for them once whichever
+  library it picks.
+- `process.env.NODE_ENV` is defined as `production`, so development-only
+  warnings are dropped, as in a real app build.
+- Gzip is `node:zlib` at level 9. CSS is counted separately and is not added
+  into the JS number.
+- The kit is measured twice, with and without the GFM preset, because GFM sits
+  behind the `@react-markdown-kit/renderer/gfm` export.
+
+Results from the committed run of 2026-09-20, gzipped:
+
+| Import | Version | Gzip |
+| --- | --- | ---: |
+| `markdown-to-jsx` | 9.10.3 | 27.8 kB |
+| `react-markdown` | 10.1.0 | 35.5 kB |
+| `@react-markdown-kit/renderer` | 0.1.0 | 36.8 kB |
+| `react-markdown` + `remark-gfm` | 10.1.0 | 46.4 kB |
+| `@react-markdown-kit/renderer` + GFM | 0.1.0 | 48.5 kB |
+| `@milkdown/react` + preset-commonmark | 7.22.1 | 104.9 kB |
+| `@react-markdown-kit/editor` | 0.1.0 | 110.3 kB |
+| `streamdown` | 2.6.0 | 152.2 kB |
+| `@mdxeditor/editor` | 4.2.5 | 163.1 kB |
+
+**The renderer is larger than react-markdown, not smaller**: 1.3 kB gzip more
+on CommonMark and 2.1 kB more with GFM. Both parse with micromark, so the
+difference is the kit's document contract and policy layer, not the parser.
+Size is not a reason to switch renderers today, and no page should claim it is.
+The editor comparison is the other way round: 110.3 kB against 163.1 kB for
+`@mdxeditor/editor`, with `@milkdown/react` 5.4 kB below the kit.
+
 ## What is not measured yet
 
-- Bundle size against the baseline. The renderer's built JS is about 24 kB
-  unminified across three chunks; a like-for-like compressed comparison needs a
-  real bundler run and is not done.
 - Editor input-to-paint latency (spec 12.4 sets a 50 ms p95 target on a 10,000
   character document). Needs the editor package to land.
 - Browser rendering, as opposed to server rendering.

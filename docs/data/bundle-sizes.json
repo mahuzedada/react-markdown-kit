@@ -1,0 +1,214 @@
+{
+  "measuredOn": "2026-09-20",
+  "generator": "scripts/compare-bundles.mjs",
+  "method": {
+    "bundler": "esbuild 0.27.7",
+    "format": "esm",
+    "platform": "browser",
+    "target": "es2020",
+    "minify": true,
+    "treeShaking": true,
+    "external": [
+      "react",
+      "react/*",
+      "react-dom",
+      "react-dom/*"
+    ],
+    "define": {
+      "process.env.NODE_ENV": "\"production\""
+    },
+    "gzip": "node:zlib gzipSync level 9",
+    "packageSource": "npm tarball installed into a temporary directory; the kit from `npm pack` of its built dist",
+    "notes": [
+      "Bytes are what a browser downloads for the recorded entry, not package size on disk.",
+      "React and React DOM are external, so no row includes them.",
+      "CSS is reported separately; JS byte counts exclude it.",
+      "A row with a non-null error was not measured. No number in this file is estimated."
+    ]
+  },
+  "results": [
+    {
+      "id": "kit-renderer",
+      "label": "@react-markdown-kit/renderer, CommonMark",
+      "package": "@react-markdown-kit/renderer",
+      "version": "0.1.0",
+      "entry": "import { Markdown } from '@react-markdown-kit/renderer'\nexport { Markdown }\n",
+      "minBytes": 121320,
+      "gzipBytes": 37698,
+      "cssMinBytes": null,
+      "cssGzipBytes": null,
+      "license": "MIT",
+      "peerReact": ">=18",
+      "peerDependencies": {
+        "react": ">=18"
+      },
+      "shipsTypes": true,
+      "error": null
+    },
+    {
+      "id": "kit-renderer-gfm",
+      "label": "@react-markdown-kit/renderer + GFM preset",
+      "package": "@react-markdown-kit/renderer",
+      "version": "0.1.0",
+      "entry": "import { Markdown, defineMarkdownPreset } from '@react-markdown-kit/renderer'\nimport { gfm } from '@react-markdown-kit/renderer/gfm'\nexport const preset = defineMarkdownPreset({ extensions: [gfm()] })\nexport { Markdown }\n",
+      "minBytes": 161846,
+      "gzipBytes": 49688,
+      "cssMinBytes": null,
+      "cssGzipBytes": null,
+      "license": "MIT",
+      "peerReact": ">=18",
+      "peerDependencies": {
+        "react": ">=18"
+      },
+      "shipsTypes": true,
+      "error": null
+    },
+    {
+      "id": "kit-editor",
+      "label": "@react-markdown-kit/editor",
+      "package": "@react-markdown-kit/editor",
+      "version": "0.1.0",
+      "entry": "import { MarkdownEditor, createMarkdownBridge } from '@react-markdown-kit/editor'\nexport { MarkdownEditor, createMarkdownBridge }\n",
+      "minBytes": 358122,
+      "gzipBytes": 112994,
+      "cssMinBytes": null,
+      "cssGzipBytes": null,
+      "license": "MIT",
+      "peerReact": ">=18",
+      "peerDependencies": {
+        "@react-markdown-kit/renderer": "^0.1.0",
+        "react": ">=18",
+        "react-dom": ">=18"
+      },
+      "shipsTypes": true,
+      "error": null
+    },
+    {
+      "id": "react-markdown",
+      "label": "react-markdown, CommonMark",
+      "package": "react-markdown",
+      "version": "10.1.0",
+      "entry": "import Markdown from 'react-markdown'\nexport { Markdown }\n",
+      "minBytes": 117746,
+      "gzipBytes": 36386,
+      "cssMinBytes": null,
+      "cssGzipBytes": null,
+      "license": "MIT",
+      "peerReact": ">=18",
+      "peerDependencies": {
+        "@types/react": ">=18",
+        "react": ">=18"
+      },
+      "shipsTypes": true,
+      "error": null
+    },
+    {
+      "id": "react-markdown-gfm",
+      "label": "react-markdown + remark-gfm",
+      "package": "react-markdown",
+      "version": "10.1.0",
+      "entry": "import Markdown from 'react-markdown'\nimport remarkGfm from 'remark-gfm'\nexport const plugins = [remarkGfm]\nexport { Markdown }\n",
+      "minBytes": 156227,
+      "gzipBytes": 47488,
+      "cssMinBytes": null,
+      "cssGzipBytes": null,
+      "license": "MIT",
+      "peerReact": ">=18",
+      "peerDependencies": {
+        "@types/react": ">=18",
+        "react": ">=18"
+      },
+      "shipsTypes": true,
+      "error": null,
+      "alsoMeasured": [
+        {
+          "package": "remark-gfm",
+          "version": "4.0.1"
+        }
+      ]
+    },
+    {
+      "id": "markdown-to-jsx",
+      "label": "markdown-to-jsx",
+      "package": "markdown-to-jsx",
+      "version": "9.10.3",
+      "entry": "import Markdown from 'markdown-to-jsx'\nexport { Markdown }\n",
+      "minBytes": 78616,
+      "gzipBytes": 28475,
+      "cssMinBytes": null,
+      "cssGzipBytes": null,
+      "license": "MIT",
+      "peerReact": ">= 16.0.0",
+      "peerDependencies": {
+        "react": ">= 16.0.0",
+        "solid-js": ">=1.0.0",
+        "vue": ">=3.0.0"
+      },
+      "shipsTypes": true,
+      "error": null
+    },
+    {
+      "id": "streamdown",
+      "label": "streamdown",
+      "package": "streamdown",
+      "version": "2.6.0",
+      "entry": "import { Streamdown } from 'streamdown'\nexport { Streamdown }\n",
+      "minBytes": 518191,
+      "gzipBytes": 155860,
+      "cssMinBytes": null,
+      "cssGzipBytes": null,
+      "license": "Apache-2.0",
+      "peerReact": "^18.0.0 || ^19.0.0",
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0"
+      },
+      "shipsTypes": true,
+      "error": null
+    },
+    {
+      "id": "mdxeditor",
+      "label": "@mdxeditor/editor",
+      "package": "@mdxeditor/editor",
+      "version": "4.2.5",
+      "entry": "import { MDXEditor } from '@mdxeditor/editor'\nexport { MDXEditor }\n",
+      "minBytes": 523528,
+      "gzipBytes": 167065,
+      "cssMinBytes": null,
+      "cssGzipBytes": null,
+      "license": "MIT",
+      "peerReact": ">= 18 || >= 19",
+      "peerDependencies": {
+        "react": ">= 18 || >= 19",
+        "react-dom": ">= 18 || >= 19"
+      },
+      "shipsTypes": true,
+      "error": null
+    },
+    {
+      "id": "milkdown",
+      "label": "@milkdown/react + @milkdown/preset-commonmark",
+      "package": "@milkdown/react",
+      "version": "7.22.1",
+      "entry": "import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'\nimport { commonmark } from '@milkdown/preset-commonmark'\nexport { Milkdown, MilkdownProvider, useEditor, commonmark }\n",
+      "minBytes": 354486,
+      "gzipBytes": 107453,
+      "cssMinBytes": null,
+      "cssGzipBytes": null,
+      "license": "MIT",
+      "peerReact": "*",
+      "peerDependencies": {
+        "react": "*",
+        "react-dom": "*"
+      },
+      "shipsTypes": true,
+      "error": null,
+      "alsoMeasured": [
+        {
+          "package": "@milkdown/preset-commonmark",
+          "version": "7.22.1"
+        }
+      ]
+    }
+  ]
+}
