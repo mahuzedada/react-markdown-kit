@@ -4,12 +4,14 @@
  * link. A browser without the streams API writes the UTF-8 bytes as plain
  * base64url instead; a one-letter prefix (`z` deflated, `u` plain) tells the
  * reader which it got. `?view=` picks the page's role: the editor, the
- * audience window or the presenter window.
+ * audience window or the presenter window. `?embed=1` drops both and renders
+ * the deck alone, for an iframe in someone else's page.
  */
 export type DemoView = 'edit' | 'present' | 'presenter'
 
 export const SOURCE_PARAM = 'd'
 export const VIEW_PARAM = 'view'
+export const EMBED_PARAM = 'embed'
 
 const DEFLATED = 'z'
 const PLAIN = 'u'
@@ -73,6 +75,20 @@ export function readView(search: string): DemoView {
 
 export function readSourceParam(search: string): string | null {
   return new URLSearchParams(search).get(SOURCE_PARAM)
+}
+
+/** True for `?embed=1`: the page is the deck alone, inside someone else's iframe. */
+export function readEmbed(search: string): boolean {
+  return new URLSearchParams(search).get(EMBED_PARAM) === '1'
+}
+
+/** The same deck on the full demo: this URL without `?embed=` and without a view. */
+export function fullDemoLink(): string {
+  const url = new URL(location.href)
+  url.searchParams.delete(EMBED_PARAM)
+  url.searchParams.delete(VIEW_PARAM)
+  url.hash = ''
+  return url.toString()
 }
 
 /** The current page's URL with `?d=` set to `encoded` and `?view=` to `view` (or removed). */

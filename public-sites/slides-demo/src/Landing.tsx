@@ -60,6 +60,15 @@ const preset = defineMarkdownPreset({ extensions: [slides()] })
 
 <MarkdownEditor preset={preset} value={source} onChange={setSource} />`
 
+const EMBED = `<iframe
+  src="https://slides.reactmarkdownkit.com/?embed=1&d=uIyBXZWxjb21lCgotLS0KCiMjIFNlY29uZCBzbGlkZQoKT25lIGZpbGUsIHR3byBzbGlkZXMu"
+  title="A deck written in Markdown"
+  width="100%"
+  height="480"
+  loading="lazy"
+  allowfullscreen
+></iframe>`
+
 const FAQ: readonly FaqItem[] = [
   {
     question: 'Can I make slides from Markdown?',
@@ -85,6 +94,11 @@ const FAQ: readonly FaqItem[] = [
     question: 'Can I set a class or a background on one slide?',
     answer:
       'Yes, with a comment alone on its line: class, background or name. Front matter at the top of the file sets the title, the aspect ratio and defaults for every slide.',
+  },
+  {
+    question: 'Can I embed a Markdown deck in a blog post?',
+    answer:
+      'Yes. Add embed=1 to a share link and put it in an iframe. The frame holds the deck alone, in present mode, with the keys working inside it and a link that opens the full editor.',
   },
   {
     question: 'Is it a Marp or Slidev alternative?',
@@ -194,6 +208,27 @@ export default function Landing(): ReactNode {
             lives in.
           </p>
         </div>
+
+        <span className="site-eyebrow">Embed</span>
+        <h2>Put a deck in your own page</h2>
+        <p>
+          Add <code>embed=1</code> to a share link and the page drops everything but the deck: no
+          footer, no landing copy, no editor. The deck fills the frame, opens in present mode, and
+          keeps its keyboard and pointer navigation inside it, so arrow keys and clicks move the
+          slides once the frame has the focus. A small <em>Open in React Markdown Kit</em> link sits
+          in the corner and opens the full editor in a new tab with the same deck.
+        </p>
+        <pre className="site-code">
+          <code>{EMBED}</code>
+        </pre>
+        <p>
+          The <code>d</code> value is the whole deck, so the frame loads nothing from you. Press
+          Share on this page to copy a link with your deck in it, then add <code>&amp;embed=1</code>.
+          An embedded deck writes no address bar and opens no sync channel, so several frames on one
+          page stay independent. Give the frame the aspect ratio of your slides (16 by 9 by
+          default) and <code>allowfullscreen</code> if you want the full screen button to work.{' '}
+          <a href={`${sites.slidesDemo}/?embed=1`}>See the embed on its own</a>.
+        </p>
 
         <h2>About this editor</h2>
         <ul>
