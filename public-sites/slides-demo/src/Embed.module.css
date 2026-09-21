@@ -1,0 +1,47 @@
+/* Chrome for `?embed=1`. There is none, beyond the box the deck fills and the
+   one link out of it. The deck itself is styled by the plugin's stylesheet:
+   presenting, it is fixed to this document's viewport, which inside an iframe
+   is the frame the host page sized. */
+
+.frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.deck {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Above the deck, which is z-index 1000 while it presents, and in the corner
+   away from the control bar at the bottom of the frame. */
+.open {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1001;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  color: var(--foreground);
+  text-decoration: none;
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  opacity: 0.75;
+}
+
+.open:hover,
+.open:focus-visible {
+  opacity: 1;
+  background: var(--card);
+}
+
+.open:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}

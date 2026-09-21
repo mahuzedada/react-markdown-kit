@@ -20,8 +20,18 @@
     <meta name="twitter:image" content="https://slides.reactmarkdownkit.com/social-card.png" />
     <meta name="keywords" content="markdown slides, markdown presentation, markdown to slides, markdown slide deck, react slides, markdown presenter, speaker notes markdown, remark slides, marp alternative, react markdown kit" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      /* `?embed=1` renders the deck alone. The built index.html carries the
+         prerendered landing copy and footer for crawlers, so hide them before
+         first paint; the app never renders them in an embed. */
+      html[data-embed='1'] .site-landing,
+      html[data-embed='1'] .site-footer {
+        display: none;
+      }
+    </style>
     <script>
       // Colour mode before first paint: the saved choice, else the system's.
+      // `?embed=1` is flagged here too, for the rule above.
       ;(function () {
         try {
           var theme = localStorage.getItem('theme')
@@ -29,6 +39,11 @@
             theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
           }
           document.documentElement.dataset.theme = theme
+        } catch (error) {}
+        try {
+          if (new URLSearchParams(location.search).get('embed') === '1') {
+            document.documentElement.dataset.embed = '1'
+          }
         } catch (error) {}
       })()
     </script>
