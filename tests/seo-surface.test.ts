@@ -79,7 +79,9 @@ function resolves(dir: string, path: string): boolean {
   return [clean, `${clean}/index.html`, `${clean}.html`].some((candidate) => existsSync(join(dir, candidate)))
 }
 
-const inCI = process.env['CI'] !== undefined && process.env['CI'] !== ''
+// The public-sites CI job builds all six hosts and sets this; everywhere else an
+// unbuilt host skips instead of failing, since `pnpm test` runs before builds.
+const sitesMustBeBuilt = process.env['RMK_SITES_BUILT'] === '1'
 
 describe('nginx.container.conf', () => {
   const conf = readFileSync(join(root, 'nginx.container.conf'), 'utf8')
@@ -92,7 +94,7 @@ describe('nginx.container.conf', () => {
 })
 
 for (const site of SITES) {
-  if (inCI) {
+  if (sitesMustBeBuilt) {
     it(`${site.name} is built`, () => {
       expect(built(site), site.dir).toBe(true)
     })
@@ -136,7 +138,7 @@ for (const site of SITES) {
       }
     })
 
-    for (const page of pages(dir)) {
+    for (const page of built(site) ? pages(dir) : []) {
       const route = '/' + relative(dir, page).replace(/index\.html$/, '')
       describe(route, () => {
         const html = readFileSync(page, 'utf8')

@@ -142,6 +142,19 @@ writing a single new page.
     footer, the docs index, the home hub and llms.txt. 50 pages, 0 problems.
   - "C 3.3 follow-ups" had no defined content left; the four Mermaid pages
     exist. Removed from the open list.
+- 2026-09-21 (later): `main` is pushed to GitHub. The first CI runs there
+  were red for three reasons that never showed locally, all fixed in one
+  commit: the `test` job ran `pnpm test` before `pnpm build`, and
+  `tests/compare-runner.test.ts` runs the codemod CLI, which requires the
+  built renderer package (the job now builds first); `tests/seo-surface.test.ts`
+  and `tests/seo-links.test.ts` walked `public-sites/*/build` while collecting
+  tests even inside a skipped `describe`, and treated any `CI` variable as
+  "every host must be built", so they now skip an unbuilt host and only
+  require builds when `RMK_SITES_BUILT=1`, which only the `public-sites` job
+  sets; and yarn classic silently drops a tarball spec from `yarn add` when
+  `--no-audit --no-fund` are present, so `scripts/pack-check.mjs` passes
+  those flags to npm only and uses `add` for yarn. Bing Webmaster Tools:
+  all six sites verified and sitemaps submitted.
 - 2026-09-21: every milestone (A to E) is done and deployed. Off-repo work
   done from the browser: the GitHub repository carries 12 topics (`react`,
   `markdown`, `markdown-editor`, `markdown-renderer`, `mermaid`,
@@ -403,10 +416,10 @@ page depends on a feature.
 
 Listed so the agent does not attempt them and so the human knows what remains.
 
-- Push `main` to github.com/mahuzedada/react-markdown-kit. The remote was
-  created 2026-09-20 with a single "proof of concept" commit whose CI run
-  failed; the READMEs, the release workflow and the SEO pages are only
-  local until it is pushed. Topics, description and website are set.
+- Keep `main` pushed to github.com/mahuzedada/react-markdown-kit (first
+  full push 2026-09-21; the CI fixes in the status entry above make the
+  workflow green once they are pushed). Topics, description and website
+  are set.
 - npm login if `npm whoami` fails.
 - Record baseline positions in `docs/SEO_LOG.md` once Search Console shows
   impressions. All six hosts are verified in Google Search Console and Bing

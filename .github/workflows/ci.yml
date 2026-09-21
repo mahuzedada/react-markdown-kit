@@ -14,10 +14,10 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm fixtures          # download the pinned CommonMark spec
+      - run: pnpm build             # tests/compare-runner runs the packed CLI against dist
       - run: pnpm test
       - run: pnpm typecheck
       - run: node scripts/check-css-scope.mjs   # styling contract
-      - run: pnpm build
 
   # Spec 12.2: never trust monorepo imports. Pack the real tarballs and install
   # them into clean consumers, so undeclared dependencies, broken exports and
@@ -84,6 +84,7 @@ jobs:
       # where there is an FAQ, robots, sitemap, llms.txt; then every href and
       # src inside the six hosts and in the package READMEs resolves.
       - run: pnpm vitest run tests/seo-surface.test.ts tests/seo-links.test.ts
+        env: { RMK_SITES_BUILT: '1' }   # here every host must exist; elsewhere unbuilt hosts skip
       # One row per page (host, path, title, description length, h1, JSON-LD
       # types), so a reviewer can eyeball the deploy in the job log.
       - run: pnpm seo:report

@@ -115,17 +115,19 @@ function broken(urls: string[], from: Site, route: string): string[] {
   return missing
 }
 
-const inCI = process.env['CI'] !== undefined && process.env['CI'] !== ''
+// The public-sites CI job builds all six hosts and sets this; everywhere else an
+// unbuilt host skips instead of failing, since `pnpm test` runs before builds.
+const sitesMustBeBuilt = process.env['RMK_SITES_BUILT'] === '1'
 
 for (const site of SITES) {
-  if (inCI) {
+  if (sitesMustBeBuilt) {
     it(`${site.name} is built`, () => {
       expect(built(site), site.dir).toBe(true)
     })
   }
   describe.skipIf(!built(site))(`${site.name} (${site.url})`, () => {
     const dir = join(root, site.dir)
-    for (const page of pages(dir)) {
+    for (const page of built(site) ? pages(dir) : []) {
       const route = '/' + relative(dir, page).replace(/index\.html$/, '')
       it(`${route} links only to files and routes that exist`, () => {
         expect(broken(links(readFileSync(page, 'utf8')), site, route)).toEqual([])

@@ -17,7 +17,9 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const client = process.argv[2] ?? 'npm'
 // npm's noise switches; pnpm 10 rejects options it does not know.
-const quietFlags = client === 'pnpm' ? [] : ['--no-audit', '--no-fund']
+// npm-only flags: pnpm has no audit step here, and yarn classic silently drops
+// a tarball spec when they are present.
+const quietFlags = client === 'npm' ? ['--no-audit', '--no-fund'] : []
 const run = (cmd, args, cwd) =>
   execFileSync(cmd, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' })
 
@@ -162,7 +164,8 @@ for (const journey of JOURNEYS) {
     )
     const specs = journey.install.map((n) => tarballs[n])
     specs.push('react@19', 'react-dom@19')
-    run(client, ['install', ...quietFlags, ...specs], dir)
+    // yarn classic rejects `install <pkg>` and wants `add`; npm and pnpm take `install`.
+    run(client, [client === 'yarn' ? 'add' : 'install', ...quietFlags, ...specs], dir)
     writeFileSync(join(dir, journey.file), journey.code)
     const output = run('node', [journey.file], dir).trim()
     if (output !== 'ok') throw new Error(output)
