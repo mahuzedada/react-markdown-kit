@@ -1,0 +1,146 @@
+/* The round-trip panel inside the landing prose. Tokens only, like the rest
+   of the demo chrome; the kit's own stylesheets style nothing here. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+
+.input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 3rem;
+}
+
+.status {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+}
+
+.status.same {
+  font-weight: 600;
+  color: var(--success-text);
+}
+
+.status.changed {
+  font-weight: 600;
+  color: var(--warning-text);
+}
+
+.status.error {
+  color: var(--danger-text);
+}
+
+.diff {
+  max-height: 24rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.caption {
+  padding: 0.35rem 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  text-align: left;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.hunk + .hunk {
+  border-top: 1px solid var(--border);
+}
+
+.number {
+  width: 2.5rem;
+  padding: 0 0.35rem;
+  text-align: right;
+  color: var(--muted-foreground);
+  user-select: none;
+}
+
+.mark {
+  width: 1rem;
+  padding: 0;
+  text-align: center;
+  user-select: none;
+}
+
+.text {
+  padding: 0 0.5rem 0 0.25rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.removed {
+  background: color-mix(in oklab, var(--danger) 12%, transparent);
+  color: var(--danger-text);
+}
+
+.added {
+  background: color-mix(in oklab, var(--success) 12%, transparent);
+  color: var(--success-text);
+}
+
+.note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+
+.note a {
+  color: var(--primary-text);
+}
+
+.note code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+}
