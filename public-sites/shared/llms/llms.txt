@@ -47,6 +47,7 @@ No provider, no stylesheet, no configuration.
 - [React Markdown renderer](https://docs.reactmarkdownkit.com/react-markdown-renderer): one component, its defaults and the test behind each of them
 - [How to render Markdown in React](https://docs.reactmarkdownkit.com/docs/guides/render-markdown-in-react): GFM, custom components, links, code blocks, security defaults and server rendering, each shown live
 - [Streaming Markdown in React](https://docs.reactmarkdownkit.com/streaming-markdown): every partial prefix renders, finished blocks stay byte-identical, and the two constructs that legitimately rewrite themselves are named
+- [React Markdown library comparisons](https://docs.reactmarkdownkit.com/compare): every comparison page grouped by package, with one install-size table for every import
 - [react-markdown alternative](https://docs.reactmarkdownkit.com/react-markdown-alternative): 39 of 39 prop comparisons render identical markup, three differences are documented, and a codemod applies them
 - [React Markdown Kit vs react-markdown](https://docs.reactmarkdownkit.com/compare/react-markdown): install size, GFM, security defaults, streaming, server rendering, plugins and migration, with linked evidence
 - [React Markdown Kit vs markdown-to-jsx](https://docs.reactmarkdownkit.com/compare/markdown-to-jsx): the same rows against markdown-to-jsx 9.10.3

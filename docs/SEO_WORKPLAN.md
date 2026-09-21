@@ -119,6 +119,29 @@ writing a single new page.
     page runs `/` -> the funnel -> the page rather than through `/compare`. A
     `/compare` index would be a small follow-up.
   - C 3.3 follow-ups, then deploy.
+- 2026-09-20: the Milestone C pages above are deployed and live. Follow-ups
+  closed:
+  - **Soft 404s.** Every host answered an unknown path with 200 and its
+    home page. `nginx.container.conf` now tries only real files and answers
+    anything else with 404 and the site's `404.html` (Docusaurus writes the
+    docs one, `shared/vite-seo.ts` writes the five Vite ones, marked
+    `noindex`). Checked against the built image on every host;
+    `tests/seo-surface.test.ts` asserts the config and the files.
+  - **Drift of published figures.** `docs/data/benchmarks.json` holds the
+    reference run's medians (`node benchmarks/run.mjs --write` replaces it).
+    `tests/published-figures.test.ts` fails on any decimal ratio, median or
+    byte count in the public sources that `benchmarks.json`,
+    `bundle-sizes.json` or `mermaid-size.json` does not produce, and binds
+    each llms.txt comparison sentence to its rows. That covers the llms files,
+    `Landing.tsx` and every MDX page, so a generator was not needed.
+  - **Docs index structured data**: `WebSite` and a root `BreadcrumbList`
+    next to `SoftwareSourceCode`.
+  - **`/compare` index** (`src/pages/compare.mdx`, `CollectionPage`): every
+    comparison grouped by package with the full size table. The six
+    `/compare/*` trails now run `/` -> `/compare` -> page. Linked from the
+    footer, the docs index, the home hub and llms.txt. 50 pages, 0 problems.
+  - "C 3.3 follow-ups" had no defined content left; the four Mermaid pages
+    exist. Removed from the open list.
 
 ## 0. Ground rules
 

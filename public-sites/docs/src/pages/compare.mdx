@@ -1,0 +1,114 @@
+---
+title: "React Markdown Library Comparisons"
+description: "Every React Markdown Kit comparison in one place: react-markdown, markdown-to-jsx, Streamdown, MDXEditor, Milkdown, Handlebars, Marp and mermaid.live."
+---
+
+import Link from '@docusaurus/Link'
+import CompareTable, { bundler, measuredOn } from '@site/src/components/CompareTable'
+import sites from '@site/src/sites'
+import { BreadcrumbJsonLd, JsonLd, ORGANIZATION } from '@site/src/components/JsonLd'
+
+export const PATH = '/compare'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'Comparisons' },
+]
+
+export const GROUPS = [
+  {
+    heading: 'Renderer',
+    pages: [
+      { to: '/react-markdown-alternative', label: 'react-markdown alternative', what: 'What matches, the three differences, the codemod, and when to stay on react-markdown.' },
+      { to: '/compare/react-markdown', label: 'React Markdown Kit vs react-markdown', what: 'Install size, GFM, security defaults, streaming, server rendering, plugins and migration.' },
+      { to: '/compare/markdown-to-jsx', label: 'React Markdown Kit vs markdown-to-jsx', what: 'The same rows against the smallest import in the table.' },
+      { to: '/compare/streamdown', label: 'React Markdown Kit vs Streamdown', what: 'The same rows for an AI chat UI that renders Markdown while it streams.' },
+    ],
+  },
+  {
+    heading: 'Editor',
+    pages: [
+      { to: '/compare/mdxeditor', label: 'React Markdown Kit Editor vs MDXEditor', what: 'Two Lexical editors: editing model, output format, round trip, bundle and migration.' },
+      { to: '/compare/milkdown', label: 'React Markdown Kit Editor vs Milkdown', what: 'Lexical against ProseMirror on the same rows.' },
+    ],
+  },
+  {
+    heading: 'Templates, diagrams and slides',
+    pages: [
+      { to: '/compare/handlebars', label: 'Markdown templating vs Handlebars', what: 'String interpolation before parsing, against placeholders resolved inside the parser.' },
+      { to: '/mermaid-live-editor-alternative', label: 'Mermaid Live Editor alternative', what: 'A visual canvas next to the text, compared with mermaid.live. Flowcharts only.' },
+      { to: '/marp-alternative', label: 'Marp and Slidev alternative', what: 'Decks rendered inside a React app, against tools that export PDF and PPTX.' },
+    ],
+  },
+]
+
+<JsonLd
+  data={{
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: frontMatter.title,
+    description: frontMatter.description,
+    url: `${sites.docs}${PATH}`,
+    publisher: ORGANIZATION,
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: GROUPS.flatMap((group) => group.pages).map((page, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: page.label,
+        url: `${sites.docs}${page.to}`,
+      })),
+    },
+  }}
+/>
+<BreadcrumbJsonLd trail={crumbs} />
+
+# React Markdown library comparisons
+
+Each page compares React Markdown Kit with one library, section by section, and says
+where the other library is the better pick. Sizes come from
+`scripts/compare-bundles.mjs`, performance from `benchmarks/run.mjs`, and behaviour from
+tests linked on each page.
+
+{GROUPS.map((group) => (
+  <section key={group.heading}>
+    <h2>{group.heading}</h2>
+    <ul>
+      {group.pages.map((page) => (
+        <li key={page.to}>
+          <Link to={page.to}><strong>{page.label}</strong></Link>: {page.what}
+        </li>
+      ))}
+    </ul>
+  </section>
+))}
+
+## Install size, every import
+
+One import of each package, bundled with {bundler} and measured on {measuredOn}. React
+and React DOM are external in every row, and 1 KB is 1024 bytes. The renderer is larger
+than react-markdown, and the editor is larger than Milkdown.
+
+<CompareTable
+  ids={[
+    'markdown-to-jsx',
+    'react-markdown',
+    'kit-renderer',
+    'react-markdown-gfm',
+    'kit-renderer-gfm',
+    'milkdown',
+    'kit-editor',
+    'streamdown',
+    'mdxeditor',
+  ]}
+  licenses
+/>
+
+## Next
+
+<Link href={sites.rendererDemo}>Renderer playground</Link> ·{' '}
+<Link href={sites.editorDemo}>Editor demo</Link> ·{' '}
+<Link href={sites.mermaidDemo}>Mermaid visual editor</Link> ·{' '}
+<Link href={sites.slidesDemo}>Slides editor</Link> ·{' '}
+<Link href="https://www.npmjs.com/search?q=%40react-markdown-kit">Packages on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>

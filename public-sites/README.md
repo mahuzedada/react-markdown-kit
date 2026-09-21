@@ -34,13 +34,19 @@ the space the demo will take, the landing copy in `src/Landing.tsx` (one h1,
 the lede, three features, install and how-to, an FAQ with its `FAQPage`
 structured data, and the `WebApplication` block) and the footer. The app then
 mounts over that markup with `createRoot`. The same step writes `sitemap.xml`
-with the site's last commit date and copies `shared/llms/*.txt`, which the
-docs site serves from the same folder. `public/robots.txt` and the head tags
+with the site's last commit date, writes a `404.html`, and copies
+`shared/llms/*.txt`, which the docs site serves from the same folder. Every
+route is a file (a demo has only `/`; slides switches views with `?view=`),
+so `nginx.container.conf` answers any other path with a real 404 and that
+page, never the site root with a 200. `public/robots.txt` and the head tags
 (title, description, canonical, Open Graph, Twitter) are hand-written in each
 `index.html`; `public/social-card.png` comes from `scripts/social-cards.mjs`.
 
 `tests/seo-surface.test.ts` reads the six build folders and fails on a
 missing h1, a wrong title or description length, a missing canonical, an
 `og:image` that is not a PNG on disk, structured data that does not parse, a
-missing robots, sitemap or llms file, or a link to a 404 on any of the six
-hosts. It runs in the `public-sites` CI job after the builds.
+missing robots, sitemap, llms or 404 file, a container config that falls
+back to `/index.html`, or a link to a 404 on any of the six hosts. It runs in
+the `public-sites` CI job after the builds. `tests/published-figures.test.ts`
+checks every ratio, median and byte count on the public surface against the
+committed files in `docs/data/`.

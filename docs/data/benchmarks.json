@@ -1,0 +1,62 @@
+{
+  "measuredOn": "2026-09-20",
+  "generator": "benchmarks/run.mjs --write",
+  "note": "The medians of the reference run first recorded in benchmarks/README.md on 2026-09-20; the next `node benchmarks/run.mjs --write` replaces this file.",
+  "environment": {
+    "cpu": "Apple M4 Max",
+    "cores": 14,
+    "node": "v24.17.0",
+    "baseline": "react-markdown@10.1.0 with remark-gfm"
+  },
+  "method": "renderToStaticMarkup on the server, five warm-up calls, median of the iteration count, both sides parsing GFM",
+  "sizes": [
+    {
+      "size": "1 KB",
+      "kit": {
+        "median": 2.69,
+        "iterations": 400
+      },
+      "baseline": {
+        "median": 2.23,
+        "iterations": 400
+      },
+      "ratio": 1.21
+    },
+    {
+      "size": "10 KB",
+      "kit": {
+        "median": 16.22,
+        "iterations": 120
+      },
+      "baseline": {
+        "median": 16.25,
+        "iterations": 120
+      },
+      "ratio": 1
+    },
+    {
+      "size": "100 KB",
+      "kit": {
+        "median": 206.96,
+        "iterations": 20
+      },
+      "baseline": {
+        "median": 233.36,
+        "iterations": 20
+      },
+      "ratio": 0.89
+    }
+  ],
+  "precompiled": {
+    "size": "10 KB",
+    "fromString": {
+      "median": 16.8,
+      "iterations": 100
+    },
+    "fromDocument": {
+      "median": 5.99,
+      "iterations": 100
+    },
+    "speedup": 2.8
+  }
+}

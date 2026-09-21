@@ -193,6 +193,11 @@ const SLIDES_PAGES: readonly Evidence[] = [
 /** One page per compared library. Byte counts on them come from docs/data/bundle-sizes.json. */
 const COMPARISONS: readonly Evidence[] = [
   {
+    href: docsUrl('/compare'),
+    label: 'All comparisons',
+    what: 'Every comparison page, grouped by package, with one install-size table for every import.',
+  },
+  {
     href: docsUrl('/compare/react-markdown'),
     label: 'vs react-markdown',
     what: 'Install size, GFM, security defaults, streaming, server rendering, plugins and migration.',

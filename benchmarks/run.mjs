@@ -6,14 +6,20 @@
  * are only meaningful with the methodology alongside them, which is why the
  * output includes the environment and the exact baseline version.
  *
- * Usage: node benchmarks/run.mjs [--json]
+ * Usage: node benchmarks/run.mjs [--json] [--write]
+ *
+ * `--write` also records the medians in docs/data/benchmarks.json, the file
+ * every public figure is checked against (tests/published-figures.test.ts).
+ * Rewrite the prose that quotes the old numbers in the same commit.
  */
+import { writeFileSync } from 'node:fs'
 import { performance } from 'node:perf_hooks'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { cpus, totalmem } from 'node:os'
 
 const asJson = process.argv.includes('--json')
+const write = process.argv.includes('--write')
 
 // Benchmarks run against the BUILT package, the same artifact a consumer gets.
 const { Markdown, compileMarkdown, defineMarkdownPreset, gfm } = await import(
@@ -159,6 +165,37 @@ for (const [name, source] of Object.entries(ADVERSARIAL)) {
   const result = measure(name, () => renderToStaticMarkup(createElement(Markdown, { preset }, source)), 20)
   results.adversarial.push(result)
   if (!asJson) console.log(`  ${name.padEnd(22)} median ${ms(result.median)}`)
+}
+
+if (write) {
+  const round = (value) => Math.round(value * 100) / 100
+  const median = (result) => ({ median: round(result.median), iterations: result.iterations })
+  const data = {
+    measuredOn: new Date().toISOString().slice(0, 10),
+    generator: 'benchmarks/run.mjs --write',
+    environment: {
+      cpu: results.environment.cpu,
+      cores: results.environment.cores,
+      node: results.environment.node,
+      baseline: 'react-markdown@10.1.0 with remark-gfm',
+    },
+    method: 'renderToStaticMarkup on the server, five warm-up calls, median of the iteration count, both sides parsing GFM',
+    sizes: results.sizes.map((row) => ({
+      size: row.size,
+      kit: median(row.kit),
+      baseline: row.baseline ? median(row.baseline) : null,
+      ratio: row.ratio === undefined ? null : round(row.ratio),
+    })),
+    precompiled: {
+      size: '10 KB',
+      fromString: median(fromString),
+      fromDocument: median(fromDoc),
+      speedup: round(fromString.median / fromDoc.median),
+    },
+  }
+  const file = new URL('../docs/data/benchmarks.json', import.meta.url)
+  writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`)
+  if (!asJson) console.log('\nWrote docs/data/benchmarks.json')
 }
 
 if (asJson) {

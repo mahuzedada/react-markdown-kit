@@ -5,7 +5,7 @@ import CodeBlock from '@theme/CodeBlock'
 import RenderExample from '@site/src/components/RenderExample'
 import TemplateExample from '@site/src/components/TemplateExample'
 import sites from '@site/src/sites'
-import { JsonLd, ORGANIZATION } from '@site/src/components/JsonLd'
+import { BreadcrumbJsonLd, JsonLd, ORGANIZATION } from '@site/src/components/JsonLd'
 import styles from './index.module.css'
 
 const RENDERER_SAMPLE = `## Release 1.4
@@ -117,6 +117,20 @@ export default function Home(): ReactNode {
           author: ORGANIZATION,
         }}
       />
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'React Markdown Kit docs',
+          url: sites.docs,
+          description: DESCRIPTION,
+          inLanguage: 'en',
+          publisher: ORGANIZATION,
+          isPartOf: { '@type': 'WebSite', name: 'React Markdown Kit', url: sites.home },
+        }}
+      />
+      {/* The root of every breadcrumb trail on this site. */}
+      <BreadcrumbJsonLd trail={[{ name: 'React Markdown Kit' }]} />
       {/* Spec 13.1: open with the renderer, not with architecture. */}
       <header className={`${styles.hero} dark`}>
         <div className="container">
@@ -260,7 +274,8 @@ export default function Home(): ReactNode {
               <Link href={`${sites.github}/blob/main/docs/data/bundle-sizes.json`}>
                 docs/data/bundle-sizes.json
               </Link>
-              , written by <code>scripts/compare-bundles.mjs</code>.
+              , written by <code>scripts/compare-bundles.mjs</code>.{' '}
+              <Link to="/compare">All comparisons, with the full size table</Link>.
             </p>
           </div>
           <ul className={styles.links}>

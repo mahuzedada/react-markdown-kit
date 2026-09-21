@@ -5,8 +5,10 @@
  * `renderToStaticMarkup` into `#root`, so the built `index.html` carries the
  * h1, the copy, the FAQ, the structured data and the links without running
  * JavaScript; the app then mounts over that markup with `createRoot`. It also
- * writes `sitemap.xml` with the last commit date of the site, and copies the
- * shared `llms.txt` files so every host serves the same one.
+ * writes `sitemap.xml` with the last commit date of the site, writes the
+ * `404.html` that the container nginx serves with a real 404 status for any
+ * path that is not a file, and copies the shared `llms.txt` files so every
+ * host serves the same one.
  */
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs'
@@ -15,6 +17,7 @@ import { fileURLToPath } from 'node:url'
 import { createElement, type ComponentType } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer, type Plugin, type ResolvedConfig } from 'vite'
+import sites from './sites.json'
 
 const shared = dirname(fileURLToPath(import.meta.url))
 const LLMS_FILES = ['llms.txt', 'llms-full.txt'] as const
@@ -40,8 +43,9 @@ export function seo({ url, routes = [] }: SeoOptions): Plugin {
       const outDir = resolve(config.root, config.build.outDir)
       await prerender(config.root, outDir)
       writeFileSync(join(outDir, 'sitemap.xml'), sitemap(url, routes, lastModified(config.root)))
+      writeFileSync(join(outDir, '404.html'), notFound(url))
       for (const file of LLMS_FILES) copyFileSync(join(shared, 'llms', file), join(outDir, file))
-      config.logger.info(`rmk-seo: prerendered index.html, wrote sitemap.xml, copied ${LLMS_FILES.join(' and ')}`)
+      config.logger.info(`rmk-seo: prerendered index.html, wrote sitemap.xml and 404.html, copied ${LLMS_FILES.join(' and ')}`)
     },
   }
 }
@@ -74,6 +78,45 @@ function sitemap(url: string, routes: readonly string[], lastmod: string): strin
   const paths = ['/', ...routes.filter((route) => route !== '/')]
   const entries = paths.map((path) => `  <url><loc>${url}${path}</loc><lastmod>${lastmod}</lastmod></url>`)
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.join('\n')}\n</urlset>\n`
+}
+
+/**
+ * The page behind a 404 status. The demos have one route each, so there is no
+ * client-side fallback to serve: say so and link the site root and the hub.
+ * Self-contained, with the Foundry tokens inlined, because the fingerprinted
+ * stylesheet name is not known here.
+ */
+function notFound(url: string): string {
+  const host = new URL(url).host
+  const hub = url === sites.home ? '' : `\n    <p><a href="${sites.home}/">React Markdown Kit home</a></p>`
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Page not found | React Markdown Kit</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    :root { --background: #ffffff; --foreground: #1c2127; --muted-foreground: #5f6b7c; --primary-text: #215db0; color-scheme: light dark; }
+    @media (prefers-color-scheme: dark) {
+      :root { --background: #1c2127; --foreground: #f6f7f9; --muted-foreground: #abb3bf; --primary-text: #8abbff; }
+    }
+    body { margin: 0; background: var(--background); color: var(--foreground); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 40rem; margin: 0 auto; padding: 4rem 16px; }
+    p { color: var(--muted-foreground); }
+    a { color: var(--primary-text); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Page not found</h1>
+    <p>Nothing lives at this address on ${host}.</p>
+    <p><a href="/">Go to ${host}</a></p>${hub}
+  </main>
+</body>
+</html>
+`
 }
 
 /** The date of the last commit that touched the site or the shared files. */

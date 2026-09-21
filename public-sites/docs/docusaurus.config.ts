@@ -137,6 +137,7 @@ const config: Config = {
         {
           title: 'Compare',
           items: [
+            { label: 'All comparisons', to: '/compare' },
             { label: 'react-markdown alternative', to: '/react-markdown-alternative' },
             { label: 'vs react-markdown', to: '/compare/react-markdown' },
             { label: 'vs markdown-to-jsx', to: '/compare/markdown-to-jsx' },

@@ -6,7 +6,13 @@ published as a comparison without the methodology note the runner prints.
 ```bash
 node benchmarks/run.mjs          # human readable
 node benchmarks/run.mjs --json   # machine readable
+node benchmarks/run.mjs --write  # also record the medians in docs/data/benchmarks.json
 ```
+
+Every ratio, median and byte count quoted on a public page is checked against
+`docs/data/benchmarks.json`, `docs/data/bundle-sizes.json` and
+`docs/data/mermaid-size.json` by `tests/published-figures.test.ts`. After a
+`--write` run the test lists every sentence still quoting the old numbers.
 
 Benchmarks run against the **built** package in `packages/renderer/dist`, the
 same artifact a consumer installs, not against source.

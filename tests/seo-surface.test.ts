@@ -4,8 +4,9 @@
  * description of 140 to 155, an absolute canonical, Open Graph and Twitter
  * tags with a PNG image that exists, structured data that parses and names a
  * type, and a FAQPage block wherever it shows an FAQ; every host serves
- * robots.txt, a sitemap with lastmod, and the shared llms.txt; and no page
- * links to a 404 on any of the six hosts. tests/seo-links.test.ts checks
+ * robots.txt, a sitemap with lastmod, the shared llms.txt and a 404.html
+ * that the container nginx serves with a real 404 status (no soft 404s); and
+ * no page links to a 404 on any of the six hosts. tests/seo-links.test.ts checks
  * every other href and src, and the READMEs.
  *
  * It reads build output, so a site that is not built is skipped locally. In
@@ -77,6 +78,16 @@ function resolves(dir: string, path: string): boolean {
 
 const inCI = process.env['CI'] !== undefined && process.env['CI'] !== ''
 
+describe('nginx.container.conf', () => {
+  const conf = readFileSync(join(root, 'nginx.container.conf'), 'utf8')
+
+  it('answers an unknown path with 404 and the site 404.html, not the home page', () => {
+    expect(conf).toMatch(/try_files \$uri \$uri\/index\.html \$uri\.html =404;/)
+    expect(conf).toMatch(/error_page 404 \/404\.html;/)
+    expect(conf).not.toMatch(/try_files[^;]*\s\/index\.html;/)
+  })
+})
+
 for (const site of SITES) {
   if (inCI) {
     it(`${site.name} is built`, () => {
@@ -99,6 +110,12 @@ for (const site of SITES) {
         expect(loc.startsWith(site.url)).toBe(true)
         expect(resolves(dir, loc.slice(site.url.length)), loc).toBe(true)
       }
+    })
+
+    it('ships a 404.html that search engines will not index', () => {
+      const html = readFileSync(join(dir, '404.html'), 'utf8')
+      expect(html.match(/<h1[\s>]/g) ?? []).toHaveLength(1)
+      if (site.name !== 'docs') expect(html).toContain('<meta name="robots" content="noindex" />')
     })
 
     it('serves the shared llms.txt files', () => {
@@ -192,6 +209,27 @@ for (const site of SITES) {
     }
   })
 }
+
+describe.skipIf(!built(SITES[1]))('docs breadcrumbs', () => {
+  const dir = join(root, SITES[1].dir)
+  const types = (route: string): unknown[] =>
+    jsonLd(readFileSync(join(dir, route, 'index.html'), 'utf8')).map((block) => block['@type'])
+  const trail = (route: string): unknown[] => {
+    const list = jsonLd(readFileSync(join(dir, route, 'index.html'), 'utf8')).find((block) => block['@type'] === 'BreadcrumbList')
+    return ((list?.['itemListElement'] as Array<Record<string, unknown>> | undefined) ?? []).map((item) => item['item'])
+  }
+
+  it('the docs index is the WebSite and the root of the trail', () => {
+    expect(types('')).toEqual(expect.arrayContaining(['WebSite', 'BreadcrumbList']))
+  })
+
+  it('every comparison page runs through the /compare index', () => {
+    const compare = readdirSync(join(dir, 'compare')).filter((entry) => statSync(join(dir, 'compare', entry)).isDirectory())
+    expect(compare.length).toBeGreaterThan(0)
+    expect(types('compare')).toContain('CollectionPage')
+    for (const entry of compare) expect(trail(`compare/${entry}`), entry).toContain(`${SITES[1].url}/compare`)
+  })
+})
 
 /**
  * The Mermaid size figures in the shared llms.txt files are copied by hand
