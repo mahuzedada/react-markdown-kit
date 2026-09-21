@@ -1,9 +1,10 @@
 ---
-title: "Slides from Markdown with one plugin"
-sidebar_label: Slides from Markdown
-description: "Slides split on ---, notes after ???, fragments after --, and the file renders as a deck of sections. One plugin for the renderer, present mode and editor."
+title: Markdown Presentations in React
+sidebar_label: Slides
+description: "Markdown presentations in React: slides split on ---, speaker notes after ???, fragments after --, present mode, and a deck editor in one plugin."
 ---
 
+import Link from '@docusaurus/Link'
 import RenderExample from '@site/src/components/RenderExample'
 import EditorExample from '@site/src/components/EditorExample'
 import sites from '@site/src/sites'
@@ -142,7 +143,19 @@ Type \`---\` on its own line and press Enter to start a slide.
 - Preview shows the deck
 `
 
+{/* Links to the evidence for a claim, in the repository. */}
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
 # Slides from Markdown
+
+Markdown presentations in React, from the same file the rest of your app renders as a
+document. `@react-markdown-kit/slides` is one plugin with three entries: the deck, the
+deck plus present mode, and the deck plus the editor commands. There is no new app to
+deploy, no export step, and no second copy of the content.
+
+It renders decks; it writes no files. PDF and PPTX are what Marp and Slidev do, and the
+<Link to="/marp-alternative">comparison with Marp, Slidev and reveal.js</Link> says which
+tool fits which job.
 
 ```bash
 npm install @react-markdown-kit/slides
@@ -161,7 +174,12 @@ const preset = defineMarkdownPreset({ extensions: [slides()] })
 ```
 
 Try it in the <a href={sites.slidesDemo}>slides demo</a>: the editor on the
-left, the deck on the right, Present in the control bar.
+left, the deck on the right, Present in the control bar. Add
+<a href={`${sites.slidesDemo}/?embed=1`}><code>?embed=1</code></a> to drop the page chrome,
+which is the URL to put in an `iframe` in a blog post or in your own docs.
+
+The rest of this page is the reference: the dialect, then present mode, then the editor
+commands.
 
 ## A deck is Markdown
 
@@ -355,10 +373,14 @@ with the node's source range, and every code is exported as
 ```
 
 - **No script, no class, no inline style, no id other than
-  `slide-<name>`.** Optional attributes appear only when set.
+  `slide-<name>`.** Optional attributes appear only when set, and
+  <a href={blob('plugins/slides/tests/extension.test.tsx')}>extension.test.tsx</a> asserts
+  the markup above character for character.
 - **Server-renderable.** The deck is built as hast by a handler for the mdast
   `root`, so it works in a server component and in static rendering. The
-  decks on this page were rendered when the site was built.
+  decks on this page were rendered when the site was built, and
+  <a href={blob('plugins/slides/tests/present.dom.test.tsx')}>present.dom.test.tsx</a>
+  renders the present entry on the server and hydrates it without a mismatch.
 - **Accessible by default.** Each section carries `aria-roledescription="slide"`
   and an `aria-label` from its first heading, with `slideLabel` and the slide
   number (`Slide 3`) as the fallback.
@@ -403,7 +425,8 @@ const preset = defineMarkdownPreset({ extensions: [gfm(), slides()] })
   `.rmk-document`; the example above gives the preview surface that class with
   `classNames={{ preview: 'rmk-preview rmk-document' }}`.
 - Every untouched block is written back from its original bytes. A deck
-  loaded and saved without edits is unchanged.
+  loaded and saved without edits is unchanged, byte for byte
+  (<a href={blob('plugins/slides/tests/round-trip.test.ts')}>round-trip.test.ts</a>).
 - Front matter stays an opaque block in rich mode; edit it in source mode.
 - Labels: the editor's `labels` prop relabels the toolbar buttons by id
   (`slide`, `slideNotes`, `slidePause`, `slideBackground`) and the node
@@ -447,3 +470,21 @@ and `onSlideChange`; `/editor` adds `editorLabels`, the node captions only
 node type constants,
 the type guards and the diagnostic codes are exported for tooling that walks
 a compiled document.
+
+## Marp, Slidev and reveal.js
+
+Those three export decks to files: PDF and PPTX from a command line, or print to PDF
+from the browser. This plugin does neither. It renders a deck inside a React app, from
+Markdown the app already renders, with present mode and speaker notes. The
+<Link to="/marp-alternative">comparison page</Link> puts the four side by side, with the
+Marp directives mapped onto this dialect.
+
+## Next
+
+<a href={sites.slidesDemo}>The slides demo</a> ·{' '}
+<a href={`${sites.slidesDemo}/?embed=1`}>The demo in embed mode</a> ·{' '}
+<Link to="/marp-alternative">Marp and Slidev alternative</Link> ·{' '}
+<a href="https://www.npmjs.com/package/@react-markdown-kit/slides">@react-markdown-kit/slides on npm</a> ·{' '}
+<Link to="/docs/editor/basics">The editor</Link> ·{' '}
+<Link to="/docs/styling">Styling</Link> ·{' '}
+<Link to="/docs/security">Security model</Link>
