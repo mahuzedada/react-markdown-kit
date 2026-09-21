@@ -1,0 +1,409 @@
+---
+title: "Streaming Markdown in React for AI"
+description: "Render streaming Markdown in React for AI chat UIs: every partial prefix renders, finished blocks stay byte-identical, and the two exceptions are named."
+---
+
+import Link from '@docusaurus/Link'
+import RenderExample from '@site/src/components/RenderExample'
+import StreamExample from '@site/src/components/StreamExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+import bundles from '../../../../docs/data/bundle-sizes.json'
+
+export const PATH = '/streaming-markdown'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'React Markdown renderer', path: '/react-markdown-renderer' },
+  { name: 'Streaming Markdown in React' },
+]
+
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/renderer'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+export const streaming = (line) => blob(`packages/renderer/tests/streaming.test.tsx#L${line}`)
+
+{/* Sizes are read from the generated file, never typed in. */}
+export const sizes = Object.fromEntries(bundles.results.map((row) => [row.id, row]))
+export const kb = (bytes) => `${(bytes / 1024).toFixed(1)} KB`
+
+export const FAQ = [
+  {
+    question: 'Can React Markdown Kit render a half-written Markdown document?',
+    answer:
+      'Yes. Every prefix of a document renders without throwing, including an unclosed code fence, half-written emphasis, a table stopped mid row, a list stopped mid item and a link with an unclosed bracket. The seven cases are asserted prefix by prefix in packages/renderer/tests/streaming.test.tsx.',
+  },
+  {
+    question: 'Does already rendered content move while more tokens arrive?',
+    answer:
+      'The HTML of the finished blocks is byte-identical at every later prefix, so nothing above the block being written is re-ordered or re-escaped. Two constructs are exceptions by the CommonMark and GFM rules: a paragraph followed by a setext underline becomes a heading, and a half-typed URL autolinks to the truncated host.',
+  },
+  {
+    question: 'Do I need a special streaming component or an incremental parser?',
+    answer:
+      'No. The renderer re-parses and re-renders the whole prefix on every token. packages/renderer/src/markdown.tsx contains no memo, no useMemo and no manual keys; React reconciliation keeps the finished DOM nodes in place, which a test asserts by checking the same h1 element survives every growth step.',
+  },
+  {
+    question: 'Can I stream into a precompiled document?',
+    answer:
+      'Yes. compileMarkdown accepts every prefix, htmlFromDocument(prefix) equals the same prefix rendered from a string, and a mounted root fed a growing precompiled document ends byte-identical to a root that only ever saw the finished document.',
+  },
+]
+
+export const demoDocument = [
+  '## Streaming renderer',
+  '',
+  'A finished paragraph with a [link](https://example.com) and `code`.',
+  '',
+  '> A finished block quote.',
+  '',
+  '```js',
+  'const finished = true',
+  '```',
+  '',
+  '| package | size |',
+  '| --- | ---: |',
+  '| renderer | 12 kB |',
+  '| editor | 30 kB |',
+  '',
+  '```ts',
+  'const partial = {',
+  '  answer: 42,',
+  '',
+].join('\n')
+
+export const degraded = `*em then **str then \`code then [text](
+
+~~str then ![alt](x.p then 1. one`
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
+
+# Streaming Markdown in React
+
+A model writes Markdown one token at a time. The chat UI hands the renderer the
+whole document again on every token, so most of what it renders is not valid
+Markdown yet: a fence with no closing fence, one asterisk of a `**strong**`
+pair, a table row that stops mid cell.
+
+`@react-markdown-kit/renderer` renders every one of those prefixes. There is no
+streaming mode and no separate component.
+
+```tsx
+import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+export function Answer({ text }: { text: string }) {
+  // `text` grows on every token. Nothing else changes.
+  return <Markdown preset={preset}>{text}</Markdown>
+}
+```
+
+Every claim on this page links to a test in
+<Link href={blob('packages/renderer/tests/streaming.test.tsx')}>`packages/renderer/tests/streaming.test.tsx`</Link>.
+Run it yourself:
+
+```bash
+pnpm vitest run packages/renderer/tests/streaming.test.tsx
+```
+
+## Watch it stream
+
+The document below is the one the tests use, with its top heading demoted to
+`##` so this page keeps one `h1`: four finished blocks, then a GFM table and an
+unclosed TypeScript fence arriving token by token. The split is
+the same one the tests use, so words stay whole and every whitespace and
+punctuation character is its own token, which makes ```` ``` ```` arrive as
+three separate tokens.
+
+<StreamExample
+  title="Every frame is a full parse and a full render of the prefix so far"
+  markdown={demoDocument}
+  speed={40}
+>
+  Press **Replay from the first token**. Watch the heading, the paragraph, the
+  quote and the closed `js` fence stay exactly where they are while the table
+  and the open fence are written below them.
+</StreamExample>
+
+## What holds while a document streams
+
+Seven cases are streamed prefix by prefix: an unclosed code fence, half-written
+emphasis and strong, a table mid-row, a list mid-item, a heading with no
+trailing newline, a link with an unclosed bracket, and a fenced block that
+closes late. Each case is a fixed set of finished blocks plus that tail, so
+"the finished part" is a known string and its HTML is a known string.
+
+**No prefix throws.** Asserted for all seven cases
+(<Link href={streaming(151)}>"renders every prefix of *case* without throwing"</Link>),
+and for a document that is never well formed at any prefix, a fence inside a
+list inside a block quote
+(<Link href={streaming(269)}>"renders every prefix of nested unclosed constructs without throwing"</Link>).
+
+**The finished part is byte-identical.** At every prefix, the HTML starts with
+exactly the HTML of the finished blocks
+(<Link href={streaming(157)}>"keeps the closed prefix byte-identical while *case* streams"</Link>).
+Nothing above the block being written is re-laid-out, re-ordered or re-escaped.
+
+**Nothing is duplicated.** Exactly one copy of the finished HTML, one
+`<h1>Streaming renderer</h1>` and one closed `js` code block at every prefix
+(<Link href={streaming(166)}>"never duplicates a closed node while *case* streams"</Link>).
+
+**An open fence never leaks as markup.** While a ```` ```md ```` fence is open,
+`# not a heading` and `- not a list` never render as `<h1>` or `<li>`
+(<Link href={streaming(188)}>"does not leak the contents of an open fence as markup"</Link>),
+and the paragraph after a late fence appears only once the closing fence
+arrives (<Link href={streaming(198)}>test</Link>).
+
+**The end state is the one-shot render.** A mounted React root is grown token by
+token and compared with a root that never saw a partial prefix
+(<Link href={streaming(397)}>"ends byte-identical to a one-shot render of *case*"</Link>).
+That comparison is what would catch stale memoisation; comparing a string
+render with itself would not.
+
+## Partial constructs degrade to the characters typed so far
+
+Nothing is dropped and nothing is invented. These outputs are pinned exactly
+(<Link href={streaming(213)}>"renders *source* as *expected*"</Link>).
+
+| Prefix | Rendered |
+| --- | --- |
+| `*em` | `<p>*em</p>` |
+| `**str` | `<p>**str</p>` |
+| `_u` | `<p>_u</p>` |
+| `~~str` | `<p>~~str</p>` |
+| `` `code `` | `` <p>`code</p> `` |
+| `[text` | `<p>[text</p>` |
+| `[text](` | `<p>[text](</p>` |
+| `![alt](x.p` | `<p>![alt](x.p</p>` |
+| `# head` | `<h1>head</h1>`, no trailing newline needed |
+| `- item\n- ha` | a two-item `<ul>` |
+| `1. one\n2. tw` | a two-item `<ol>` |
+| `> quote\n> mo` | a `<blockquote>` |
+| `` ```ts\nconst x `` | `<pre><code class="language-ts">const x\n</code></pre>`, info string already applied |
+
+<RenderExample
+  title="Half-written constructs, rendered live on this page"
+  markdown={degraded}
+  editable
+>
+  Delete characters from the left pane to watch each construct fall back to its
+  literal text. Nothing throws and nothing disappears.
+</RenderExample>
+
+## Two places where rendered output changes
+
+Both are CommonMark and GFM behaving correctly, so neither is fixed. Both are
+pinned by tests
+(<Link href={blob('packages/renderer/tests/streaming.test.tsx#L241')}>"the two prefixes where already rendered output changes"</Link>)
+so a change in either is a test failure rather than a surprise. A streaming UI
+sees them as content that rewrites itself, so they are listed here.
+
+### A setext underline rewrites a finished paragraph
+
+`Paragraph text` renders `<p>Paragraph text</p>`. One token later,
+`Paragraph text\n-` renders `<h2>Paragraph text</h2>`
+(<Link href={streaming(247)}>"turns a finished paragraph into a heading when the next line starts a setext underline"</Link>).
+
+A paragraph is therefore not settled until a line arrives that cannot underline
+it. The trailing paragraph of a stream can visibly jump to a heading. If your
+UI needs frozen output, treat the last paragraph as provisional, or split the
+stream on blank lines and freeze only blocks that are followed by one.
+
+### A half-typed URL links to the truncated host
+
+`http://ex` renders `<p><a href="http://ex">http://ex</a></p>`, and
+`http://example.com/pa` links to that partial path
+(<Link href={streaming(256)}>"links a half-typed URL to the truncated host while it streams"</Link>).
+
+A link rendered mid-stream can point somewhere real but wrong. If anchors are
+clickable during streaming, disable the last one until its block closes.
+
+### Milder: a table is a paragraph until its delimiter row is complete
+
+`| a | b |\n| - ` renders `<p>| a | b |\n| -</p>`, then flips to a `<table>`
+once `| - | - |` lands
+(<Link href={streaming(231)}>"shows a table as a paragraph until the delimiter row is complete"</Link>).
+This is not a defect: the flip happens inside the block being written, and
+nothing above it moves.
+
+## Why the finished part is stable
+
+<Link href={blob('packages/renderer/src/markdown.tsx')}>`packages/renderer/src/markdown.tsx`</Link>
+contains no `memo`, no `useMemo` and no manual keys. Every prefix is a full
+parse and a full React render.
+
+Stability comes from React reconciliation over a structurally identical tree,
+not from caching: the finished blocks parse to the same nodes every time, so
+React updates nothing above the block being written. The test
+<Link href={streaming(373)}>"reuses the heading element across growth instead of recreating it"</Link>
+holds a reference to the `<h1>` element and asserts the same element instance
+survives every growth step. That is what keeps scroll position, focus and CSS
+animations on already-rendered content intact.
+
+The practical consequence: there is no incremental-parsing machinery to
+configure, and no cache to invalidate when the document changes.
+
+## Precompiled documents
+
+`compileMarkdown` is equally tolerant, so a server can parse each prefix and
+send the document instead of the string.
+
+```tsx
+import Markdown, { compileMarkdown, defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+// Accepts every prefix; content problems become diagnostics on the document,
+// not exceptions. Only a configuration mistake throws.
+const document = compileMarkdown(partialText, { preset })
+
+<Markdown preset={preset} document={document} />
+```
+
+- Every prefix compiles without throwing
+  (<Link href={streaming(279)}>test</Link>).
+- A precompiled prefix renders exactly like the same prefix as a string
+  (<Link href={streaming(285)}>test</Link>).
+- The finished part stays byte-identical for precompiled documents too
+  (<Link href={streaming(291)}>test</Link>).
+- A mounted root fed a precompiled document that grows token by token matches a
+  one-shot root at every step, ending with exactly one `<h1>` and one `<table>`
+  (<Link href={streaming(350)}>test</Link>).
+
+Re-rendering from a compiled document is about 2.8 times faster than
+re-rendering from a string, because parsing is roughly 80% of the work
+(<Link href={blob('benchmarks/README.md')}>benchmark results</Link>,
+<Link href={blob('benchmarks/run.mjs')}>`benchmarks/run.mjs`</Link>). That
+payoff applies to a document you re-render often, such as one already finished
+in the transcript. A document still streaming is parsed once per token either
+way.
+
+## With the AI SDK
+
+`useChat` hands you message parts that grow. Render the text parts with
+`<Markdown>` and change nothing else.
+
+```tsx
+'use client'
+
+import { useChat } from '@ai-sdk/react'
+import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+export function Transcript() {
+  const { messages } = useChat()
+
+  return messages.map((message) => (
+    <article key={message.id} className="rmk-document">
+      {message.parts.map((part, index) =>
+        part.type === 'text' ? (
+          <Markdown preset={preset} key={index}>
+            {part.text}
+          </Markdown>
+        ) : null,
+      )}
+    </article>
+  ))
+}
+```
+
+Two notes for a transcript.
+
+- Give each message a stable key. React then reconciles a growing message
+  against itself rather than against its neighbour.
+- The renderer is a server component by default, with no `use client`
+  directive. The `use client` above is on your chat component, because
+  `useChat` is a hook. Rendering the finished transcript on the server needs no
+  directive at all: <Link to="/nextjs-markdown">Markdown in Next.js</Link>.
+
+## Against Streamdown
+
+[Streamdown](https://www.npmjs.com/package/streamdown) is a Markdown component
+built for AI chat. The table below is one measurement only: what a browser
+downloads for one import of each package, generated by
+<Link href={blob('scripts/compare-bundles.mjs')}>`scripts/compare-bundles.mjs`</Link>
+and stored in
+<Link href={blob('docs/data/bundle-sizes.json')}>`docs/data/bundle-sizes.json`</Link>,
+measured on {bundles.measuredOn}. React and React DOM are external in every
+row. 1 KB is 1024 bytes.
+
+<table>
+  <thead>
+    <tr>
+      <th>Entry bundled</th>
+      <th>Version</th>
+      <th>Minified</th>
+      <th>Gzipped</th>
+      <th>Licence</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{sizes['kit-renderer'].label}</td>
+      <td>{sizes['kit-renderer'].version}</td>
+      <td>{kb(sizes['kit-renderer'].minBytes)}</td>
+      <td>{kb(sizes['kit-renderer'].gzipBytes)}</td>
+      <td>{sizes['kit-renderer'].license}</td>
+    </tr>
+    <tr>
+      <td>{sizes['kit-renderer-gfm'].label}</td>
+      <td>{sizes['kit-renderer-gfm'].version}</td>
+      <td>{kb(sizes['kit-renderer-gfm'].minBytes)}</td>
+      <td>{kb(sizes['kit-renderer-gfm'].gzipBytes)}</td>
+      <td>{sizes['kit-renderer-gfm'].license}</td>
+    </tr>
+    <tr>
+      <td>{sizes['streamdown'].label}</td>
+      <td>{sizes['streamdown'].version}</td>
+      <td>{kb(sizes['streamdown'].minBytes)}</td>
+      <td>{kb(sizes['streamdown'].gzipBytes)}</td>
+      <td>{sizes['streamdown'].license}</td>
+    </tr>
+  </tbody>
+</table>
+
+With GFM on both sides that is {kb(sizes['kit-renderer-gfm'].gzipBytes)} against
+{' '}{kb(sizes['streamdown'].gzipBytes)} gzipped, a difference of
+{' '}{kb(sizes['streamdown'].gzipBytes - sizes['kit-renderer-gfm'].gzipBytes)}.
+
+What the table does not say:
+
+- It does not compare features. A package that ships more code does more with
+  it, and this row is one import, not a feature list. Read Streamdown's own
+  documentation before choosing on bytes.
+- It does not measure CSS. The kit's stylesheet is optional and scoped to
+  `.rmk-document`; the JS numbers above exclude stylesheets on both sides.
+- It is one entry expression per row, recorded in the JSON next to the bytes,
+  bundled with esbuild and gzipped. Re-run `pnpm size:bundles` to refresh it.
+
+What this page does claim about the kit is tested: every behaviour above comes
+from <Link href={blob('packages/renderer/tests/streaming.test.tsx')}>one file
+of 59 tests</Link>, which streams seven cases prefix by prefix and pins the two
+prefixes where the output legitimately rewrites itself. Nothing here describes
+how another package behaves, because these tests cover ours and not theirs.
+
+## FAQ
+
+<dl>
+  {FAQ.map((item) => (
+    <div key={item.question}>
+      <dt><strong>{item.question}</strong></dt>
+      <dd>{item.answer}</dd>
+    </div>
+  ))}
+</dl>
+
+## Next
+
+<Link href={sites.rendererDemo}>Try prefixes in the renderer demo</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/renderer on npm</Link> ·{' '}
+<Link href={blob('packages/renderer/tests/streaming.test.tsx')}>The streaming tests</Link>
+
+<Link to="/react-markdown-renderer">React Markdown renderer</Link> ·{' '}
+<Link to="/docs/guides/render-markdown-in-react">How to render Markdown in React</Link> ·{' '}
+<Link to="/nextjs-markdown">Markdown in Next.js</Link> ·{' '}
+<Link to="/docs/renderer/compiling">Compiling documents</Link> ·{' '}
+<Link to="/migrate-from-react-markdown">Migrate from react-markdown</Link>

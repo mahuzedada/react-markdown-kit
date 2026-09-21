@@ -4,42 +4,112 @@ description: "Render Markdown in a Next.js server component with no client JavaS
 ---
 
 import Link from '@docusaurus/Link'
-import { ArticleJsonLd } from '@site/src/components/JsonLd'
+import RenderExample from '@site/src/components/RenderExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
 
-<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path="/nextjs-markdown" />
+export const PATH = '/nextjs-markdown'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'React Markdown renderer', path: '/react-markdown-renderer' },
+  { name: 'Markdown in Next.js' },
+]
+
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/renderer'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const FAQ = [
+  {
+    question: 'Can I render Markdown in a Next.js server component?',
+    answer:
+      'Yes. @react-markdown-kit/renderer has no use client directive and touches no browser global, so the Markdown component renders inside an async server component that reads the file with node:fs, and no JavaScript ships for the Markdown itself.',
+  },
+  {
+    question: 'Do I need dynamic import or a client wrapper for Markdown in Next.js?',
+    answer:
+      'No. Rendering is synchronous and needs no DOM, so there is no dynamic import, no ssr:false wrapper and no useEffect. Only the editor package is a client component, because it is interactive.',
+  },
+  {
+    question: 'How do I make repeat requests skip the Markdown parse?',
+    answer:
+      'Call compileMarkdown once at module scope and pass the resulting document to the renderer. Parsing is roughly 80% of the work, so re-rendering from a compiled document is about 2.8 times faster in benchmarks/run.mjs.',
+  },
+]
+
+export const example = `## Release notes\n\nShipped **today**, rendered on the server.\n\n| Stage | Where it runs |\n| --- | --- |\n| Parse | Server |\n| Render | Server |\n| Hydrate | Nothing to hydrate |`
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
 
 # Markdown in Next.js
 
-The renderer is a server component. It reads files, runs during a static build, and ships
-no JavaScript to the browser for the Markdown itself.
+The renderer is a server component. It reads files, runs during a static build,
+and ships no JavaScript to the browser for the Markdown itself.
 
-## A server component
+## A server component in the App Router
 
-There is no `use client` in this file or in the renderer entry, so React keeps it on the
-server.
+There is no `use client` in this file or in the renderer entry, so React keeps
+it on the server.
 
 ```tsx
 // app/posts/[slug]/page.tsx
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
 
+// The dialect, decided once for the whole app.
 const preset = defineMarkdownPreset({ extensions: [gfm()] })
 
-export default async function Page({ params }) {
-  const content = await readFile(`content/${params.slug}.md`, 'utf8')
-  return <Markdown preset={preset}>{content}</Markdown>
+export async function generateStaticParams() {
+  const files = await readdir('content')
+  return files
+    .filter((file) => file.endsWith('.md'))
+    .map((file) => ({ slug: file.replace(/\.md$/, '') }))
+}
+
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const content = await readFile(`content/${slug}.md`, 'utf8')
+
+  return (
+    <article className="rmk-document">
+      <Markdown preset={preset}>{content}</Markdown>
+    </article>
+  )
 }
 ```
 
-Reading from `node:fs` in the same component only works because the renderer never
-touches a browser global.
+Three things make that work.
+
+- **No `use client`.** React treats the directive as a module boundary, so a
+  module without one stays on the server side of the graph.
+- **No browser global.** Reading from `node:fs` in the same component is safe,
+  and the same code runs in a static export with no DOM.
+- **Synchronous rendering.** No `dynamic()`, no `ssr: false`, no `useEffect`.
+  There is also no `MarkdownAsync` and no `MarkdownHooks`, so an async remark
+  or rehype plugin will not run
+  (<Link to="/docs/compatibility">compatibility</Link>).
+
+The `rmk-document` class is optional. It scopes the shipped stylesheet, which
+you import once in the root layout if you want the typography:
+<Link to="/docs/styling">styling</Link>.
+
+<RenderExample
+  gfm
+  title="What that page renders, live on this page"
+  markdown={example}
+/>
 
 ## Precompile what does not change
 
-Parsing is roughly 80% of the work. Hoist it out of the request path and re-render from
-the compiled document, which is about 2.8 times faster.
+Parsing is roughly 80% of the work. Hoist it out of the request path and
+re-render from the compiled document, which is about 2.8 times faster in the
+benchmark (<Link href={blob('benchmarks/README.md')}>results</Link>,
+<Link href={blob('benchmarks/run.mjs')}>`benchmarks/run.mjs`</Link>).
 
 ```tsx
+import { readFile } from 'node:fs/promises'
 import Markdown, { compileMarkdown } from '@react-markdown-kit/renderer'
 
 // Parsed once per process, not once per request.
@@ -50,14 +120,55 @@ export default function Page() {
 }
 ```
 
-A compiled document is plain JSON. It survives a cache, a queue and an HTTP boundary, so
-it can also come from a build step.
+A compiled document is plain JSON. It survives a cache, a queue and an HTTP
+boundary, so it can also come from a build step, from `unstable_cache`, or from
+a CMS webhook that compiles on publish. The content policy runs again on the
+way to HTML, so compiling early is not a way around it
+(<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L107')}>test</Link>).
+
+<Link to="/docs/renderer/compiling">Compiling documents</Link>
+
+## Route handlers and metadata
+
+The same import works outside a page. A route handler can compile Markdown and
+return the document as JSON, and `generateMetadata` can read the front matter
+your own loader parsed, since the renderer takes the body as a string.
+
+```tsx
+// app/api/doc/[slug]/route.ts
+import { NextResponse } from 'next/server'
+import { compileMarkdown } from '@react-markdown-kit/renderer'
+
+export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  return NextResponse.json(compileMarkdown(await load(slug)))
+}
+```
+
+## Markdown from users
+
+Raw HTML is rendered as visible escaped text rather than executed, and URL
+schemes outside `http`, `https`, `irc`, `ircs`, `mailto` and `xmpp` are
+emptied. Both defaults are asserted in
+<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>`packages/renderer/tests/render.dom.test.tsx`</Link>,
+and they apply to a server component exactly as they do in the browser.
+<Link to="/docs/security">The security model</Link>.
+
+## Streaming a model's answer
+
+A Next.js chat route streams tokens to a client component. Hand the renderer
+the longer string on every token; every prefix renders, and the finished blocks
+stay byte-identical while the next one is written
+(<Link href={blob('packages/renderer/tests/streaming.test.tsx')}>streaming tests</Link>).
+
+<Link to="/streaming-markdown">Streaming Markdown in React for AI chat</Link>
 
 ## The editor is the other case
 
-The editor is interactive, so it is a client component. That is precisely why it is a
-separate package: installing the renderer never drags editor code into a server bundle,
-and a packaging test asserts it against the real tarball.
+The editor is interactive, so it is a client component. That is precisely why
+it is a separate package: installing the renderer never drags editor code into
+a server bundle, and a packaging test asserts it against the real tarball
+(<Link href={blob('tests/packaging.test.ts')}>`tests/packaging.test.ts`</Link>).
 
 ```tsx
 'use client'
@@ -65,7 +176,25 @@ and a packaging test asserts it against the real tarball.
 import { MarkdownEditor } from '@react-markdown-kit/editor'
 ```
 
+## FAQ
+
+<dl>
+  {FAQ.map((item) => (
+    <div key={item.question}>
+      <dt><strong>{item.question}</strong></dt>
+      <dd>{item.answer}</dd>
+    </div>
+  ))}
+</dl>
+
 ## Next
 
+<Link href={sites.rendererDemo}>Renderer demo</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/renderer on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
+
 <Link to="/docs/server-rendering">Server rendering in depth</Link> ·{' '}
-<Link to="/react-markdown-renderer">Renderer overview</Link>
+<Link to="/react-markdown-renderer">React Markdown renderer</Link> ·{' '}
+<Link to="/docs/guides/render-markdown-in-react">How to render Markdown in React</Link> ·{' '}
+<Link to="/streaming-markdown">Streaming Markdown in React</Link> ·{' '}
+<Link to="/migrate-from-react-markdown">Migrate from react-markdown</Link>
