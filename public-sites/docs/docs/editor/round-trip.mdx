@@ -1,5 +1,6 @@
 ---
-title: Round-trip preservation
+title: "Round-trip preservation of Markdown"
+sidebar_label: Round-trip preservation
 description: "What the editor guarantees about your source: no-op preservation, documented normalization on edit, opaque nodes for unsupported syntax, no silent loss."
 ---
 
@@ -21,13 +22,13 @@ That is the contract this page is about. It is the reason the editor is safe to 
 
 ## Why this needs saying
 
-Most Markdown WYSIWYG editors parse into an editing model and serialize back out. Anything the model cannot hold is lost on the way through, and the loss shows up as a diff nobody asked for.
+A WYSIWYG editor that parses into an editing model and serializes back out loses anything the model cannot hold. The loss shows up as a diff nobody asked for.
 
 The editor this package replaces did exactly that. Its audit, `docs/AUDIT.md`, lists 22 constructs it damaged on save. A blank quote line gained a second marker. A backslash doubled. A tilde fence got escaped into prose. Reference links were never parsed at all.
 
 Each corruption stuck, and each save compounded it.
 
-All 22 of those cases are fixtures in this repository. The editor round-trips every one byte-identically, with GFM on and with GFM off, and the test fails the build if any of them stops.
+All 22 of those cases are fixtures in this repository. The editor round-trips every one byte-identically, with GFM on and with GFM off, in [`packages/editor/tests/roundtrip.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/packages/editor/tests/roundtrip.test.ts). The serializer path has its own suite, [`tests/roundtrip.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/roundtrip.test.ts): 22 of 22 keep their meaning, 22 of 22 are idempotent, 14 of 22 come back byte-identical, because that path canonicalizes. Either suite fails the build if a case stops.
 
 ## The four guarantees
 
@@ -136,7 +137,7 @@ Conflating these is how the old bugs went unnoticed, so the distinction is worth
 
 **The editor layer** is open, look around, close. Byte identity is required, 22 out of 22. That is what this page guarantees, and it works because unchanged regions are never re-serialized.
 
-**The serializer layer** is `documentToMarkdown(compileMarkdown(source))`. That path deliberately canonicalizes, so byte identity is neither expected nor wanted. What holds there is semantic stability, 22 out of 22, and idempotence, 22 out of 22. Saving twice never differs from saving once.
+**The serializer layer** is `documentToMarkdown(compileMarkdown(source))`. That path deliberately canonicalizes, so byte identity is neither expected nor wanted. What holds there is semantic stability, 22 out of 22, and idempotence, 22 out of 22, in `tests/roundtrip.test.ts`. Saving twice never differs from saving once.
 
 Use the editor when the exact bytes matter. Use the serializer when you want a canonical form. See [Compiling](../renderer/compiling.mdx).
 

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="188" height="20" role="img" aria-label="Mermaid: Open in visual editor">
+  <title>Mermaid: Open in visual editor</title>
+  <clipPath id="r"><rect width="188" height="20" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="60" height="20" fill="#1c2127"/>
+    <rect x="60" width="128" height="20" fill="#2d72d2"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="30" y="14" textLength="48">Mermaid</text>
+    <text x="124" y="14" textLength="116">Open in visual editor</text>
+  </g>
+</svg>

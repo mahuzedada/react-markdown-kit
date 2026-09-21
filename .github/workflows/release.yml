@@ -1,0 +1,59 @@
+name: Release
+
+# Publishes the five workspace packages (packages/* and plugins/*) to npm
+# when a tag matching v* is pushed. The tag must equal every package.json
+# version, so a release is one commit that bumps all five together.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  id-token: write   # npm provenance
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The version comes from package.json's packageManager field; naming
+      # one here too makes the action refuse to run when they differ.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          # Writes the .npmrc that maps NODE_AUTH_TOKEN to the registry.
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm fixtures          # download the pinned CommonMark spec
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm build
+
+      - name: Tag version must match every package.json
+        run: |
+          node - "$GITHUB_REF_NAME" <<'JS'
+          const { readFileSync } = require('node:fs')
+          const tag = process.argv[2].replace(/^v/, '')
+          const files = [
+            'packages/renderer', 'packages/editor',
+            'plugins/template', 'plugins/mermaid', 'plugins/slides',
+          ].map((dir) => `${dir}/package.json`)
+          const mismatched = files
+            .map((file) => ({ file, version: JSON.parse(readFileSync(file, 'utf8')).version }))
+            .filter(({ version }) => version !== tag)
+          if (mismatched.length) {
+            for (const { file, version } of mismatched) {
+              console.error(`${file}: version ${version} does not match tag ${tag}`)
+            }
+            process.exit(1)
+          }
+          console.log(`All ${files.length} packages are at ${tag}`)
+          JS
+
+      - name: Publish to npm with provenance
+        run: pnpm -r --filter './packages/*' --filter './plugins/*' publish --access public --provenance --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

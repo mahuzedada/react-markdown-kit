@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-20",
+  "script": "scripts/mermaid-size.mjs",
+  "gzip": "node:zlib gzipSync, level 9, one file at a time",
+  "plugin": {
+    "name": "@react-markdown-kit/mermaid",
+    "version": "0.1.0",
+    "entry": "plugins/mermaid/dist/index.js",
+    "method": "esbuild 0.27.7: --bundle --minify --format=esm, React and Lexical external",
+    "minified": 54218,
+    "gzipped": 18541
+  },
+  "mermaid": {
+    "name": "mermaid",
+    "version": "12.0.0",
+    "method": "npm pack mermaid@12.0.0; dist/mermaid.esm.min.mjs and dist/chunks/mermaid.esm.min/*.mjs as published, already minified",
+    "entry": {
+      "file": "dist/mermaid.esm.min.mjs",
+      "files": 1,
+      "minified": 30198,
+      "gzipped": 11359
+    },
+    "flowchart": {
+      "what": "the entry plus every chunk a flowchart loads: static import closure of the entry, dist/chunks/mermaid.esm.min/flowDiagram-WPHQAKTU.mjs and dist/chunks/mermaid.esm.min/dagre-QJJCSHY4.mjs",
+      "files": 28,
+      "minified": 881940,
+      "gzipped": 242781
+    },
+    "all": {
+      "what": "the entry plus every chunk in dist/chunks/mermaid.esm.min",
+      "files": 105,
+      "minified": 5457829,
+      "gzipped": 1609780
+    },
+    "unpackedSize": {
+      "what": "dist.unpackedSize from the registry: every file in the tarball, source maps, types and docs included",
+      "bytes": 124593065
+    }
+  }
+}

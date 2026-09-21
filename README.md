@@ -146,6 +146,24 @@ node scripts/check-css-scope.mjs   # enforce the styling contract
 pnpm -r --filter './public-sites/*' build   # the docs site and the four demo sites
 ```
 
+## Releasing
+
+Every release publishes all five packages at the same version.
+
+1. Bump `version` in every `package.json` under `packages/` and `plugins/`,
+   and add an entry to each package's `CHANGELOG.md`.
+2. Commit, then tag the commit `vX.Y.Z` and push the tag:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) runs the
+tests, typecheck and build, fails if the tag does not match every
+`package.json` version, and publishes to npm with provenance. `NPM_TOKEN`
+must be set as a repository secret before the first tag.
+
 ## License
 
 MIT

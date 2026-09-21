@@ -97,3 +97,106 @@
   font-size: 0.78rem;
   color: var(--muted-foreground);
 }
+
+/* Copy link and Share, next to the status badge in the code pane's head. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.action {
+  padding: 0.15rem 0.55rem;
+  font: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: var(--primary-text);
+  background: transparent;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.action:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
+.action:disabled {
+  color: var(--muted-foreground);
+  border-color: var(--border);
+  cursor: default;
+}
+
+.action[aria-expanded='true'] {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+/* The share panel: the link, the README badge and the embed snippet. */
+.share {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+}
+
+.shareRow {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.4rem;
+}
+
+.shareLabel {
+  padding-top: 0.3rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.shareField {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0.3rem 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: none;
+  box-sizing: border-box;
+}
+
+.shareField:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+.shareNote {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--muted-foreground);
+}
+
+.shareNote a {
+  color: var(--primary-text);
+}
+
+.shareNote code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+}
+
+.hint a {
+  color: var(--primary-text);
+}

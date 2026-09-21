@@ -12,7 +12,9 @@
     "lint": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
     "fixtures": "node scripts/fetch-fixtures.mjs",
     "pack:check": "node scripts/pack-check.mjs",
-    "bench": "node benchmarks/run.mjs"
+    "bench": "node benchmarks/run.mjs",
+    "seo:report": "node scripts/seo-report.mjs",
+    "size:mermaid": "node scripts/mermaid-size.mjs"
   },
   "devDependencies": {
     "@react-markdown-kit/renderer": "workspace:*",

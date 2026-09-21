@@ -1,0 +1,178 @@
+---
+title: "Flowchart to Mermaid: draw it, copy it"
+description: "Turn a flowchart to Mermaid syntax by drawing it on a free visual canvas that writes plain flowchart code for GitHub, GitLab, Notion, Obsidian and React."
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+import Link from '@docusaurus/Link'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+import { mermaid } from '@react-markdown-kit/mermaid'
+
+export const PATH = '/flowchart-to-mermaid'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'Mermaid diagrams', path: '/docs/mermaid' },
+  { name: 'Flowchart to Mermaid' },
+]
+
+export const faq = [
+  {
+    question: 'Can I convert an image of a flowchart to Mermaid?',
+    answer:
+      'Not here, no. The editor converts a drawing you make on its canvas into Mermaid text. It has no image recognition, so it cannot read a PNG, a photo or a PDF of a flowchart. Redraw the flowchart on the canvas and copy the Mermaid it writes.',
+  },
+  {
+    question: 'How do I turn a flowchart into Mermaid syntax?',
+    answer:
+      'Open the editor at mermaid.reactmarkdownkit.com, draw boxes with the Rectangle tool, connect them with the Arrow tool, and type the text of each box. The code pane on the left holds the Mermaid flowchart as you draw. Copy it from there, or with Copy as Mermaid in the canvas toolbar.',
+  },
+  {
+    question: 'Does the layout survive in other tools?',
+    answer:
+      'The positions are stored in one %% rmk-layout v1 comment on the last line of the fence. Mermaid treats a %% line as a comment, so GitHub, GitLab, Notion and Obsidian render the flowchart with their own automatic layout and ignore the line. The React Markdown Kit plugin reads the line back and reproduces the drawing exactly.',
+  },
+]
+
+export const drawn = `\`\`\`mermaid
+flowchart LR
+    smfr1a2b0["Start"]
+    smfr1a2c1["Work"]
+    smfr1a2d2["Done"]
+    smfr1a2b0 --> smfr1a2c1
+    smfr1a2c1 --> smfr1a2d2
+    %% rmk-layout v1 {"canvasHeight":220,"nodes":{"smfr1a2b0":{"x":40,"y":60,"width":160,"height":80,"strokeWidth":2},"smfr1a2c1":{"x":280,"y":60,"width":160,"height":80,"strokeWidth":2},"smfr1a2d2":{"x":520,"y":60,"width":160,"height":80,"strokeWidth":2}},"edges":{"smfr1a2b0->smfr1a2c1":{"id":"smfr1a2e3","x":200,"y":100,"width":80,"height":0,"stroke":"#1e1e1e","fill":"transparent","strokeWidth":2},"smfr1a2c1->smfr1a2d2":{"id":"smfr1a2f4","x":440,"y":100,"width":80,"height":0,"stroke":"#1e1e1e","fill":"transparent","strokeWidth":2}}}
+\`\`\`
+`
+
+export const plain = `\`\`\`mermaid
+flowchart LR
+    a[Start] --> b[Work]
+    b --> c[Done]
+\`\`\`
+`
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={faq} />
+
+# Flowchart to Mermaid
+
+This page turns a drawing into Mermaid text. You draw the flowchart on the
+canvas at <a href={sites.mermaidDemo}>mermaid.reactmarkdownkit.com</a>, and
+the editor writes the Mermaid flowchart syntax as you draw. It does not read
+an image, a photo or a PDF of a flowchart. If you have a picture, redraw it
+on the canvas and copy the text. Three boxes and two arrows is five drags.
+
+The editor and the plugin behind it, `@react-markdown-kit/mermaid`, handle
+flowcharts only. Sequence, class, Gantt and the other Mermaid diagram types
+stay ordinary code blocks
+([`mermaid-parse.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts)).
+The editor is free, open source under MIT, and runs in the browser with no
+account.
+
+## Draw a three-step flowchart
+
+The walkthrough draws Start, Work and Done, joined by two arrows. The key
+handling it relies on is in
+[`drawing-canvas.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/src/canvas/drawing-canvas.tsx)
+and
+[`text-edit-overlay.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/src/canvas/text-edit-overlay.tsx).
+
+1. Open <a href={sites.mermaidDemo}>the editor</a>. It loads with an example
+   diagram. Click the canvas on the right to focus it, press `Ctrl+A`
+   (`Cmd+A` on macOS) to select every shape, then press `Delete`. The code
+   pane on the left now reads `flowchart LR` plus an empty layout line.
+2. Pick **Rectangle** in the canvas toolbar and drag on the canvas. The new
+   box is selected. Press `Enter`, type `Start`, and press `Enter` again to
+   commit the text. Double-clicking a box also opens its text.
+3. Repeat step 2 twice, to the right of the first box, with `Work` and
+   `Done`.
+4. Pick **Arrow**. Drag from inside the Start box to inside the Work box.
+   The arrow binds to the boxes it starts and ends on, and follows them when
+   they move. Draw a second arrow from Work to Done.
+5. Copy the text from the **Mermaid code** pane on the left. Every drag has
+   already been written there. **Copy as Mermaid** in the canvas toolbar
+   copies the same text.
+
+The code pane holds this, with generated node ids and the layout line the
+canvas writes. The right-hand side below is the plugin rendering that text on
+this page, as static SVG.
+
+<RenderExample title="What the canvas wrote: three boxes, two arrows, one layout line" markdown={drawn} rendererProps={{ extensions: [mermaid()] }} />
+
+For a README, most people rename the ids and drop the layout line. The
+result is the shortest Mermaid that draws the same flowchart, and every
+Mermaid renderer lays it out automatically. Edit the left pane to try it.
+
+<RenderExample editable title="The same flowchart, ids renamed, layout line removed" markdown={plain} rendererProps={{ extensions: [mermaid()] }} />
+
+If you rename an id in the syntax while keeping the layout line, the entry
+under the old id names nothing and is ignored, and that box falls back to
+automatic layout
+([LAYOUT_ANNOTATION.md, section 6, rule 7](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/LAYOUT_ANNOTATION.md)).
+
+There are no screenshots on this page. The diagrams above are rendered by
+the plugin itself from the text shown next to them.
+
+## Where the output works
+
+The canvas writes ordinary Mermaid flowchart syntax, so the fence renders
+wherever Mermaid fences render. Each renderer below documents ```` ```mermaid ````
+support on its own site.
+
+| Host | Documentation |
+| --- | --- |
+| GitHub | [Creating diagrams](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams) |
+| GitLab | [GitLab Flavored Markdown, Mermaid](https://docs.gitlab.com/user/markdown/#mermaid) |
+| Notion | [Enhanced Markdown, code blocks](https://developers.notion.com/guides/data-apis/enhanced-markdown) |
+| Obsidian | [Advanced formatting syntax, Diagrams](https://obsidian.md/help/Editing+and+formatting/Advanced+formatting+syntax) |
+| React | The plugin on this site, <Link to="/react-mermaid">Mermaid in React Markdown</Link> |
+
+The layout line starts with `%%`, which
+[Mermaid defines as a comment](https://mermaid.js.org/syntax/flowchart.html#comments).
+Those hosts render the flowchart with their own automatic layout and skip
+the line. The plugin reads it back and reproduces the drawing; the round
+trip is covered by
+[`layout-annotation.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/layout-annotation.test.ts).
+
+In React, the same fence becomes static SVG with no script, no event
+attribute, no `foreignObject` and no external reference, asserted in
+[`extension.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/extension.test.tsx).
+The package lists no Mermaid.js dependency
+([`package.json`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/package.json)).
+
+```bash
+npm install @react-markdown-kit/renderer @react-markdown-kit/mermaid
+```
+
+```tsx
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { mermaid } from '@react-markdown-kit/mermaid'
+
+const preset = defineMarkdownPreset({ extensions: [mermaid()] })
+
+<Markdown preset={preset}>{content}</Markdown>
+```
+
+## FAQ
+
+<dl>
+  {faq.map((item) => (
+    <div key={item.question}>
+      <dt><strong>{item.question}</strong></dt>
+      <dd>{item.answer}</dd>
+    </div>
+  ))}
+</dl>
+
+## Next
+
+<a href={sites.mermaidDemo}>Draw a flowchart in the editor</a> ·{' '}
+<a href="https://www.npmjs.com/package/@react-markdown-kit/mermaid">@react-markdown-kit/mermaid on npm</a> ·{' '}
+<Link to="/mermaid-live-editor-alternative">Mermaid Live Editor alternative</Link> ·{' '}
+<Link to="/react-mermaid">Mermaid in React Markdown</Link> ·{' '}
+<Link to="/edit-ai-generated-mermaid">Fix AI-generated Mermaid</Link> ·{' '}
+<Link to="/docs/mermaid">Mermaid plugin reference</Link> ·{' '}
+<a href={sites.github}>Source on GitHub</a>

@@ -74,3 +74,50 @@ export function ArticleJsonLd({ headline, description, path }: ArticleJsonLdProp
     />
   )
 }
+
+export interface Crumb {
+  readonly name: string
+  /** Site-relative path. The last crumb usually has none: Google wants `item` on every crumb but the last. */
+  readonly path?: string
+}
+
+/** A breadcrumb trail for a page under src/pages (docs under /docs get one from Docusaurus). */
+export function BreadcrumbJsonLd({ trail }: { readonly trail: readonly Crumb[] }): ReactNode {
+  const { siteConfig } = useDocusaurusContext()
+  return (
+    <JsonLd
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: trail.map((crumb, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: crumb.name,
+          ...(crumb.path === undefined ? {} : { item: `${siteConfig.url}${crumb.path}` }),
+        })),
+      }}
+    />
+  )
+}
+
+export interface FaqEntry {
+  readonly question: string
+  readonly answer: string
+}
+
+/** The FAQ section of a page as FAQPage structured data; the visible answers must say the same. */
+export function FaqJsonLd({ items }: { readonly items: readonly FaqEntry[] }): ReactNode {
+  return (
+    <JsonLd
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: items.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: { '@type': 'Answer', text: item.answer },
+        })),
+      }}
+    />
+  )
+}

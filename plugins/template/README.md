@@ -1,7 +1,9 @@
 # @react-markdown-kit/template
 
-Markdown templating for React Markdown Kit, as plugins. Typed variables,
-runtime schemas, formatting and localization.
+Markdown template variables for React Markdown Kit, as plugins. Typed
+placeholders, runtime schemas, formatting and localization. Values are placed
+into the parsed tree, never into the source text, so data cannot inject
+Markdown or HTML.
 
 ```bash
 npm install @react-markdown-kit/renderer @react-markdown-kit/template
@@ -11,9 +13,12 @@ npm install @react-markdown-kit/renderer @react-markdown-kit/template
 import Markdown from '@react-markdown-kit/renderer'
 import { template } from '@react-markdown-kit/template'
 
-<Markdown extensions={[template({ data: { user: { name: 'Chatis' } } })]}>
-  {'# Hello {{user.name}}'}
-</Markdown>
+const source = '# Hello {{user.name}}\n\nYour balance is {{balance | currency:"USD"}}.'
+
+export function Greeting({ user, balance }: { user: { name: string }; balance: number }) {
+  const extensions = [template({ data: { user, balance }, locale: 'en-US' })]
+  return <Markdown extensions={extensions}>{source}</Markdown>
+}
 ```
 
 There is no engine to call. `template({ data })` is a `MarkdownExtension`;
@@ -29,6 +34,14 @@ const markdown = await documentToMarkdown(document)
 
 The root entry imports no React and no Lexical, so this runs in a service, a
 worker, a CLI, an email job or a PDF pipeline.
+[`scripts/pack-check.mjs`](https://github.com/mahuzedada/react-markdown-kit/blob/main/scripts/pack-check.mjs)
+resolves a template from the packed tarball with no Lexical installed.
+
+## Links
+
+- Docs: [Markdown template engine](https://docs.reactmarkdownkit.com/markdown-template-engine)
+- Editor demo with placeholder chips: [editor.reactmarkdownkit.com](https://editor.reactmarkdownkit.com)
+- Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
 
 ## Data cannot inject Markdown structure
 
@@ -38,6 +51,11 @@ renders those literal asterisks and no value can create a heading, a table
 row, a link destination, an HTML tag or a code fence. Placeholders inside code
 are literal, and so is an escaped `\{{delimiter}}`. Paths that reach for the
 prototype chain (`__proto__`, `constructor`, `prototype`) never resolve.
+
+Each of those sentences is a test:
+[`plugins/template/tests/injection.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/template/tests/injection.test.ts)
+and
+[`tests/template-security-independent.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/template-security-independent.test.ts).
 
 ## Failure renders nothing
 

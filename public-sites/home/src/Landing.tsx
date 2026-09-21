@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, softwareSourceCode, type FaqItem } from '../../shared/Seo'
+import size from '../../../docs/data/mermaid-size.json'
 
 /*
  * The hub (docs/SEO_WORKPLAN.md, milestone A item 9): every package funnel,
@@ -13,6 +14,9 @@ export const TITLE = 'React Markdown Kit: renderer, editor, Mermaid and slides f
 /** Also the meta description in index.html; tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
   'React Markdown Kit renders Markdown in React, adds a rich editor that saves plain Markdown, and ships plugins for templates, Mermaid flowcharts and slides.'
+
+/** The same formula as docs/src/pages/react-mermaid.mdx, from the same file. */
+const kb = (bytes: number): string => `${(bytes / 1024).toFixed(1)} KB`
 
 const USE = `import Markdown from '@react-markdown-kit/renderer'
 
@@ -103,6 +107,29 @@ const EVIDENCE: readonly Evidence[] = [
     href: docsUrl('/nextjs-markdown'),
     label: 'Next.js and server components',
     what: 'No use client directive; render on the server or in static builds.',
+  },
+]
+
+const GUIDES: readonly Evidence[] = [
+  {
+    href: docsUrl('/react-mermaid'),
+    label: 'Mermaid in React, no Mermaid.js',
+    what: `Flowcharts as static SVG: ${kb(size.plugin.gzipped)} gzipped against ${kb(size.mermaid.flowchart.gzipped)} for a Mermaid.js flowchart (measured by scripts/mermaid-size.mjs).`,
+  },
+  {
+    href: docsUrl('/mermaid-live-editor-alternative'),
+    label: 'Mermaid Live Editor alternative',
+    what: 'mermaid.live and the visual canvas side by side: editing, sharing, price, licence, diagram types.',
+  },
+  {
+    href: docsUrl('/flowchart-to-mermaid'),
+    label: 'Flowchart to Mermaid',
+    what: 'Draw a flowchart on the canvas and copy the Mermaid it writes.',
+  },
+  {
+    href: docsUrl('/edit-ai-generated-mermaid'),
+    label: 'Fix AI-generated Mermaid',
+    what: 'Paste model output, drag the layout right, copy it back with positions kept in a comment.',
   },
 ]
 
@@ -210,6 +237,18 @@ export default function Landing(): ReactNode {
             <li key={demo.href}>
               <a href={demo.href}>{demo.label}</a>
               <span>{demo.what}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="home-section" aria-labelledby="home-guides">
+        <h2 id="home-guides">Mermaid guides</h2>
+        <ul className="home-list">
+          {GUIDES.map((guide) => (
+            <li key={guide.href}>
+              <a href={guide.href}>{guide.label}</a>
+              <span>{guide.what}</span>
             </li>
           ))}
         </ul>

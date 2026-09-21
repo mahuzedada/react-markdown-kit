@@ -1,13 +1,16 @@
 /**
  * The SEO surface of the six public sites (docs/SEO_WORKPLAN.md, milestone E
- * item 1): every built page has one h1, a title, a description, an absolute
- * canonical, Open Graph and Twitter tags with a PNG image that exists, and
- * structured data that parses; every host serves robots.txt, a sitemap with
- * lastmod, and the shared llms.txt; and no page links to a 404 on any of the
- * six hosts.
+ * item 1): every built page has one h1, a title of 50 to 60 characters, a
+ * description of 140 to 155, an absolute canonical, Open Graph and Twitter
+ * tags with a PNG image that exists, structured data that parses and names a
+ * type, and a FAQPage block wherever it shows an FAQ; every host serves
+ * robots.txt, a sitemap with lastmod, and the shared llms.txt; and no page
+ * links to a 404 on any of the six hosts. tests/seo-links.test.ts checks
+ * every other href and src, and the READMEs.
  *
- * It reads build output, so a site that is not built is skipped here and
- * checked by the `public-sites` CI job after the builds.
+ * It reads build output, so a site that is not built is skipped locally. In
+ * CI (`CI` set) a missing build is a failure, so the `public-sites` job cannot
+ * pass with a host it never inspected.
  */
 import { describe, expect, it } from 'vitest'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
@@ -20,7 +23,7 @@ interface Site {
   readonly name: string
   readonly dir: string
   readonly url: string
-  /** A single landing page written to the workplan's title and description lengths. */
+  /** A single landing page: canonical is the root and the structured data repeats the description. */
   readonly landing: boolean
 }
 
@@ -61,6 +64,10 @@ function jsonLd(html: string): Array<Record<string, unknown>> {
   )
 }
 
+/** A page with an FAQ section: the shared `Faq` component, or a heading that says so. */
+const hasFaq = (html: string): boolean =>
+  /class="[^"]*\bsite-faq\b/.test(html) || /<h[1-6][^>]*>[^<]*(FAQ|Frequently asked)/i.test(html)
+
 /** Does `path` (site-relative, no query or hash) resolve to a file in `dir`? */
 function resolves(dir: string, path: string): boolean {
   const clean = decodeURIComponent(path).replace(/\/$/, '')
@@ -68,7 +75,14 @@ function resolves(dir: string, path: string): boolean {
   return [clean, `${clean}/index.html`, `${clean}.html`].some((candidate) => existsSync(join(dir, candidate)))
 }
 
+const inCI = process.env['CI'] !== undefined && process.env['CI'] !== ''
+
 for (const site of SITES) {
+  if (inCI) {
+    it(`${site.name} is built`, () => {
+      expect(built(site), site.dir).toBe(true)
+    })
+  }
   describe.skipIf(!built(site))(`${site.name} (${site.url})`, () => {
     const dir = join(root, site.dir)
 
@@ -103,20 +117,17 @@ for (const site of SITES) {
           expect(html.match(/<h1[\s>]/g) ?? []).toHaveLength(1)
         })
 
-        it('has a title and a description of the right length', () => {
+        it('has a title of 50 to 60 characters naming the kit', () => {
           const title = decode(attribute(html, /<title[^>]*>([^<]*)<\/title>/) ?? '')
+          expect(title.length, title).toBeGreaterThanOrEqual(50)
+          expect(title.length, title).toBeLessThanOrEqual(60)
+          expect(title, title).toContain('React Markdown Kit')
+        })
+
+        it('has a description of 140 to 155 characters', () => {
           const description = decode(meta(html, 'name', 'description') ?? '')
-          expect(title).not.toBe('')
-          expect(description).not.toBe('')
-          if (site.landing) {
-            expect(title.length, title).toBeGreaterThanOrEqual(50)
-            expect(title.length, title).toBeLessThanOrEqual(60)
-            expect(description.length, description).toBeGreaterThanOrEqual(140)
-            expect(description.length, description).toBeLessThanOrEqual(155)
-          } else {
-            expect(title.length, title).toBeLessThanOrEqual(75)
-            expect(description.length, description).toBeLessThanOrEqual(160)
-          }
+          expect(description.length, description).toBeGreaterThanOrEqual(140)
+          expect(description.length, description).toBeLessThanOrEqual(155)
         })
 
         it('has an absolute canonical on this host', () => {
@@ -130,6 +141,7 @@ for (const site of SITES) {
           expect(meta(html, 'property', 'og:title')).toBeTruthy()
           expect(meta(html, 'property', 'og:description')).toBeTruthy()
           expect(meta(html, 'property', 'og:url')?.startsWith(site.url)).toBe(true)
+          expect(meta(html, 'property', 'og:type')).toBe('website')
           expect(meta(html, 'name', 'twitter:card')).toBe('summary_large_image')
           const image = meta(html, 'property', 'og:image') ?? ''
           expect(image.startsWith(site.url)).toBe(true)
@@ -142,6 +154,19 @@ for (const site of SITES) {
           expect(blocks.length).toBeGreaterThan(0)
           for (const block of blocks) expect(typeof block['@type']).toBe('string')
         })
+
+        if (hasFaq(html)) {
+          it('backs its FAQ with a FAQPage block that lists every question', () => {
+            const faq = jsonLd(html).find((block) => block['@type'] === 'FAQPage')
+            expect(faq).toBeDefined()
+            const questions = (faq?.['mainEntity'] as Array<Record<string, unknown>> | undefined) ?? []
+            expect(questions.length).toBeGreaterThan(0)
+            for (const question of questions) {
+              expect(question['@type']).toBe('Question')
+              expect(typeof question['name']).toBe('string')
+            }
+          })
+        }
 
         if (site.landing) {
           it('describes itself the same way in the meta description and the structured data', () => {
@@ -167,3 +192,26 @@ for (const site of SITES) {
     }
   })
 }
+
+/**
+ * The Mermaid size figures in the shared llms.txt files are copied by hand
+ * from docs/data/mermaid-size.json (scripts/mermaid-size.mjs writes it), so a
+ * rerun of the script that changes the JSON fails here until the text is
+ * updated. docs/src/pages/react-mermaid.mdx and home/src/Landing.tsx read the
+ * JSON at build time with the same formula.
+ */
+describe('llms.txt Mermaid size figures', () => {
+  const size = JSON.parse(readFileSync(join(root, 'docs/data/mermaid-size.json'), 'utf8')) as {
+    plugin: { gzipped: number }
+    mermaid: { flowchart: { gzipped: number } }
+  }
+  const kb = (bytes: number): string => `${(bytes / 1024).toFixed(1)} KB`
+  for (const file of ['llms.txt', 'llms-full.txt']) {
+    it(`${file} states the measured plugin and Mermaid.js flowchart sizes`, () => {
+      const text = readFileSync(join(root, 'public-sites/shared/llms', file), 'utf8')
+      const line = text.split('\n').find((candidate) => candidate.includes('/react-mermaid)'))
+      expect(line).toBeDefined()
+      expect(line).toContain(`${kb(size.plugin.gzipped)} gzipped against ${kb(size.mermaid.flowchart.gzipped)}`)
+    })
+  }
+})

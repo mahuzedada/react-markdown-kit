@@ -1,6 +1,6 @@
 /**
  * The diagram block through the editor's headless bridge: an untouched fence
- * writes back byte for byte (both formats, even an unparseable payload), and
+ * writes back byte for byte (all three formats, even an unparseable payload), and
  * the first edit turns the block into ```drawing without touching its
  * neighbours.
  */
@@ -15,6 +15,8 @@ const DRAWING_PAYLOAD =
   '{"version":3,"canvasHeight":200,"shapes":[{"id":"a","type":"rect","x":20,"y":40,"width":150,"height":80,"stroke":"#1971c2","fill":"#a5d8ff","strokeWidth":2,"text":"A"}]}'
 
 const SKELETON_PAYLOAD = '{"boxes":[{"id":"web","text":"Web"},{"id":"api","text":"API"}],"connectors":[{"from":"web","to":"api"}]}'
+
+const FLOWCHART = 'flowchart LR\n    web[Web App] -->|REST| api[(API)]'
 
 const DOCUMENT = `# Title
 
@@ -31,6 +33,12 @@ ${SKELETON_PAYLOAD}
 \`\`\`
 
 After the diagram.
+
+\`\`\`mermaid
+${FLOWCHART}
+\`\`\`
+
+After the flowchart.
 `
 
 function open(source: string): { editor: LexicalEditor; bridge: ReturnType<typeof createMarkdownBridge> } {
@@ -49,12 +57,13 @@ function read<T>(editor: LexicalEditor, callback: () => T): T {
 }
 
 describe('mermaid() on the editor bridge', () => {
-  it('round-trips a document with both fence formats byte for byte', () => {
+  it('round-trips a document with all three fence formats byte for byte', () => {
     const { editor, bridge } = open(DOCUMENT)
     expect(bridge.getMarkdown()).toBe(DOCUMENT)
     const nodes = diagramNodes(editor)
-    expect(nodes).toHaveLength(2)
-    expect(read(editor, () => nodes.map((node) => node.getFormat()))).toEqual(['drawing', 'diagram'])
+    expect(nodes).toHaveLength(3)
+    expect(read(editor, () => nodes.map((node) => node.getFormat()))).toEqual(['drawing', 'diagram', 'mermaid'])
+    expect(read(editor, () => nodes[2]?.getData().shapes.map((shape) => shape.type))).toEqual(['rect', 'cylinder', 'arrow'])
     expect(read(editor, () => nodes[0]?.getData().shapes)).toHaveLength(1)
     // The skeleton is expanded on import: two boxes and one bound arrow.
     expect(read(editor, () => nodes[1]?.getData().shapes.map((shape) => shape.type))).toEqual([
@@ -82,8 +91,9 @@ describe('mermaid() on the editor bridge', () => {
     expect(out).toContain('# Title\n\nBefore the drawing.\n\n')
     expect(out).toContain('\n\nBetween the two.\n\n')
     expect(out).toContain('\n\nAfter the diagram.\n')
-    // The untouched skeleton is still the original bytes.
+    // The untouched skeleton and flowchart are still the original bytes.
     expect(out).toContain('```diagram\n' + SKELETON_PAYLOAD + '\n```')
+    expect(out).toContain('```mermaid\n' + FLOWCHART + '\n```\n\nAfter the flowchart.\n')
   })
 
   it('expands a ```diagram skeleton one way: the first edit makes it ```mermaid', () => {
@@ -98,7 +108,7 @@ describe('mermaid() on the editor bridge', () => {
     )
     const out = bridge.getMarkdown()
     expect(out).not.toContain('```diagram')
-    expect(out.match(/```mermaid/g)).toHaveLength(1)
+    expect(out.match(/```mermaid/g)).toHaveLength(2)
     expect(out).toContain('    web --> api\n')
     expect(out).toContain('"width":"text"')
     // The first block was never touched and is still its original bytes.

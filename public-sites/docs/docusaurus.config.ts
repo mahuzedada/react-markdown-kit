@@ -37,6 +37,10 @@ const config: Config = {
   projectName: 'react-markdown-kit',
 
   onBrokenLinks: 'throw',
+
+  // Milestone A item 5: og:type on every page. The preset emits the other
+  // Open Graph tags; tests/seo-surface.test.ts checks all of them.
+  headTags: [{ tagName: 'meta', attributes: { property: 'og:type', content: 'website' } }],
   markdown: { hooks: { onBrokenMarkdownLinks: 'throw' } },
 
   i18n: { defaultLocale: 'en', locales: ['en'] },
@@ -58,12 +62,14 @@ const config: Config = {
         sitemap: { lastmod: 'date', changefreq: null, priority: null },
         theme: {
           // The ZUI token contract, the Foundry theme (token overrides, shared
-          // with the demo sites), the kit's diagram properties mapped onto the
-          // tokens, then the Infima-to-token map. Order matters: each layer
-          // overrides the last.
+          // with the demo sites), the Mermaid plugin's optional stylesheet (so
+          // every example diagram scales to its column), the kit's diagram
+          // properties mapped onto the tokens, then the Infima-to-token map.
+          // Order matters: each layer overrides the last.
           customCss: [
             require.resolve('@zuilib/tokens/tokens.css'),
             require.resolve('../shared/foundry.css'),
+            require.resolve('@react-markdown-kit/mermaid/styles.css'),
             require.resolve('../shared/kit.css'),
             './src/css/custom.css',
           ],

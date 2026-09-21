@@ -10,7 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: 10 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
@@ -32,7 +31,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: 10 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
@@ -43,7 +41,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: 10 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
@@ -61,7 +58,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: 10 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
@@ -83,6 +79,11 @@ jobs:
       - run: pnpm --filter react-markdown-kit-editor-demo build
       - run: pnpm --filter react-markdown-kit-mermaid-demo build
       - run: pnpm --filter react-markdown-kit-slides-demo build
-      # The SEO surface of the six built sites: one h1, canonical, Open Graph
-      # with a PNG, structured data, robots, sitemap, llms.txt, no internal 404.
-      - run: pnpm vitest run tests/seo-surface.test.ts
+      # The SEO surface of the six built sites: one h1, title and description
+      # lengths, canonical, Open Graph with a PNG, structured data, FAQPage
+      # where there is an FAQ, robots, sitemap, llms.txt; then every href and
+      # src inside the six hosts and in the package READMEs resolves.
+      - run: pnpm vitest run tests/seo-surface.test.ts tests/seo-links.test.ts
+      # One row per page (host, path, title, description length, h1, JSON-LD
+      # types), so a reviewer can eyeball the deploy in the job log.
+      - run: pnpm seo:report

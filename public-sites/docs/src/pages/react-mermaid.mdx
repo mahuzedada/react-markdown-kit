@@ -1,0 +1,355 @@
+---
+title: "React Mermaid: diagrams, no Mermaid.js"
+description: "React Mermaid without Mermaid.js: one plugin renders Mermaid flowcharts in React Markdown as static SVG, on the server or in the browser, flowcharts only."
+---
+
+import Link from '@docusaurus/Link'
+import RenderExample from '@site/src/components/RenderExample'
+import EditorExample from '@site/src/components/EditorExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+import { mermaid } from '@react-markdown-kit/mermaid'
+import { mermaid as mermaidEditor } from '@react-markdown-kit/mermaid/editor'
+import size from '../../../../docs/data/mermaid-size.json'
+
+export const PATH = '/react-mermaid'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'Mermaid diagrams', path: '/docs/mermaid' },
+  { name: 'React Mermaid' },
+]
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/mermaid'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+{/* The plugin's `/editor` entry, built once at module level so the canvas is not remounted on every render. */}
+export const editorExtensions = [mermaidEditor()]
+
+export const kb = (bytes) => `${(bytes / 1024).toFixed(1)} KB`
+export const ratio = (size.mermaid.flowchart.gzipped / size.plugin.gzipped).toFixed(0)
+
+export const FAQ = [
+  {
+    question: 'Does React Mermaid need Mermaid.js?',
+    answer:
+      `No. @react-markdown-kit/mermaid parses the flowchart subset itself and draws static SVG, so nothing loads Mermaid.js. The plugin is ${kb(size.plugin.gzipped)} gzipped; the files Mermaid.js ${size.mermaid.version} loads for one flowchart are ${kb(size.mermaid.flowchart.gzipped)} gzipped, measured by scripts/mermaid-size.mjs.`,
+  },
+  {
+    question: 'Can I render Mermaid in a React server component?',
+    answer:
+      'Yes. The SVG is built as hast with no DOM and no browser global, so <Markdown> with the mermaid() extension renders in a server component, during SSR and in a static build. The plugin tests render it with renderToStaticMarkup.',
+  },
+  {
+    question: 'Which Mermaid diagram types does the plugin render?',
+    answer:
+      'Flowcharts only, written as flowchart or graph in any direction. Sequence, class, Gantt, pie and every other Mermaid diagram type stay ordinary code blocks, rendered as source.',
+  },
+  {
+    question: 'Does the layout comment break GitHub or Mermaid.js?',
+    answer:
+      'No. Positions are stored in one %% rmk-layout v1 comment, and %% starts a comment in Mermaid (mermaid.js.org/syntax/flowchart.html#comments), so Mermaid.js and the hosts that render fences with it, such as GitHub, ignore the line and draw the flowchart with their own layout.',
+  },
+]
+
+
+export const flow = `\`\`\`mermaid
+flowchart LR
+    req[Request] -->|parse| doc[Compiled document]
+    doc --> react[React elements]
+    doc --> html[Static HTML]
+    style doc fill:#a5d8ff,stroke:#1971c2
+\`\`\`
+`
+
+export const editorDoc = `## Release flow
+
+Drag a box, then read the saved Markdown underneath.
+
+\`\`\`mermaid
+flowchart LR
+    pr[Pull request] -->|CI| review{Approved?}
+    review -->|yes| merge[Merge]
+    review -->|no| fix[Request changes]
+    style merge fill:#b2f2bb,stroke:#2f9e44
+    style fix fill:#ffc9c9,stroke:#e03131
+\`\`\`
+`
+
+export const withLayout = `\`\`\`mermaid
+flowchart LR
+    a["Markdown"]
+    b(["React"])
+    a -->|render| b
+    style a fill:#a5d8ff,stroke:#1971c2
+    style b fill:#b2f2bb,stroke:#2f9e44
+    %% rmk-layout v1 {"canvasHeight":180,"nodes":{"a":{"x":24,"y":40,"width":160,"height":90,"strokeWidth":2},"b":{"x":330,"y":40,"width":170,"height":90,"strokeWidth":2}},"edges":{"a->b":{"routing":"elbow","elbow":0.5}}}
+\`\`\`
+`
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
+
+# React Mermaid, no Mermaid.js runtime
+
+`@react-markdown-kit/mermaid` renders a ```` ```mermaid ```` fence in React Markdown as
+static SVG. It does not load Mermaid.js. It renders flowcharts only. The same plugin
+opens the fence on a drawing canvas in the editor and writes plain Mermaid back.
+
+Try the canvas at <Link href={sites.mermaidDemo}>mermaid.reactmarkdownkit.com</Link>.
+This page is for the React side: install, render, server-render, edit, and the one
+comment that stores positions.
+
+## Install
+
+```bash
+npm install @react-markdown-kit/renderer @react-markdown-kit/mermaid
+```
+
+The renderer is a peer. The plugin's root entry has no runtime dependency, no React
+import and no Lexical import, which
+<Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link> proves by
+installing the packed tarball into a consumer without Lexical and rendering a diagram.
+
+## Render a flowchart in nine lines
+
+```tsx
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { mermaid } from '@react-markdown-kit/mermaid'
+import '@react-markdown-kit/mermaid/styles.css' // optional: surface, border, dot grid
+
+const preset = defineMarkdownPreset({ extensions: [mermaid()] })
+
+export function Doc({ content }: { content: string }) {
+  return <Markdown preset={preset}>{content}</Markdown>
+}
+```
+
+`mermaid()` is the whole API. It turns a `mermaid` fence whose body is a flowchart into
+a `diagram` node, and the renderer draws that node as SVG. Every other fence, and every
+Mermaid diagram that is not a flowchart, stays an ordinary code block.
+
+The example below is rendered by the plugin, on this page, with no browser work: the
+SVG is in the HTML the server sent.
+
+<RenderExample
+  title="Rendered by @react-markdown-kit/mermaid, editable"
+  markdown={flow}
+  rendererProps={{ extensions: [mermaid()] }}
+  editable
+/>
+
+## Static SVG, no runtime
+
+The output is one `figure` holding one `svg`.
+
+```html
+<figure data-rmk-diagram="mermaid">
+  <svg viewBox="0 0 640 260" role="img" aria-label="Diagram">…</svg>
+</figure>
+```
+
+- Shapes are `rect`, `ellipse`, `circle`, `polygon`, `path` and `text`, grouped in `g`,
+  with a `title` and `desc`. Colours from `style` lines land as attributes.
+- No `script`, no event attribute, no `foreignObject`, no external reference. The test
+  <Link href={blob('plugins/mermaid/tests/extension.test.tsx#L118')}>"does not execute anything"</Link>
+  feeds the renderer a hostile drawing payload and a hostile flowchart and asserts none of
+  them appear.
+- A flowchart the parser cannot read is shown as source inside the figure, with
+  `data-rmk-diagram-error` set and a `DIAGRAM_INVALID` diagnostic on the compiled
+  document. Nothing is hidden and nothing throws.
+
+### Size, measured
+
+Mermaid.js ships a parser and a layout engine for every diagram type. This plugin parses
+one type and lays it out itself, so it is smaller. The table is generated by
+<Link href={blob('scripts/mermaid-size.mjs')}>`scripts/mermaid-size.mjs`</Link> and stored
+in <Link href={blob('docs/data/mermaid-size.json')}>`docs/data/mermaid-size.json`</Link>,
+measured on {size.date}. Gzip is {size.gzip}. 1 KB is 1024 bytes.
+
+<table>
+  <thead>
+    <tr>
+      <th>What loads</th>
+      <th>Files</th>
+      <th>Minified</th>
+      <th>Gzipped</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{size.plugin.name}@{size.plugin.version}, root entry</td>
+      <td>1</td>
+      <td>{kb(size.plugin.minified)}</td>
+      <td>{kb(size.plugin.gzipped)}</td>
+    </tr>
+    <tr>
+      <td>mermaid@{size.mermaid.version}, entry only</td>
+      <td>{size.mermaid.entry.files}</td>
+      <td>{kb(size.mermaid.entry.minified)}</td>
+      <td>{kb(size.mermaid.entry.gzipped)}</td>
+    </tr>
+    <tr>
+      <td>mermaid@{size.mermaid.version}, entry plus the chunks one flowchart loads</td>
+      <td>{size.mermaid.flowchart.files}</td>
+      <td>{kb(size.mermaid.flowchart.minified)}</td>
+      <td>{kb(size.mermaid.flowchart.gzipped)}</td>
+    </tr>
+    <tr>
+      <td>mermaid@{size.mermaid.version}, entry plus every chunk</td>
+      <td>{size.mermaid.all.files}</td>
+      <td>{kb(size.mermaid.all.minified)}</td>
+      <td>{kb(size.mermaid.all.gzipped)}</td>
+    </tr>
+  </tbody>
+</table>
+
+How each row was measured:
+
+- The plugin row is `plugins/mermaid/dist/index.js` bundled and minified with esbuild
+  ({size.plugin.method}), then gzipped.
+- The Mermaid rows are the published package, fetched with `npm pack`
+  ({size.mermaid.method}). Its entry, `{size.mermaid.entry.file}`, lazy-loads one chunk
+  per diagram type. The flowchart row is the static import closure of the entry, the
+  `flowDiagram` chunk and the `dagre` layout chunk it requests. The last row is every
+  chunk in the package. Each row sums the files' sizes, gzipped one file at a time.
+- React is not counted on either side. The renderer package is not counted either; it is
+  the Markdown pipeline the plugin plugs into.
+
+For one flowchart, that is {ratio} times less gzipped JavaScript. Mermaid.js does far
+more with its bytes. If the document needs a sequence diagram, this plugin will not
+draw it.
+
+## Server rendering
+
+The SVG is built as hast, with no DOM, so the plugin works wherever the renderer works:
+a React server component, SSR, a static build, or a Node service that only compiles or
+templates the document with `compileMarkdown` and installs no Lexical
+(<Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link>).
+
+```tsx
+// app/docs/[slug]/page.tsx, a server component
+import { readFile } from 'node:fs/promises'
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { mermaid } from '@react-markdown-kit/mermaid'
+
+const preset = defineMarkdownPreset({ extensions: [mermaid()] })
+
+export default async function Page({ params }) {
+  const content = await readFile(`content/${params.slug}.md`, 'utf8')
+  return <Markdown preset={preset}>{content}</Markdown>
+}
+```
+
+The plugin's own tests render through
+<Link href={blob('plugins/mermaid/tests/extension.test.tsx#L32')}>`renderToStaticMarkup`</Link>,
+and the diagram on this page was server-rendered by Docusaurus the same way. The Next.js
+guide covers precompiling a document once per process:
+<Link to="/nextjs-markdown">Markdown in Next.js</Link>.
+
+## Edit the diagram on a canvas
+
+`@react-markdown-kit/mermaid/editor` is the same extension with one more capability. It
+replaces `mermaid()` from the root entry in an editor preset, and only this entry loads
+React and Lexical.
+
+```tsx
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import { mermaid } from '@react-markdown-kit/mermaid/editor'
+
+const preset = defineMarkdownPreset({ extensions: [gfm(), mermaid()] })
+
+<MarkdownEditor preset={preset} value={value} onChange={setValue} />
+```
+
+The toolbar gains an insert-diagram button. Boxes and connectors are drawn by dragging.
+Connectors bind to the boxes they touch and follow them. **Copy as Mermaid** copies the
+same text the fence saves, layout comment included, so other renderers ignore the last
+line and this plugin restores the positions.
+
+<EditorExample
+  title="Drag a box; the saved Markdown stays plain Mermaid"
+  markdown={editorDoc}
+  extensions={editorExtensions}
+  height={420}
+/>
+
+An untouched fence is written back byte for byte
+(<Link href={blob('plugins/mermaid/tests/editor-bridge.test.tsx#L60')}>test</Link>).
+An edited one is written as ```` ```mermaid ```` with the positions on the last line
+(<Link href={blob('plugins/mermaid/tests/editor-bridge.test.tsx#L76')}>test</Link>).
+
+## The layout annotation
+
+Mermaid has no syntax for where a box sits, how big it is, how an edge bends, or free
+text on the canvas. The editor stores exactly that remainder in one comment on the last
+line of the fence:
+
+```text
+%% rmk-layout v1 {"canvasHeight":180,"nodes":{"a":{"x":24,"y":40,"width":160,"height":90}},"edges":{"a->b":{"routing":"elbow"}}}
+```
+
+`%%` starts a comment in Mermaid
+([flowchart syntax, comments](https://mermaid.js.org/syntax/flowchart.html#comments)), so
+Mermaid.js and the hosts that render fences with it, such as GitHub, ignore the line and
+lay the flowchart out their own way
+(<Link to="/flowchart-to-mermaid#where-the-output-works">host documentation</Link>).
+This plugin reads it back, so
+the drawing round-trips without loss
+(<Link href={blob('plugins/mermaid/tests/mermaid-parse.test.ts#L111')}>round-trip tests</Link>).
+A hand-written flowchart with no annotation is auto-laid out.
+
+<RenderExample
+  title="With a layout annotation: exact positions and elbow routing"
+  markdown={withLayout}
+  rendererProps={{ extensions: [mermaid()] }}
+/>
+
+The syntax stays authoritative for the graph and the colours. The annotation never
+repeats them. Edges are keyed by their endpoints (`a->b`, `a->b#2` for a second edge
+between the same nodes), so an entry survives edits that reorder the statements.
+Reading is fail-closed: a payload with a wrong type, an unknown version or a second
+annotation is rejected as a whole, the diagram is auto-laid out, and the compile result
+carries a `DIAGRAM_LAYOUT_INVALID` warning with the path of the first problem
+(<Link href={blob('plugins/mermaid/tests/layout-annotation.test.ts#L71')}>validation tests</Link>).
+Members the reader does not know are ignored, so a later minor revision can add fields.
+
+The format is specified in
+<Link href={blob('plugins/mermaid/LAYOUT_ANNOTATION.md')}>`LAYOUT_ANNOTATION.md`</Link>,
+shipped with the package, and `LAYOUT_ANNOTATION_JSON_SCHEMA` is exported from the root.
+
+## Flowcharts only
+
+The plugin renders flowcharts only. `flowchart` or `graph`, any direction, the bracket
+shapes (`[ ]`, `( )`, `([ ])`, `(( ))`, `{ }`, `{{ }}`, `[( )]`, `[[ ]]`, `> ]`), edge
+labels in both spellings, lines, arrows, bidirectional arrows, chains, `&` groups,
+`subgraph … end` read through, `style` colours and a front-matter title. `classDef`,
+`click` and `linkStyle` are ignored.
+
+Sequence, class, state, Gantt, pie and every other diagram type stay ordinary code
+blocks: rendered as source, edited as text, never opened on the canvas
+(<Link href={blob('plugins/mermaid/tests/extension.test.tsx#L163')}>test</Link>). The
+subset is covered by
+<Link href={blob('plugins/mermaid/tests/mermaid-parse.test.ts')}>`mermaid-parse.test.ts`</Link>.
+If a document needs those types, render them with Mermaid.js; the two can share a page,
+since this plugin leaves the fences it does not read untouched.
+
+## FAQ
+
+{FAQ.map((item) => (
+  <section key={item.question}>
+    <h3>{item.question}</h3>
+    <p>{item.answer}</p>
+  </section>
+))}
+
+## Next
+
+<Link href={sites.mermaidDemo}>Mermaid visual editor</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/mermaid on npm</Link> ·{' '}
+<Link to="/docs/mermaid">Plugin reference</Link> ·{' '}
+<Link to="/mermaid-live-editor-alternative">Mermaid live editor alternative</Link> ·{' '}
+<Link to="/flowchart-to-mermaid">Flowchart to Mermaid</Link> ·{' '}
+<Link to="/edit-ai-generated-mermaid">Fix AI-generated Mermaid</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>

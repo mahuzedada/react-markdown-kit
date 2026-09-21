@@ -1,0 +1,200 @@
+---
+title: "Mermaid Live Editor Alternative: Canvas"
+description: "A Mermaid live editor alternative compared with mermaid.live on text editing, drag and drop, share links, price, licence, offline use and diagram types."
+---
+
+import Link from '@docusaurus/Link'
+import RenderExample from '@site/src/components/RenderExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+import { mermaid } from '@react-markdown-kit/mermaid'
+
+export const PATH = '/mermaid-live-editor-alternative'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'Mermaid diagrams', path: '/docs/mermaid' },
+  { name: 'Mermaid live editor alternative' },
+]
+
+export const FAQ = [
+  {
+    question: 'Is there a Mermaid live editor with drag and drop?',
+    answer:
+      'Yes. mermaid.reactmarkdownkit.com puts a drawing canvas next to the code pane. Drag a box or a connector and the Mermaid text updates, with the positions stored in one %% rmk-layout v1 comment. It supports flowcharts only.',
+  },
+  {
+    question: 'Is there an open source Mermaid editor besides mermaid.live?',
+    answer:
+      'Yes. The visual editor at mermaid.reactmarkdownkit.com is the MIT licensed @react-markdown-kit/mermaid plugin running in the browser. The source is on GitHub at mahuzedada/react-markdown-kit. mermaid.live is also open source, under MIT.',
+  },
+  {
+    question: 'Does the Mermaid visual editor support sequence diagrams?',
+    answer:
+      'No. The plugin renders flowcharts only. Sequence, class, Gantt, pie and every other Mermaid diagram type stay ordinary code blocks. For those, stay on mermaid.live, which renders every type through Mermaid.js.',
+  },
+]
+
+
+export const plain = `\`\`\`mermaid
+flowchart LR
+    a[Start] --> b[Work]
+    b --> c[Done]
+\`\`\`
+`
+
+export const withLayout = `\`\`\`mermaid
+flowchart LR
+    a["Paste from mermaid.live"]
+    b(["Drag on the canvas"])
+    c["Copy Mermaid back"]
+    a --> b
+    b -->|layout comment| c
+    style b fill:#b2f2bb,stroke:#2f9e44
+    %% rmk-layout v1 {"canvasHeight":200,"nodes":{"a":{"x":24,"y":20,"width":190,"height":70,"strokeWidth":2},"b":{"x":260,"y":110,"width":190,"height":70,"strokeWidth":2},"c":{"x":500,"y":20,"width":170,"height":70,"strokeWidth":2}},"edges":{"a->b":{"routing":"elbow","elbow":0.5},"b->c":{"routing":"elbow","elbow":0.5}}}
+\`\`\`
+`
+
+export const sequence = `\`\`\`mermaid
+sequenceDiagram
+    Alice->>Bob: Hello
+    Bob-->>Alice: Hi
+\`\`\`
+`
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
+
+# Mermaid live editor alternative
+
+[mermaid.live](https://mermaid.live) is the reference editor for Mermaid. It is
+free, open source under MIT, and renders every diagram type that Mermaid.js
+renders. This page compares it with the visual editor at
+<a href={sites.mermaidDemo}>mermaid.reactmarkdownkit.com</a>, which adds a drag
+and drop canvas and a layout comment, and supports flowcharts only.
+
+The short version: if you edit flowcharts and want to move boxes with the
+mouse, try the canvas. If you need any other diagram type, stay on
+mermaid.live.
+
+## Side by side
+
+Every fact about mermaid.live below comes from its repository,
+[mermaid-js/mermaid-live-editor](https://github.com/mermaid-js/mermaid-live-editor).
+Every fact about this editor links to the code or test that backs it.
+
+| | mermaid.live | mermaid.reactmarkdownkit.com |
+| --- | --- | --- |
+| Text editing | Yes. A code editor with a live preview. The README says "Edit and preview flowcharts, sequence diagrams, gantt diagrams in real time." | Yes. A code pane on the left; the canvas re-parses as you type ([MermaidDemo.tsx](https://github.com/mahuzedada/react-markdown-kit/blob/main/public-sites/mermaid-demo/src/MermaidDemo.tsx)). |
+| Visual (drag and drop) editing | No. The request for one, [issue #1284](https://github.com/mermaid-js/mermaid-live-editor/issues/1284), was closed as not planned. | Yes. Drag boxes and connectors on a canvas; the code pane shows what will be saved ([canvas source](https://github.com/mahuzedada/react-markdown-kit/tree/main/plugins/mermaid/src/canvas)). |
+| Where positions go | Not stored. Mermaid has no syntax for positions, so the layout is recomputed on every render. | One `%% rmk-layout v1` comment on the last line of the fence. Other Mermaid renderers ignore it as a comment; this plugin reads it back ([LAYOUT_ANNOTATION.md](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/LAYOUT_ANNOTATION.md)). |
+| Sharing links | Yes. A viewer link and an edit link, with the diagram in the URL hash as `pako:` or `base64:` ([serde.ts](https://github.com/mermaid-js/mermaid-live-editor/blob/develop/src/lib/util/serde.ts)). | Yes. An edit link with the diagram in the URL hash as `#pako:` or `#base64:`, plus a README badge and an `?embed=1` iframe snippet. No separate viewer link ([share.ts](https://github.com/mahuzedada/react-markdown-kit/blob/main/public-sites/mermaid-demo/src/share.ts), [test](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/mermaid-share.test.ts)). |
+| Price | Free. The hosted editor is the one the [Mermaid docs](https://mermaid.js.org/intro/) link to. | Free. No account, no paywall. |
+| Open source and licence | Yes, MIT ([LICENSE](https://github.com/mermaid-js/mermaid-live-editor/blob/develop/LICENSE)). | Yes, MIT ([package.json](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/package.json)). The editor is the same plugin you install from npm. |
+| Offline use | Self-host with the Docker image in the [README](https://github.com/mermaid-js/mermaid-live-editor#readme). | Once the page is open, editing and share links need no server: the diagram lives in the URL hash ([share.ts](https://github.com/mahuzedada/react-markdown-kit/blob/main/public-sites/mermaid-demo/src/share.ts)). Self-host by building `public-sites/mermaid-demo` from the repository. |
+| Rendering engine | Mermaid.js, version 12 ([package.json](https://github.com/mermaid-js/mermaid-live-editor/blob/develop/package.json)). | Its own flowchart parser and a static SVG writer. No Mermaid.js is loaded ([extension.ts](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/src/extension.ts)). |
+| Diagram types | Every type Mermaid.js renders. The README names flowcharts, sequence diagrams and Gantt charts. | Flowcharts only, written as `flowchart` or `graph` ([parser tests](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts)). Other types stay code blocks. |
+| Export | Save the result as an SVG (README). | Copy as Mermaid. The SVG is what the renderer emits in your own app; the demo has no download button. |
+
+## What the canvas changes
+
+Mermaid has no syntax for where a box sits, how big it is, or how an edge
+bends. mermaid.live recomputes the layout every time. This editor writes the
+geometry as one `%%` comment, which
+[Mermaid defines as a comment](https://mermaid.js.org/syntax/flowchart.html#comments),
+so the text you paste into a host that renders fences with Mermaid.js, such as
+GitHub, still renders there
+(<Link to="/flowchart-to-mermaid#where-the-output-works">host documentation</Link>),
+and the plugin restores your positions when it reads the same text back.
+
+<RenderExample
+  title="Plain Mermaid, auto-laid out by the plugin"
+  markdown={plain}
+  rendererProps={{ extensions: [mermaid()] }}
+/>
+
+<RenderExample
+  title="The same syntax with a layout comment: exact positions and elbow routing"
+  markdown={withLayout}
+  rendererProps={{ extensions: [mermaid()] }}
+/>
+
+Both examples are rendered on this page by the plugin itself, with no
+Mermaid.js. The output is a `<figure data-rmk-diagram>` holding an SVG with no
+script, no event attribute, no `foreignObject` and no external reference, asserted by
+[extension.test.tsx](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/extension.test.tsx).
+
+Open either example on the canvas:
+<a href="https://mermaid.reactmarkdownkit.com/#pako:eJxLy8kvT85ILCpR8AniUlBQUEiMDi5JLCqJVdDVtVNIig7PL8qOBUskgUWSo13y81JjAdi5EDQ">the three nodes</a>
+in the visual editor.
+
+## Who should stay on mermaid.live
+
+Be honest with yourself before switching. Stay on mermaid.live if any of
+these apply.
+
+- **You use any diagram type other than flowcharts.** Sequence, class, state,
+  ER, Gantt, pie, mindmap, timeline and the rest render there and not here.
+- **You rely on flowchart features outside the subset.** `classDef`, `class`,
+  `click` and `linkStyle` are ignored by this plugin, and `subgraph` groups
+  are read but not drawn. The full subset is listed in the
+  <Link to="/docs/mermaid">plugin reference</Link>.
+- **You want pixel-identical output to GitHub.** GitHub renders fences with
+  Mermaid.js. This plugin draws its own SVG, so shapes and spacing differ.
+- **You need a viewer-only link or an SVG download from the editor.** Both
+  exist on mermaid.live. Here the link always opens the editor, and the SVG
+  comes from the renderer in your own app.
+
+This is what a sequence diagram does in this editor: it stays a code block.
+
+<RenderExample
+  title="Not a flowchart, so not a diagram"
+  markdown={sequence}
+  rendererProps={{ extensions: [mermaid()] }}
+/>
+
+## Who should try the canvas
+
+- You edit flowcharts and want to move boxes and route connectors by hand.
+- You paste flowcharts from AI chats or wikis and fix their layout by dragging
+  instead of rewriting the text.
+- You render Markdown with React and want the same fence to become static SVG
+  with no Mermaid.js in the bundle.
+- You want the diagram, positions included, to stay in the Markdown file and
+  in version control, as one comment line.
+
+```bash
+npm install @react-markdown-kit/renderer @react-markdown-kit/mermaid
+```
+
+```tsx
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { mermaid } from '@react-markdown-kit/mermaid'
+
+const preset = defineMarkdownPreset({ extensions: [mermaid()] })
+
+<Markdown preset={preset}>{content}</Markdown>
+```
+
+## FAQ
+
+<dl>
+  {FAQ.map((item) => (
+    <div key={item.question}>
+      <dt><strong>{item.question}</strong></dt>
+      <dd>{item.answer}</dd>
+    </div>
+  ))}
+</dl>
+
+## Next
+
+<a href={sites.mermaidDemo}>Open the visual editor</a> ·{' '}
+<a href="https://www.npmjs.com/package/@react-markdown-kit/mermaid">@react-markdown-kit/mermaid on npm</a> ·{' '}
+<a href={sites.github}>Source on GitHub</a>
+
+<Link to="/react-mermaid">Mermaid in React Markdown</Link> ·{' '}
+<Link to="/flowchart-to-mermaid">Flowchart to Mermaid</Link> ·{' '}
+<Link to="/edit-ai-generated-mermaid">Fix AI-generated Mermaid</Link> ·{' '}
+<Link to="/docs/mermaid">Plugin reference</Link>

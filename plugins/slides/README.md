@@ -1,6 +1,6 @@
 # @react-markdown-kit/slides
 
-Slides from Markdown, as a plugin. Slides are separated by `---`, speaker
+Markdown slides for React, as a plugin. Slides are separated by `---`, speaker
 notes follow `???`, fragments follow `--`, and `<!-- class | background |
 name: … -->` comments set per-slide properties. The file stays plain
 CommonMark: GitHub shows it as a document with rules, the renderer shows it
@@ -18,9 +18,13 @@ import '@react-markdown-kit/slides/styles.css'
 
 const preset = defineMarkdownPreset({ extensions: [slides()] })
 
-<div className="rmk-document">
-  <Markdown preset={preset}>{deck}</Markdown>
-</div>
+export function Deck({ deck }: { deck: string }) {
+  return (
+    <div className="rmk-document">
+      <Markdown preset={preset}>{deck}</Markdown>
+    </div>
+  )
+}
 ```
 
 ```md
@@ -46,6 +50,13 @@ So are costs.
 
 Pause before the second line.
 ```
+
+## Links
+
+- Docs: [Slides from Markdown](https://docs.reactmarkdownkit.com/docs/slides)
+- Demo: [slides.reactmarkdownkit.com](https://slides.reactmarkdownkit.com),
+  with `/present` and `/editor`
+- Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
 
 ## The dialect
 
@@ -96,6 +107,8 @@ understand.
 `isSlideDirectiveNode`, `SLIDES_DIAGNOSTIC_CODES`; types `SlidesOptions`,
 `SlideAspect`, `SlideMarkerNode`, `SlideDirectiveNode`, `DeckModel`,
 `SlideModel`. This entry loads no React and no Lexical.
+[`scripts/pack-check.mjs`](https://github.com/mahuzedada/react-markdown-kit/blob/main/scripts/pack-check.mjs)
+renders a static deck from the packed tarball with no Lexical installed.
 
 ## What the renderer emits
 
@@ -170,3 +183,7 @@ remount the deck on every render.
 With `@react-markdown-kit/template`, `{{placeholders}}` in slide prose
 resolve; markers and directives are literal. List `slides()` before
 `template()`.
+
+## License
+
+MIT

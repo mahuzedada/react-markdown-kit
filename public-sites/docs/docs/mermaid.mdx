@@ -1,6 +1,7 @@
 ---
-title: Mermaid diagrams
-description: "Render a Mermaid flowchart from a fenced block as static SVG, and edit it on a canvas that saves plain Mermaid back. One plugin for the renderer and the editor."
+title: "Mermaid diagrams in Markdown for React"
+sidebar_label: Mermaid diagrams
+description: "Render a Mermaid flowchart from a fenced block as static SVG, and edit it on a canvas that saves plain Mermaid back. One plugin, renderer and editor."
 ---
 
 import RenderExample from '@site/src/components/RenderExample'
@@ -64,6 +65,15 @@ draws that node as a static SVG, the template plugin keeps its text literal,
 and the editor opens it on a canvas.
 
 <RenderExample title="A three-box flow" markdown={flow} rendererProps={{ extensions: [mermaid()] }} />
+
+## Guides
+
+This page is the reference. Four guides cover one job each:
+
+- [Mermaid in React, no Mermaid.js runtime](/react-mermaid): install, static SVG, the measured size against Mermaid.js, server rendering.
+- [Mermaid Live Editor alternative](/mermaid-live-editor-alternative): the canvas next to mermaid.live, feature by feature.
+- [Flowchart to Mermaid](/flowchart-to-mermaid): draw a flowchart on the canvas and copy the syntax it writes.
+- [Fix AI-generated Mermaid](/edit-ai-generated-mermaid): paste model output, drag the layout right, copy it back.
 
 ## The flowchart subset
 
@@ -166,7 +176,17 @@ The toolbar gains an insert-diagram button. Boxes, connectors and text are
 drawn by picking a tool and dragging; connectors bind to the boxes they touch
 and follow them; a selected connector toggles elbow routing and arrow
 direction; colours are one setting per shape. **Copy as Mermaid** copies the
-plain flowchart without the layout annotation.
+same text the fence saves, layout annotation included, so pasting it into
+another canvas keeps the positions and every other renderer ignores the
+comment.
+
+The <a href={sites.mermaidDemo}>live editor</a> shares a diagram by link: the
+source, annotation included, is deflated into the URL hash as
+`#pako:<base64url>` (the same zlib form mermaid.live uses, with a `#base64:`
+fallback), so nothing is uploaded. Its **Share** panel gives the link, an
+"Open in visual editor" badge for a README, and an `?embed=1` iframe snippet
+that hides the site chrome. The format is tested in
+[`tests/mermaid-share.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/mermaid-share.test.ts).
 
 Only the `/editor` entry loads React and Lexical. A Node service that renders
 or templates diagrams imports the root entry and installs neither.

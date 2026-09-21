@@ -46,6 +46,10 @@ No provider, no stylesheet, no configuration.
 - [Migrating from react-markdown](https://docs.reactmarkdownkit.com/migrate-from-react-markdown)
 - [Renderer demo: configure the renderer and copy the code](https://renderer.reactmarkdownkit.com)
 - [Mermaid: flowcharts as static SVG, edited on a canvas](https://docs.reactmarkdownkit.com/docs/mermaid)
+- [Mermaid in React without Mermaid.js](https://docs.reactmarkdownkit.com/react-mermaid): the plugin renders flowcharts as static SVG on the server or in the browser, 18.1 KB gzipped against 237.1 KB for a Mermaid.js flowchart, flowcharts only
+- [Mermaid Live Editor alternative](https://docs.reactmarkdownkit.com/mermaid-live-editor-alternative): mermaid.live and the visual canvas side by side on text editing, drag and drop, share links, price, licence and diagram types
+- [Flowchart to Mermaid](https://docs.reactmarkdownkit.com/flowchart-to-mermaid): draw a flowchart on the free canvas and copy the Mermaid it writes; it converts a drawing, not an image
+- [Fix AI-generated Mermaid](https://docs.reactmarkdownkit.com/edit-ai-generated-mermaid): paste model output, fix the layout by dragging nodes, copy Mermaid back with positions kept in one %% rmk-layout v1 comment
 - [Mermaid live editor demo: syntax on the left, a visual canvas on the right, plain Mermaid saved](https://mermaid.reactmarkdownkit.com)
 - [Editor demo: the editor with the template and diagram plugins](https://editor.reactmarkdownkit.com)
 - [Slides: a Markdown deck rendered as sections, presented from the same page, edited with slide commands](https://docs.reactmarkdownkit.com/docs/slides)

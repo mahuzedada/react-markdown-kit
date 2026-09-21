@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../shared/Seo'
+import { badgeMarkdown, EXAMPLE_HASH, EXAMPLE_SOURCE, shareUrl } from './share'
 
 /*
  * The crawlable copy of mermaid.reactmarkdownkit.com. It targets the searches
@@ -37,6 +38,11 @@ const preset = defineMarkdownPreset({ extensions: [mermaid()] })
 
 <MarkdownEditor preset={preset} value={source} onChange={setSource} />`
 
+/** The badge snippet for the three-node example, with its diagram in the hash. */
+const BADGE = badgeMarkdown(shareUrl(EXAMPLE_HASH))
+
+const EMBED = `<iframe src="${shareUrl(EXAMPLE_HASH).replace('/#', '/?embed=1#')}" width="100%" height="520" style="border:0" title="Mermaid visual editor" loading="lazy"></iframe>`
+
 const FAQ: readonly FaqItem[] = [
   {
     question: 'Is there a free Mermaid visual editor?',
@@ -64,6 +70,11 @@ const FAQ: readonly FaqItem[] = [
     question: 'Which Mermaid diagram types does it support?',
     answer:
       'Flowcharts only, written as flowchart or graph. Sequence, class, Gantt and the other diagram types stay ordinary code blocks, so a document that mixes them still round-trips.',
+  },
+  {
+    question: 'Can I share a diagram by link?',
+    answer:
+      'Yes. Copy link puts the whole diagram, layout comment included, compressed into the URL hash, so the link needs no server and nothing is uploaded. Opening it restores the drawing on the canvas.',
   },
   {
     question: 'Does it need Mermaid.js or a server?',
@@ -160,6 +171,11 @@ export default function Landing(): ReactNode {
             flowchart subset (every node shape, edge style, <code>subgraph</code>, <code>style</code>{' '}
             colours and front-matter titles), the layout annotation format and the editor options.{' '}
             <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> covers the editor the canvas lives in.
+            Four guides cover one job each:{' '}
+            <a href={docsUrl('/react-mermaid')}>Mermaid in React without Mermaid.js</a>,{' '}
+            <a href={docsUrl('/mermaid-live-editor-alternative')}>a Mermaid Live Editor alternative</a>,{' '}
+            <a href={docsUrl('/flowchart-to-mermaid')}>flowchart to Mermaid</a> and{' '}
+            <a href={docsUrl('/edit-ai-generated-mermaid')}>fixing AI-generated Mermaid</a>.
           </p>
         </div>
 
@@ -180,6 +196,33 @@ export default function Landing(): ReactNode {
             <a href={sites.rendererDemo}>renderer demo</a>.
           </li>
         </ul>
+
+        <span className="site-eyebrow">Share</span>
+        <h2>Open in visual editor badge</h2>
+        <p>
+          A link carries the diagram: the source, layout comment included, is compressed into the
+          URL hash (<code>#pako:</code>, the same zlib form mermaid.live uses), so nothing is uploaded
+          and the link needs no server. Paste this in a README and the badge opens the diagram on
+          the canvas. Press <strong>Share</strong> in the editor above to get the snippet for your own
+          diagram.
+        </p>
+        <pre className="site-code">
+          <code>{BADGE}</code>
+        </pre>
+        <p>
+          The badge is <a href="/badge.svg">/badge.svg</a>, a static SVG on this host. The link in this
+          example opens this three-node flowchart:
+        </p>
+        <pre className="site-code">
+          <code>{EXAMPLE_SOURCE}</code>
+        </pre>
+        <p>
+          To put the editor in a blog post or a docs page, add <code>?embed=1</code> to any link and
+          the site chrome is hidden:
+        </p>
+        <pre className="site-code">
+          <code>{EMBED}</code>
+        </pre>
 
         <Faq id="mermaid-faq" items={FAQ} />
       </div>

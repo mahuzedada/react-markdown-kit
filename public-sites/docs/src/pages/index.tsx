@@ -59,12 +59,12 @@ const DATASETS = [
 ]
 
 const DESCRIPTION =
-  'Render Markdown as React, add rich editing, and personalize the same document with typed variables. Two packages, one Markdown model, no design system required.'
+  'Render Markdown as React, add rich editing, and personalize the same document with typed variables. Two packages, one Markdown model, no design system.'
 
 export default function Home(): ReactNode {
   return (
     <Layout
-      title="React Markdown renderer, editor and template engine"
+      title="React Markdown renderer and editor docs"
       description={DESCRIPTION}
     >
       <JsonLd
@@ -84,9 +84,10 @@ export default function Home(): ReactNode {
       {/* Spec 13.1: open with the renderer, not with architecture. */}
       <header className={`${styles.hero} dark`}>
         <div className="container">
-          <h1>Render Markdown. Add editing. Personalize it.</h1>
+          <h1>React Markdown renderer, editor and template engine</h1>
           <p className={styles.tagline}>
-            Three React packages that share one Markdown model, so an app can grow from
+            Render Markdown. Add editing. Personalize it. Three React packages that share
+            one Markdown model, so an app can grow from
             displaying Markdown to authoring and personalizing it without changing how
             anything is stored.
           </p>

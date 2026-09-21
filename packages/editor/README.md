@@ -1,6 +1,8 @@
 # @react-markdown-kit/editor
 
-Rich, source and preview Markdown editing for React. Markdown in, Markdown out.
+A React Markdown editor with rich, source and preview modes. Markdown in,
+Markdown out. Built on Lexical, but Lexical never appears in the public types.
+Open a document and close it without typing, and the file is unchanged.
 
 ```bash
 npm install @react-markdown-kit/editor @react-markdown-kit/renderer
@@ -21,18 +23,36 @@ export function Notes() {
 Your application keeps storing Markdown strings. Nothing asks you to persist
 editor JSON or a proprietary format.
 
+## Links
+
+- Docs: [React Markdown editor](https://docs.reactmarkdownkit.com/react-markdown-editor)
+- Demo: [editor.reactmarkdownkit.com](https://editor.reactmarkdownkit.com)
+- Round-trip guarantee: [the docs page](https://docs.reactmarkdownkit.com/docs/editor/round-trip),
+  backed by [`packages/editor/tests/roundtrip.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/packages/editor/tests/roundtrip.test.ts)
+  and [`tests/roundtrip.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/roundtrip.test.ts)
+- Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
+
 ## The round trip is the point
 
-Most Markdown editors quietly damage documents. Opening one and closing it
-without typing rewrites parts of it, and the damage compounds on every save.
+A Markdown editor that parses into an editing model and serializes back out
+can damage the document on every save, and the damage compounds.
 
 This editor converts between a real CommonMark syntax tree and the editing
 model, then writes unchanged blocks back from their **original source bytes**.
 Opening a document and closing it changes nothing.
 
-The test corpus comes from an audit of a prior editor with seven reproducible
-corruption bugs. All 22 cases now round-trip byte for byte, each asserted twice:
-once with GitHub Flavored Markdown and once with plain CommonMark.
+The test corpus comes from
+[`docs/AUDIT.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/AUDIT.md),
+an audit of a prior editor with seven reproducible corruption bugs, expanded to
+22 cases. All 22 round-trip byte for byte through the editor bridge, each
+asserted twice: once with GitHub Flavored Markdown and once with plain
+CommonMark
+([`packages/editor/tests/roundtrip.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/packages/editor/tests/roundtrip.test.ts)).
+A second suite,
+[`tests/roundtrip.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/roundtrip.test.ts),
+checks the serializer path with no source bytes to fall back on: 22 of 22 keep
+their meaning, 22 of 22 are idempotent, 14 of 22 are byte-identical, and the
+14 may not shrink.
 
 ```text
 > a            blockquote with a blank line     unchanged
@@ -132,8 +152,10 @@ export const appMarkdown = defineMarkdownPreset({ extensions: [gfm()] })
 No styling dependency: no Tailwind, no design system, no icon package. Icons are
 inline SVG.
 
-The editor is **fully functional with no stylesheet loaded**, and a test asserts
-it. The optional theme is opt-in and scoped:
+The editor is **fully functional with no stylesheet loaded**.
+[`packages/editor/tests/styling.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/packages/editor/tests/styling.test.tsx)
+edits, switches mode and serializes with no CSS in the document. The optional
+theme is opt-in and scoped:
 
 ```tsx
 import '@react-markdown-kit/editor/styles.css'
@@ -155,7 +177,8 @@ Or pass your own classes per part, which replace rather than merge:
 />
 ```
 
-Full contract in [`docs/STYLING.md`](../../docs/STYLING.md).
+Full contract in
+[`docs/STYLING.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/STYLING.md).
 
 ## Headless, without React
 
@@ -212,7 +235,7 @@ node's identity for the writer. A decorator component reaches the engine with
 
 ## Plugins
 
-Templates, Mermaid diagrams and slides are separate packages, used only through `extensions`:
+Templates, Mermaid flowcharts and slides are separate packages, used only through `extensions`:
 
 ```tsx
 import { templateVariables } from '@react-markdown-kit/template/editor'
@@ -230,7 +253,10 @@ Every `{{placeholder}}` becomes a chip with a sample-data preview (never
 written back to the source), a ```` ```mermaid ```` flowchart opens on a
 drawing canvas, and a deck gets numbered slide breaks, `???` / `--` dividers,
 directive chips, four toolbar buttons and a Preview that is the interactive
-deck. See each package's README.
+deck. See each package's README:
+[template](https://www.npmjs.com/package/@react-markdown-kit/template),
+[mermaid](https://www.npmjs.com/package/@react-markdown-kit/mermaid),
+[slides](https://www.npmjs.com/package/@react-markdown-kit/slides).
 
 ## License
 

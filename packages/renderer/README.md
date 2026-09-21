@@ -1,6 +1,9 @@
 # @react-markdown-kit/renderer
 
-Render Markdown as React.
+A React Markdown renderer with safe defaults and no configuration. Pass a
+Markdown string, get semantic HTML as React elements. CommonMark by default,
+GitHub Flavored Markdown one import away, and a document format you can
+compile once and render anywhere.
 
 ```bash
 npm install @react-markdown-kit/renderer
@@ -8,14 +11,27 @@ npm install @react-markdown-kit/renderer
 
 ```tsx
 import Markdown from '@react-markdown-kit/renderer'
+import { GfmMarkdown } from '@react-markdown-kit/renderer/gfm'
 
 export function Article({ content }: { content: string }) {
   return <Markdown>{content}</Markdown>
+}
+
+export function Readme({ content }: { content: string }) {
+  return <GfmMarkdown>{content}</GfmMarkdown>
 }
 ```
 
 That is the whole first-use experience. No provider, no stylesheet, no account,
 no design system, no configuration.
+
+## Links
+
+- Docs: [React Markdown renderer](https://docs.reactmarkdownkit.com/react-markdown-renderer)
+- Demo: [renderer.reactmarkdownkit.com](https://renderer.reactmarkdownkit.com)
+- Compatibility with `react-markdown`: [the table](https://docs.reactmarkdownkit.com/docs/compatibility),
+  generated from [`docs/COMPATIBILITY.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/COMPATIBILITY.md)
+- Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
 
 ## What you get by default
 
@@ -53,8 +69,9 @@ const preset = defineMarkdownPreset({ extensions: [gfm()] })
 <Markdown preset={preset}>{content}</Markdown>
 ```
 
-The `remark-gfm` plugin also works, and the test suite asserts the two produce
-the same output.
+The `remark-gfm` plugin also works.
+[`tests/gfm.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/gfm.test.ts)
+asserts that `gfm()` and `remark-gfm` produce the same output.
 
 ## Presets: define your dialect once
 
@@ -146,18 +163,25 @@ is nothing to `!important` away:
 <Markdown components={{ a: AppLink, table: AppTable }}>{content}</Markdown>
 ```
 
-Full contract in [`docs/STYLING.md`](../../docs/STYLING.md).
+Full contract in
+[`docs/STYLING.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/STYLING.md).
+Each of the four approaches is asserted in
+[`tests/styling.dom.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/styling.dom.test.tsx).
 
 ## Security
 
 Raw HTML in the source is not executed, and `href`/`src`-style attributes are
 restricted to safe schemes. The URL algorithm is the same one `react-markdown`
-uses, because it is well tested against protocol-obfuscation corpora.
+uses.
 
 ```tsx
 <Markdown>{'[x](javascript:alert(1))'}</Markdown>
 // href is emptied, nothing executes
 ```
+
+Both behaviours are asserted in
+[`packages/renderer/tests/render.dom.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/packages/renderer/tests/render.dom.test.tsx)
+under `security (RENDER-08)`.
 
 To allow raw HTML, opt in explicitly and sanitize:
 
@@ -193,26 +217,33 @@ The prop surface is intentionally familiar: `children`, `components`,
 `disallowedElements`, `allowElement`, `skipHtml`, `unwrapDisallowed` and
 `urlTransform`.
 
-See [`docs/COMPATIBILITY.md`](../../docs/COMPATIBILITY.md) for the evidence-backed
-matrix against a pinned `react-markdown@10.1.0`, where every feature is
-classified `compatible`, `compatible with documented change`, `not supported yet`
-or `intentionally different`.
+[`docs/COMPATIBILITY.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/COMPATIBILITY.md)
+is the evidence-backed matrix against a pinned `react-markdown@10.1.0`. It is
+generated from
+[`tests/compatibility.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/compatibility.test.tsx),
+which renders the same input through both packages and compares normalized
+HTML: 39 comparisons across 11 props, 39 identical. Every feature is classified
+`compatible`, `compatible with documented change`, `not supported yet` or
+`intentionally different`. The same table is published at
+[docs.reactmarkdownkit.com/docs/compatibility](https://docs.reactmarkdownkit.com/docs/compatibility).
 
-We do not claim "drop-in replacement". Read the matrix and decide.
+Read the matrix and decide.
 
 ## The rest of the kit
 
 All optional. The renderer never requires them, and carries none of their code.
 
-- [`@react-markdown-kit/editor`](../editor) — rich, source and preview editing
-  that reads and writes the same Markdown.
-- [`@react-markdown-kit/template`](../../plugins/template) — a plugin: `template({ data })`
-  resolves typed placeholders while this renderer parses.
-- [`@react-markdown-kit/mermaid`](../../plugins/mermaid) — a plugin: `mermaid()` draws
-  ```` ```diagram ```` fences as static SVG.
-- [`@react-markdown-kit/slides`](../../plugins/slides) — a plugin: `slides()` renders a
-  deck from plain Markdown (`---` splits slides) as static `<section>`s; its
-  `/present` entry adds present mode.
+- [`@react-markdown-kit/editor`](https://www.npmjs.com/package/@react-markdown-kit/editor):
+  rich, source and preview editing that reads and writes the same Markdown.
+- [`@react-markdown-kit/template`](https://www.npmjs.com/package/@react-markdown-kit/template):
+  a plugin. `template({ data })` resolves typed placeholders while this
+  renderer parses.
+- [`@react-markdown-kit/mermaid`](https://www.npmjs.com/package/@react-markdown-kit/mermaid):
+  a plugin. `mermaid()` draws ```` ```mermaid ```` flowchart fences as static
+  SVG. Flowcharts only.
+- [`@react-markdown-kit/slides`](https://www.npmjs.com/package/@react-markdown-kit/slides):
+  a plugin. `slides()` renders a deck from plain Markdown (`---` splits
+  slides) as static `<section>`s; its `/present` entry adds present mode.
 
 ## API
 

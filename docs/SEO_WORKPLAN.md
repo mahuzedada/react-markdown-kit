@@ -20,6 +20,21 @@ writing a single new page.
   `repository`, `bugs`, target keywords). Item 3 done: every package is 0.1.0 with a
   CHANGELOG.md. Remaining in B: registry check and publish (2), READMEs as
   landing pages (4), release workflow (6).
+- 2026-09-20 (deployed the same day): Milestone B done: 0.1.0 of all five packages published to npm
+  today, READMEs rewritten as npm landing pages (4), release workflow on
+  `v*` tags with provenance and a version guard (6). Milestone E items 1, 3
+  and 4 done: `tests/seo-surface.test.ts` strict on every built page,
+  `tests/seo-links.test.ts`, `scripts/seo-report.mjs`, all in the
+  `public-sites` CI job. Milestone D items 2, 3 and 4 done for the Mermaid
+  demo: share links carry the source in the hash as
+  `#pako:<base64url(zlib-deflate)>` with a `#base64:` fallback, the "Open in
+  visual editor" badge (`/badge.svg` plus that link) and `?embed=1`.
+  Milestone C 3.3 pages done: `/react-mermaid`,
+  `/mermaid-live-editor-alternative`, `/flowchart-to-mermaid`,
+  `/edit-ai-generated-mermaid`, cross-linked from `/docs/mermaid`, the home
+  hub, the Mermaid demo and `llms.txt`. Next: C 3.1 renderer pages, D items
+  2 to 4 for the renderer, editor and slides demos, D1 streaming check, D6
+  `compare-bundles`.
 
 ## 0. Ground rules
 
@@ -118,8 +133,11 @@ Applies to all six hosts: `reactmarkdownkit.com` (home),
    abandoned.
 4. Make each package README the npm landing page: first paragraph contains
    the primary term, then install, a ten-line example, links to the funnel,
-   the demo, the compatibility table (renderer) and the round-trip suite
-   (editor). READMEs are already in `files`; confirm with `pnpm pack:check`.
+   the demo, the compatibility table (renderer) and the round-trip suites
+   (editor: `packages/editor/tests/roundtrip.test.ts` for the 22 of 22
+   byte-identical cases, `tests/roundtrip.test.ts` for the serializer path's
+   meaning and idempotence). READMEs are already in `files`; confirm with
+   `pnpm pack:check`.
 5. Tune `keywords` toward the target terms: renderer adds
    `react-markdown-alternative`, `markdown-renderer`, `streaming-markdown`,
    `ai-chat`; editor adds `markdown-editor`, `wysiwyg`, `lexical`,

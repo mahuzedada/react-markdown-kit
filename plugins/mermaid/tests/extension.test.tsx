@@ -118,13 +118,37 @@ describe('mermaid(): renderer', () => {
   it('does not execute anything: no script, no event handlers, no foreign objects', () => {
     const hostile = '```drawing\n{"version":3,"canvasHeight":100,"shapes":[{"id":"a","type":"rect","x":0,"y":0,"width":10,"height":10,"stroke":"#000\\" onload=\\"alert(1)","fill":"url(javascript:alert(1))","strokeWidth":2,"text":"<script>alert(1)</script>"}]}\n```\n'
     const html = render(hostile)
-    expect(html).not.toContain('<script')
-    expect(html).not.toContain('onload=')
-    expect(html).not.toContain('javascript:')
+    expectInert(html)
     // The payload text is drawn as escaped SVG text, wrapped to the box.
     expect(html).toContain('&lt;s')
+
+    // The same payload through a ```mermaid flowchart: node text, an edge
+    // label and a style line each carry it.
+    const flowchart =
+      '```mermaid\nflowchart LR\n' +
+      '    a["<script>alert(1)</script>"] -->|"<foreignObject onload=alert(1)>"| b["<img onerror=alert(1)>"]\n' +
+      '    style a fill:url(javascript:alert(1)),stroke:#000" onload="alert(1)\n' +
+      '    style b fill:#fff,stroke:url(#x),color:javascript:alert(1)\n' +
+      '```\n'
+    const svg = render(flowchart)
+    expect(svg).toContain('<figure data-rmk-diagram="mermaid">')
+    expectInert(svg)
+    expect(svg).toContain('&lt;script')
   })
 })
+
+/**
+ * No script, no foreignObject, no event attribute and no URL reference on any
+ * element. Hostile text may survive as escaped text content, so the attribute
+ * checks look inside tags only.
+ */
+function expectInert(html: string): void {
+  expect(html).not.toContain('<script')
+  expect(html).not.toContain('<foreignObject')
+  expect(html).not.toMatch(/<[^>]*\son[a-z]+=/i)
+  expect(html).not.toMatch(/<[^>]*(href=|xlink:|url\()/i)
+  expect(html).not.toContain('javascript:')
+}
 
 describe('mermaid(): template', () => {
   it('never resolves a placeholder inside a diagram payload', () => {
