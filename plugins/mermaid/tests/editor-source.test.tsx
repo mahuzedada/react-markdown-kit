@@ -2,10 +2,13 @@
  * Source mode inside <MarkdownEditor>: a sequence fence renders its preview
  * and problems, typing commits the source without a keystroke reaching
  * Lexical, the editing component holds while the textarea has focus and
- * switches on blur, quick keystrokes coalesce into one undo step, undo keys
- * route to Lexical, Tab indents, Escape moves to the header, unregistered
- * kinds show their notice, and `sourceEditor: false` hides the textarea.
+ * switches on blur, quick keystrokes coalesce into one undo step but never
+ * across an undo or an outside change, undo keys route to Lexical, Tab
+ * indents, Escape moves to the header, a read-only toggle releases the
+ * mode hold, unregistered kinds show their notice, and `sourceEditor:
+ * false` hides the textarea.
  */
+import type { ReactElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MarkdownEditor, useMarkdownEditorContext, type MarkdownEditorInstance } from '@react-markdown-kit/editor'
 import { mount, run, type Mounted } from '../../../packages/editor/tests/helpers/mount.js'
@@ -185,6 +188,48 @@ describe('source mode', () => {
     expect(textareaOf(view).value).toBe(SEQUENCE + '\n    Ali')
   })
 
+  // Review C4: a keystroke within the merge window of an undo must not fold
+  // into the entry the undo restored, or it cannot be undone and a redo
+  // overwrites it.
+  it('does not merge a keystroke typed right after Ctrl+Z into the restored entry', () => {
+    vi.useFakeTimers()
+    const doc = 'Before.\n\n```mermaid\nsequenceDiagram\n    A->>B: x\n```\n'
+    const { view, editor } = open(doc)
+    const textarea = textareaOf(view)
+    focus(textarea)
+    type(textarea, 'sequenceDiagram\n    A->>B: x\n    A')
+    vi.advanceTimersByTime(100)
+    keydown(textarea, { key: 'z', ctrlKey: true })
+    expect(editor().getMarkdown()).toBe(doc)
+    vi.advanceTimersByTime(100)
+    type(textarea, 'sequenceDiagram\n    A->>B: x\n    B')
+    expect(editor().getMarkdown()).toContain('    B\n```')
+    run(() => editor().undo())
+    expect(editor().getMarkdown()).toBe(doc)
+    expect(textareaOf(view).value).toBe('sequenceDiagram\n    A->>B: x')
+    run(() => editor().redo())
+    expect(editor().getMarkdown()).toContain('    B\n```')
+    expect(editor().getMarkdown()).not.toContain('    A\n```')
+  })
+
+  it('does not merge a keystroke typed right after an undo from outside the field', () => {
+    vi.useFakeTimers()
+    const { view, editor } = open(SEQUENCE_DOC)
+    const textarea = textareaOf(view)
+    focus(textarea)
+    type(textarea, SEQUENCE + '\n    A')
+    vi.advanceTimersByTime(100)
+    // The toolbar's undo: the node changes without a key in the textarea.
+    run(() => editor().undo())
+    expect(editor().getMarkdown()).toBe(SEQUENCE_DOC)
+    vi.advanceTimersByTime(100)
+    type(textarea, SEQUENCE + '\n    B')
+    run(() => editor().undo())
+    expect(editor().getMarkdown()).toBe(SEQUENCE_DOC)
+    run(() => editor().redo())
+    expect(editor().getMarkdown()).toContain(`${SEQUENCE}\n    B\n\`\`\``)
+  })
+
   it('routes Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y in the textarea to Lexical', () => {
     vi.useFakeTimers()
     const { view, editor } = open(SEQUENCE_DOC)
@@ -244,6 +289,26 @@ describe('source mode', () => {
     run(() => editor().redo())
     expect(textarea.value).toBe(SEQUENCE + '\n    Bob->>Alice: bye')
     expect(textarea.selectionStart).toBe(textarea.value.length)
+  })
+
+  // Review C20: the mode hold lasts while the textarea has focus. A
+  // read-only toggle unmounts it without a blur; the hold must go with it.
+  it('releases the mode hold when the textarea unmounts without a blur', () => {
+    const render = (readOnly: boolean): ReactElement => (
+      <MarkdownEditor extensions={[mermaid()]} defaultValue={'```mermaid\nsequenceDiagram\n    A->>B: x\n```\n'} readOnly={readOnly} />
+    )
+    const view = mount(render(false))
+    views.push(view)
+    const textarea = textareaOf(view)
+    focus(textarea)
+    type(textarea, 'flowchart LR\n    a --> b')
+    expect(view.container.querySelector('.rmk-diagram-block')?.getAttribute('data-rmk-diagram-mode')).toBe('source')
+    view.rerender(render(true))
+    expect(view.container.querySelector('.rmk-diagram-source-input')).toBeNull()
+    view.rerender(render(false))
+    expect(document.activeElement).toBe(document.body)
+    expect(view.container.querySelector('.rmk-diagram-block')?.getAttribute('data-rmk-diagram-mode')).toBe('canvas')
+    expect(view.container.querySelector('.rmk-diagram-canvas')).not.toBeNull()
   })
 
   it('shows the notice for a kind shown as source, and for no keyword with its hint', () => {

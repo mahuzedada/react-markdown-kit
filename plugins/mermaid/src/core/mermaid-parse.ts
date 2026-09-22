@@ -14,16 +14,25 @@
  * canvas keeps them. A statement the parser cannot read at all is a
  * `FLOWCHART_UNKNOWN_STATEMENT` problem and a retained line. Features the
  * drawing flattens (subgraphs, edge styles, exotic brackets, `linkStyle`,
- * style properties other than colours) are named in `lossy` so the editor
- * can warn before the first edit. The only parse error is a fence whose
- * first statement is not a flowchart header.
+ * style properties other than colours, markdown strings) are named in
+ * `lossy` so the editor can warn before the first edit. The only parse
+ * error is a fence whose first statement is not a flowchart header.
+ *
+ * Problems are `invalid` only where Mermaid.js itself rejects the fence
+ * (checked against Mermaid 11): a statement it cannot read, an unquoted
+ * label holding brackets, braces, parentheses, quotes or pipes, an empty
+ * label, a keyword such as `end` used as a node id, a `%%` comment after a
+ * statement, and an `end` without a subgraph. Where Mermaid accepts the
+ * text but the drawing does not use it, the problem is `ignored`.
  *
  * Geometry Mermaid cannot express lives in one `%% rmk-layout v1 {…}`
  * annotation the exporter writes (`layout-annotation.ts`, spec in
  * LAYOUT_ANNOTATION.md). With it, a drawing round-trips without loss;
  * without it, or when it is rejected, the graph is laid out like a skeleton
  * and the rejection is reported as `layoutProblem` and as a
- * `FLOWCHART_LAYOUT_INVALID` problem.
+ * `FLOWCHART_LAYOUT_INVALID` problem. The annotation line is read wherever
+ * it appears, even after a statement or inside an unreadable run of lines,
+ * and is never retained: the writer emits exactly one.
  */
 import {
   isConnectorType,
@@ -41,6 +50,7 @@ import {
   readLayoutAnnotation,
   type LayoutAnnotation,
   type LayoutProblem,
+  type LayoutRead,
   type LayoutSlot,
 } from './layout-annotation.js'
 import { readFrontMatterTitle, splitFrontMatter } from './front-matter.js'
@@ -61,9 +71,29 @@ export interface FlowchartParse {
 
 export type MermaidParse = FlowchartParse | { readonly error: string; readonly line?: number }
 
+export const FLOWCHART_PROBLEM_CODES = {
+  unknownStatement: 'FLOWCHART_UNKNOWN_STATEMENT',
+  syntaxIgnored: 'FLOWCHART_SYNTAX_IGNORED',
+  layoutInvalid: 'FLOWCHART_LAYOUT_INVALID',
+  labelNeedsQuotes: 'FLOWCHART_LABEL_NEEDS_QUOTES',
+  labelEmpty: 'FLOWCHART_LABEL_EMPTY',
+  reservedId: 'FLOWCHART_RESERVED_ID',
+  trailingComment: 'FLOWCHART_TRAILING_COMMENT',
+} as const
+
 /** The `lossy` vocabulary, in the order the list is reported. */
-const LOSSY = ['subgraph', 'edge-style', 'shape', 'linkStyle', 'style-property'] as const
+const LOSSY = ['subgraph', 'edge-style', 'shape', 'linkStyle', 'style-property', 'markdown-string'] as const
 type Lossy = (typeof LOSSY)[number]
+
+interface Problem {
+  readonly code: string
+  readonly message: string
+}
+
+const UNKNOWN_STATEMENT: Problem = {
+  code: FLOWCHART_PROBLEM_CODES.unknownStatement,
+  message: 'The statement could not be read and is kept as written.',
+}
 
 interface ParsedNode {
   id: string
@@ -83,11 +113,43 @@ interface ParsedEdge {
 
 /** Keywords first, `flowchart-elk` before `flowchart` so the suffix is not left over; any Mermaid direction. */
 const HEADER = /^(flowchart-elk|flowchart|graph)\b\s*(LR|RL|TB|BT|TD|BR|<|>|\^|v)?\s*;?\s*$/
+/** The keyword followed by something that is not a direction: the slip the error names. */
+const HEADER_MISTYPED = /^(flowchart-elk|flowchart|graph)\b\s+(\S+)\s*;?\s*$/
 const DOWN_DIRECTIONS: ReadonlySet<string> = new Set(['TB', 'TD', 'BT', 'v', '^'])
-/** A Mermaid id: alphanumerics with single dashes between them, so the token ends before `--`, `-.`, `==`, `~~~`, `@{`, `@-` and `<-`. */
-const ID = /^[A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*/
+/** The `direction` statement takes the spelled-out directions, case-sensitive; `direction` alone is a node id. */
+const DIRECTION_STATEMENT = /^direction\s+(TB|TD|BT|LR|RL)\b/
+const DIRECTION_ATTEMPT = /^direction\s+\w+\s*;?$/
 const TITLE_LINE = /^\s*title:\s*(.+?)\s*$/
 const CLASS_SUFFIX = /^:::([A-Za-z0-9_-]+)/
+
+/**
+ * Ids Mermaid's lexer reads as keywords wherever they appear, so a node can
+ * never carry them (`A --> end` is a parse error; `End` and `END` are fine).
+ * `direction` and `default` are keywords only at the start of a statement
+ * and are accepted as ids, so they are not here.
+ */
+export const RESERVED_IDS: ReadonlySet<string> = new Set(['end', 'subgraph', 'graph', 'flowchart', 'style', 'classDef', 'class', 'click', 'linkStyle'])
+
+/**
+ * A Mermaid id: Unicode letters, digits and `_`, with a single `-`, `.` or
+ * `:` between them (`my-box`, `api.gateway`, `svc:4`, `Пользователь`), so
+ * the token ends before `--`, `-.`, `==`, `~~~`, `@{`, `@-`, `<-` and `:::`.
+ */
+const ID_CHAR = '[\\p{L}\\p{N}_]'
+const ID = new RegExp(`^${ID_CHAR}+(?:[-.:]${ID_CHAR}+)*`, 'u')
+const WHOLE_ID = new RegExp(`^${ID_CHAR}+(?:[-.:]${ID_CHAR}+)*$`, 'u')
+
+/** True when the writer can emit `id` unchanged: the parser reads it back as the same id. */
+export function isMermaidId(id: string): boolean {
+  return WHOLE_ID.test(id) && !RESERVED_IDS.has(id)
+}
+
+/** The closest valid id: other characters become `_`, an empty result is `n_`, a keyword gets a trailing `_`. */
+export function sanitizeMermaidId(id: string): string {
+  const cleaned = id.replace(/[^\p{L}\p{N}_]/gu, '_')
+  if (cleaned === '') return 'n_'
+  return RESERVED_IDS.has(cleaned) ? `${cleaned}_` : cleaned
+}
 
 /** Shape openers, longest first, with their closer, our shape type, and whether the writer emits the same bracket. */
 const SHAPES: readonly [open: string, close: string, type: NodeShapeType, exact: boolean][] = [
@@ -145,9 +207,23 @@ export function parseMermaidFlowchart(source: string): MermaidParse {
   return new FlowchartParser(source).parse()
 }
 
+/** `kept`: every physical line was retained; `read`: modelled or consumed; an error means the header is missing. */
+type Outcome = 'kept' | 'read' | { readonly error: string }
+
+/** A `style` line, applied once every node is known (Mermaid applies them in any order). */
+interface StyleLine {
+  readonly ids: readonly string[]
+  readonly fill?: string
+  readonly stroke?: string
+  /** A property the drawing has no field for. */
+  readonly extra: boolean
+  readonly logical: LogicalLine
+}
+
 class FlowchartParser {
   private readonly out = new ParseOutput()
   private readonly graph = new Graph()
+  private readonly styles: StyleLine[] = []
   private direction: 'right' | 'down' = 'right'
   private annotation: LayoutAnnotation | undefined
   private layoutProblem: LayoutProblem | undefined
@@ -167,62 +243,89 @@ class FlowchartParser {
   parse(): MermaidParse {
     for (let logical = this.reader.next(); logical !== undefined; logical = this.reader.next()) {
       const outcome = this.readLine(logical)
-      if (outcome === 'error') {
-        return { error: `Not a Mermaid flowchart: expected "flowchart" or "graph", got "${logical.text.slice(0, 40)}".`, line: logical.first }
-      }
+      if (typeof outcome !== 'string') return { error: outcome.error, line: logical.first }
     }
     if (!this.seenHeader) return { error: 'Not a Mermaid flowchart: the block is empty.' }
+    this.applyStyles()
     if (this.layoutProblem !== undefined) {
-      this.out.problem('FLOWCHART_LAYOUT_INVALID', 'invalid', this.layoutProblem.message, this.layoutLine, this.layoutProblem.path)
+      this.out.problem(FLOWCHART_PROBLEM_CODES.layoutInvalid, 'invalid', this.layoutProblem.message, this.layoutLine, this.layoutProblem.path)
       return { data: build(this.graph, this.direction, this.title, undefined), ...this.out.result(), layoutProblem: this.layoutProblem }
     }
     return { data: build(this.graph, this.direction, this.title, this.annotation), ...this.out.result() }
   }
 
   /**
-   * One logical line. `kept` means every physical line was retained as
-   * written (so a trailing comment went with it); `read` means the line was
-   * modelled or consumed, and a trailing comment becomes its own retained
-   * line; `error` means the header is missing.
+   * One logical line. A `%%` comment after a statement is a Mermaid parse
+   * error, so it is reported; the statement is still read and the comment
+   * becomes its own retained line (or, for an annotation, the layout), so
+   * the written source is valid.
    */
-  private readLine(logical: LogicalLine): 'kept' | 'read' | 'error' {
+  private readLine(logical: LogicalLine): Outcome {
     const { text: line, first } = logical
     if (line === '') return 'read'
     if (line.startsWith('%%')) return this.readComment(logical)
 
     const { code, comment } = splitTrailingComment(line)
-    const outcome = this.readStatements(logical, code)
-    if (outcome === 'read' && comment !== undefined) this.out.retainText(first, comment)
+    if (comment === undefined) return this.readStatements(logical, code)
+    const last = first + logical.lines.length - 1
+    this.out.problem(FLOWCHART_PROBLEM_CODES.trailingComment, 'invalid', 'Mermaid reads a %% comment only on a line of its own; this one is kept on its own line.', last)
+    const outcome = this.readStatements(withoutTrailingComment(logical, comment), code)
+    this.readCommentText(comment, last)
     return outcome
   }
 
-  private readComment(logical: LogicalLine): 'kept' | 'read' {
+  private readComment(logical: LogicalLine): Outcome {
     const read = readLayoutAnnotation(logical.text)
     if (read.kind === 'none') {
-      this.out.retain(logical)
+      this.retain(logical)
       return 'kept'
     }
-    // The annotation is the writer's own line: never retained, and only
-    // one per block. Rejections keep the graph and drop the geometry.
-    if (this.annotation !== undefined || this.layoutProblem !== undefined) {
-      this.layoutProblem = { message: 'A block may carry one layout annotation; found more than one.' }
-      this.layoutLine = logical.first
-      this.annotation = undefined
-    } else if (read.kind === 'invalid') {
-      this.layoutProblem = read.problem
-      this.layoutLine = logical.first
-    } else {
-      this.annotation = read.annotation
-    }
+    this.readAnnotation(read, logical.first)
     return 'read'
   }
 
-  private readStatements(logical: LogicalLine, code: string): 'kept' | 'read' | 'error' {
+  private readCommentText(comment: string, line: number): void {
+    const read = readLayoutAnnotation(comment)
+    if (read.kind === 'none') this.out.retainText(line, comment)
+    else this.readAnnotation(read, line)
+  }
+
+  /** The annotation is the writer's own line: never retained, and only one per block. Rejections keep the graph and drop the geometry. */
+  private readAnnotation(read: Exclude<LayoutRead, { kind: 'none' }>, line: number): void {
+    if (this.annotation !== undefined || this.layoutProblem !== undefined) {
+      this.layoutProblem = { message: 'A block may carry one layout annotation; found more than one.' }
+      this.layoutLine = line
+      this.annotation = undefined
+    } else if (read.kind === 'invalid') {
+      this.layoutProblem = read.problem
+      this.layoutLine = line
+    } else {
+      this.annotation = read.annotation
+    }
+  }
+
+  /** Retains every physical line except an annotation, which is read instead: the writer emits its own. */
+  private retain(logical: LogicalLine): void {
+    logical.lines.forEach((text, index) => {
+      const line = logical.first + index
+      const read = readLayoutAnnotation(text)
+      if (read.kind === 'none') this.out.retainText(line, text)
+      else this.readAnnotation(read, line)
+    })
+  }
+
+  private unknown(logical: LogicalLine, problem: Problem = UNKNOWN_STATEMENT): 'kept' {
+    this.retain(logical)
+    this.out.problem(problem.code, 'invalid', problem.message, logical.first)
+    return 'kept'
+  }
+
+  private readStatements(logical: LogicalLine, code: string): Outcome {
     if (code === '') return 'read'
     let statements = splitStatements(code)
     if (!this.seenHeader) {
       const header = HEADER.exec(statements[0] ?? '')
-      if (header === null) return 'error'
+      if (header === null) return { error: headerError(statements[0] ?? '', logical.text) }
       this.seenHeader = true
       this.direction = header[2] !== undefined && DOWN_DIRECTIONS.has(header[2]) ? 'down' : 'right'
       statements = statements.slice(1)
@@ -235,12 +338,14 @@ class FlowchartParser {
       return 'read'
     }
     if (/^end\s*;?$/.test(code)) {
-      this.depth = Math.max(0, this.depth - 1)
+      // Mermaid rejects an `end` that closes nothing.
+      if (this.depth === 0) return this.unknown(logical)
+      this.depth -= 1
       return 'read'
     }
-    if (/^direction\b/.test(code) && this.depth > 0) return 'read'
+    if (DIRECTION_ATTEMPT.test(code)) return this.readDirection(logical, code)
     if (/^(classDef|class|click)\b/.test(code)) {
-      this.out.retain(logical)
+      this.retain(logical)
       return 'kept'
     }
     if (/^linkStyle\b/.test(code)) {
@@ -248,7 +353,9 @@ class FlowchartParser {
       return 'read'
     }
     if (/^style\b/.test(code)) {
-      if (applyStyle(code, this.graph.nodes)) this.out.lose('style-property')
+      const style = readStyle(code)
+      if (style === undefined) return this.unknown(logical)
+      this.styles.push({ ...style, logical })
       return 'read'
     }
 
@@ -259,22 +366,68 @@ class FlowchartParser {
     const readable = statements.every((statement) => parseStatement(statement, this.graph, flags))
     if (!readable) {
       this.graph.restore(snapshot)
-      this.out.retain(logical)
-      this.out.problem('FLOWCHART_UNKNOWN_STATEMENT', 'invalid', 'The statement could not be read and is kept as written.', logical.first)
-      return 'kept'
+      return this.unknown(logical, flags.failure ?? UNKNOWN_STATEMENT)
     }
     for (const lossy of flags.lossy) this.out.lose(lossy)
+    // Labels Mermaid rejects stay in the model: the writer quotes them.
+    for (const problem of flags.labelProblems) this.out.problem(problem.code, 'invalid', problem.message, logical.first)
     if (flags.retainLine) {
       // The nodes stay in the model; the edges live in the retained line,
       // which Mermaid reads after the node lines the writer emits.
       this.graph.edges.length = snapshot.edgeCount
-      this.out.retain(logical)
-      for (const message of flags.ignoredMessages()) this.out.problem('FLOWCHART_SYNTAX_IGNORED', 'ignored', message, logical.first)
+      this.retain(logical)
+      for (const message of flags.ignoredMessages()) this.out.problem(FLOWCHART_PROBLEM_CODES.syntaxIgnored, 'ignored', message, logical.first)
       return 'kept'
     }
     for (const [id, cls] of flags.classes) this.out.retainText(logical.first, `${logical.indent}class ${id} ${cls}`)
     return 'read'
   }
+
+  /**
+   * Inside a subgraph the direction is the subgraph's (flattened, nothing
+   * to keep). At top level Mermaid accepts it anywhere: before the first
+   * node it is the diagram's direction; after one it is kept as written.
+   */
+  private readDirection(logical: LogicalLine, code: string): Outcome {
+    if (this.depth > 0) return 'read'
+    const match = DIRECTION_STATEMENT.exec(code)
+    if (match === null) return this.unknown(logical)
+    if (this.graph.nodes.size === 0 && this.graph.edges.length === 0) {
+      this.direction = DOWN_DIRECTIONS.has(match[1] as string) ? 'down' : 'right'
+      return 'read'
+    }
+    this.retain(logical)
+    this.out.problem(FLOWCHART_PROBLEM_CODES.syntaxIgnored, 'ignored', 'The direction statement after the first node is kept as written and not applied.', logical.first)
+    return 'kept'
+  }
+
+  /** Colours go onto the nodes that exist; a line naming a node that never appears is kept as written. */
+  private applyStyles(): void {
+    for (const style of this.styles) {
+      const missing = style.ids.filter((id) => !this.graph.nodes.has(id))
+      for (const id of style.ids) {
+        const node = this.graph.nodes.get(id)
+        if (node === undefined) continue
+        if (style.fill !== undefined) node.fill = style.fill
+        if (style.stroke !== undefined) node.stroke = style.stroke
+      }
+      if (missing.length > 0) {
+        this.retain(style.logical)
+        this.out.problem(FLOWCHART_PROBLEM_CODES.syntaxIgnored, 'ignored', `The style line for "${missing[0]}" names no node in the diagram and is kept as written.`, style.logical.first)
+      } else if (style.extra) {
+        this.out.lose('style-property')
+      }
+    }
+  }
+}
+
+/** The keyword was right but the direction was not: name the direction, since the keyword error would mislead. */
+function headerError(statement: string, line: string): string {
+  const mistyped = HEADER_MISTYPED.exec(statement)
+  if (mistyped !== null) {
+    return `Unknown direction "${mistyped[2]}" after "${mistyped[1]}"; Mermaid directions are TB, TD, BT, LR, RL (case-sensitive).`
+  }
+  return `Not a Mermaid flowchart: expected "flowchart" or "graph", got "${line.slice(0, 40)}".`
 }
 
 /* -------------------------------------------------------------- collecting */
@@ -285,6 +438,10 @@ class StatementFlags {
   readonly lossy = new Set<Lossy>()
   readonly configIds: string[] = []
   readonly edgeIds: string[] = []
+  /** Labels Mermaid rejects as written; the node or edge is modelled and the writer quotes them. */
+  readonly labelProblems: Problem[] = []
+  /** Why the statement could not be read, when a reason more specific than "unknown" is known. */
+  failure: Problem | undefined
   invisible = false
 
   get retainLine(): boolean {
@@ -304,10 +461,6 @@ class ParseOutput {
   private readonly problems: DiagramProblem[] = []
   private readonly retained: RetainedLine[] = []
   private readonly lossy = new Set<Lossy>()
-
-  retain(logical: LogicalLine): void {
-    logical.lines.forEach((text, index) => this.retained.push({ line: logical.first + index, text, place: 'body' }))
-  }
 
   retainText(line: number, text: string): void {
     this.retained.push({ line, text, place: 'body' })
@@ -331,8 +484,10 @@ class ParseOutput {
     })
   }
 
+  /** Retained lines in source order: a `style` line retained at the end of the parse sorts back to its place. */
   result(): Pick<FlowchartParse, 'problems' | 'retained' | 'lossy'> {
-    return { problems: this.problems, retained: this.retained, lossy: LOSSY.filter((feature) => this.lossy.has(feature)) }
+    const retained = [...this.retained].sort((a, b) => a.line - b.line)
+    return { problems: this.problems, retained, lossy: LOSSY.filter((feature) => this.lossy.has(feature)) }
   }
 }
 
@@ -348,11 +503,16 @@ function retainFrontMatter(frontMatter: string | undefined, out: ParseOutput): v
 
 /* ----------------------------------------------------------------- lines */
 
-/** One statement line, joined from several physical lines when a `@{` config or a `%%{` directive runs on. */
+/**
+ * One statement line, joined from several physical lines when a `%%{`
+ * directive, a `@{` config or a quoted label runs on. Lines joined for a
+ * quoted label keep their breaks as `\n`, so a label spanning lines reads
+ * as a label with line breaks.
+ */
 interface LogicalLine {
   readonly lines: readonly string[]
   readonly first: number
-  /** Trimmed and joined with single spaces. */
+  /** Trimmed and joined. */
   readonly text: string
   /** Leading whitespace of the first physical line, for synthesized lines to sit beside it. */
   readonly indent: string
@@ -371,27 +531,49 @@ class LineReader {
     const start = this.index
     const raw = this.lines[start] as string
     this.index += 1
-    const trimmed = raw.trim()
-    const closer = continuationCloser(trimmed)
-    if (closer !== undefined) {
-      while (this.index < this.lines.length && !closer(this.lines.slice(start, this.index).map((l) => l.trim()).join(' '))) this.index += 1
+    const continuation = continuationOf(raw.trim())
+    const separator = continuation?.separator ?? ' '
+    const joined = (): string => this.lines.slice(start, this.index).map((l) => l.trim()).join(separator)
+    if (continuation !== undefined) {
+      while (this.index < this.lines.length && !continuation.closes(joined())) {
+        // A comment or blank line never sits inside a config or a label,
+        // so an unclosed one stops here instead of swallowing the rest of
+        // the fence (and the writer's annotation with it).
+        const next = (this.lines[this.index] as string).trim()
+        if (continuation.bounded && (next === '' || next.startsWith('%%'))) break
+        this.index += 1
+      }
     }
     const lines = this.lines.slice(start, this.index)
     return {
       lines,
       first: this.firstLine + start,
-      text: lines.map((line) => line.trim()).join(' '),
+      text: lines.map((line) => line.trim()).join(separator),
       indent: /^\s*/.exec(raw)?.[0] ?? '',
     }
   }
 }
 
-/** Multi-line constructs: a directive runs to `}%%`, a `@{` config to its balancing brace. */
-function continuationCloser(trimmed: string): ((joined: string) => boolean) | undefined {
-  if (trimmed.startsWith('%%{')) return (joined) => joined.includes('}%%')
-  const at = trimmed.indexOf('@{')
-  if (at === -1 || trimmed.startsWith('%%')) return undefined
-  return (joined) => bracesBalanced(joined.slice(joined.indexOf('@{') + 1))
+interface Continuation {
+  readonly closes: (joined: string) => boolean
+  readonly separator: string
+  /** Stops at a blank or `%%` line. Directives are not bounded: `}%%` is their own closer. */
+  readonly bounded: boolean
+}
+
+/** Multi-line constructs: a directive runs to `}%%`, a `@{` config to its balancing brace, a quoted label to its closing quote. */
+function continuationOf(trimmed: string): Continuation | undefined {
+  if (trimmed.startsWith('%%{')) return { closes: (joined) => joined.includes('}%%'), separator: ' ', bounded: false }
+  if (trimmed.startsWith('%%')) return undefined
+  if (trimmed.includes('@{')) {
+    return { closes: (joined) => bracesBalanced(joined.slice(joined.indexOf('@{') + 1)), separator: ' ', bounded: true }
+  }
+  if (quoteCount(trimmed) % 2 === 1) return { closes: (joined) => quoteCount(joined) % 2 === 0, separator: '\n', bounded: true }
+  return undefined
+}
+
+function quoteCount(text: string): number {
+  return text.replace(/[^"]/g, '').length
 }
 
 function bracesBalanced(text: string): boolean {
@@ -412,7 +594,7 @@ function bracesBalanced(text: string): boolean {
   return false
 }
 
-/** A `%%` comment after a statement, outside quotes, becomes its own retained line. */
+/** A `%%` comment after a statement, outside quotes. */
 function splitTrailingComment(line: string): { code: string; comment?: string } {
   let quoted = false
   for (let index = 0; index < line.length - 1; index += 1) {
@@ -425,14 +607,40 @@ function splitTrailingComment(line: string): { code: string; comment?: string } 
   return { code: line }
 }
 
-/** `;` separates statements, except inside quotes. */
+/** The same logical line with the trailing comment cut off its last physical line, so retaining it keeps only the code. */
+function withoutTrailingComment(logical: LogicalLine, comment: string): LogicalLine {
+  const lines = [...logical.lines]
+  const last = lines[lines.length - 1] as string
+  const at = last.lastIndexOf(comment)
+  lines[lines.length - 1] = at === -1 ? last : last.slice(0, at).trimEnd()
+  return { ...logical, lines, text: splitTrailingComment(logical.text).code }
+}
+
+const ENTITY = /^#\w+;/
+
+/**
+ * `;` separates statements, except inside quotes, inside a `|label|` and
+ * as the end of a `#NN;` entity, which is how Mermaid reads `|a;b|` and
+ * `A[a#59;b]` and how the writer's own `#124;` pipe escape comes back.
+ */
 function splitStatements(line: string): string[] {
   const out: string[] = []
   let current = ''
   let quoted = false
-  for (const char of line) {
+  let piped = false
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index] as string
+    if (char === '#' && !quoted) {
+      const entity = ENTITY.exec(line.slice(index))
+      if (entity !== null) {
+        current += entity[0]
+        index += entity[0].length - 1
+        continue
+      }
+    }
     if (char === '"') quoted = !quoted
-    if (char === ';' && !quoted) {
+    else if (char === '|' && !quoted) piped = !piped
+    if (char === ';' && !quoted && !piped) {
       out.push(current)
       current = ''
       continue
@@ -443,23 +651,22 @@ function splitStatements(line: string): string[] {
   return out.map((s) => s.trim()).filter((s) => s !== '')
 }
 
-/** Applies fill and stroke; returns true when the line carried a property the drawing has no field for. */
-function applyStyle(line: string, nodes: Map<string, ParsedNode>): boolean {
-  const match = /^style\s+([A-Za-z0-9_-]+)\s+(.+?)\s*;?$/.exec(line)
-  if (match === null) return false
-  const node = nodes.get(match[1] as string)
+/** `style id[,id…] prop:value[,prop:value…]`, as Mermaid reads it; undefined when it is not one. */
+function readStyle(line: string): Omit<StyleLine, 'logical'> | undefined {
+  const match = /^style\s+(\S+)\s+(.+?)\s*;?$/.exec(line)
+  if (match === null) return undefined
+  const ids = (match[1] as string).split(',')
+  if (!ids.every((id) => WHOLE_ID.test(id))) return undefined
+  let fill: string | undefined
+  let stroke: string | undefined
   let extra = false
   for (const declaration of (match[2] as string).split(',')) {
     const [key, value] = declaration.split(':').map((part) => part.trim())
-    if (key === 'fill' && value !== undefined) {
-      if (node !== undefined) node.fill = value
-    } else if (key === 'stroke' && value !== undefined) {
-      if (node !== undefined) node.stroke = value
-    } else if (key !== undefined && key !== '') {
-      extra = true
-    }
+    if (key === 'fill' && value !== undefined) fill = value
+    else if (key === 'stroke' && value !== undefined) stroke = value
+    else if (key !== undefined && key !== '') extra = true
   }
-  return extra
+  return { ids, ...(fill === undefined ? {} : { fill }), ...(stroke === undefined ? {} : { stroke }), extra }
 }
 
 /* --------------------------------------------------------------- graph */
@@ -504,6 +711,7 @@ function parseStatement(statement: string, graph: Graph, flags: StatementFlags):
   while (rest !== '') {
     const edge = readEdge(rest, flags)
     if (edge === undefined) return false
+    if (edge.label !== undefined) flags.labelProblems.push(edgeLabelProblem(edge.label, previous[0] ?? ''))
     rest = edge.rest.trimStart()
     const next = readGroup()
     if (next === undefined) return false
@@ -531,6 +739,10 @@ function readNode(
 ): { id?: string; rest: string } | undefined {
   const id = ID.exec(input)?.[0]
   if (id === undefined) return undefined
+  if (RESERVED_IDS.has(id)) {
+    flags.failure = { code: FLOWCHART_PROBLEM_CODES.reservedId, message: `"${id}" is a Mermaid keyword and cannot name a node; the line is kept as written.` }
+    return undefined
+  }
   let rest = input.slice(id.length)
   let text: string | undefined
   let type: NodeShapeType | undefined
@@ -555,7 +767,9 @@ function readNode(
       opened = true
       const body = readShapeBody(rest.slice(open.length), close)
       if (body === undefined) continue
-      text = decodeText(body.text)
+      const issue = labelIssue(body.raw, body.quoted, SHAPE_LABEL_REJECTS)
+      if (issue !== undefined) flags.labelProblems.push(nodeLabelProblem(issue, id))
+      text = labelText(body.raw, body.quoted, flags)
       type = shapeType
       rest = body.rest
       if (!exact) flags.lossy.add('shape')
@@ -607,30 +821,98 @@ function configValue(body: string, key: string): string | undefined {
   return (match[1] ?? match[2] ?? match[3] ?? '').trim()
 }
 
-function readShapeBody(input: string, close: string): { text: string; rest: string } | undefined {
+/** The text between a shape's brackets: `raw` is what stood between the quotes, or between the brackets untrimmed. */
+function readShapeBody(input: string, close: string): { raw: string; quoted: boolean; rest: string } | undefined {
   if (input.startsWith('"')) {
     const end = input.indexOf('"', 1)
     if (end === -1) return undefined
     const after = input.slice(end + 1)
     if (!after.startsWith(close)) return undefined
-    return { text: input.slice(1, end), rest: after.slice(close.length) }
+    return { raw: input.slice(1, end), quoted: true, rest: after.slice(close.length) }
   }
   const end = input.indexOf(close)
   if (end === -1) return undefined
-  return { text: input.slice(0, end).trim(), rest: input.slice(end + close.length) }
+  return { raw: input.slice(0, end), quoted: false, rest: input.slice(end + close.length) }
 }
+
+/* ---------------------------------------------------------------- labels */
+
+type LabelIssue = 'empty' | 'needs-quotes'
+
+/** Characters Mermaid's lexer refuses in an unquoted bracket label. */
+const SHAPE_LABEL_REJECTS = /[()[\]{}"|]/
+/** The same for an unquoted `|label|`; the pipe itself ends the label. */
+const PIPE_LABEL_REJECTS = /[()[\]{}"]/
+/** In `-- text -->` Mermaid takes brackets and parentheses; only a quote breaks it. */
+const DASH_LABEL_REJECTS = /"/
+
+/** Mermaid rejects an empty label (`A[]`, `A[""]`, `|` `|`) and an unquoted one holding delimiters; `A[ ]` is fine. */
+function labelIssue(raw: string, quoted: boolean, rejects: RegExp): LabelIssue | undefined {
+  if (raw === '') return 'empty'
+  if (!quoted && rejects.test(raw)) return 'needs-quotes'
+  return undefined
+}
+
+function nodeLabelProblem(issue: LabelIssue, id: string): Problem {
+  return issue === 'empty'
+    ? { code: FLOWCHART_PROBLEM_CODES.labelEmpty, message: `The label of "${id}" is empty; Mermaid needs text or a space between the brackets.` }
+    : { code: FLOWCHART_PROBLEM_CODES.labelNeedsQuotes, message: `Mermaid rejects the label of "${id}" as written; wrap it in quotes.` }
+}
+
+function edgeLabelProblem(issue: LabelIssue, from: string): Problem {
+  return issue === 'empty'
+    ? { code: FLOWCHART_PROBLEM_CODES.labelEmpty, message: `The label on the link from "${from}" is empty; Mermaid needs text or a space between the pipes.` }
+    : { code: FLOWCHART_PROBLEM_CODES.labelNeedsQuotes, message: `Mermaid rejects the label on the link from "${from}" as written; wrap it in quotes.` }
+}
+
+/**
+ * Label text as the drawing shows it. A quoted label is taken as written
+ * (line breaks from a label spanning lines included); an unquoted one is
+ * trimmed as Mermaid trims it. A markdown string (`` "`…`" ``) loses its
+ * backticks and its `**bold**`, `*italic*` and `_italic_` markers, which
+ * the drawing cannot show, so it is named in `lossy`.
+ */
+function labelText(raw: string, quoted: boolean, flags: StatementFlags): string {
+  if (!quoted) return decodeText(raw.trim())
+  if (raw.length >= 2 && raw.startsWith('`') && raw.endsWith('`')) {
+    flags.lossy.add('markdown-string')
+    return decodeText(stripMarkdown(raw.slice(1, -1)))
+  }
+  return decodeText(raw)
+}
+
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*([^*\n]+)\*\*/g, '$1')
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1$2')
+    .replace(/(^|[^\p{L}\p{N}_])_([^_\n]+)_(?![\p{L}\p{N}_])/gu, '$1$2')
+    .split('\n')
+    .map((line) => line.trim())
+    .join('\n')
+}
+
+/** A label between pipes or dashes: quoted text may hold `|` and `--`; the caller has matched the quotes. */
+function edgeLabel(raw: string, rejects: RegExp, flags: StatementFlags): { text: string; issue?: LabelIssue } {
+  const trimmed = raw.trim()
+  const quoted = /^"[^"]*"$/s.test(trimmed)
+  const issue = labelIssue(raw, quoted, rejects)
+  const text = quoted ? labelText(trimmed.slice(1, -1), true, flags) : decodeText(trimmed)
+  return issue === undefined ? { text } : { text, issue }
+}
+
+/* ----------------------------------------------------------------- edges */
 
 /** `e1@` before a link token. */
 const EDGE_ID = /^([A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*)@(?=[-=.<xo~])/
-/** Every link token: optional `<`, `o` or `x` start; dashes, dots, equals or tildes; optional head; optional `|label|`. */
-const PLAIN_EDGE = /^([<ox])?(-{2,}[>ox]|-{3,}|-\.+-[>ox]?|={2,}[>ox]|={3,}|~{3,})(?:\s*\|([^|]*)\|)?/
-/** `-- text -->`, `-. text .->`, `== text ==>` and their headless forms. */
-const LABELLED_EDGE = /^([<ox])?(--|-\.|==)\s*(.+?)\s*(-{2,}[>ox]|-{2,}|\.+-[>ox]?|={2,}[>ox]|={2,})/
+/** Every link token: optional `<`, `o` or `x` start; dashes, dots, equals or tildes; optional head; optional `|label|`, whose quoted text may hold a pipe. */
+const PLAIN_EDGE = /^([<ox])?(-{2,}[>ox]|-{3,}|-\.+-[>ox]?|={2,}[>ox]|={3,}|~{3,})(?:\s*\|("[^"]*"|[^|]*)\|)?/
+/** `-- text -->`, `-. text .->`, `== text ==>` and their headless forms; quoted text may hold the closer. */
+const LABELLED_EDGE = /^([<ox])?(--|-\.|==)\s*("[^"]*"|.+?)\s*(-{2,}[>ox]|-{2,}|\.+-[>ox]?|={2,}[>ox]|={2,})/
 
 function readEdge(
   input: string,
   flags: StatementFlags,
-): { type: ConnectorType; text?: string; bidirectional: boolean; rest: string } | undefined {
+): { type: ConnectorType; text?: string; bidirectional: boolean; rest: string; label?: LabelIssue } | undefined {
   const edgeId = EDGE_ID.exec(input)
   if (edgeId !== null) {
     flags.edgeIds.push(edgeId[1] as string)
@@ -638,17 +920,21 @@ function readEdge(
   }
   const plain = PLAIN_EDGE.exec(input)
   if (plain !== null) {
+    const label = plain[3] === undefined ? undefined : edgeLabel(plain[3], PIPE_LABEL_REJECTS, flags)
     return {
       ...edgeType(plain[1], plain[2] as string, false, flags),
-      ...(plain[3] === undefined ? {} : { text: decodeText(unquote(plain[3].trim())) }),
+      ...(label === undefined ? {} : { text: label.text }),
+      ...(label?.issue === undefined ? {} : { label: label.issue }),
       rest: input.slice(plain[0].length),
     }
   }
   const labelled = LABELLED_EDGE.exec(input)
   if (labelled !== null) {
+    const label = edgeLabel(labelled[3] as string, DASH_LABEL_REJECTS, flags)
     return {
       ...edgeType(labelled[1], `${labelled[2]}${labelled[4]}`, true, flags),
-      text: decodeText(unquote(labelled[3] as string)),
+      text: label.text,
+      ...(label.issue === undefined ? {} : { label: label.issue }),
       rest: input.slice(labelled[0].length),
     }
   }
@@ -682,10 +968,6 @@ function edgeType(
   const long = dotted ? dots > (labelled ? 2 : 1) : strokes > (labelled ? 2 : 0) + (arrow ? 2 : 3)
   if (dotted || thick || rounded || long) flags.lossy.add('edge-style')
   return { type: arrow ? 'arrow' : 'line', bidirectional: arrow && start !== undefined }
-}
-
-function unquote(value: string): string {
-  return /^".*"$/.test(value) ? value.slice(1, -1) : value
 }
 
 /* --------------------------------------------------------------- building */

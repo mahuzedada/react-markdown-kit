@@ -7,10 +7,18 @@
  * The node stores Mermaid source, so a commit goes through the flowchart
  * kind's `write` with the lines the parser read through, and what comes
  * back is the model of that source: the canvas remembers it as its last
- * commit so its own echo never resets a gesture. Features the writer cannot
- * keep (`lossy`) lock the canvas behind a notice until the author accepts
- * the loss or switches to text; the first commit can only happen after
- * that.
+ * commit so its own echo never resets a gesture. "Copy as Mermaid" writes
+ * the same way, from the same payload, so the clipboard holds what a commit
+ * would put in the document: title, description, width and retained lines
+ * included. Features the writer cannot keep (`lossy`) lock the canvas
+ * behind a notice until the author accepts the loss or switches to text;
+ * the first commit can only happen after that.
+ *
+ * Commits are discrete, like every other editing path of the package, so
+ * the document read right after a gesture is the gesture's result. That is
+ * why `updateShapes` applies its updater to a ref instead of React's queue:
+ * a discrete update runs Lexical's listeners at once, which must not happen
+ * inside a state updater React may run while rendering.
  */
 import {
   useCallback,
@@ -28,7 +36,6 @@ import type { BlockWidth } from '../core/block-width.js'
 import { bindEndpoints, nodeShapeOutline, findNodeShapeAt, createBinding, resolveBindings } from '../core/bindings.js'
 import { connectorPoints } from '../core/connectors.js'
 import { bbox, normalize, textBoxSize } from '../core/geometry.js'
-import { drawingToMermaid } from '../core/mermaid.js'
 import { NODE_SHAPE_DEFINITIONS, type TextField } from '../core/shapes/definitions.js'
 import {
   createShapeId,
@@ -167,8 +174,8 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
   const pendingPointRef = useRef<Point | null>(null)
   const frameRef = useRef<number | null>(null)
   const lastCommittedRef = useRef(serializeDrawingData(data))
+  /** The local shapes, written by `updateShapes` and the adopt effect only; `shapes` mirrors it for rendering. */
   const shapesRef = useRef(shapes)
-  shapesRef.current = shapes
   const heightRef = useRef(canvasHeight)
   heightRef.current = canvasHeight
   const widthRef = useRef(width)
@@ -208,6 +215,7 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
     const incoming = serializeDrawingData(data)
     if (incoming !== lastCommittedRef.current) {
       lastCommittedRef.current = incoming
+      shapesRef.current = data.shapes
       setShapes(data.shapes)
       setCanvasHeight(data.canvasHeight)
       setWidth(data.width ?? 'full')
@@ -233,14 +241,16 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
     return () => observer.disconnect()
   }, [logicalWidth])
 
-  const commit = useCallback(
-    (nextShapes: readonly DrawingShape[], options?: { height?: number; width?: BlockWidth }) => {
+  // The model a commit writes: the local state over the fields the canvas
+  // does not edit (title, description, logical width).
+  const payloadOf = useCallback(
+    (nextShapes: readonly DrawingShape[], options?: { height?: number; width?: BlockWidth }): DrawingData => {
       const nextWidth = options?.width ?? widthRef.current
       // `full` stays implicit when picked from the toolbar; an explicit
       // `full` already in the payload (insertion default, hand-written
       // source) survives edits that don't touch the width.
       const explicitFull = options?.width === undefined && data.width !== undefined
-      const payload: DrawingData = {
+      return {
         version: 3,
         ...(canvasWidth ? { canvasWidth } : {}),
         canvasHeight: options?.height ?? heightRef.current,
@@ -249,35 +259,55 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
         ...(data.description ? { description: data.description } : {}),
         shapes: nextShapes,
       }
+    },
+    [canvasWidth, data.width, data.title, data.description],
+  )
+
+  // The source of a payload through the kind's writer, with the lines the
+  // parser read through; undefined when no registered kind writes.
+  const writeSource = useCallback((payload: DrawingData): { kind: DiagramKind; written: string } | undefined => {
+    const kind = canvasKindOf(optionsRef.current.kinds)
+    const written = (kind as DiagramKind<DrawingData> | undefined)?.write?.(payload, { retained: retainedRef.current })
+    return kind === undefined || written === undefined ? undefined : { kind, written }
+  }, [])
+
+  const commit = useCallback(
+    (nextShapes: readonly DrawingShape[], options?: { height?: number; width?: BlockWidth }) => {
+      const payload = payloadOf(nextShapes, options)
       const json = serializeDrawingData(payload)
       if (json === lastCommittedRef.current) return
-      const { kinds } = optionsRef.current
-      const kind = canvasKindOf(kinds)
-      if (kind?.write === undefined) return
+      const source = writeSource(payload)
+      if (source === undefined) return
+      const { kind, written } = source
       // The node stores source: write it, and remember the model that
       // source parses to, which is what comes back as `data`.
-      const written = (kind as DiagramKind<DrawingData>).write?.(payload, { retained: retainedRef.current })
-      if (written === undefined) return
+      const { kinds } = optionsRef.current
       const reparsed = parseDiagramSource(kinds, kind.name, written)
       lastCommittedRef.current =
         reparsed !== undefined && !('error' in reparsed) ? serializeDrawingData(reparsed.model as DrawingData) : json
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey)
-        if ($isDiagramNode(node) && node.getSource() !== written) node.setSource(written, kinds)
-      })
+      // Discrete, so the document holds the gesture when the handler returns.
+      editor.update(
+        () => {
+          const node = $getNodeByKey(nodeKey)
+          if ($isDiagramNode(node) && node.getSource() !== written) node.setSource(written, kinds)
+        },
+        { discrete: true },
+      )
     },
-    [editor, nodeKey, canvasWidth, data.width, data.title, data.description],
+    [editor, nodeKey, payloadOf, writeSource],
   )
 
+  // Updates chain through `shapesRef`, so consecutive calls in one handler
+  // compose the way functional updaters would, and a commit runs in the
+  // handler, never inside React's render.
   const updateShapes = useCallback(
     (updater: (prev: readonly DrawingShape[]) => readonly DrawingShape[], options?: { commit?: boolean }) => {
-      setShapes((prev) => {
-        // Re-resolve bindings after every change so bound connectors track
-        // the boxes they're attached to (resolveBindings is idempotent)
-        const next = resolveBindings(updater(prev))
-        if (options?.commit) commit(next)
-        return next
-      })
+      // Re-resolve bindings after every change so bound connectors track
+      // the boxes they're attached to (resolveBindings is idempotent)
+      const next = resolveBindings(updater(shapesRef.current))
+      shapesRef.current = next
+      setShapes(next)
+      if (options?.commit) commit(next)
     },
     [commit],
   )
@@ -709,15 +739,17 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
     [updateShapes],
   )
 
+  // What a commit of the current state would write, retained lines and all.
   const copyMermaid = useCallback(async () => {
-    const payload: DrawingData = { version: 3, canvasHeight: heightRef.current, shapes: shapesRef.current }
+    const source = writeSource(payloadOf(shapesRef.current))
+    if (source === undefined) return false
     try {
-      await navigator.clipboard.writeText(drawingToMermaid(payload))
+      await navigator.clipboard.writeText(source.written)
       return true
     } catch {
       return false
     }
-  }, [])
+  }, [payloadOf, writeSource])
 
   const editingShape = shapes.find((s) => s.id === editingText?.id) ?? null
   const hoverBox = hoverBoxId ? shapes.find((s) => s.id === hoverBoxId) : null

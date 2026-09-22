@@ -278,7 +278,10 @@ flowchart LR
       { line: 9, text: '%% trailing comment', place: 'body' },
       { line: 10, text: '    %% between', place: 'body' },
     ])
-    expect(result.problems).toEqual([])
+    // Mermaid rejects a comment after a statement (C24); the statement is still read and the comment kept on its own line.
+    expect(result.problems).toEqual([
+      { code: 'FLOWCHART_TRAILING_COMMENT', severity: 'invalid', message: 'Mermaid reads a %% comment only on a line of its own; this one is kept on its own line.', line: 9 },
+    ])
     expect(result.lossy).toEqual([])
   })
 
@@ -404,6 +407,298 @@ describe('round trip through the %% rmk-layout annotation', () => {
     expect(second.data).toEqual(first.data)
     expect(second.retained.map((line) => line.text)).toEqual(first.retained.map((line) => line.text))
     expect(drawingToMermaid(second.data, { retained: second.retained })).toBe(written)
+  })
+})
+
+describe('review regressions: what Mermaid accepts is read, what it rejects is invalid', () => {
+  const problems = (source: string) => parsed(source).problems.map((p) => [p.code, p.severity, p.line])
+  const roundTrip = (source: string): FlowchartParse => {
+    const first = parsed(source)
+    const written = drawingToMermaid(first.data, { retained: first.retained })
+    const second = parsed(written)
+    expect(second.data).toEqual(first.data)
+    expect(drawingToMermaid(second.data, { retained: second.retained })).toBe(written)
+    return second
+  }
+
+  it('C0: a `;` inside a #NN; entity or a |label| does not end the statement', () => {
+    const d = data('flowchart LR\n    A -->|a#124;b| B\n    C[a#59;b] --> D\n    E -->|a;b| F; G --> H')
+    expect(edgeSummary(d)).toEqual([
+      ['A', 'B', 'arrow', 'a|b', false],
+      ['C', 'D', 'arrow', '', false],
+      ['E', 'F', 'arrow', 'a;b', false],
+      ['G', 'H', 'arrow', '', false],
+    ])
+    expect(boxes(d).find((b) => b.id === 'C')?.text).toBe('a;b')
+    expect(parsed('flowchart LR\n    A -->|a#124;b| B').problems).toEqual([])
+  })
+
+  it('C0: edge text with | and ; survives write and parse, and the written text is a fixed point', () => {
+    const shape = (id: string, x: number): DrawingShape => ({ id, type: 'rect', x, y: 32, width: 160, height: 90, stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2 })
+    for (const text of ['a|b', 'a;b', 'a | b; c']) {
+      const model: DrawingData = {
+        version: 3,
+        canvasHeight: 154,
+        shapes: [shape('A', 32), shape('B', 282), { id: 'c3', type: 'arrow', x: 198, y: 77, width: 78, height: 0, stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2, text, startBinding: { id: 'A' }, endBinding: { id: 'B' } }],
+      }
+      const written = drawingToMermaid(model, { retained: [] })
+      const back = parsed(written)
+      expect(back.problems).toEqual([])
+      expect(edges(back.data).map((e) => e.text)).toEqual([text])
+      expect(drawingToMermaid(back.data, { retained: back.retained })).toBe(written)
+    }
+  })
+
+  it('C1, C6: an out-of-range #NN; entity never throws; it reads as U+FFFD', () => {
+    expect(() => parseMermaidFlowchart('flowchart LR\n    A["#9999999999;"] --> B')).not.toThrow()
+    expect(boxes(data('flowchart LR\n    A["#99999999;"] --> B'))[0]?.text).toBe('�')
+    expect(boxes(data('flowchart LR\n    A@{ label: "#9999999;" }'))[0]?.text).toBe('�')
+  })
+
+  it('C3, C8: a title that needs YAML quoting is written quoted and read back exactly', () => {
+    for (const title of ['a: b', '[draft] plan', '*', 'C# service # comment', 'say "hi"', "it's"]) {
+      const written = drawingToMermaid({ version: 3, canvasHeight: 154, title, shapes: [] }, { retained: [] })
+      expect(data(written).title).toBe(title)
+    }
+    const quoted = roundTrip('---\ntitle: "a: b"\n---\nflowchart LR\n    A --> B')
+    expect(quoted.data.title).toBe('a: b')
+  })
+
+  it('C7: text that looks like an entity, or holds & or %%{, comes back unchanged after write', () => {
+    for (const text of ['PR #42; merged', 'Bug #123; fixed', '#quot; and &quot;', '%%{init: x}', 'a #124; b', '100%']) {
+      const model: DrawingData = {
+        version: 3,
+        canvasHeight: 154,
+        shapes: [{ id: 'a', type: 'rect', x: 0, y: 0, width: 100, height: 50, stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2, text }],
+      }
+      const back = parsed(drawingToMermaid(model, { retained: [] }))
+      expect(back.problems).toEqual([])
+      expect(boxes(back.data)[0]?.text).toBe(text)
+    }
+  })
+
+  it('C9: an unclosed @{ stops at a comment line, so the annotation is read and every write has one annotation', () => {
+    const p1 = parsed('flowchart LR\n    A --> B\n    A@{ shape: rect')
+    expect(p1.problems.map((p) => [p.code, p.line])).toEqual([['FLOWCHART_UNKNOWN_STATEMENT', 3]])
+    const w1 = drawingToMermaid(p1.data, { retained: p1.retained })
+    const p2 = parsed(w1)
+    expect(p2.retained.map((line) => line.text)).toEqual(['    A@{ shape: rect'])
+    expect(p2.layoutProblem).toBeUndefined()
+    expect(p2.data).toEqual(p1.data)
+    const w2 = drawingToMermaid(p2.data, { retained: p2.retained })
+    expect(w2).toBe(w1)
+    expect(w2.match(/rmk-layout/g)).toHaveLength(1)
+    // The same when the unclosed config swallows a statement before the comment.
+    const p3 = parsed('flowchart LR\n    A --> B\n    A@{ shape: rect\n    B --> C\n    %% note')
+    expect(p3.retained.map((line) => line.text)).toEqual(['    A@{ shape: rect', '    B --> C', '    %% note'])
+  })
+
+  it('C9: an annotation inside a retained run of lines is never retained', () => {
+    const result = parsed('flowchart LR\n    A --> B\n    %%{init: {\n    %% rmk-layout v1 {"canvasHeight":200}\n    }}%%')
+    expect(result.retained.map((line) => line.text)).toEqual(['    %%{init: {', '    }}%%'])
+    expect(result.data.canvasHeight).toBe(200)
+  })
+
+  it('C11, C16: a style line before its node colours it; one naming no node is kept as written', () => {
+    const before = parsed('flowchart LR\n    style A fill:#f9f,stroke:#333\n    A --> B')
+    expect(boxes(before.data)[0]?.fill).toBe('#f9f')
+    expect(boxes(before.data)[0]?.stroke).toBe('#333')
+    expect(before.problems).toEqual([])
+    expect(before.retained).toEqual([])
+    expect(drawingToMermaid(before.data, { retained: before.retained })).toContain('style A fill:#f9f,stroke:#333')
+
+    const unknown = parsed('flowchart LR\n    A --> B\n    style X fill:#f00')
+    expect(unknown.retained).toEqual([{ line: 3, text: '    style X fill:#f00', place: 'body' }])
+    expect(unknown.problems).toEqual([
+      { code: 'FLOWCHART_SYNTAX_IGNORED', severity: 'ignored', message: 'The style line for "X" names no node in the diagram and is kept as written.', line: 3 },
+    ])
+    expect(unknown.lossy).toEqual([])
+
+    const list = parsed('flowchart LR\n    A --> B\n    style A,B fill:#f00')
+    expect(boxes(list.data).map((b) => b.fill)).toEqual(['#f00', '#f00'])
+    expect(list.problems).toEqual([])
+    // Retained lines stay in source order even when a style line is decided at the end.
+    const ordered = parsed('flowchart LR\n    style X fill:#f00\n    A --> B\n    click A "https://x"')
+    expect(ordered.retained.map((line) => line.line)).toEqual([2, 4])
+  })
+
+  it('C11: `style` without properties is not a style line and is invalid', () => {
+    expect(problems('flowchart LR\n    A --> B\n    style A')).toEqual([['FLOWCHART_UNKNOWN_STATEMENT', 'invalid', 3]])
+  })
+
+  it('C12: ids with Unicode letters, dots and colons read as ids and are written unchanged', () => {
+    const cyrillic = parsed('flowchart TD\n    Пользователь --> Сервер')
+    expect(boxes(cyrillic.data).map((b) => b.id)).toEqual(['Пользователь', 'Сервер'])
+    expect(cyrillic.problems).toEqual([])
+    const dotted = parsed('flowchart TD\n    api.gateway --> db')
+    expect(edgeSummary(dotted.data)).toEqual([['api.gateway', 'db', 'arrow', '', false]])
+    const mixed = parsed('flowchart TD\n    svc_1 --> svc-2 --> svc.3 --> svc:4\n    用户 --> 服务器')
+    expect(boxes(mixed.data).map((b) => b.id)).toEqual(['svc_1', 'svc-2', 'svc.3', 'svc:4', '用户', '服务器'])
+    expect(mixed.problems).toEqual([])
+    const written = drawingToMermaid(mixed.data, { retained: [] })
+    expect(written).toContain('svc.3 --> svc:4')
+    expect(written).toContain('用户["用户"]')
+    roundTrip('flowchart TD\n    svc_1 --> svc-2 --> svc.3 --> svc:4\n    Пользователь --> Сервер')
+    // The id still ends before every link token and before a class suffix.
+    expect(boxes(data('flowchart LR\n    A-.->B\n    C:::hot --> D\n    E---F')).map((b) => b.id)).toEqual(['A', 'B', 'C', 'D', 'E', 'F'])
+  })
+
+  it('C13: unquoted delimiters in a bracket or pipe label are invalid, and the node stays', () => {
+    for (const [source, expected] of [
+      ['flowchart TD\n    A[Compute f(x)] --> B', 'Compute f(x)'],
+      ['flowchart TD\n    A[Set {x}] --> B', 'Set {x}'],
+      ['flowchart TD\n    A[say "hi"] --> B', 'say "hi"'],
+      ['flowchart TD\n    A[a | b] --> B', 'a | b'],
+    ] as const) {
+      const result = parsed(source)
+      expect(boxes(result.data).map((b) => b.text)).toEqual([expected, 'B'])
+      expect(edges(result.data)).toHaveLength(1)
+      expect(result.retained).toEqual([])
+      expect(result.problems).toEqual([
+        { code: 'FLOWCHART_LABEL_NEEDS_QUOTES', severity: 'invalid', message: 'Mermaid rejects the label of "A" as written; wrap it in quotes.', line: 2 },
+      ])
+      // The writer quotes the label, so the written source is valid and the problem is gone.
+      expect(parsed(drawingToMermaid(result.data, { retained: result.retained })).problems).toEqual([])
+    }
+    const pipe = parsed('flowchart TD\n    A -->|ok (200)| B\n    C -->|a [b]| D')
+    expect(edgeSummary(pipe.data)).toEqual([['A', 'B', 'arrow', 'ok (200)', false], ['C', 'D', 'arrow', 'a [b]', false]])
+    expect(pipe.problems).toEqual([
+      { code: 'FLOWCHART_LABEL_NEEDS_QUOTES', severity: 'invalid', message: 'Mermaid rejects the label on the link from "A" as written; wrap it in quotes.', line: 2 },
+      { code: 'FLOWCHART_LABEL_NEEDS_QUOTES', severity: 'invalid', message: 'Mermaid rejects the label on the link from "C" as written; wrap it in quotes.', line: 3 },
+    ])
+    // `-- text -->` takes parentheses and brackets; only a quote breaks it.
+    expect(parsed('flowchart TD\n    A -- ok (200) [b] --> B').problems).toEqual([])
+    expect(problems('flowchart TD\n    A -- say "hi" --> B')).toEqual([['FLOWCHART_LABEL_NEEDS_QUOTES', 'invalid', 2]])
+    // Quoted labels and < > are fine.
+    expect(parsed('flowchart TD\n    A["f(x)"] --> B\n    B -->|"ok (200)"| C\n    C[a < b > c]').problems).toEqual([])
+  })
+
+  it('C13: an empty label is invalid and keeps the node; a space is a label', () => {
+    for (const source of ['flowchart TD\n    A[] --> B', 'flowchart TD\n    A[""] --> B', 'flowchart TD\n    A() --> B']) {
+      const result = parsed(source)
+      expect(boxes(result.data).map((b) => [b.id, b.text])).toEqual([['A', undefined], ['B', 'B']])
+      expect(edges(result.data)).toHaveLength(1)
+      expect(result.problems.map((p) => [p.code, p.severity, p.line])).toEqual([['FLOWCHART_LABEL_EMPTY', 'invalid', 2]])
+    }
+    expect(parsed('flowchart TD\n    A[ ] --> B').problems).toEqual([])
+    expect(parsed('flowchart TD\n    A -->| | B').problems).toEqual([])
+    expect(problems('flowchart TD\n    A -->|| B')).toEqual([['FLOWCHART_LABEL_EMPTY', 'invalid', 2]])
+  })
+
+  it('C13, C24: a %% comment after a statement or the header is invalid, read, and kept on its own line', () => {
+    const result = parsed('flowchart TD %% main\n    A --> B %% comment')
+    expect(edgeSummary(result.data)).toEqual([['A', 'B', 'arrow', '', false]])
+    expect(result.problems.map((p) => [p.code, p.severity, p.line])).toEqual([
+      ['FLOWCHART_TRAILING_COMMENT', 'invalid', 1],
+      ['FLOWCHART_TRAILING_COMMENT', 'invalid', 2],
+    ])
+    expect(result.retained).toEqual([
+      { line: 1, text: '%% main', place: 'body' },
+      { line: 2, text: '%% comment', place: 'body' },
+    ])
+    const written = drawingToMermaid(result.data, { retained: result.retained })
+    expect(written.split('\n')).toContain('%% comment')
+    expect(parsed(written).problems).toEqual([])
+    // A line that is kept keeps its code only; the comment is its own line.
+    const kept = parsed('flowchart TD\n    A --> ; B %% why')
+    expect(kept.retained).toEqual([
+      { line: 2, text: '    A --> ; B', place: 'body' },
+      { line: 2, text: '%% why', place: 'body' },
+    ])
+  })
+
+  it('C14: a quoted label spanning lines is one statement with a line break; a markdown string loses its markers', () => {
+    const multi = parsed('flowchart TD\n    A["First line\n    second line"] --> B')
+    expect(boxes(multi.data).map((b) => [b.id, b.text])).toEqual([['A', 'First line\nsecond line'], ['B', 'B']])
+    expect(edges(multi.data)).toHaveLength(1)
+    expect(multi.problems).toEqual([])
+    expect(multi.lossy).toEqual([])
+    roundTrip('flowchart TD\n    A["First line\n    second line"] --> B')
+
+    const md = parsed('flowchart LR\n    A["`**Bold** text`"] --> B')
+    expect(boxes(md.data)[0]?.text).toBe('Bold text')
+    expect(md.problems).toEqual([])
+    expect(md.lossy).toEqual(['markdown-string'])
+
+    const mdMulti = parsed('flowchart LR\n    A("`The **cat**\n    in the _hat_`") -- "`edge *label*`" --> B{{"`The **dog** in the hog`"}}')
+    expect(boxes(mdMulti.data).map((b) => b.text)).toEqual(['The cat\nin the hat', 'The dog in the hog'])
+    expect(edgeSummary(mdMulti.data)).toEqual([['A', 'B', 'arrow', 'edge label', false]])
+    expect(mdMulti.lossy).toEqual(['shape', 'markdown-string'])
+    // Underscores inside words are not emphasis.
+    expect(boxes(data('flowchart LR\n    A["`snake_case_name`"]'))[0]?.text).toBe('snake_case_name')
+  })
+
+  it('C15: an end without a subgraph is invalid and kept as written', () => {
+    const result = parsed('flowchart LR\n    A --> B\n    end')
+    expect(result.problems).toEqual([
+      { code: 'FLOWCHART_UNKNOWN_STATEMENT', severity: 'invalid', message: 'The statement could not be read and is kept as written.', line: 3 },
+    ])
+    expect(result.retained).toEqual([{ line: 3, text: '    end', place: 'body' }])
+    expect(problems('flowchart LR\n    subgraph one\n    A --> B\n    end\n    end')).toEqual([['FLOWCHART_UNKNOWN_STATEMENT', 'invalid', 5]])
+    expect(parsed('flowchart LR\n    subgraph one\n    A --> B\n    end').problems).toEqual([])
+  })
+
+  it('C17: a trailing %% rmk-layout comment is read as the annotation, never retained', () => {
+    const result = parsed('flowchart LR\n    A --> B %% rmk-layout v1 {"canvasHeight":200}')
+    expect(result.retained).toEqual([])
+    expect(result.data.canvasHeight).toBe(200)
+    expect(result.problems.map((p) => p.code)).toEqual(['FLOWCHART_TRAILING_COMMENT'])
+    const written = drawingToMermaid(result.data, { retained: result.retained })
+    expect(written.match(/rmk-layout v1/g)).toHaveLength(1)
+    expect(parsed(written).problems).toEqual([])
+  })
+
+  it('C18, C23: a top-level direction before any node is the direction; after one it is kept as written and ignored', () => {
+    const before = parsed('flowchart LR\n    direction TB\n    A --> B')
+    expect(before.problems).toEqual([])
+    expect(before.retained).toEqual([])
+    const [a, b] = boxes(before.data)
+    expect((b?.y ?? 0) > (a?.y ?? 0)).toBe(true)
+    expect(b?.x).toBe(a?.x)
+
+    const after = parsed('flowchart LR\n    A --> B\n    direction TB')
+    expect(after.problems).toEqual([
+      { code: 'FLOWCHART_SYNTAX_IGNORED', severity: 'ignored', message: 'The direction statement after the first node is kept as written and not applied.', line: 3 },
+    ])
+    expect(after.retained).toEqual([{ line: 3, text: '    direction TB', place: 'body' }])
+    // Mermaid rejects a lowercase direction; `direction` alone is a node id.
+    expect(problems('flowchart LR\n    direction tb\n    A --> B')).toEqual([['FLOWCHART_UNKNOWN_STATEMENT', 'invalid', 2]])
+    expect(boxes(data('flowchart LR\n    direction --> B')).map((b) => b.id)).toEqual(['direction', 'B'])
+  })
+
+  it('C24: Mermaid keywords cannot name a node; the line is invalid and kept as written', () => {
+    for (const id of ['end', 'subgraph', 'graph', 'flowchart', 'style', 'classDef', 'class', 'click', 'linkStyle']) {
+      const result = parsed(`flowchart LR\n    A --> ${id}`)
+      expect(result.problems).toEqual([
+        { code: 'FLOWCHART_RESERVED_ID', severity: 'invalid', message: `"${id}" is a Mermaid keyword and cannot name a node; the line is kept as written.`, line: 2 },
+      ])
+      expect(result.retained).toEqual([{ line: 2, text: `    A --> ${id}`, place: 'body' }])
+      expect(boxes(result.data)).toEqual([])
+    }
+    expect(problems('flowchart LR\n    end --> B')).toEqual([['FLOWCHART_RESERVED_ID', 'invalid', 2]])
+    // Case matters, and `direction`, `default` and words containing a keyword are ids.
+    expect(boxes(data('flowchart LR\n    start --> End --> END --> endpoint --> direction --> default')).map((b) => b.id)).toEqual(['start', 'End', 'END', 'endpoint', 'direction', 'default'])
+  })
+
+  it('C25: a quoted edge label may hold -- and |', () => {
+    const d = data('flowchart LR\n    A -- "x -- y" --> C\n    A -->|"a | b"| B\n    C -. "p -- q" .-> D')
+    expect(edgeSummary(d)).toEqual([
+      ['A', 'C', 'arrow', 'x -- y', false],
+      ['A', 'B', 'arrow', 'a | b', false],
+      ['C', 'D', 'arrow', 'p -- q', false],
+    ])
+    expect(parsed('flowchart LR\n    A -- "x -- y" --> C\n    A -->|"a | b"| B').problems).toEqual([])
+    roundTrip('flowchart LR\n    A -- "x -- y" --> C\n    A -->|"a | b"| B')
+  })
+
+  it('C28: a wrong-case direction is named as such, with the directions Mermaid takes', () => {
+    expect(parseMermaidFlowchart('graph td\n    A --> B')).toEqual({
+      error: 'Unknown direction "td" after "graph"; Mermaid directions are TB, TD, BT, LR, RL (case-sensitive).',
+      line: 1,
+    })
+    expect(parseMermaidFlowchart('flowchart Td\n    A --> B')).toMatchObject({ error: expect.stringContaining('Unknown direction "Td"'), line: 1 })
+    expect(parseMermaidFlowchart('flowchart-elk lr\n    A --> B')).toMatchObject({ error: expect.stringContaining('Unknown direction "lr" after "flowchart-elk"') })
+    expect(parseMermaidFlowchart('Flowchart LR\n  a --> b')).toMatchObject({ error: expect.stringMatching(/Not a Mermaid flowchart/), line: 1 })
   })
 })
 

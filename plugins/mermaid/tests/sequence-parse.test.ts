@@ -17,6 +17,9 @@ import { parseSequenceDiagram, SEQUENCE_PROBLEM_CODES } from '../src/core/sequen
 
 const CORPUS = join(dirname(fileURLToPath(import.meta.url)), 'corpus', 'sequenceDiagram')
 
+/** C29: one message for every residue after a `;`, naming the entity codes for `;`, `&`, `<`, `>`. */
+const SEMICOLON_HINT = 'This statement is not sequence diagram syntax; ";" ends a statement, so write #59; for a semicolon in text and #38;, #lt;, #gt; instead of &amp;, &lt;, &gt;.'
+
 function parse(source: string): DiagramParse<SequenceModel> {
   const parsed = parseSequenceDiagram(source)
   if ('error' in parsed) throw new Error(parsed.error)
@@ -207,7 +210,7 @@ describe('parseSequenceDiagram: messages', () => {
   it('reports residue after a ; as an unknown statement with the #59; hint, and retains the line once', () => {
     const p = parse('sequenceDiagram\n    A->>B: wait; then go\n    C->>D: ok')
     expect(p.problems).toEqual([
-      { code: 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT', severity: 'invalid', message: 'This statement is not sequence diagram syntax; use #59; for a semicolon in text.', line: 2 },
+      { code: 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT', severity: 'invalid', message: SEMICOLON_HINT, line: 2 },
     ])
     expect(p.retained).toEqual([{ line: 2, text: '    A->>B: wait; then go', place: 'body' }])
     expect(messages('sequenceDiagram\n    A->>B: wait; then go\n    C->>D: ok')).toEqual(['A->>B: wait', 'C->>D: ok'])
@@ -459,6 +462,7 @@ describe('parseSequenceDiagram: retained lines and ignored statements', () => {
   it('uses only the documented problem codes', () => {
     expect(Object.values(SEQUENCE_PROBLEM_CODES)).toEqual([
       'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT',
+      'SEQUENCE_DIAGRAM_RESERVED_ID',
       'SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE',
       'SEQUENCE_DIAGRAM_END_WITHOUT_OPENER',
       'SEQUENCE_DIAGRAM_SECTION_OUTSIDE_FRAME',
@@ -474,8 +478,147 @@ describe('parseSequenceDiagram: retained lines and ignored statements', () => {
   })
 })
 
+describe('parseSequenceDiagram: review findings', () => {
+  // C2 + C10: a directive may span lines, before or after the header; every physical line is retained.
+  it('joins a multi-line %%{ }%% directive before the header and retains every line of it', () => {
+    const source = '%%{\n  init: { "theme": "dark" }\n}%%\nsequenceDiagram\n    A->>B: hi'
+    const p = parse(source)
+    expect(p.problems).toEqual([])
+    expect(messages(source)).toEqual(['A->>B: hi'])
+    expect(p.retained).toEqual([
+      { line: 1, text: '%%{', place: 'body' },
+      { line: 2, text: '  init: { "theme": "dark" }', place: 'body' },
+      { line: 3, text: '}%%', place: 'body' },
+    ])
+  })
+
+  it('joins a multi-line directive after the header, indented, and one that never closes runs to the end as in Mermaid', () => {
+    const p = parse('sequenceDiagram\n    %%{\n      init: { "theme": "dark" }\n    }%%\n    A->>B: hi')
+    expect(p.problems).toEqual([])
+    expect(p.retained.map((r) => [r.line, r.text])).toEqual([
+      [2, '    %%{'],
+      [3, '      init: { "theme": "dark" }'],
+      [4, '    }%%'],
+    ])
+    expect(p.model.items).toHaveLength(1)
+    const unclosed = parse('sequenceDiagram\n    A->>B: hi\n%%{\n  init: { "theme": "dark" }')
+    expect(unclosed.problems).toEqual([])
+    expect(unclosed.retained.map((r) => r.line)).toEqual([3, 4])
+    expect(unclosed.model.items).toHaveLength(1)
+  })
+
+  it('strips and retains a %% comment after the header, after a ;, and after end; inside message text %% is text', () => {
+    const p = parse('sequenceDiagram %% login\n    A->>B: x')
+    expect(p.problems).toEqual([])
+    expect(p.retained).toEqual([{ line: 1, text: '%% login', place: 'body' }])
+    expect(messages('sequenceDiagram %% login\n    A->>B: x')).toEqual(['A->>B: x'])
+    expect(messages('sequenceDiagram %% login; A->>B: x')).toEqual([])
+    expect(parse('sequenceDiagram; %% c\n    A->>B: x; %% d\n    loop l\n    end %% e').retained).toEqual([
+      { line: 1, text: '%% c', place: 'body' },
+      { line: 2, text: '%% d', place: 'body' },
+      { line: 4, text: '%% e', place: 'body' },
+    ])
+    expect(problems('sequenceDiagram; %% c\n    A->>B: x; %% d\n    loop l\n    end %% e')).toEqual([])
+    expect(messages('sequenceDiagram\n    A->>B: hi %% c')).toEqual(['A->>B: hi %% c'])
+    expect(messages('sequenceDiagram\n    loop x\n    end %% c; A->>B: x')).toEqual(['loop x'])
+    expect(parse('sequenceDiagram\n    autonumber 10 %% c\n    A->>B: x').problems).toEqual([])
+    expect(model('sequenceDiagram\n    autonumber 10 %% c\n    A->>B: x').numbering).toEqual({ start: 10, step: 1 })
+    expect(invalid('sequenceDiagram\n    activate A\n    deactivate A %% c')).toEqual(['SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE@3'])
+  })
+
+  it('retains a line once when a statement on it is unknown and it also carries a comment', () => {
+    const p = parse('sequenceDiagram\n    A->>B: wait; then go; %% c')
+    expect(p.problems).toEqual([{ code: 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT', severity: 'invalid', message: SEMICOLON_HINT, line: 2 }])
+    expect(p.retained).toEqual([{ line: 2, text: '    A->>B: wait; then go; %% c', place: 'body' }])
+  })
+
+  // C27: the header is the leading keyword token; the rest of its line is the first statement.
+  it('reads the header and the first statement on one line', () => {
+    expect(messages('sequenceDiagram A->>B: hi')).toEqual(['A->>B: hi'])
+    expect(messages('sequenceDiagram\tA->>B: hi')).toEqual(['A->>B: hi'])
+    expect(parse('sequenceDiagram A->>B: hi').problems).toEqual([])
+    expect(model('sequenceDiagram participant A').participants).toEqual([{ id: 'A', label: 'A', kind: 'participant' }])
+    expect(messages('sequenceDiagram;A->>B: hi')).toEqual(['A->>B: hi'])
+    expect(parseSequenceDiagram('sequenceDiagramA->>B: hi')).toEqual({ error: 'Not a sequence diagram: expected "sequenceDiagram", got "sequenceDiagramA->>B: hi".', line: 1 })
+  })
+
+  // C19: `(` and `)` are actor characters in messages; `to` cannot start with `(`.
+  it('reads actor names with parentheses in messages, keeping the () connection check first', () => {
+    expect(messages('sequenceDiagram\n    A(1)->>B: hi')).toEqual(['A(1)->>B: hi'])
+    expect(parse('sequenceDiagram\n    A(1)->>B: hi').problems).toEqual([])
+    expect(messages('sequenceDiagram\n    A->>B(2): hi\n    A(1)-)B(2): yo\n    A (1)-->>B: x')).toEqual(['A->>B(2): hi', 'A(1)-)B(2): yo', 'A (1)-->>B: x'])
+    const p = parse('sequenceDiagram\n    A(1)->>+B(2): hi\n    B(2)-->>-A(1): yo')
+    expect(p.problems).toEqual([])
+    expect(p.model.activations).toEqual([{ participantId: 'B(2)', start: 0, end: 1 }])
+    expect(invalid('sequenceDiagram\n    A->>(B): hi')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'])
+    expect(parse('sequenceDiagram\n    A()->>B: c\n    A->>()B: c').problems.map((x) => x.message)).toEqual(['"()" connections are not drawn.', '"()" connections are not drawn.'])
+  })
+
+  // C26: a message end or note target Mermaid lexes as a keyword.
+  it('reports a reserved keyword used as a message actor, at the use and not the declaration', () => {
+    const p = parse('sequenceDiagram\n    participant end as Endpoint\n    A->>end: hi')
+    expect(p.problems).toEqual([{ code: 'SEQUENCE_DIAGRAM_RESERVED_ID', severity: 'invalid', message: '"end" is a Mermaid keyword and cannot be a participant id.', line: 3 }])
+    expect(p.retained).toEqual([])
+    expect(messages('sequenceDiagram\n    participant end as Endpoint\n    A->>end: hi')).toEqual(['A->>end: hi'])
+    expect(p.model.participants.map((x) => x.id)).toEqual(['end', 'A'])
+    expect(parse('sequenceDiagram\n    participant end as Endpoint').problems).toEqual([])
+    expect(invalid('sequenceDiagram\n    participant loop as Loop Service\n    A->>loop: x')).toEqual(['SEQUENCE_DIAGRAM_RESERVED_ID@3'])
+    expect(parse('sequenceDiagram\n    Note->>A: x').problems).toEqual([{ code: 'SEQUENCE_DIAGRAM_RESERVED_ID', severity: 'invalid', message: '"Note" is a Mermaid keyword and cannot be a participant id.', line: 2 }])
+    expect(invalid('sequenceDiagram\n    end->>A: x')).toEqual(['SEQUENCE_DIAGRAM_RESERVED_ID@2'])
+    expect(invalid('sequenceDiagram\n    A->>End: x\n    A->>end point: x\n    A->>end-point: x\n    A->>title: x\n    A->>Note over B: x\n    participant->>B: x\n    activate->>B: x\n    link->>B: x')).toEqual([
+      'SEQUENCE_DIAGRAM_RESERVED_ID@2',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@3',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@4',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@5',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@6',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@7',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@8',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@9',
+    ])
+    const keywords = ['end', 'loop', 'alt', 'else', 'opt', 'par', 'par_over', 'and', 'critical', 'option', 'break', 'rect', 'note', 'box', 'participant', 'actor', 'activate', 'deactivate', 'autonumber', 'links', 'link', 'properties', 'details', 'create', 'destroy', 'over', 'off', 'sequenceDiagram', 'accTitle', 'accDescr']
+    for (const keyword of keywords) expect(invalid(`sequenceDiagram\n    A->>${keyword}: x`), keyword).toEqual(['SEQUENCE_DIAGRAM_RESERVED_ID@2'])
+  })
+
+  it('reports a reserved keyword as a note target', () => {
+    expect(invalid('sequenceDiagram\n    Note over end: x\n    Note over A, end: x\n    Note left of loop: x\n    Note over A,title: x')).toEqual([
+      'SEQUENCE_DIAGRAM_RESERVED_ID@2',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@3',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@4',
+      'SEQUENCE_DIAGRAM_RESERVED_ID@5',
+    ])
+  })
+
+  it('accepts ids Mermaid accepts: keyword prefixes, title without a following space, and declarations', () => {
+    const source = 'sequenceDiagram\n    A->>endpoint: x\n    A->>title:x\n    title->>B: x\n    A->>as: x\n    A->>left: x\n    A->>wrap: x\n    Andy->>Office: x\n    accTitle->>B: x'
+    expect(parse(source).problems).toEqual([])
+    expect(messages(source)).toEqual(['A->>endpoint: x', 'A->>title: x', 'title->>B: x', 'A->>as: x', 'A->>left: x', 'A->>wrap: x', 'Andy->>Office: x', 'accTitle->>B: x'])
+    expect(parse('sequenceDiagram\n    participant end\n    actor loop\n    activate end\n    deactivate end\n    box G\n    participant note\n    end').problems).toEqual([])
+  })
+
+  it('closes a frame on an end with trailing text and reports the residue', () => {
+    expect(problems('sequenceDiagram\n    loop x\n    end foo')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'])
+    expect(problems('sequenceDiagram\n    box g\n    participant A\n    end foo')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@4'])
+    expect(model('sequenceDiagram\n    box g\n    participant A\n    end foo').boxes).toEqual([{ label: 'g', participantIds: ['A'] }])
+  })
+
+  it('reports a bare ignored keyword as unknown rather than ignored', () => {
+    expect(invalid('sequenceDiagram\n    link\n    destroy->>B: x')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2', 'SEQUENCE_DIAGRAM_RESERVED_ID@3'])
+  })
+
+  // C29: one problem per code and line, with the entity hint.
+  it('reports one problem per code and line, however many residues a line has', () => {
+    const source = 'sequenceDiagram\n    participant W as Workstation\n    participant F as \\\\fileserver\\share\n    W->>F: copy C:\\Users\\jdoe\\report.docx\n    F-->>W: &lt;done&gt; &amp; 100%'
+    const p = parse(source)
+    expect(p.problems).toEqual([{ code: 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT', severity: 'invalid', message: SEMICOLON_HINT, line: 5 }])
+    expect(p.retained).toEqual([{ line: 5, text: '    F-->>W: &lt;done&gt; &amp; 100%', place: 'body' }])
+    expect(messages(source)).toEqual(['W->>F: copy C:\\Users\\jdoe\\report.docx', 'F-->>W: &lt'])
+    expect(problems('sequenceDiagram\n    foo; bar; baz\n    deactivate A; deactivate B')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2', 'SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE@3'])
+  })
+})
+
 describe('parseSequenceDiagram: corpus outlines', () => {
   const EXPECTED: Record<string, readonly string[]> = {
+    'actor-parens.mmd': ['participant Alice(1)', 'participant Bob(2)', 'Alice(1)->>Bob(2): Hi', 'Bob(2)-->>Alice(1): Hello'],
     'activation-shorthand.mmd': ['participant Alice', 'participant John', 'Alice->>+John: Hello John, how are you?', 'John-->>-Alice: Great!', 'activation John 0-1'],
     'activation-stacked.mmd': [
       'participant Alice',
@@ -554,6 +697,9 @@ describe('parseSequenceDiagram: corpus outlines', () => {
       'Alice->>John: Thanks!',
     ],
     'directive.mmd': ['participant Alice', 'participant Bob', 'Alice->>Bob: Hi'],
+    'directive-multi-line.mmd': ['participant Alice', 'participant Bob', 'Alice->>Bob: Hi'],
+    'header-comment.mmd': ['participant Alice', 'participant Bob', 'Alice->>Bob: Hi'],
+    'header-inline.mmd': ['participant Alice', 'participant Bob', 'Alice->>Bob: Hi'],
     'entity-codes.mmd': ['participant A', 'participant B', 'A->>B: I # this ♥'],
     'line-breaks.mmd': ['participant Alice', 'participant John', 'Alice->>John: Hello John,\nhow are you?', 'note over Alice,John: A typical\ninteraction'],
     'link.mmd': ['actor Alice', 'actor John', 'Alice->>John: Hello John, how are you?', 'John-->>Alice: Great!'],
@@ -602,6 +748,17 @@ describe('parseSequenceDiagram: corpus outlines', () => {
     'title-front-matter.mmd': ['title Hello Title', 'participant Alice', 'participant Bob', 'Alice->>Bob: Hi'],
   }
   const IGNORED: Record<string, readonly number[]> = { 'link.mmd': [4, 5, 6, 7], 'links.mmd': [4, 5] }
+  /** Retained body lines: comments, directives and the ignored statements above. */
+  const RETAINED: Record<string, readonly number[]> = {
+    'actor-parens.mmd': [],
+    'comments.mmd': [3, 5],
+    'directive-multi-line.mmd': [1, 2, 3],
+    'directive.mmd': [1],
+    'header-comment.mmd': [1],
+    'header-inline.mmd': [],
+    'link.mmd': [4, 5, 6, 7],
+    'links.mmd': [4, 5],
+  }
 
   const files = readdirSync(CORPUS).filter((f) => f.endsWith('.mmd')).sort()
 
@@ -616,7 +773,7 @@ describe('parseSequenceDiagram: corpus outlines', () => {
       expect(outline(p.model)).toEqual(EXPECTED[file])
       expect(p.problems.filter((x) => x.severity === 'invalid')).toEqual([])
       expect(p.problems.map((x) => x.line)).toEqual(IGNORED[file] ?? [])
-      expect(p.retained.filter((r) => !/^\s*%%/.test(r.text) && r.place === 'body').map((r) => r.line)).toEqual(IGNORED[file] ?? [])
+      expect(p.retained.filter((r) => r.place === 'body').map((r) => r.line)).toEqual(RETAINED[file] ?? [])
     })
   }
 })

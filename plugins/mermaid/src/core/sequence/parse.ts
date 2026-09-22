@@ -8,13 +8,22 @@
  * kept as a retained line so nothing an author wrote is lost. Problems are
  * `invalid` when Mermaid.js itself would reject the fence (checked against
  * Mermaid 11) and `ignored` when Mermaid accepts a statement this kind does
- * not draw.
+ * not draw. One problem per code and line: a line that fails in several
+ * places is reported once.
  *
  * Lexing follows Mermaid's: keywords are case-insensitive and win over
  * message actors, `;` ends a statement, a bare `#` starts a comment while
- * `#NN;` and `#name;` are entities, `%%` lines are comments, and actor
- * names in messages may hold spaces and hyphens but never `+ ( ) < > : , ;`.
- * A line with several statements is retained once when any of them is.
+ * `#NN;` and `#name;` are entities, `%%` starts a comment only where a
+ * statement starts or after the header, `end` or `autonumber` (inside
+ * message text or an id it is text), a `%%{ … }%%`
+ * directive may span lines and runs to `}%%` or the end of the body, the
+ * header is the leading `sequenceDiagram` token and the rest of its line is
+ * the first statement, and actor names in messages may hold spaces, hyphens
+ * and parentheses but never `+ < > : , ;`. A message end or note target
+ * that starts with a keyword is lexed as that keyword by Mermaid, so it is
+ * an invalid reserved id here; declarations (`participant`, `activate`,
+ * `box`) take any id, as Mermaid's lexer does in its id state. A line with
+ * several statements is retained once when any of them is.
  */
 import { readFrontMatterTitle, splitFrontMatter } from '../front-matter.js'
 import type { DiagramParse, DiagramParseError, DiagramProblem, RetainedLine } from '../kind.js'
@@ -23,6 +32,7 @@ import type { Activation, Box, Frame, Message, Participant, SequenceItem, Sequen
 
 export const SEQUENCE_PROBLEM_CODES = {
   unknownStatement: 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT',
+  reservedId: 'SEQUENCE_DIAGRAM_RESERVED_ID',
   deactivateInactive: 'SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE',
   endWithoutOpener: 'SEQUENCE_DIAGRAM_END_WITHOUT_OPENER',
   sectionOutsideFrame: 'SEQUENCE_DIAGRAM_SECTION_OUTSIDE_FRAME',
@@ -32,6 +42,8 @@ export const SEQUENCE_PROBLEM_CODES = {
 } as const
 
 const HEADER = 'sequenceDiagram'
+/** The header token, case-sensitive like detection; what follows on the line is the first statement. */
+const HEADER_TOKEN = /^sequenceDiagram\b\s*/
 
 /** Arrow spellings, longest first so `-->>` wins over `->` and `-->`. */
 const ARROWS: readonly [token: string, line: Message['line'], head: Message['head'], bidirectional: boolean][] = [
@@ -47,21 +59,48 @@ const ARROWS: readonly [token: string, line: Message['line'], head: Message['hea
   ['-)', 'solid', 'open', false],
 ]
 const ARROW_PATTERN = ARROWS.map(([token]) => token.replace(/[()]/g, '\\$&')).join('|')
-/** `from ARROW [+|-] to : text`, actors as Mermaid's lexer bounds them. */
-const MESSAGE = new RegExp(`^([^+()<>:,;]+?)\\s*(${ARROW_PATTERN})\\s*([+-])?\\s*([^+()<>:,;]+?)\\s*:(.*)$`)
+/**
+ * `from ARROW [+|-] to : text`, actors as Mermaid's lexer bounds them: `(`
+ * and `)` are actor characters, but `to` cannot start with `(` (Mermaid
+ * rejects `A->>(B): x`). The last group keeps `to`'s tail (`: text`) so the
+ * reserved-keyword check sees what Mermaid's lexer would see after the id.
+ */
+const MESSAGE = new RegExp(`^([^+<>:,;]+?)\\s*(${ARROW_PATTERN})\\s*([+-])?\\s*((?!\\()[^+<>:,;]+?)(\\s*:.*)$`)
 /** Half arrows (`-|\\`, `//-`, dotted forms): accepted by Mermaid 11, not drawn here. */
 const HALF_ARROW = /-{1,2}(\|\\|\|\/|\\\\|\/\/)|(\/\||\\\||\/\/|\\\\)-{1,2}/
-const NOTE = /^note\s+(left of|right of|over)\s+([^:]+?)\s*:(.*)$/i
+/** `note PLACEMENT ids : text`; the last group keeps the ids' tail for the reserved-keyword check. */
+const NOTE = /^note\s+(left of|right of|over)\s+([^:]+?)(\s*:.*)$/i
 const PARTICIPANT = /^(participant|actor)\s+(.+)$/i
 const ALIAS = /^(.+?)\s+as\s+(.+)$/i
 const FRAME_OPENER = /^(loop|opt|alt|par_over|par|critical|break|rect)\b\s*(.*)$/i
 const SECTION = /^(else|and|option)\b\s*(.*)$/i
+const END = /^end\b(.*)$/i
 const TITLE = /^title(?::\s|\s)\s*(.+)$/i
 const ACC = /^acc(Title|Descr)\s*(:|\{)/i
-const IGNORED_KEYWORD = /^(link|links|properties|details|destroy)\b/i
+const IGNORED_KEYWORD = /^(link|links|properties|details|destroy)\s/i
 const NUMBER = /^\d+(?:\.\d{1,2})?$|^\.\d{1,2}$/
+/**
+ * What may precede a `%%` comment on a statement: nothing, or a token after
+ * which Mermaid's lexer is back in its initial state (the header, `end`,
+ * `autonumber` and its arguments). After anything else (`deactivate A`, a
+ * frame label, message text) `%%` is part of the token.
+ */
+const BEFORE_COMMENT = /^(?:sequenceDiagram|end|autonumber\b.*)?$/i
+/**
+ * What Mermaid's lexer reads as a keyword at the start of an actor id in a
+ * message or note, given the id and the text after it. Word keywords need a
+ * word boundary (`end point` is `end`, `endpoint` is an actor); `title` is
+ * a keyword only before whitespace or `: `; `accTitle`/`accDescr` only
+ * before their `:` or `{`.
+ */
+const RESERVED_ID =
+  /^(?:(box|participant|actor|create|destroy|loop|rect|opt|alt|else|par_over|par|and|critical|option|break|end|left of|right of|links|link|properties|details|over|note|activate|deactivate|sequenceDiagram|autonumber|off)\b|(title)(?=\s|:\s)|(accTitle)(?=\s*:)|(accDescr)(?=\s*[:{]))/i
 
 const SECTION_FRAME: Readonly<Record<string, Frame['kind']>> = { else: 'alt', and: 'par', option: 'critical' }
+
+const UNKNOWN_MESSAGE = 'This statement is not sequence diagram syntax.'
+const UNKNOWN_AFTER_SEMICOLON_MESSAGE =
+  'This statement is not sequence diagram syntax; ";" ends a statement, so write #59; for a semicolon in text and #38;, #lt;, #gt; instead of &amp;, &lt;, &gt;.'
 
 interface OpenFrame {
   readonly frame: Frame
@@ -77,6 +116,12 @@ interface Statement {
   readonly text: string
   /** The statement came after a `;` on its line. */
   readonly afterSemicolon: boolean
+}
+
+interface SplitLine {
+  readonly statements: readonly Statement[]
+  /** A `%%` comment that started where a statement would, to the end of the line. */
+  readonly comment?: string
 }
 
 export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel> | DiagramParseError {
@@ -108,6 +153,7 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
   let accDescrOpen = false
 
   const problem = (code: string, severity: DiagramProblem['severity'], message: string, line: number): void => {
+    if (problems.some((p) => p.code === code && p.line === line)) return
     problems.push({ code, severity, message, line })
   }
   const ignore = (line: number, text: string, message: string): void => {
@@ -115,15 +161,15 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
     retain(line, text)
   }
   const unknown = (line: number, text: string, afterSemicolon: boolean): void => {
-    problem(
-      SEQUENCE_PROBLEM_CODES.unknownStatement,
-      'invalid',
-      afterSemicolon
-        ? 'This statement is not sequence diagram syntax; use #59; for a semicolon in text.'
-        : 'This statement is not sequence diagram syntax.',
-      line,
-    )
+    problem(SEQUENCE_PROBLEM_CODES.unknownStatement, 'invalid', afterSemicolon ? UNKNOWN_AFTER_SEMICOLON_MESSAGE : UNKNOWN_MESSAGE, line)
     retain(line, text)
+  }
+  /** Report an actor id Mermaid would lex as a keyword; `context` is the id and what follows it. */
+  const checkReservedId = (context: string, line: number): void => {
+    const keyword = reservedKeyword(context)
+    if (keyword !== undefined) {
+      problem(SEQUENCE_PROBLEM_CODES.reservedId, 'invalid', `"${keyword}" is a Mermaid keyword and cannot be a participant id.`, line)
+    }
   }
   const currentItems = (): SequenceItem[] => {
     const top = frames[frames.length - 1]
@@ -180,19 +226,26 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
     }
     const trimmed = text.trim()
     if (trimmed === '') continue
+    if (trimmed.startsWith('%%{') && !trimmed.includes('}%%')) {
+      const last = directiveEnd(bodyLines, i)
+      for (let j = i; j <= last; j += 1) retain(bodyLineStart + j, bodyLines[j] ?? '')
+      i = last
+      continue
+    }
     if (trimmed.startsWith('%%')) {
       retain(line, text)
       continue
     }
 
-    for (const statement of splitStatements(text)) {
-      const s = statement.text
+    const { statements, comment } = splitStatements(text)
+    for (const statement of statements) {
+      let s = statement.text
       if (!headerSeen) {
-        if (s === HEADER) {
-          headerSeen = true
-          continue
-        }
-        return { error: `Not a sequence diagram: expected "${HEADER}", got "${s.slice(0, 40)}".`, line }
+        const header = HEADER_TOKEN.exec(s)
+        if (header === null) return { error: `Not a sequence diagram: expected "${HEADER}", got "${s.slice(0, 40)}".`, line }
+        headerSeen = true
+        s = s.slice(header[0].length)
+        if (s === '') continue
       }
 
       if (openBox !== undefined) {
@@ -203,9 +256,11 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
           }
           continue
         }
-        if (/^end\b/i.test(s)) {
+        const end = END.exec(s)
+        if (end !== null) {
           boxes.push(openBox.box)
           openBox = undefined
+          if ((end[1] ?? '').trim() !== '') unknown(line, text, statement.afterSemicolon)
           continue
         }
         unknown(line, text, statement.afterSemicolon)
@@ -246,11 +301,14 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
         openBox = { box: label === '' ? { participantIds: [] } : { label: decodeText(label), participantIds: [] }, line }
         continue
       }
-      if (/^end\b/i.test(s)) {
+      // `end` closes a frame; `end` used as a message actor (`end->>B: x`) is a message with a reserved id.
+      const end = END.exec(s)
+      if (end !== null && !MESSAGE.test(s)) {
         if (frames.pop() === undefined) {
           problem(SEQUENCE_PROBLEM_CODES.endWithoutOpener, 'invalid', '"end" closes nothing.', line)
           retain(line, text)
         }
+        if ((end[1] ?? '').trim() !== '') unknown(line, text, statement.afterSemicolon)
         continue
       }
       const opener = FRAME_OPENER.exec(s)
@@ -311,7 +369,8 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
       const note = NOTE.exec(s)
       if (note !== null) {
         const placement = (note[1] ?? '').toLowerCase().replace(' of', '') as 'left' | 'right' | 'over'
-        const ids = (note[2] ?? '')
+        const rawIds = note[2] ?? ''
+        const ids = rawIds
           .split(',')
           .map((id) => id.trim())
           .filter((id) => id !== '')
@@ -319,8 +378,9 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
           unknown(line, text, statement.afterSemicolon)
           continue
         }
+        for (const context of idContexts(rawIds + (note[3] ?? ''))) checkReservedId(context, line)
         for (const id of ids) ensureParticipant(id)
-        push({ type: 'note', placement, participantIds: ids, text: messageText(note[3] ?? '') })
+        push({ type: 'note', placement, participantIds: ids, text: messageText(stripColon(note[3] ?? '')) })
         continue
       }
       const titled = TITLE.exec(s)
@@ -343,6 +403,8 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
           unknown(line, text, statement.afterSemicolon)
           continue
         }
+        checkReservedId(s, line)
+        checkReservedId(`${message[4] ?? ''}${message[5] ?? ''}`, line)
         ensureParticipant(from)
         ensureParticipant(to)
         const item: Message = {
@@ -352,7 +414,7 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
           line: arrow[1],
           head: arrow[2],
           bidirectional: arrow[3],
-          text: messageText(message[5] ?? ''),
+          text: messageText(stripColon(message[5] ?? '')),
           ...(message[3] === undefined ? {} : { activate: message[3] as '+' | '-' }),
         }
         const index = push(item)
@@ -368,6 +430,7 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
       }
       unknown(line, text, statement.afterSemicolon)
     }
+    if (comment !== undefined) retain(line, comment)
   }
 
   if (!headerSeen) return { error: 'Not a sequence diagram: the block is empty.' }
@@ -404,15 +467,57 @@ function messageText(raw: string): string {
   return decodeText(raw.replace(/^\s*(?:no)?wrap:/i, '').trim())
 }
 
+/** The text after the `:` that ends an actor or note tail. */
+function stripColon(tail: string): string {
+  return tail.replace(/^\s*:/, '')
+}
+
+/** The keyword Mermaid's lexer reads at the start of an actor id, given the id and what follows it, or undefined. */
+function reservedKeyword(context: string): string | undefined {
+  const match = RESERVED_ID.exec(context)
+  return match === null ? undefined : (match[1] ?? match[2] ?? match[3] ?? match[4])
+}
+
+/**
+ * Each comma-separated id of a note with everything after it, as Mermaid's
+ * lexer sees it: `A, end: x` gives `A, end: x` and `end: x`.
+ */
+function idContexts(idsAndTail: string): string[] {
+  const out: string[] = []
+  let offset = 0
+  for (const segment of idsAndTail.split(',')) {
+    out.push(idsAndTail.slice(offset + (segment.length - segment.trimStart().length)))
+    offset += segment.length + 1
+  }
+  return out
+}
+
+/**
+ * The index of the line that closes a `%%{` directive opened at `start`,
+ * or the last line when it never closes, as Mermaid's directive regex takes
+ * an unclosed directive to the end of the text.
+ */
+function directiveEnd(lines: readonly string[], start: number): number {
+  for (let i = start; i < lines.length; i += 1) {
+    if ((lines[i] ?? '').includes('}%%')) return i
+  }
+  return lines.length - 1
+}
+
 /**
  * Split a line into statements the way Mermaid's lexer does: a bare `#`
  * starts a comment for the rest of the line and `;` ends a statement, while
- * `#NN;` and `#name;` entities are text and never split.
+ * `#NN;` and `#name;` entities are text and never split. A `%%` where a
+ * statement starts, or after a token that leaves the lexer in its initial
+ * state (`BEFORE_COMMENT`), is a comment to the end of the line, returned
+ * separately so it can be retained; the statements after it are gone, as
+ * in Mermaid.
  */
-function splitStatements(line: string): Statement[] {
+function splitStatements(line: string): SplitLine {
   const out: Statement[] = []
   let current = ''
   let afterSemicolon = false
+  let comment: string | undefined
   const flush = (): void => {
     const text = current.trim()
     if (text !== '') out.push({ text, afterSemicolon })
@@ -428,6 +533,10 @@ function splitStatements(line: string): Statement[] {
       i += match[0].length - 1
       continue
     }
+    if (char === '%' && line[i + 1] === '%' && BEFORE_COMMENT.test(current.trim())) {
+      comment = line.slice(i)
+      break
+    }
     if (char === ';') {
       flush()
       afterSemicolon = true
@@ -436,5 +545,5 @@ function splitStatements(line: string): Statement[] {
     current += char
   }
   flush()
-  return out
+  return comment === undefined ? { statements: out } : { statements: out, comment }
 }

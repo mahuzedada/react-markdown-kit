@@ -2,11 +2,14 @@
  * The canvas mounted inside <MarkdownEditor>: the block renders the header
  * and the canvas for a flowchart, the toolbar gains one insert button per
  * kind, labels and options reach the canvas, read-only shows the static
- * output, and a lossy flowchart mounts read-only behind its notice.
+ * output, a lossy flowchart mounts read-only behind its notice, "Copy as
+ * Mermaid" copies what a commit would write, and a commit lands in the
+ * document before the handler returns.
  */
-import { describe, expect, it } from 'vitest'
+import mermaidJs from 'mermaid'
+import { describe, expect, it, vi } from 'vitest'
 import { MarkdownEditor, useMarkdownEditorContext, type MarkdownEditorInstance } from '@react-markdown-kit/editor'
-import { button, click, mount, run } from '../../../packages/editor/tests/helpers/mount.js'
+import { button, click, mount, run, runAsync } from '../../../packages/editor/tests/helpers/mount.js'
 import { mermaid } from '../src/editor.js'
 
 const DOCUMENT = `Before.
@@ -136,6 +139,78 @@ describe('the diagram canvas in <MarkdownEditor>', () => {
     expect(view.container.querySelector('.rmk-diagram-lossy')).toBeNull()
     expect(view.container.querySelector('.rmk-diagram-toolbar')).not.toBeNull()
     expect(editor.getMarkdown()).toBe(LOSSY)
+    view.unmount()
+  })
+
+  // Review C5: the clipboard text must equal what a commit writes, so the
+  // title, the front matter, the retained lines and the width survive it.
+  it('"Copy as Mermaid" copies the source a commit would write, retained lines and title included', async () => {
+    const source =
+      '---\ntitle: My flow\nconfig:\n  theme: dark\n---\nflowchart LR\n    %% a comment\n    classDef big fill:#fff\n    a[A] --> b[B]\n    click a "https://x"'
+    const writeText = vi.fn(async (_text: string) => {})
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    let editor!: MarkdownEditorInstance
+    const view = mount(
+      <MarkdownEditor extensions={[mermaid()]} defaultValue={'```mermaid\n' + source + '\n```\n'}>
+        <Capture onReady={(value) => (editor = value)} />
+      </MarkdownEditor>,
+    )
+    click(view.container.querySelector('.rmk-diagram-tool[aria-label="Copy as Mermaid"]'))
+    await runAsync(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    expect(writeText).toHaveBeenCalledTimes(1)
+    const copied = writeText.mock.calls[0]?.[0] ?? ''
+    // The writer emits the title as a JSON-quoted YAML scalar (review C3/C8).
+    expect(copied.startsWith('---\ntitle: "My flow"\nconfig:\n  theme: dark\n---\nflowchart LR\n')).toBe(true)
+    expect(copied).toContain('\n    %% a comment\n')
+    expect(copied).toContain('\n    classDef big fill:#fff\n')
+    expect(copied).toContain('\n    click a "https://x"\n')
+    expect(copied).toContain('%% rmk-layout v1 ')
+    // The same text a commit puts in the document: the first canvas edit
+    // (a width preset) writes it with only the width added.
+    click(view.container.querySelector('.rmk-diagram-tool[aria-label="Compact (shrink to content)"]'))
+    const fence = editor.getMarkdown().replace(/^```mermaid\n/, '').replace(/\n```\n$/, '')
+    expect(fence.replace('"width":"content",', '')).toBe(copied)
+    // And Mermaid.js accepts it.
+    await expect(mermaidJs.parse(copied)).resolves.toMatchObject({ diagramType: 'flowchart-v2' })
+    view.unmount()
+  })
+
+  it('"Copy as Mermaid" copies the local state, including a width the canvas set', async () => {
+    const writeText = vi.fn(async (_text: string) => {})
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const view = mount(<MarkdownEditor extensions={[mermaid()]} defaultValue={'```mermaid\nflowchart LR\n    a --> b\n```\n'} />)
+    click(view.container.querySelector('.rmk-diagram-tool[aria-label="Compact (shrink to content)"]'))
+    click(view.container.querySelector('.rmk-diagram-tool[aria-label="Copy as Mermaid"]'))
+    await runAsync(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    expect(writeText.mock.calls[0]?.[0]).toContain('"width":"content"')
+    view.unmount()
+  })
+
+  // Review C21: a canvas commit is discrete like every other editing path,
+  // so a host reading the document on the same event sees the gesture.
+  it('commits a width preset before the click handler returns, and undoes it as one step', () => {
+    let editor!: MarkdownEditorInstance
+    const doc = '```mermaid\nflowchart LR\n    a --> b\n```\n'
+    const view = mount(
+      <MarkdownEditor extensions={[mermaid()]} defaultValue={doc}>
+        <Capture onReady={(value) => (editor = value)} />
+      </MarkdownEditor>,
+    )
+    const compact = view.container.querySelector<HTMLButtonElement>('.rmk-diagram-tool[aria-label="Compact (shrink to content)"]')
+    if (compact === null) throw new Error('No width preset.')
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    let seen = ''
+    run(() => {
+      compact.click()
+      seen = editor.getMarkdown()
+    })
+    expect(seen).toContain('"width":"content"')
+    expect(view.container.querySelector('.rmk-diagram-canvas')?.classList.contains('is-content-width')).toBe(true)
+    run(() => editor.undo())
+    expect(editor.getMarkdown()).toBe(doc)
+    expect(view.container.querySelector('.rmk-diagram-canvas')?.classList.contains('is-content-width')).toBe(false)
+    expect(errors).not.toHaveBeenCalled()
+    errors.mockRestore()
     view.unmount()
   })
 

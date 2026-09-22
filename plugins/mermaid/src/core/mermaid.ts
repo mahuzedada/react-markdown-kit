@@ -17,6 +17,13 @@
  * the annotation (docs/MERMAID_PLATFORM.md section 4.3). Ids the parser
  * accepted are written unchanged; only an id that is not a valid Mermaid id
  * is rewritten, and canvas-created ids are always valid.
+ *
+ * Text is quoted and escaped so the parser reads back exactly what the
+ * model held and Mermaid.js accepts the line: `#` becomes `#35;` before
+ * any other entity is written (so text that already looks like an entity
+ * survives), `&` and `%` become `#38;` and `#37;` (so `&quot;` stays text
+ * and `%%{` can never open a directive inside a label), and the title is a
+ * JSON-quoted YAML scalar whatever characters it holds.
  */
 import {
   isNodeShapeType,
@@ -35,6 +42,8 @@ import {
   type LayoutSlot,
 } from './layout-annotation.js'
 import type { RetainedLine } from './kind.js'
+import { isMermaidId, sanitizeMermaidId } from './mermaid-parse.js'
+import { writeFrontMatterTitle } from './front-matter.js'
 
 export type MermaidDirection = 'LR' | 'TD'
 
@@ -49,8 +58,6 @@ export type MermaidOptions = Readonly<{
 const INDENT = '    '
 const DEFAULT_STROKE: string = STROKE_COLORS[0]
 const DEFAULT_FILL = 'transparent'
-/** A Mermaid node id the parser accepts as is: alphanumerics with single dashes between them. */
-const VALID_ID = /^[A-Za-z0-9_]+(-[A-Za-z0-9_]+)*$/
 
 /** Export a drawing as a Mermaid `flowchart`. */
 export function drawingToMermaid(data: DrawingData, options: MermaidOptions = {}): string {
@@ -70,7 +77,7 @@ export function drawingToMermaid(data: DrawingData, options: MermaidOptions = {}
   const lines = [
     ...(data.title === undefined && frontMatter.length === 0
       ? []
-      : ['---', ...(data.title === undefined ? [] : [`title: ${data.title}`]), ...frontMatter, '---']),
+      : ['---', ...(data.title === undefined ? [] : [writeFrontMatterTitle(data.title)]), ...frontMatter, '---']),
     `flowchart ${options.direction ?? autoDirection(edges)}`,
     ...boxes.map((box) => INDENT + nodeLine(box, mermaidId(box.id))),
     ...edges.map((edge) => INDENT + edgeLine(edge, mermaidId)),
@@ -168,24 +175,19 @@ function assignMermaidIds(boxes: readonly DrawingShape[]): Map<string, string> {
   const ids = new Map<string, string>()
   const used = new Set<string>()
   for (const box of boxes) {
-    if (!VALID_ID.test(box.id) || used.has(box.id)) continue
+    if (!isMermaidId(box.id) || used.has(box.id)) continue
     used.add(box.id)
     ids.set(box.id, box.id)
   }
   for (const box of boxes) {
     if (ids.has(box.id) && ids.get(box.id) === box.id) continue
-    const base = sanitizeId(box.id)
+    const base = sanitizeMermaidId(box.id)
     let candidate = base
     for (let n = 2; used.has(candidate); n += 1) candidate = `${base}_${n}`
     used.add(candidate)
     ids.set(box.id, candidate)
   }
   return ids
-}
-
-function sanitizeId(id: string): string {
-  const cleaned = id.replace(/[^A-Za-z0-9_]/g, '_')
-  return cleaned === '' ? 'n_' : cleaned
 }
 
 /** Bracket per shape. Types with no Mermaid bracket are recorded in the annotation. */
@@ -212,8 +214,16 @@ function edgeLine(edge: DrawingShape, mermaidId: (shapeId: string) => string): s
   const from = mermaidId(edge.startBinding?.id ?? '')
   const to = mermaidId(edge.endBinding?.id ?? '')
   const connector = edge.type === 'line' ? '---' : edge.bidirectional ? '<-->' : '-->'
-  const label = edge.text ? `|${escapeText(edge.text).replace(/\|/g, '#124;')}|` : ''
+  const label = edge.text ? `|${pipeLabel(edge.text)}|` : ''
   return `${from} ${connector}${label} ${to}`
+}
+
+/** Brackets, braces and parentheses Mermaid takes only inside quotes; the escaped text never holds a quote or a pipe. */
+const PIPE_LABEL_NEEDS_QUOTES = /[()[\]{}]/
+
+function pipeLabel(text: string): string {
+  const escaped = escapeText(text).replace(/\|/g, '#124;')
+  return PIPE_LABEL_NEEDS_QUOTES.test(escaped) ? `"${escaped}"` : escaped
 }
 
 function styleLine(box: DrawingShape, id: string): string | null {
@@ -227,7 +237,14 @@ function styleLine(box: DrawingShape, id: string): string | null {
   return `style ${id} ${props.join(',')}`
 }
 
-/** Escape user text for a quoted Mermaid string; newlines become `<br/>` */
+/** Escape user text for a quoted Mermaid string; `#` goes first so no other entity is re-escaped; newlines become `<br/>` */
 function escapeText(text: string): string {
-  return text.replace(/"/g, '#quot;').replace(/</g, '#lt;').replace(/>/g, '#gt;').replace(/\r?\n/g, '<br/>')
+  return text
+    .replace(/#/g, '#35;')
+    .replace(/&/g, '#38;')
+    .replace(/%/g, '#37;')
+    .replace(/"/g, '#quot;')
+    .replace(/</g, '#lt;')
+    .replace(/>/g, '#gt;')
+    .replace(/\r?\n/g, '<br/>')
 }

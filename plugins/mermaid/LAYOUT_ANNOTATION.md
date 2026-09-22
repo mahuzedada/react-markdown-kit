@@ -125,7 +125,7 @@ insert or remove other edge statements.
   the second `a->b#2`, the third `a->b#3`.
 - A bidirectional edge `a <--> b` has the key `a->b`.
 
-Node ids match `[A-Za-z0-9_-]+`, so `->` and `#` are unambiguous separators.
+Node ids are Unicode letters, digits and `_` with single `-`, `.` or `:` between them, so `->` and `#` are unambiguous separators.
 
 ## 5. Text slots
 
@@ -204,12 +204,15 @@ For any normalised `DrawingData` whose node ids are valid Mermaid ids:
 - `parse(write(d))` deep-equals `d` (lossless round trip);
 - `write(parse(write(d)))` equals `write(d)` byte for byte (fixed point).
 
-A valid Mermaid id matches `/^[A-Za-z0-9_]+(-[A-Za-z0-9_]+)*$/`: alphanumerics
-and underscores with single dashes between them, so `my-box` and `1st` are
-valid. Ids the parser accepted are written unchanged, and ids the canvas
-creates are always valid. Only an id that is not a valid Mermaid id is
-rewritten: characters outside the set become `_` (`my.box` becomes `my_box`)
-and a rewritten id that collides with another id gets a `_2`, `_3` suffix.
+A valid Mermaid id matches `/^[\p{L}\p{N}_]+(?:[-.:][\p{L}\p{N}_]+)*$/u`
+and is not a flowchart keyword (`end`, `subgraph`, `graph`, `flowchart`,
+`style`, `classDef`, `class`, `click`, `linkStyle`): Unicode letters, digits
+and underscores with a single `-`, `.` or `:` between them, so `my-box`,
+`api.gateway`, `svc:4` and `1st` are valid. Ids the parser accepted are
+written unchanged, and ids the canvas creates are always valid. Only an id
+that is not a valid Mermaid id is rewritten: characters outside the set
+become `_` (`my box` becomes `my_box`), a keyword gets a trailing `_`, and a
+rewritten id that collides with another id gets a `_2`, `_3` suffix.
 A rewrite never displaces a valid id. The round trip then preserves
 everything except the rewritten ids. Both guarantees are covered by
 `tests/mermaid-parse.test.ts`, `tests/mermaid.test.ts` and

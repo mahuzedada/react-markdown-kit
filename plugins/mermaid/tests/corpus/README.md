@@ -48,3 +48,37 @@ Left out, with the reason:
   "Configuration" and "Renderer" sections: `linkStyle`, `classDef default`,
   `%%{init}%%` config keys and renderer settings are configuration, not
   diagram syntax; `linkStyle` is the `linkStyle` lossy feature.
+
+## sequenceDiagram
+
+Source: `packages/mermaid/src/docs/syntax/sequenceDiagram.md` at tag
+`mermaid@11.17.2` (rendered at https://mermaid.js.org/syntax/sequenceDiagram.html);
+`directive.mmd` comes from `config/directives.md` ("Changing Sequence
+diagram config via directive").
+
+Four files are regression inputs rather than documentation examples. Each
+is accepted by Mermaid.js and was once read wrongly by the sequence parser
+(review findings C2, C10, C19 and C27):
+
+- `directive-multi-line.mmd`: a `%%{ … }%%` directive spread over three
+  lines before the header; every physical line is retained.
+- `header-comment.mmd`: a `%%` comment after the header on the same line.
+- `header-inline.mmd`: the header and the first statement on one line.
+- `actor-parens.mmd`: `(` and `)` inside actor names in messages.
+
+Inputs Mermaid.js rejects, which the parser must report as `invalid`, live
+in `tests/sequence-conformance.dom.test.ts`, since every corpus file must
+parse without an invalid problem.
+
+### Added after the platform review
+
+- "Markdown Strings" (`markdown-strings.mmd`): the parser now joins a quoted
+  label that runs onto the next line into one statement and reads a
+  backtick markdown string without its markers (lossy `markdown-string`), so
+  the example the "Left out" list above excluded for that reason is in. The
+  "Markdown formatting" example stays out: it is the same construct.
+- Inputs the review compared against Mermaid.js that are not documentation
+  examples (entities with `;`, Unicode and dotted ids, labels Mermaid rejects
+  unquoted, keywords as ids, trailing comments, top-level `direction`) live in
+  `tests/flowchart-kind.dom.test.ts`, which asserts both what Mermaid accepts
+  and what it rejects, not in this corpus.

@@ -87,6 +87,16 @@ describe('drawingToMermaid', () => {
     expect(out[3]).toBe('    a -->|x #124; #quot;y#quot;| b')
   })
 
+  it('quotes an edge label only when it holds brackets, braces or parentheses (C13)', () => {
+    const out = lines(drawing(
+      box('a', 'rect'), box('b', 'rect'),
+      connector('e1', 'a', 'b', { text: 'ok (200)' }),
+      connector('e2', 'a', 'b', { text: 'arr[0] {x}' }),
+      connector('e3', 'a', 'b', { text: 'plain' }),
+    ))
+    expect(out.slice(3, 6)).toEqual(['    a -->|"ok (200)"| b', '    a -->|"arr[0] {x}"| b', '    a -->|plain| b'])
+  })
+
   it('connectors without both bindings are skipped', () => {
     const out = drawingToMermaid(drawing(
       box('a', 'rect'), box('b', 'rect'),
@@ -125,16 +135,56 @@ describe('drawingToMermaid', () => {
 
   it('valid Mermaid ids are written unchanged; only invalid ids are rewritten, and never onto a valid one', () => {
     const out = lines(drawing(
-      box('my-box', 'rect'), box('my.box', 'rect'), box('1st', 'rect'), box('my_box', 'rect'), box('a--b', 'rect'),
-      connector('e', 'my-box', 'my.box'),
+      box('my-box', 'rect'), box('my box', 'rect'), box('1st', 'rect'), box('my_box', 'rect'), box('a--b', 'rect'),
+      connector('e', 'my-box', 'my box'),
     ))
     expect(out[1]).toBe('    my-box["my-box"]')
-    // `my.box` is invalid; `my_box` is taken by the valid id below, so it moves on.
-    expect(out[2]).toBe('    my_box_2["my.box"]')
+    // `my box` is invalid; `my_box` is taken by the valid id below, so it moves on.
+    expect(out[2]).toBe('    my_box_2["my box"]')
     expect(out[3]).toBe('    1st["1st"]')
     expect(out[4]).toBe('    my_box["my_box"]')
     expect(out[5]).toBe('    a__b["a--b"]')
     expect(out[6]).toBe('    my-box --> my_box_2')
+  })
+
+  it('writes ids with Unicode letters, dots and colons unchanged, as the parser reads them (C12)', () => {
+    const out = lines(drawing(
+      box('Пользователь', 'rect'), box('api.gateway', 'rect'), box('svc:4', 'rect'), box('用户', 'rect'),
+      connector('e', 'Пользователь', 'api.gateway'),
+    ))
+    expect(out.slice(1, 6)).toEqual([
+      '    Пользователь["Пользователь"]',
+      '    api.gateway["api.gateway"]',
+      '    svc:4["svc:4"]',
+      '    用户["用户"]',
+      '    Пользователь --> api.gateway',
+    ])
+  })
+
+  it('never writes a Mermaid keyword as a node id (C24)', () => {
+    const out = lines(drawing(box('end', 'rect'), box('style', 'rect'), connector('e', 'end', 'style')))
+    expect(out.slice(1, 4)).toEqual(['    end_["end"]', '    style_["style"]', '    end_ --> style_'])
+  })
+
+  it('escapes # before any other entity, and & and %, so text that looks like an entity survives a round trip (C7)', () => {
+    const out = lines(drawing(
+      box('a', 'rect', { text: 'PR #42; merged' }),
+      box('b', 'rect', { text: 'Bug #123; fixed #quot; &quot; %%{init 100%' }),
+      connector('e', 'a', 'b', { text: 'a|b #124; 5%' }),
+    ))
+    expect(out[1]).toBe('    a["PR #35;42; merged"]')
+    expect(out[2]).toBe('    b["Bug #35;123; fixed #35;quot; #38;quot; #37;#37;{init 100#37;"]')
+    expect(out[3]).toBe('    a -->|a#124;b #35;124; 5#37;| b')
+  })
+
+  it('writes the title as a JSON-quoted YAML scalar, whatever it holds (C3, C8)', () => {
+    const titled = (title: string): string => drawingToMermaid({ ...drawing(box('a', 'rect')), title }, { omitLayout: true }).split('\n')[1] as string
+    expect(titled('Flow')).toBe('title: "Flow"')
+    expect(titled('a: b')).toBe('title: "a: b"')
+    expect(titled('[draft] plan')).toBe('title: "[draft] plan"')
+    expect(titled('C# x # y')).toBe('title: "C# x # y"')
+    expect(titled('say "hi" \\ there')).toBe('title: "say \\"hi\\" \\\\ there"')
+    expect(titled('*')).toBe('title: "*"')
   })
 
   it('free text shapes are preserved as comments', () => {
@@ -162,7 +212,7 @@ describe('retained lines', () => {
     const out = drawingToMermaid(data, { retained }).split('\n')
     expect(out.slice(0, 12)).toEqual([
       '---',
-      'title: Flow',
+      'title: "Flow"',
       'config:',
       '  theme: base',
       '---',

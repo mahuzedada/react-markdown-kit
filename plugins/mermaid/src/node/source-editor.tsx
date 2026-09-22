@@ -10,9 +10,13 @@
  * source and never rewrites it. The draft is local; each change commits
  * the node's source at once, merged into the previous history entry when
  * the previous commit was under 300 ms ago, so typing undoes in bursts
- * rather than one character at a time. Undo and redo keys inside the field
- * are Lexical's, dispatched as its commands. Source mode signals problems,
- * it never blocks a keystroke.
+ * rather than one character at a time. A burst ends at anything that is
+ * not this field's own commit: an undo or redo, a canvas edit, a
+ * collaborator. Merging across those would fold the keystroke into the
+ * history entry Lexical just restored, where no undo reaches it and a redo
+ * overwrites it. Undo and redo keys inside the field are Lexical's,
+ * dispatched as its commands. Source mode signals problems, it never blocks
+ * a keystroke.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
@@ -80,15 +84,28 @@ export function DiagramSourceEditor({
   kindsRef.current = kinds
   const onEscapeRef = useRef(onEscape)
   onEscapeRef.current = onEscape
+  const onFocusChangeRef = useRef(onFocusChange)
+  onFocusChangeRef.current = onFocusChange
 
-  // An undo, a canvas edit or a collaborator changed the node: adopt it. A
+  // An undo, a canvas edit or a collaborator changed the node: adopt it and
+  // end the typing burst, so the next keystroke is a new history entry. A
   // change equal to what this field last committed is its own echo.
   useEffect(() => {
     if (source === lastCommittedRef.current) return
     lastCommittedRef.current = source
+    lastCommitAtRef.current = 0
     caretRef.current = source.length
     setDraft(source)
   }, [source])
+
+  // The hold on the block's mode lasts while the textarea has focus. An
+  // unmount without a blur (the editor turning read-only) must release it,
+  // or the block stays in source mode once it is editable again.
+  useEffect(() => {
+    return () => {
+      onFocusChangeRef.current(false)
+    }
+  }, [])
 
   useLayoutEffect(() => {
     const element = ref.current
@@ -104,14 +121,18 @@ export function DiagramSourceEditor({
 
     const commit = (next: string): void => {
       const now = Date.now()
-      const merge = now - lastCommitAtRef.current < HISTORY_MERGE_WINDOW
+      const previous = lastCommittedRef.current
+      const withinBurst = now - lastCommitAtRef.current < HISTORY_MERGE_WINDOW
       lastCommitAtRef.current = now
       lastCommittedRef.current = next
       editor.update(
         () => {
           const node = $getNodeByKey(nodeKey)
           if (!$isDiagramNode(node) || node.getSource() === next) return
-          if (merge) $addUpdateTag('history-merge')
+          // Merge only into this field's own previous commit: a node that
+          // holds anything else changed from outside since, whether or not
+          // the adopt effect has caught up.
+          if (withinBurst && node.getSource() === previous) $addUpdateTag('history-merge')
           node.setSource(next, kindsRef.current)
         },
         { discrete: true },
@@ -130,8 +151,11 @@ export function DiagramSourceEditor({
       commit(element.value)
     }
     // Lexical's own history, committed discretely like the editor's
-    // commands, so the step has landed when the key handler returns.
+    // commands, so the step has landed when the key handler returns. The
+    // step ends the typing burst: what it restores is not this field's
+    // commit, and the next keystroke must not merge into it.
     const history = (command: typeof UNDO_COMMAND): void => {
+      lastCommitAtRef.current = 0
       editor.update(
         () => {
           editor.dispatchCommand(command, undefined)

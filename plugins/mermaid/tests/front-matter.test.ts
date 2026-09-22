@@ -4,7 +4,9 @@
  * for every kind.
  */
 import { describe, expect, it } from 'vitest'
-import { readFrontMatterTitle, splitFrontMatter } from '../src/core/front-matter.js'
+import { readFrontMatterTitle, splitFrontMatter, writeFrontMatterTitle } from '../src/core/front-matter.js'
+import { flowchart } from '../src/core/flowchart-kind.js'
+import { sequenceDiagram } from '../src/core/sequence/index.js'
 import { decodeText } from '../src/core/text.js'
 
 describe('splitFrontMatter', () => {
@@ -62,6 +64,24 @@ describe('readFrontMatterTitle', () => {
     expect(readFrontMatterTitle(undefined)).toBeUndefined()
     expect(readFrontMatterTitle('')).toBeUndefined()
   })
+
+  it('unescapes a double-quoted value as YAML does, and a single-quoted one (C3, C8)', () => {
+    expect(readFrontMatterTitle('title: "a: b"')).toBe('a: b')
+    expect(readFrontMatterTitle('title: "say \\"hi\\" \\\\ there"')).toBe('say "hi" \\ there')
+    expect(readFrontMatterTitle('title: "[draft] flow"')).toBe('[draft] flow')
+    expect(readFrontMatterTitle('title: "tab\\tnew\\u00e9"')).toBe('tab\tnewé')
+    expect(readFrontMatterTitle("title: 'it''s: here'")).toBe("it's: here")
+    // A YAML-only escape keeps the raw text rather than failing.
+    expect(readFrontMatterTitle('title: "back\\ slash"')).toBe('back\\ slash')
+  })
+
+  it('writes a title as a JSON-quoted scalar and reads it back exactly (C3, C8)', () => {
+    for (const title of ['Flow', 'a: b', '[draft] plan', '*', 'C# x # y', 'say "hi" \\ there', "it's", 'Пользователь ♥', '- item', '#tag']) {
+      const line = writeFrontMatterTitle(title)
+      expect(line.startsWith('title: "')).toBe(true)
+      expect(readFrontMatterTitle(line)).toBe(title)
+    }
+  })
 })
 
 describe('decodeText', () => {
@@ -75,5 +95,26 @@ describe('decodeText', () => {
 
   it('leaves plain text alone', () => {
     expect(decodeText('Hello, world')).toBe('Hello, world')
+  })
+
+  it('decodes #35;, #37; and #38; last, so escaped entities stay text (C7)', () => {
+    expect(decodeText('#35;quot; #35;124; #38;quot; #37;#37;{')).toBe('#quot; #124; &quot; %%{')
+    expect(decodeText('PR #35;42; merged')).toBe('PR #42; merged')
+  })
+
+  it('never throws on an out-of-range entity and never yields a non-XML character (C1, C6, C22)', () => {
+    expect(decodeText('#9999999999;')).toBe('\uFFFD')
+    expect(decodeText('#1114112;')).toBe('\uFFFD')
+    expect(decodeText('#1;#0;#27;')).toBe('\uFFFD\uFFFD\uFFFD')
+    expect(decodeText('#65534; #65535; #55296;')).toBe('\uFFFD \uFFFD \uFFFD')
+    expect(decodeText('#9;#10;#13;#32;#65533;#128512;')).toBe('\t\n\r \uFFFD\u{1F600}')
+    expect(() => sequenceDiagram().parse('sequenceDiagram\n    A->>B: #9999999999;')).not.toThrow()
+    expect(() => sequenceDiagram().parse('sequenceDiagram\n    participant A as #2000000;')).not.toThrow()
+    expect(() => flowchart().parse('flowchart LR\n    A["#9999999999;"] --> B')).not.toThrow()
+    const rendered = flowchart().render!(
+      (flowchart().parse('flowchart LR\n    A["#1;#0;"] --> B') as { model: Parameters<NonNullable<ReturnType<typeof flowchart>['render']>>[0] }).model,
+      { fallbackTitle: 'D' },
+    )
+    expect(JSON.stringify(rendered)).not.toMatch(/\\u000[01]/)
   })
 })
