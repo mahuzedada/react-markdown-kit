@@ -143,7 +143,9 @@ Two kinds sharing a name or a keyword make `mermaid()` throw `MarkdownConfigurat
 
 `write` is `drawingToMermaid` and emits, in order: one `---` block holding `title:` as a JSON-quoted YAML scalar (`title: "a: b"`) and the retained front-matter lines (omitted when both are empty); the header; node lines; edge lines; `style` lines; the retained body lines in original order; the `%% rmk-layout v1` line last. Ids the parser accepted are written unchanged; only ids that are not valid Mermaid ids (`/^[\p{L}\p{N}_]+(?:[-.:][\p{L}\p{N}_]+)*$/u` and not a reserved keyword) are rewritten; a keyword gets a trailing `_`, and canvas-created ids are always valid. Retained lines are re-emitted verbatim; a reference in them to an id that no longer exists is valid Mermaid and not reported. Text is escaped as `#35;` for `#` (before every other entity), `#38;` for `&`, `#37;` for `%`, `#quot;`, `#lt;`, `#gt;`, `#124;` for `|` in edge labels, and `<br/>` for a line break; an edge label holding `(`, `)`, `[`, `]`, `{` or `}` is written quoted. `LAYOUT_ANNOTATION.md` section 8 is updated to the same id rule.
 
-**`sequenceDiagram`**: keyword `sequenceDiagram`. Model `SequenceModel` (section 8). No `write` in this revision. Editor: source.
+**`sequenceDiagram`**: keyword `sequenceDiagram`. Model `SequenceModel` (section 8). `render` is the sequence renderer. Editor: the sequence canvas (section 9.5).
+
+`write` emits, in order: one `---` block holding the JSON-quoted `title:` and the retained front-matter lines (omitted when both are empty); the header `sequenceDiagram`; `autonumber`, `autonumber N` or `autonumber N M` when `numbering` is set; each box as `box <label>` … `end` holding its participants; the remaining participants in order as `participant id` or `actor id`, with ` as Label` when the label differs from the id; the retained body lines (`link`, `links`, `properties`, `details`, `accTitle`, `accDescr`, directives, comments), which attach to participants or to the diagram and are position-independent; then the items depth first, indented four spaces per nesting level: a message as `from<arrow>[+|-]to: text`, a note as `Note left of|right of|over A[,B]: text`, a frame as `<kind> <label>` with its sections split by `else`, `and` or `option` lines and closed by `end`. Text goes through the shared `escapeText`, so `;` becomes `#59;` and `#` becomes `#35;`. `create` and `destroy` statements cannot keep their position relative to the messages, so the parser names `create-destroy` in `lossy` and the writer drops them; the canvas lock of section 9.2 shows the notice before the first edit. The fixed-point rule of 4.1 holds for every corpus file.
 
 ### 4.4 Shared helpers
 
@@ -352,7 +354,22 @@ class DiagramNode extends DecoratorNode {
 
 Header row: kind label, support badge, and for a canvas kind a "Text"/"Canvas" toggle. In read-only editors the header shows label and badge only, and the block renders the kind's `render` output or the source `pre`.
 
-Mode: canvas when the format is legacy or the kind is the built-in `flowchart` and `sourceMode` is off; source otherwise. `sourceMode` is component state set by the toggle. The kind is re-detected on every `setSource` and the badge updates immediately, but the editing component never changes while the block's textarea has focus; the hold is released on blur, on the toggle, and when the textarea unmounts without a blur (the editor turning read-only), so a mode change implied by a new kind takes effect at the first of those. The toggle is disabled, with the parse error as its title, while the source does not parse.
+Mode: canvas when the kind has `write` and the editor entry has a canvas component for it, or the format is legacy, and `sourceMode` is off; source otherwise. The built-in canvas components are `DiagramCanvas` for `flowchart` and `SequenceCanvas` for `sequenceDiagram`. The editor entry's `mermaid({ editors })` option maps a kind name to a `DiagramKindEditor` component so a third-party kind can bring its own canvas; a built-in name in the map replaces the built-in component. The lossy lock, the notice with "Edit on canvas" and "Edit as text", and the read-only rules live in `DiagramBlock` and apply to every canvas kind alike.
+
+```ts
+export interface DiagramKindEditorProps {
+  readonly nodeKey: NodeKey
+  readonly kind: DiagramKind
+  readonly source: string
+  readonly parse: DiagramParse<unknown>
+  readonly readOnly: boolean
+  /** Writes `source` to the node in a discrete update. `merge` coalesces with the previous commit under the 300 ms rule. */
+  readonly commit: (source: string, options?: { readonly merge?: boolean }) => void
+}
+export type DiagramKindEditor = ComponentType<DiagramKindEditorProps>
+```
+
+`DiagramBlock` owns `commit`, `lastCommittedRef` and the history-merge window for every canvas kind; a canvas receives the parse and writes back source. The built-in canvases are adapted to this contract. `sourceMode` is component state set by the toggle. The kind is re-detected on every `setSource` and the badge updates immediately, but the editing component never changes while the block's textarea has focus; the hold is released on blur, on the toggle, and when the textarea unmounts without a blur (the editor turning read-only), so a mode change implied by a new kind takes effect at the first of those. The toggle is disabled, with the parse error as its title, while the source does not parse.
 
 **Canvas.** The existing `DiagramCanvas`. Its input is the model from `parseDiagramSource`. On change it computes `written = flowchart.write(payload, { retained })`, sets `lastCommittedRef` to `serializeDrawingData(flowchart.parse(written).model)`, then calls `setSource(written, kinds)` in `editor.update(…, { discrete: true })`, so the document holds the gesture when the handler returns, like every other editing path of the package. "Copy as Mermaid" in the tool row writes the current canvas state through the same `flowchart.write` with the same `retained` lines, so the clipboard holds exactly what a commit would put in the document: title, description, width and retained lines included. While `lossy` is non-empty and unacknowledged, the canvas mounts read-only, with no tool row, no pointer editing and no height grip, behind a notice that lists the lossy features by name and offers "Edit on canvas" (acknowledges for this block, in component state) and "Edit as text" (sets `sourceMode`). The first commit can only happen after "Edit on canvas".
 
@@ -373,6 +390,26 @@ History: the textarea is controlled by a local draft. Each change commits `setSo
 - Source mode never blocks a keystroke and never rewrites text; it signals. `invalid` problems appear while typing and reach hosts as `DIAGRAM_SYNTAX_INVALID` after save. The claim that written output is accepted by Mermaid.js applies to kinds with `write`.
 - Problems surface where the mistake is: in the source editor with line numbers, and in compile diagnostics with a narrowed range.
 
+### 9.5 The sequence canvas
+
+`SequenceCanvas` edits a sequence diagram on its rendered picture. Every gesture is an operation on `SequenceModel`; the result is written with `sequenceDiagram.write(model, { retained })` and committed through `setSource` in a discrete update, with `lastCommittedRef` set to the model of `parse(written)` as the flowchart canvas does. The picture is the section 8.3 layout, so what is edited is exactly what the reader sees. `core/sequence/layout.ts` exposes the geometry of every column, message, note, frame, section and activation for hit testing, and the canvas draws the same hast through `hast-util-to-jsx-runtime` with an interaction layer on top.
+
+Selection: one participant, message, note or frame at a time, shown with an outline. Click selects, Escape clears, Delete and Backspace remove the selection (a participant takes its messages and notes with it; a frame unwraps its items). Enter, or a double click, edits the selected label inline through the `text-edit-overlay` pattern; the field commits on blur or Enter and cancels on Escape.
+
+Participants: the tool row has "Add participant" and "Add actor", which append a participant with a fresh unique id and label and select it. Dragging a participant box horizontally reorders the columns; the drop position follows the pointer's column. A participant's label is edited inline; its id is kept unless the label was the id, in which case the id follows a sanitised form of the new label so hand-written diagrams keep their ids. The property bar for a participant toggles between participant and actor.
+
+Messages: dragging from a lifeline to another lifeline, or to the same lifeline for a self message, adds a message at the row under the pointer with the default arrow `->>` and an empty text that opens for editing at once. Dragging a message vertically reorders it among the items of its section; the drop row follows the pointer. The property bar picks the line (solid, dotted), the head (arrow, open, cross, none), two-way, the activation suffix (`+`, `-`, none), and lets the ends be swapped. The label edits inline.
+
+Notes: a "+" affordance appears when hovering the gap between two rows on a lifeline; clicking it adds a note over that participant at that row. The property bar moves a note between `left of`, `right of` and `over`, and for `over` adds or removes a second participant. Dragging a note vertically reorders it.
+
+Frames: with a message or note selected, the property bar offers "Wrap in" loop, alt, opt, par, critical, break and rect, which wraps the selected item and, with Shift+click on further items, a contiguous range of siblings; the label opens for editing at once. A frame's label and each section label edit inline. The property bar adds a section (`else`, `and`, `option`) after the current one, or unwraps the frame. Dragging a frame's bottom edge extends or shrinks it over following siblings.
+
+Autonumber: a tool-row toggle sets or clears `numbering` at start 1, step 1.
+
+Commits: every structural change is one history entry. Inline text edits merge with the `history-merge` tag under the same 300 ms rule as the source editor. The canvas never blocks a gesture; an operation that would make Mermaid.js reject the fence is not offered.
+
+Read-only editors render the picture only. Labels for every control come from the `diagram.` label map so hosts can translate them.
+
 ## 10. Tests
 
 ### 10.1 Unit
@@ -387,6 +424,8 @@ History: the textarea is controlled by a local draft. Each change commits `setSo
 - `editor-bridge.test.tsx`: untouched flowchart, sequence and class fences round-trip byte for byte; legacy fences still round-trip and still convert on first edit; a canvas edit re-emits retained lines; a source edit writes the text; version 1 node JSON imports; `meta` survives an edit.
 - `editor-source.test.tsx`: source mode renders a preview, lists problems with `invalid` first, stops key propagation, keeps its component while focused and switches on blur, coalesces three quick keystrokes into one undo step, routes Ctrl+Z to Lexical, `sourceEditor: false` hides the textarea.
 - `editor-canvas.test.tsx` gains: a lossy flowchart mounts read-only behind the notice until acknowledged.
+- `sequence-write.test.ts`: the write order, escaping, retained lines after the participants, the fixed-point rule for every corpus file, `create-destroy` in `lossy`; the conformance test covers the writer's output.
+- `editor-sequence.test.tsx`: every gesture of 9.5 through pointer events in jsdom, each asserting the written Mermaid, one history entry per structural change, byte-exact write-back while untouched, the lossy lock for `create-destroy`, read-only rendering, and `mermaid({ editors })` replacing a built-in canvas.
 
 ### 10.2 Conformance
 
@@ -408,7 +447,7 @@ History: the textarea is controlled by a local draft. Each change commits `setSo
 - Status chip reads the lifted node: "Flowchart · auto layout", "Flowchart · rmk-layout v1", "Sequence diagram · static", "Class diagram · source only", "Not Mermaid" for `unknown` with the hint as its message. The "Not a flowchart" state is removed. `invalid` problems show as "Mermaid rejects line N".
 - Samples are grouped: Flowcharts (the existing eight) and Sequence diagrams (sign-in with alt/else, API call with activation and notes, parallel work, loop with autonumber). Every sample compiles with no diagnostic. No sample contains a raw `;` in text.
 - Code-pane highlighting takes its keyword set from the detected kind.
-- The right pane shows the block: canvas for flowcharts, preview and problems for sequence diagrams, the unsupported notice over the source `pre` for source-only kinds. The demo CSS generalises its `.rmk-diagram*` selectors so every mode fills the pane.
+- The right pane shows the block: the flowchart canvas for flowcharts, the sequence canvas for sequence diagrams, the unsupported notice over the source `pre` for source-only kinds. The status chip reads "Sequence diagram · canvas" for a sequence diagram. The demo CSS generalises its `.rmk-diagram*` selectors so every mode fills the pane.
 - Export works for every static kind.
 - Landing copy, meta description, FAQ, `index.html` and `public-sites/shared/llms/llms.txt` say flowcharts and sequence diagrams; every measured figure stays verbatim; the SEO surface test stays green.
 - `tests/mermaid-demo.dom.test.tsx` is committed with the change: "has nothing to export for a diagram type the canvas does not open" becomes "exports an SVG for the sequence sample"; the sample loop asserts no diagnostics for every sample.
@@ -424,7 +463,6 @@ History: the textarea is controlled by a local draft. Each change commits `setSo
 ## 13. Out of scope for this revision
 
 - A scene layer shared by the flowchart and sequence renderers.
-- Structured, non-text editing of sequence diagrams, and a per-kind editor component on `DiagramKind`.
 - `stateDiagram`, `gantt`, `erDiagram` kinds. `stateDiagram` maps onto the flowchart model and canvas and is the cheapest next kind.
 - Canvas theming through the section 7 tokens. The canvas keeps its white surface and dark filter.
 - Honouring `config.theme` and `themeVariables`.
