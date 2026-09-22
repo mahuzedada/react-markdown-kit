@@ -670,19 +670,25 @@
 
 /*
  * Ink drawing style (`mermaid({ style: 'ink' })`). Geometry is handled by
- * the renderer (core/ink.ts); the stylesheet only switches the face:
- * Recursive on its casual/cursive axes when the host loads it, the regular
- * font otherwise.
+ * the renderer (core/ink.ts): one marker stroke per shape over a fill that
+ * follows it, with a faint pencil under-drawing. The stylesheet switches
+ * the face to match: Recursive on its casual and cursive axes when the host
+ * loads it (a rounded, slightly slanted hand), the regular font otherwise,
+ * and a quieter grid so the paper stays paper.
  */
 .rmk-editor .rmk-diagram-canvas.is-ink {
   --rmk-diagram-font: 'Recursive', ui-sans-serif, system-ui, sans-serif;
-  --rmk-diagram-grid: rgba(0, 0, 0, 0.06);
+  --rmk-diagram-grid: rgba(0, 0, 0, 0.05);
 }
 
 .rmk-editor .rmk-diagram-canvas.is-ink .rmk-diagram-surface text,
 .rmk-editor .rmk-diagram-canvas.is-ink .rmk-diagram-text-input {
-  font-variation-settings: 'CASL' 1, 'CRSV' 1, 'MONO' 0, 'wght' 440, 'slnt' -3;
-  letter-spacing: 0.01em;
+  font-variation-settings: 'CASL' 1, 'CRSV' 1, 'MONO' 0, 'wght' 480, 'slnt' -6;
+  letter-spacing: 0.015em;
+}
+
+.rmk-editor .rmk-diagram-canvas.is-ink .rmk-diagram-surface text[font-weight="600"] {
+  font-variation-settings: 'CASL' 1, 'CRSV' 1, 'MONO' 0, 'wght' 640, 'slnt' -6;
 }
 
 /* Coarse pointers: 44px targets, and hover-revealed controls shown by default */

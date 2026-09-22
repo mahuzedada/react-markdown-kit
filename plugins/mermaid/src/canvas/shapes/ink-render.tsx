@@ -1,131 +1,185 @@
 /**
- * Ported from @zuilib/text-editor (MIT). Ink-style renderer: every box and
- * connector as a single seeded pen stroke (geometry from core/ink.ts).
+ * Ink-style renderer: every box and connector as one seeded marker stroke
+ * (geometry from core/ink.ts). The stroke is a real SVG stroke of uniform
+ * width with round caps and joins, over a fill that follows the same
+ * displaced centerline. Under the main stroke sits a thinner, translucent
+ * pass on a different seed: the pencil under-drawing that makes a sketch
+ * read as a sketch without making it messy.
  */
 import type { ReactElement } from 'react'
 import { arrowHeadPoints, pathLength, segmentAngleAt } from '../../core/connectors.js'
-import { bbox, ellipsePolygon } from '../../core/geometry.js'
+import { bbox } from '../../core/geometry.js'
 import {
   arcPolygon,
+  ellipseSides,
   inkAmplitude,
-  inkFillOffset,
-  inkStroke,
-  roundedPolyline,
-  roundedRectPolygon,
+  inkLineAmplitude,
+  inkOutline,
+  polygonSides,
+  polylineSides,
+  roundedRectSides,
   sampleCubic,
   seedFrom,
+  type InkSide,
 } from '../../core/ink.js'
 import type { DrawingShape, Point } from '../../core/drawing-data.js'
 import { ACTOR_FIGURE_RATIO, CYLINDER_RY, NOTE_FOLD, QUEUE_RX } from '../../core/shapes/definitions.js'
 
-const f = (v: number): string => (Number.isInteger(v) ? String(v) : v.toFixed(2))
+/** Width and opacity of the under-drawing pass, relative to the main stroke */
+const UNDER_WIDTH = 0.55
+const UNDER_OPACITY = 0.42
+/** Salt that puts the under-drawing on its own seed */
+const UNDER_SALT = 0x5a5a5a5a
+/** Salt per sub-stroke of one shape (cylinder lid, note fold, limbs …) */
+const PART_SALT = 0x1000
 
-function extent(points: readonly Point[]): { w: number; h: number } {
+type Pen = Readonly<{ seed: number; stroke: string; width: number }>
+
+function sideExtent(sides: readonly InkSide[]): number {
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
   let maxY = -Infinity
-  for (const p of points) {
-    if (p.x < minX) minX = p.x
-    if (p.x > maxX) maxX = p.x
-    if (p.y < minY) minY = p.y
-    if (p.y > maxY) maxY = p.y
+  for (const side of sides) {
+    for (const p of side) {
+      if (p.x < minX) minX = p.x
+      if (p.x > maxX) maxX = p.x
+      if (p.y < minY) minY = p.y
+      if (p.y > maxY) maxY = p.y
+    }
   }
-  return { w: maxX - minX, h: maxY - minY }
+  return Math.min(maxX - minX, maxY - minY)
+}
+
+function longestSide(sides: readonly InkSide[]): number {
+  let longest = 0
+  for (const side of sides) {
+    let total = 0
+    for (let i = 1; i < side.length; i++) total += Math.hypot(side[i]!.x - side[i - 1]!.x, side[i]!.y - side[i - 1]!.y)
+    if (total > longest) longest = total
+  }
+  return longest
 }
 
 /**
- * Ink-style box: fill first (misregistered by a seeded px or two, like a
- * print), then the stroke ring on top. `part` keeps sub-strokes of one
- * shape (cylinder top, note fold …) on distinct seeds.
+ * One stroke of the pen along the sides: fill first (closed outlines, or
+ * open ones closed for the fill by `closer` sides that are never drawn),
+ * then the under-drawing, then the marker line.
  */
+function Stroke({
+  pen,
+  sides,
+  part,
+  closed,
+  fill,
+  noTail,
+  closer,
+}: {
+  pen: Pen
+  sides: readonly InkSide[]
+  part: number
+  closed: boolean
+  fill?: string | undefined
+  noTail?: boolean | undefined
+  closer?: readonly InkSide[] | undefined
+}): ReactElement | null {
+  // Each part bows in proportion to its own size, so a small lid or head
+  // stays calmer than the body it sits on
+  const amplitude = inkAmplitude(sideExtent(sides))
+  const seed = pen.seed + part * PART_SALT
+  const reference = longestSide(sides)
+  const main = inkOutline(sides, { closed, seed, amplitude, noTail, reference })
+  if (main.stroke === '') return null
+  const under = inkOutline(sides, { closed, seed: seed ^ UNDER_SALT, amplitude: amplitude * 0.8, noTail: true, reference })
+  // The drawn sides keep their indices and corners, so the fill's edge is the stroke's centerline
+  const fillPath =
+    closer !== undefined
+      ? inkOutline([...sides, ...closer], { closed: true, seed, amplitude, noTail: true, reference }).fill
+      : main.fill
+  return (
+    <g stroke={pen.stroke} strokeLinecap="round" strokeLinejoin="round" fill="none">
+      {(closed || closer !== undefined) && fill !== undefined && <path d={fillPath} fill={fill} stroke="none" />}
+      <path d={under.stroke} strokeWidth={pen.width * UNDER_WIDTH} opacity={UNDER_OPACITY} />
+      <path d={main.stroke} strokeWidth={pen.width} />
+    </g>
+  )
+}
+
+/** Ink-style box: its outline as sides, with sub-strokes on their own seeds */
 export function InkBoxGeometry({ shape }: { shape: DrawingShape }): ReactElement | null {
   const b = bbox(shape)
-  const seed = seedFrom(shape.id)
-  const width = shape.strokeWidth
-  const off = inkFillOffset(seed)
-  const fillTransform = `translate(${f(off.x)} ${f(off.y)})`
-  // Each part wobbles in proportion to its own size, so a small head or lid
-  // stays calmer than the body it sits on
-  const amplitudeOf = (points: readonly Point[]): number =>
-    inkAmplitude(Math.min(extent(points).w, extent(points).h))
-
-  const closed = (points: readonly Point[], part: number, fill = shape.fill): ReactElement => {
-    const s = inkStroke(points, { closed: true, seed: seed + part, width, amplitude: amplitudeOf(points) })
-    return (
-      <g>
-        <path d={s.center} fill={fill} stroke="none" transform={fillTransform} />
-        <path d={s.ring} fill={shape.stroke} fillRule="evenodd" stroke="none" />
-      </g>
-    )
-  }
-  const open = (points: readonly Point[], part: number, w = width): ReactElement => (
-    <path
-      d={inkStroke(points, { closed: false, seed: seed + part, width: w, amplitude: amplitudeOf(points) }).ring}
-      fill={shape.stroke}
-      stroke="none"
-    />
-  )
+  const pen: Pen = { seed: seedFrom(shape.id), stroke: shape.stroke, width: shape.strokeWidth }
+  const fill = shape.fill
+  const cx = b.x + b.w / 2
+  const cy = b.y + b.h / 2
 
   switch (shape.type) {
     case 'rect':
-      return closed(roundedRectPolygon(b, Math.min(8, b.w / 4, b.h / 4)), 0)
+      return <Stroke pen={pen} part={0} closed fill={fill} sides={roundedRectSides(b, Math.min(6, b.w / 5, b.h / 5))} />
     case 'ellipse':
-      return closed(ellipsePolygon(b, 64), 0)
+      return <Stroke pen={pen} part={0} closed fill={fill} sides={ellipseSides(cx, cy, b.w / 2, b.h / 2, 12)} />
     case 'diamond':
-      return closed(
-        [
-          { x: b.x + b.w / 2, y: b.y },
-          { x: b.x + b.w, y: b.y + b.h / 2 },
-          { x: b.x + b.w / 2, y: b.y + b.h },
-          { x: b.x, y: b.y + b.h / 2 },
-        ],
-        0,
+      return (
+        <Stroke
+          pen={pen}
+          part={0}
+          closed
+          fill={fill}
+          sides={polygonSides([
+            { x: cx, y: b.y },
+            { x: b.x + b.w, y: cy },
+            { x: cx, y: b.y + b.h },
+            { x: b.x, y: cy },
+          ])}
+        />
       )
     case 'note': {
       const fold = NOTE_FOLD(b)
       const r = b.x + b.w
       const btm = b.y + b.h
-      const fillPts = [
+      const sheet = polygonSides([
         { x: b.x, y: b.y },
         { x: r, y: b.y },
         { x: r, y: btm - fold },
         { x: r - fold, y: btm },
         { x: b.x, y: btm },
-      ]
-      const foldPts = [
+      ])
+      // The fold: a flap lifted off the corner, drawn as an open stroke
+      const flap: InkSide[] = polylineSides([
         { x: r - fold, y: btm },
-        { x: r - fold, y: btm - fold },
+        { x: r - fold * 0.92, y: btm - fold * 0.92 },
         { x: r, y: btm - fold },
-      ]
+      ])
       return (
         <g>
-          {closed(fillPts, 0)}
+          <Stroke pen={pen} part={0} closed fill={fill} sides={sheet} />
           <path
-            d={`M ${foldPts.map((p) => `${f(p.x)} ${f(p.y)}`).join(' L ')} Z`}
-            fill="rgba(0,0,0,0.08)"
+            d={`M ${r - fold} ${btm} L ${r - fold * 0.92} ${btm - fold * 0.92} L ${r} ${btm - fold} Z`}
+            fill="rgba(0,0,0,0.1)"
             stroke="none"
           />
-          {open(foldPts, 1)}
+          <Stroke pen={pen} part={1} closed={false} sides={flap} />
         </g>
       )
     }
     case 'cylinder': {
       const ry = CYLINDER_RY(b)
       const rx = b.w / 2
-      const cx = b.x + rx
-      const body = [
-        { x: b.x, y: b.y + ry },
-        { x: b.x, y: b.y + b.h - ry },
-        ...arcPolygon(cx, b.y + b.h - ry, rx, ry, Math.PI, 0, 16),
-        { x: b.x + b.w, y: b.y + ry },
+      const body: InkSide[] = [
+        [{ x: b.x, y: b.y + ry }, { x: b.x, y: b.y + b.h - ry }],
+        arcPolygon(cx, b.y + b.h - ry, rx, ry, Math.PI, Math.PI / 2, 8),
+        arcPolygon(cx, b.y + b.h - ry, rx, ry, Math.PI / 2, 0, 8),
+        [{ x: b.x + b.w, y: b.y + b.h - ry }, { x: b.x + b.w, y: b.y + ry }],
       ]
-      const s = inkStroke(body, { closed: false, seed: seed + 0, width, amplitude: amplitudeOf(body) })
+      // The back of the lid closes the fill; the lid itself is its own loop
+      const lidBack: InkSide[] = [
+        arcPolygon(cx, b.y + ry, rx, ry, 0, -Math.PI / 2, 6),
+        arcPolygon(cx, b.y + ry, rx, ry, -Math.PI / 2, -Math.PI, 6),
+      ]
       return (
         <g>
-          <path d={`${s.center} Z`} fill={shape.fill} stroke="none" transform={fillTransform} />
-          <path d={s.ring} fill={shape.stroke} stroke="none" />
-          {closed(ellipsePolygon({ x: b.x, y: b.y, w: b.w, h: ry * 2 }, 48), 1)}
+          <Stroke pen={pen} part={0} closed={false} fill={fill} sides={body} closer={lidBack} />
+          <Stroke pen={pen} part={1} closed fill={fill} sides={ellipseSides(cx, b.y + ry, rx, ry, 8)} />
         </g>
       )
     }
@@ -139,34 +193,38 @@ export function InkBoxGeometry({ shape }: { shape: DrawingShape }): ReactElement
         [p(0.98, 0.26), p(1.04, 0.56), p(0.88, 0.64)],
         [p(1.0, 0.8), p(0.9, 0.9), p(0.76, 0.86)],
       ]
-      const pts: Point[] = [start]
+      const sides: InkSide[] = []
       let from = start
       for (const [c1, c2, to] of segs) {
-        pts.push(...sampleCubic(from, c1, c2, to, 8))
+        sides.push(sampleCubic(from, c1, c2, to, 8))
         from = to
       }
-      return closed(pts, 0)
+      sides.push([from, start])
+      return <Stroke pen={pen} part={0} closed fill={fill} sides={sides} />
     }
     case 'queue': {
       const rx = QUEUE_RX(b)
       const ry = b.h / 2
-      const body = [
-        { x: b.x + rx, y: b.y },
-        { x: b.x + b.w - rx, y: b.y },
-        { x: b.x + b.w - rx, y: b.y + b.h },
-        { x: b.x + rx, y: b.y + b.h },
-        ...arcPolygon(b.x + rx, b.y + ry, rx, ry, Math.PI / 2, (3 * Math.PI) / 2, 16).slice(1, -1),
+      const body: InkSide[] = [
+        [{ x: b.x + b.w - rx, y: b.y + b.h }, { x: b.x + rx, y: b.y + b.h }],
+        arcPolygon(b.x + rx, cy, rx, ry, Math.PI / 2, Math.PI, 6),
+        arcPolygon(b.x + rx, cy, rx, ry, Math.PI, (3 * Math.PI) / 2, 6),
+        [{ x: b.x + rx, y: b.y }, { x: b.x + b.w - rx, y: b.y }],
+      ]
+      // The front of the end cap closes the fill under the cap's own loop
+      const capFront: InkSide[] = [
+        arcPolygon(b.x + b.w - rx, cy, rx, ry, -Math.PI / 2, 0, 6),
+        arcPolygon(b.x + b.w - rx, cy, rx, ry, 0, Math.PI / 2, 6),
       ]
       return (
         <g>
-          {closed(body, 0)}
-          {closed(ellipsePolygon({ x: b.x + b.w - rx * 2, y: b.y, w: rx * 2, h: b.h }, 48), 1)}
+          <Stroke pen={pen} part={0} closed={false} fill={fill} sides={body} closer={capFront} />
+          <Stroke pen={pen} part={1} closed fill={fill} sides={ellipseSides(b.x + b.w - rx, cy, rx, ry, 8)} />
         </g>
       )
     }
     case 'actor': {
       const figH = b.h * ACTOR_FIGURE_RATIO
-      const cx = b.x + b.w / 2
       const r = Math.max(4, Math.min(figH * 0.16, b.w * 0.2))
       const neck = b.y + r * 2
       const hip = b.y + figH * 0.62
@@ -174,29 +232,27 @@ export function InkBoxGeometry({ shape }: { shape: DrawingShape }): ReactElement
       const reach = Math.min(b.w * 0.32, figH * 0.3)
       return (
         <g>
-          {closed(ellipsePolygon({ x: cx - r, y: b.y, w: r * 2, h: r * 2 }, 32), 0)}
-          {open(
-            [
-              { x: cx, y: neck },
-              { x: cx, y: hip },
-            ],
-            1,
-          )}
-          {open(
-            [
+          <Stroke pen={pen} part={0} closed fill={fill} sides={ellipseSides(cx, b.y + r, r, r, 6)} />
+          <Stroke pen={pen} part={1} closed={false} sides={polylineSides([{ x: cx, y: neck }, { x: cx, y: hip }])} />
+          <Stroke
+            pen={pen}
+            part={2}
+            closed={false}
+            sides={polylineSides([
               { x: cx - reach, y: armY },
               { x: cx + reach, y: armY },
-            ],
-            2,
-          )}
-          {open(
-            [
+            ])}
+          />
+          <Stroke
+            pen={pen}
+            part={3}
+            closed={false}
+            sides={polylineSides([
               { x: cx - reach, y: b.y + figH },
               { x: cx, y: hip },
               { x: cx + reach, y: b.y + figH },
-            ],
-            3,
-          )}
+            ])}
+          />
         </g>
       )
     }
@@ -205,7 +261,10 @@ export function InkBoxGeometry({ shape }: { shape: DrawingShape }): ReactElement
   }
 }
 
-/** Ink-style connector: a tapered pen line with chevron heads */
+/**
+ * Ink-style connector: a gently bowed marker line with open chevron heads,
+ * each barb its own length, the way a quick arrow is drawn.
+ */
 export function InkConnector({
   shape,
   points,
@@ -218,26 +277,35 @@ export function InkConnector({
   if (points.length < 2 || first === undefined || last === undefined) return null
   const seed = seedFrom(shape.id)
   const length = pathLength(points)
-  const amplitude = Math.min(3, Math.max(0.8, length * 0.015))
+  const amplitude = inkLineAmplitude(length)
   const width = shape.strokeWidth
-  const line = inkStroke(roundedPolyline(points), { closed: false, seed, width, amplitude })
+  const line = inkOutline(polylineSides(points), { closed: false, seed, amplitude })
+  const under = inkOutline(polylineSides(points), {
+    closed: false,
+    seed: seed ^ UNDER_SALT,
+    amplitude: amplitude * 0.8,
+  })
 
-  const heads: Point[][] = []
+  const heads: string[] = []
   if (shape.type === 'arrow' && length >= 1) {
-    const headLength = Math.min(14, 4 + length / 4)
-    heads.push(arrowHeadPoints(last, segmentAngleAt(points, points.length - 1, false), headLength))
-    if (shape.bidirectional) {
-      heads.push(arrowHeadPoints(first, segmentAngleAt(points, 0, true), headLength))
+    const headLength = Math.min(15, 5 + length / 4)
+    const head = (tip: Point, angle: number, part: number): string => {
+      const [a, t, c] = arrowHeadPoints(tip, angle, headLength) as [Point, Point, Point]
+      // One barb a touch longer than the other
+      const long = part % 2 === 0 ? a : c
+      const stretched = { x: t.x + (long.x - t.x) * 1.15, y: t.y + (long.y - t.y) * 1.15 }
+      const barbs = part % 2 === 0 ? [stretched, t, c] : [a, t, stretched]
+      return inkOutline(polylineSides(barbs), { closed: false, seed: seed + part * PART_SALT, amplitude: 0.6 }).stroke
     }
+    heads.push(head(last, segmentAngleAt(points, points.length - 1, false), 1))
+    if (shape.bidirectional) heads.push(head(first, segmentAngleAt(points, 0, true), 2))
   }
   return (
-    <g fill={shape.stroke} stroke="none">
-      <path d={line.ring} />
-      {heads.map((pts, i) => (
-        <path
-          key={i}
-          d={inkStroke(pts, { closed: false, seed: seed + 1 + i, width: width * 1.15, amplitude: 0.8 }).ring}
-        />
+    <g stroke={shape.stroke} strokeLinecap="round" strokeLinejoin="round" fill="none">
+      <path d={under.stroke} strokeWidth={width * UNDER_WIDTH} opacity={UNDER_OPACITY} />
+      <path d={line.stroke} strokeWidth={width} />
+      {heads.map((d, i) => (
+        <path key={i} d={d} strokeWidth={width * 1.1} />
       ))}
     </g>
   )

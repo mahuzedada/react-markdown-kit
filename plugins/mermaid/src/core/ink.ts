@@ -1,40 +1,55 @@
 /**
- * Ported from @zuilib/text-editor (MIT). Ink rendering: seeded hand-drawn stroke outlines and rounded-polygon helpers.
+ * Ink rendering: the geometry of the hand-drawn `ink` style.
+ *
+ * A shape is a list of *sides*, each a polyline (two points for a straight
+ * edge, a dense sampling for an arc or a curve). Every side is drawn as one
+ * confident marker stroke: a slight seeded bow along its normal, zero at both
+ * ends so sides meet exactly at their corners, and a faint secondary wave so
+ * long edges do not read as perfect arcs. Corners get a small shared jitter
+ * (keyed by their coordinates, so both sides of a corner move together). A
+ * closed outline does not end where it started: the pen runs a few pixels
+ * past the first corner, drifting outward, the way a hand closes a loop.
+ *
+ * The result is a plain SVG path for an SVG stroke of uniform width, and a
+ * closed centerline for the fill, so the fill sits exactly under the stroke.
+ * Everything is seeded from the shape id: the same shape draws the same way
+ * on every render, undo, export and machine.
+ *
+ * This is a renderer concern only; the drawing format never sees it.
  */
 import type { Point } from './drawing-data.js'
 
-/**
- * "Ink" rendering: one confident pen stroke instead of a plotted outline.
- * Every shape's centerline is resampled densely, displaced along its normal
- * by a smooth low-frequency field (two sines, integer frequencies on closed
- * paths so the seam is continuous) and widened by a slowly varying pressure
- * factor. The result is a filled ring path, not an SVG stroke, so the width
- * can breathe along the path. Everything is seeded from the shape id: the
- * same shape draws the same way on every render, undo, export and machine.
- *
- * This is a renderer concern only — the drawing format never sees it.
- */
-
 export type DrawingStyle = 'clean' | 'ink'
 
+/** A polyline the pen follows in one movement: two points for a straight edge, more for a curve */
+export type InkSide = readonly Point[]
+
 export type InkOptions = Readonly<{
+  /** The sides form a loop: the last ends where the first starts */
   closed: boolean
   seed: number
-  /** Nominal stroke width; the pressure factor varies it by ±30 % */
-  width: number
-  /** Peak displacement from the geometric path, in px */
+  /** Peak bow of the longest side from its geometric path, in px */
   amplitude: number
+  /** Closed outlines only: skip the overlap tail past the first corner */
+  noTail?: boolean | undefined
+  /** Length the bow of each side is measured against; the longest side by default */
+  reference?: number | undefined
 }>
 
-export type InkStroke = Readonly<{
-  /** Filled outline of the stroke (use `fillRule="evenodd"`) */
-  ring: string
-  /** Displaced centerline, for fills */
-  center: string
+export type InkOutline = Readonly<{
+  /** The stroke: an open path, drawn with round caps and joins */
+  stroke: string
+  /** The displaced centerline closed with `Z`, for the fill of a closed outline */
+  fill: string
 }>
 
-const SAMPLE_STEP = 5
-const PRESSURE = 0.3
+/** Resampling step along a side, in px */
+const SAMPLE_STEP = 4
+/** Corners move by at most this fraction of the amplitude */
+const CORNER_JITTER = 0.5
+/** A closed outline overlaps its first side by this much, capped by the side length */
+const TAIL_LENGTH = 10
+const TAU = Math.PI * 2
 
 /** FNV-1a: a stable 32-bit seed from a shape id */
 export function seedFrom(text: string): number {
@@ -44,6 +59,13 @@ export function seedFrom(text: string): number {
     h = Math.imul(h, 0x01000193)
   }
   return h >>> 0
+}
+
+function mix(seed: number, salt: number): number {
+  let h = (seed ^ Math.imul(salt + 0x9e3779b9, 0x85ebca6b)) >>> 0
+  h = Math.imul(h ^ (h >>> 16), 0x7feb352d)
+  h = Math.imul(h ^ (h >>> 15), 0x846ca68b)
+  return (h ^ (h >>> 16)) >>> 0
 }
 
 function mulberry32(seed: number): () => number {
@@ -56,63 +78,37 @@ function mulberry32(seed: number): () => number {
   }
 }
 
-/** Wobble amplitude for a shape of the given smallest dimension (px) */
+/** Bow amplitude for a shape of the given smallest dimension (px) */
 export function inkAmplitude(size: number): number {
-  return Math.min(4, Math.max(1, size * 0.03))
+  return Math.min(1.6, Math.max(0.5, size * 0.014))
 }
 
-/** Fill misregistration for a shape: a seeded 2–3 px offset */
-export function inkFillOffset(seed: number): Point {
-  const rand = mulberry32(seed ^ 0x9e3779b9)
-  const angle = rand() * Math.PI * 2
-  const d = 2 + rand()
-  return { x: Math.cos(angle) * d, y: Math.sin(angle) * d }
+/** Bow amplitude for a connector of the given length (px) */
+export function inkLineAmplitude(length: number): number {
+  return Math.min(2.4, Math.max(0.5, length * 0.012))
 }
 
-type Field = Readonly<{
-  offset: (t: number) => number
-  pressure: (t: number) => number
-}>
+const f = (v: number): string => (Number.isInteger(v) ? String(v) : v.toFixed(2))
 
-function makeField(seed: number, amplitude: number, closed: boolean): Field {
-  const rand = mulberry32(seed)
-  const int = (lo: number, span: number) => lo + Math.floor(rand() * span)
-  const f1 = closed ? int(2, 2) : 1.5 + rand()
-  const f2 = closed ? int(5, 3) : 3 + rand() * 2
-  const g = closed ? int(2, 2) : 1 + rand()
-  const p1 = rand() * Math.PI * 2
-  const p2 = rand() * Math.PI * 2
-  const pg = rand() * Math.PI * 2
-  // Two harmonics whose peaks sum to at most `amplitude`
-  const a1 = amplitude * (0.55 + rand() * 0.15)
-  const a2 = amplitude * 0.3
-  const TAU = Math.PI * 2
-  return {
-    offset: (t) => a1 * Math.sin(TAU * f1 * t + p1) + a2 * Math.sin(TAU * f2 * t + p2),
-    pressure: (t) => 1 + PRESSURE * Math.sin(TAU * g * t + pg),
+function sideLength(side: InkSide): number {
+  let total = 0
+  for (let i = 1; i < side.length; i++) {
+    total += Math.hypot(side[i]!.x - side[i - 1]!.x, side[i]!.y - side[i - 1]!.y)
   }
+  return total
 }
 
 type Samples = Readonly<{ points: Point[]; ts: number[] }>
 
-/** Even resampling along a polyline; `t` is the arc parameter in [0, 1) */
-function resample(points: readonly Point[], closed: boolean): Samples {
-  const src = closed ? [...points, points[0]!] : [...points]
-  const lengths: number[] = []
-  let total = 0
-  for (let i = 1; i < src.length; i++) {
-    const l = Math.hypot(src[i]!.x - src[i - 1]!.x, src[i]!.y - src[i - 1]!.y)
-    lengths.push(l)
-    total += l
-  }
-  if (total === 0) return { points: [src[0]!], ts: [0] }
+/** Even resampling along a side; `t` is the arc parameter in [0, 1] */
+function resample(side: InkSide, total: number): Samples {
   const out: Point[] = []
   const ts: number[] = []
   let walked = 0
-  for (let i = 1; i < src.length; i++) {
-    const a = src[i - 1]!
-    const b = src[i]!
-    const l = lengths[i - 1]!
+  for (let i = 1; i < side.length; i++) {
+    const a = side[i - 1]!
+    const b = side[i]!
+    const l = Math.hypot(b.x - a.x, b.y - a.y)
     const n = Math.max(1, Math.round(l / SAMPLE_STEP))
     for (let k = 0; k < n; k++) {
       const u = k / n
@@ -121,128 +117,124 @@ function resample(points: readonly Point[], closed: boolean): Samples {
     }
     walked += l
   }
-  if (!closed) {
-    out.push(src[src.length - 1]!)
-    ts.push(1)
-  }
+  out.push(side[side.length - 1]!)
+  ts.push(1)
   return { points: out, ts }
 }
 
-function normalAt(points: readonly Point[], i: number, closed: boolean): Point {
-  const n = points.length
-  const prev = points[closed ? (i - 1 + n) % n : Math.max(0, i - 1)]!
-  const next = points[closed ? (i + 1) % n : Math.min(n - 1, i + 1)]!
+function normalAt(points: readonly Point[], i: number): Point {
+  const prev = points[Math.max(0, i - 1)]!
+  const next = points[Math.min(points.length - 1, i + 1)]!
   const tx = next.x - prev.x
   const ty = next.y - prev.y
   const len = Math.hypot(tx, ty) || 1
   return { x: -ty / len, y: tx / len }
 }
 
-const f = (v: number): string => (Number.isInteger(v) ? String(v) : v.toFixed(2))
-const pathOf = (points: readonly Point[]): string =>
-  points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${f(p.x)} ${f(p.y)}`).join(' ')
+/** The jitter of a corner, the same for every side that ends there */
+function cornerJitter(seed: number, p: Point, amplitude: number): Point {
+  const key = mix(seed, (Math.round(p.x * 4) * 73856093) ^ (Math.round(p.y * 4) * 19349663))
+  const rand = mulberry32(key)
+  const angle = rand() * TAU
+  const d = rand() * amplitude * CORNER_JITTER
+  return { x: p.x + Math.cos(angle) * d, y: p.y + Math.sin(angle) * d }
+}
 
-/** Ink stroke along a polyline (open) or polygon (closed) */
-export function inkStroke(points: readonly Point[], options: InkOptions): InkStroke {
-  if (points.length < 2) return { ring: '', center: '' }
-  const { closed, seed, width, amplitude } = options
-  const field = makeField(seed, amplitude, closed)
-  const { points: pts, ts } = resample(points, closed)
-  if (pts.length < 2) return { ring: '', center: '' }
+type Bow = Readonly<{
+  /** Peak of the main bow; its sign picks the side of the path */
+  main: number
+  /** Peak of the secondary wave */
+  wave: number
+  phase: number
+}>
+
+function bowFor(seed: number, index: number, amplitude: number, share: number): Bow {
+  const rand = mulberry32(mix(seed, index))
+  const sign = rand() < 0.5 ? -1 : 1
+  return {
+    // Together the two peaks never exceed the amplitude
+    main: sign * amplitude * share * (0.5 + rand() * 0.25),
+    wave: amplitude * share * 0.25 * (rand() < 0.5 ? -1 : 1),
+    phase: rand() * Math.PI,
+  }
+}
+
+/** One side displaced by its bow; endpoints are the (jittered) corners */
+function drawSide(side: InkSide, bow: Bow, from: Point, to: Point): Point[] {
+  const total = sideLength(side)
+  if (total === 0) return [from]
+  const { points, ts } = resample(side, total)
+  const out: Point[] = []
+  for (let i = 0; i < points.length; i++) {
+    const t = ts[i]!
+    const nrm = normalAt(points, i)
+    const off = bow.main * Math.sin(Math.PI * t) + bow.wave * Math.sin(TAU * t + bow.phase) * Math.sin(Math.PI * t)
+    // Endpoints slide linearly onto the jittered corners
+    const dx = (from.x - side[0]!.x) * (1 - t) + (to.x - side[side.length - 1]!.x) * t
+    const dy = (from.y - side[0]!.y) * (1 - t) + (to.y - side[side.length - 1]!.y) * t
+    out.push({ x: points[i]!.x + nrm.x * off + dx, y: points[i]!.y + nrm.y * off + dy })
+  }
+  return out
+}
+
+/** Path data through the points: a move, then lines */
+function pathOf(points: readonly Point[]): string {
+  return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${f(p.x)} ${f(p.y)}`).join(' ')
+}
+
+/**
+ * The stroke and fill of an outline made of sides drawn in order. Sides must
+ * be connected: each starts where the previous ends (and for a closed
+ * outline, the last ends where the first starts).
+ */
+export function inkOutline(sides: readonly InkSide[], options: InkOptions): InkOutline {
+  const usable = sides.filter((s) => s.length >= 2 && sideLength(s) > 0)
+  if (usable.length === 0) return { stroke: '', fill: '' }
+  const { seed, amplitude, closed } = options
+  const longest = options.reference ?? Math.max(...usable.map(sideLength))
+  const corner = (p: Point): Point => cornerJitter(seed, p, amplitude)
 
   const center: Point[] = []
-  const outer: Point[] = []
-  const inner: Point[] = []
-  for (let i = 0; i < pts.length; i++) {
-    const t = ts[i]!
-    const nrm = normalAt(pts, i, closed)
-    const off = field.offset(t)
-    const c = { x: pts[i]!.x + nrm.x * off, y: pts[i]!.y + nrm.y * off }
-    // Open strokes thin out toward both ends, like a pen lifting
-    const taper = closed ? 1 : 0.55 + 0.45 * Math.min(1, t / 0.1, (1 - t) / 0.1)
-    const half = (width * field.pressure(t) * taper) / 2
-    center.push(c)
-    outer.push({ x: c.x + nrm.x * half, y: c.y + nrm.y * half })
-    inner.push({ x: c.x - nrm.x * half, y: c.y - nrm.y * half })
-  }
+  usable.forEach((side, i) => {
+    // Short sides (corner arcs, small features) bow in proportion to their length
+    const share = Math.min(1, Math.max(0.25, sideLength(side) / longest))
+    const pts = drawSide(side, bowFor(seed, i, amplitude, share), corner(side[0]!), corner(side[side.length - 1]!))
+    center.push(...(i === 0 ? pts : pts.slice(1)))
+  })
 
-  if (closed) {
-    return {
-      ring: `${pathOf(outer)} Z ${pathOf([...inner].reverse())} Z`,
-      center: `${pathOf(center)} Z`,
-    }
+  if (!closed) return { stroke: pathOf(center), fill: '' }
+
+  const fill = `${pathOf(center)} Z`
+  if (options.noTail === true) return { stroke: `${pathOf(center)} Z`, fill }
+
+  // The tail: the pen runs on along the first side, easing outward
+  const first = usable[0]!
+  const firstLen = sideLength(first)
+  const tailLen = Math.min(TAIL_LENGTH, firstLen * 0.35)
+  const { points, ts } = resample(first, firstLen)
+  const start = center[0]!
+  const end = center[center.length - 1]!
+  const drift = mulberry32(mix(seed, 0x7a11))() < 0.5 ? -1 : 1
+  const tail: Point[] = []
+  for (let i = 0; i < points.length; i++) {
+    const d = ts[i]! * firstLen
+    if (d > tailLen) break
+    const u = d / tailLen
+    const nrm = normalAt(points, i)
+    const off = drift * amplitude * 0.6 * u * u
+    // Land on the closing point, then peel away from the start of the first side
+    const bx = (start.x - first[0]!.x) * (1 - u)
+    const by = (start.y - first[0]!.y) * (1 - u)
+    tail.push({ x: points[i]!.x + nrm.x * off + bx, y: points[i]!.y + nrm.y * off + by })
   }
-  return {
-    ring: `${pathOf(outer)} ${pathOf([...inner].reverse()).replace(/^M/, 'L')} Z`,
-    center: pathOf(center),
-  }
+  tail[0] = end
+  return { stroke: pathOf([...center, ...tail.slice(1)]), fill }
 }
 
-/** Rectangle outline with circular corners, as a polygon */
-export function roundedRectPolygon(
-  r: Readonly<{ x: number; y: number; w: number; h: number }>,
-  radius: number,
-  segments = 4
-): Point[] {
-  const rad = Math.min(radius, r.w / 2, r.h / 2)
-  if (rad <= 0) {
-    return [
-      { x: r.x, y: r.y },
-      { x: r.x + r.w, y: r.y },
-      { x: r.x + r.w, y: r.y + r.h },
-      { x: r.x, y: r.y + r.h },
-    ]
-  }
-  const corners: Array<[number, number, number]> = [
-    [r.x + r.w - rad, r.y + rad, -Math.PI / 2],
-    [r.x + r.w - rad, r.y + r.h - rad, 0],
-    [r.x + rad, r.y + r.h - rad, Math.PI / 2],
-    [r.x + rad, r.y + rad, Math.PI],
-  ]
-  const out: Point[] = []
-  for (const [cx, cy, start] of corners) {
-    for (let i = 0; i <= segments; i++) {
-      const a = start + (Math.PI / 2) * (i / segments)
-      out.push({ x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) })
-    }
-  }
-  return out
-}
-
-/** Polyline with its interior corners rounded (quadratic), as points */
-export function roundedPolyline(points: readonly Point[], cornerRadius = 6, segments = 4): Point[] {
-  if (points.length < 3) return [...points]
-  const out: Point[] = [points[0]!]
-  for (let i = 1; i < points.length - 1; i++) {
-    const prev = points[i - 1]!
-    const p = points[i]!
-    const next = points[i + 1]!
-    const inLen = Math.hypot(p.x - prev.x, p.y - prev.y)
-    const outLen = Math.hypot(next.x - p.x, next.y - p.y)
-    const r = Math.min(cornerRadius, inLen / 2, outLen / 2)
-    if (r < 0.5) {
-      out.push(p)
-      continue
-    }
-    const a = { x: p.x - ((p.x - prev.x) / inLen) * r, y: p.y - ((p.y - prev.y) / inLen) * r }
-    const b = { x: p.x + ((next.x - p.x) / outLen) * r, y: p.y + ((next.y - p.y) / outLen) * r }
-    for (let k = 0; k <= segments; k++) {
-      const u = k / segments
-      const v = 1 - u
-      out.push({
-        x: v * v * a.x + 2 * v * u * p.x + u * u * b.x,
-        y: v * v * a.y + 2 * v * u * p.y + u * u * b.y,
-      })
-    }
-  }
-  out.push(points[points.length - 1]!)
-  return out
-}
-
-/** Points along a cubic Bézier, excluding the start point */
+/** Points along a cubic Bézier, including both ends */
 export function sampleCubic(p0: Point, p1: Point, p2: Point, p3: Point, segments = 10): Point[] {
   const out: Point[] = []
-  for (let k = 1; k <= segments; k++) {
+  for (let k = 0; k <= segments; k++) {
     const u = k / segments
     const v = 1 - u
     out.push({
@@ -263,8 +255,57 @@ export function arcPolygon(
   to: number,
   segments = 12
 ): Point[] {
+  // Snapped, so an arc's end is the exact point the next side starts from
+  const snap = (v: number): number => Math.round(v * 1e6) / 1e6
   return Array.from({ length: segments + 1 }, (_, i) => {
     const a = from + ((to - from) * i) / segments
-    return { x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) }
+    return { x: snap(cx + rx * Math.cos(a)), y: snap(cy + ry * Math.sin(a)) }
   })
+}
+
+/** An ellipse as four quadrant arcs, clockwise from the top */
+export function ellipseSides(cx: number, cy: number, rx: number, ry: number, segments = 10): InkSide[] {
+  const q = Math.PI / 2
+  return [0, 1, 2, 3].map((i) => arcPolygon(cx, cy, rx, ry, -q + i * q, i * q, segments))
+}
+
+/** A rectangle with rounded corners as sides: four edges and four corner arcs */
+export function roundedRectSides(
+  r: Readonly<{ x: number; y: number; w: number; h: number }>,
+  radius: number
+): InkSide[] {
+  const rad = Math.min(radius, r.w / 2, r.h / 2)
+  const right = r.x + r.w
+  const bottom = r.y + r.h
+  if (rad <= 0) {
+    return polygonSides([
+      { x: r.x, y: r.y },
+      { x: right, y: r.y },
+      { x: right, y: bottom },
+      { x: r.x, y: bottom },
+    ])
+  }
+  const q = Math.PI / 2
+  return [
+    [{ x: r.x + rad, y: r.y }, { x: right - rad, y: r.y }],
+    arcPolygon(right - rad, r.y + rad, rad, rad, -q, 0, 3),
+    [{ x: right, y: r.y + rad }, { x: right, y: bottom - rad }],
+    arcPolygon(right - rad, bottom - rad, rad, rad, 0, q, 3),
+    [{ x: right - rad, y: bottom }, { x: r.x + rad, y: bottom }],
+    arcPolygon(r.x + rad, bottom - rad, rad, rad, q, 2 * q, 3),
+    [{ x: r.x, y: bottom - rad }, { x: r.x, y: r.y + rad }],
+    arcPolygon(r.x + rad, r.y + rad, rad, rad, 2 * q, 3 * q, 3),
+  ]
+}
+
+/** The edges of a polygon as straight sides, closing back to the first point */
+export function polygonSides(points: readonly Point[]): InkSide[] {
+  return points.map((p, i) => [p, points[(i + 1) % points.length]!])
+}
+
+/** The segments of a polyline as straight sides (open) */
+export function polylineSides(points: readonly Point[]): InkSide[] {
+  const out: InkSide[] = []
+  for (let i = 1; i < points.length; i++) out.push([points[i - 1]!, points[i]!])
+  return out
 }

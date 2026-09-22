@@ -198,8 +198,11 @@ two-way and activation of a message in the property bar, add notes from the
 `critical`, `break` or `rect`, add sections, drag a frame's bottom edge, and
 toggle `autonumber`. Every gesture is one undo step, and every label edits
 inline. The toolbar has one insert button per kind: id `diagram` for the
-flowchart, `diagram-<kind>` for the others. Options: `style` (`clean` or
-hand-drawn `ink`), `newBlockWidth`, `sourceEditor` (`false` shows preview
+flowchart, `diagram-<kind>` for the others. Options: `style` (`clean`, or
+`ink`: every shape one gently bowed marker stroke over a faint pencil
+under-drawing, seeded from the shape id so it never changes between
+renders, and set in Recursive's casual hand when the host loads that font),
+`newBlockWidth`, `sourceEditor` (`false` shows preview
 and problems only) and `editors`, a map from kind name to the component that
 edits it, so a kind of your own gets a canvas and a built-in canvas can be
 replaced. A component takes `DiagramKindEditorProps` (`kind`, `source`,
