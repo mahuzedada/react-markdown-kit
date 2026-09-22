@@ -39,7 +39,7 @@ const CARDS = [
   {
     out: 'public-sites/mermaid-demo/public/social-card.png',
     title: 'Free Mermaid Visual Editor',
-    lines: ['Drag the flowchart on a canvas.', 'Get plain Mermaid syntax back.'],
+    lines: ['Flowcharts on a canvas, sequence diagrams as SVG.', 'Get plain Mermaid syntax back.'],
     host: 'mermaid.reactmarkdownkit.com',
   },
   {

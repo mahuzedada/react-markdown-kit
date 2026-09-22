@@ -66,7 +66,19 @@ describe('detectDiagramKind: registered kinds', () => {
 })
 
 describe('detectDiagramKind: Mermaid keywords no kind renders', () => {
-  for (const keyword of MERMAID_KEYWORDS) {
+  const registeredKeywords = kinds.flatMap((kind) => kind.keywords)
+  const unregistered = MERMAID_KEYWORDS.filter((keyword) => !registeredKeywords.some((k) => keyword === k || keyword.startsWith(`${k}-`)))
+
+  it('lists the built-in kinds first, so a trimmed registry still names their fences', () => {
+    expect(MERMAID_KEYWORDS.slice(0, 4)).toEqual(['flowchart', 'graph', 'flowchart-elk', 'sequenceDiagram'])
+    expect(unregistered).not.toContain('sequenceDiagram')
+    expect(detectDiagramKind('sequenceDiagram\n  A->>B: hi', [flowchart()])).toEqual({ kind: 'sequenceDiagram', support: 'source' })
+    expect(detectDiagramKind('flowchart-elk TD\n  A --> B', [sequenceDiagram()])).toEqual({ kind: 'flowchart-elk', support: 'source' })
+    expect(detectDiagramKind('graph TD\n  A --> B', [])).toEqual({ kind: 'graph', support: 'source' })
+    expect(detectDiagramKind('Sequencediagram\n  A->>B: hi', [flowchart()])).toEqual({ kind: 'unknown', support: 'source', hint: 'sequenceDiagram' })
+  })
+
+  for (const keyword of unregistered) {
     it(`${keyword}: source, with and without front matter, directives and comments`, () => {
       for (const prefix of ['', FRONT_MATTER, DIRECTIVE, COMMENT, FRONT_MATTER + DIRECTIVE + COMMENT, COMMENT + DIRECTIVE]) {
         const result = detect(`${prefix}${keyword}\n  x`)

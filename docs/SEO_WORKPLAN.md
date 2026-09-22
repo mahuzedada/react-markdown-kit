@@ -178,7 +178,9 @@ writing a single new page.
   benchmark or generated table that backs it. Refresh numbers by running
   `pnpm bench` and `pnpm test` rather than copying old ones. Never say
   "drop-in replacement" for react-markdown. Say the Mermaid plugin renders
-  flowcharts only. Show the 1 KB benchmark regression next to the 100 KB win.
+  flowcharts and sequence diagrams statically; other Mermaid types show as
+  source unless the host adds a fallback. Show the 1 KB benchmark regression
+  next to the 100 KB win.
 - Repo conventions that must survive: demos stay separate Vite sites and never
   become docs pages (`public-sites/README.md`); the styling contract in
   `docs/STYLING.md` is enforced by `scripts/check-css-scope.mjs`; public
@@ -323,7 +325,7 @@ diff" panel that demonstrates the round trip live.
 
 | Route | Title | Required sections |
 | --- | --- | --- |
-| `mermaid.reactmarkdownkit.com` (static copy) | Free Online Mermaid Visual Editor: Drag, Drop, Get Mermaid | draw or paste, two-way sync, export SVG and Mermaid, works with GitHub/GitLab/Notion/Obsidian fences, flowcharts only, FAQ ("Is there a free Mermaid visual editor?", "Can I drag and drop Mermaid nodes?", "How do I turn a flowchart into Mermaid syntax?", "Does it work offline?") |
+| `mermaid.reactmarkdownkit.com` (static copy) | Free Online Mermaid Visual Editor: Drag, Drop, Get Mermaid | draw or paste, two-way sync, export SVG and Mermaid, works with GitHub/GitLab/Notion/Obsidian fences, flowcharts on the canvas and sequence diagrams as SVG, FAQ ("Is there a free Mermaid visual editor?", "Can I drag and drop Mermaid nodes?", "How do I turn a flowchart into Mermaid syntax?", "Does it work offline?") |
 | `/mermaid-live-editor-alternative` (new, docs) | Mermaid Live Editor Alternative with a Visual Canvas | side by side with mermaid.live: text editing, visual editing, sharing, price, open source, diagram types supported (be exact) |
 | `/react-mermaid` (new, docs) | Mermaid Diagrams in React Markdown, No Mermaid.js Runtime | the plugin, static SVG output, size comparison against loading mermaid.js, the layout annotation |
 | `/flowchart-to-mermaid` (new, docs) | Flowchart to Mermaid: Draw It, Copy the Syntax | honest scope: drawing to Mermaid text, not image recognition; walkthrough with screenshots from the demo |

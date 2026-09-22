@@ -259,9 +259,11 @@ Content and product work:
 - Reply on mermaid-js/mermaid-live-editor issue #1284 ("Drag-drop visual
   editor for Mermaid") and the mermaid-js discussion asking for a visual
   editor, with a link and a screen recording. Those threads rank today.
-- Note that the plugin renders flowcharts only. Say so on the page; the
-  searchers who need sequence diagrams will bounce anyway, and honesty here
-  protects the click-through on everything else.
+- Note that the plugin renders flowcharts and sequence diagrams statically
+  and shows other Mermaid types as source unless the host adds a fallback.
+  Say so on the page; the searchers who need Gantt or class diagrams will
+  bounce anyway, and honesty here protects the click-through on everything
+  else.
 
 ### 4.4 Slides plugin (`@react-markdown-kit/slides`) and slides demo
 

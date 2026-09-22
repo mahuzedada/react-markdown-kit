@@ -129,8 +129,8 @@ conformance suite is run here against Streamdown.
 
 Streamdown adds things the renderer does not have in the box: KaTeX math, Shiki syntax
 highlighting, and Mermaid, each as an optional `@streamdown/*` plugin package in 2.6.0.
-The kit has a Mermaid plugin of its own that draws flowcharts only and loads no
-Mermaid.js (<Link to="/react-mermaid">Mermaid in React Markdown</Link>). It ships no math
+The kit has a Mermaid plugin of its own that draws flowcharts and sequence diagrams and
+loads no Mermaid.js (<Link to="/react-mermaid">Mermaid in React Markdown</Link>). It ships no math
 and no syntax highlighting; a rehype plugin covers both.
 
 ## Security defaults
@@ -282,7 +282,7 @@ What you give up, and should plan for.
   (<Link to="/docs/styling">styling</Link>).
 - **Syntax highlighting and math.** Shiki and KaTeX come with Streamdown's plugin
   packages. Here they are a rehype plugin you choose.
-- **Mermaid.** The kit's plugin renders flowcharts only and loads no Mermaid.js
+- **Mermaid.** The kit's plugin renders flowcharts and sequence diagrams and loads no Mermaid.js
   (<Link to="/react-mermaid">Mermaid in React Markdown</Link>).
 - **`animated` and `isAnimating`.** No equivalent. The kit re-renders whatever string
   you pass and guarantees the closed prefix does not move.

@@ -1,6 +1,6 @@
 ---
 title: "React Mermaid: diagrams, no Mermaid.js"
-description: "React Mermaid without Mermaid.js: one plugin renders Mermaid flowcharts in React Markdown as static SVG, on the server or in the browser, flowcharts only."
+description: "React Mermaid without Mermaid.js: one plugin renders Mermaid flowcharts and sequence diagrams in React Markdown as static SVG, on the server or in the browser."
 ---
 
 import Link from '@docusaurus/Link'
@@ -42,7 +42,7 @@ export const FAQ = [
   {
     question: 'Which Mermaid diagram types does the plugin render?',
     answer:
-      'Flowcharts only, written as flowchart or graph in any direction. Sequence, class, Gantt, pie and every other Mermaid diagram type stay ordinary code blocks, rendered as source.',
+      'Flowcharts, written as flowchart or graph in any direction, and sequence diagrams. Class, Gantt, pie and every other Mermaid diagram type is shown as source inside the figure, unless the host adds a fallback that renders it.',
   },
   {
     question: 'Does the layout comment break GitHub or Mermaid.js?',
@@ -93,8 +93,9 @@ flowchart LR
 # React Mermaid, no Mermaid.js runtime
 
 `@react-markdown-kit/mermaid` renders a ```` ```mermaid ```` fence in React Markdown as
-static SVG. It does not load Mermaid.js. It renders flowcharts only. The same plugin
-opens the fence on a drawing canvas in the editor and writes plain Mermaid back.
+static SVG. It does not load Mermaid.js. It renders flowcharts and sequence diagrams.
+The same plugin opens a flowchart on a drawing canvas in the editor and writes plain
+Mermaid back.
 
 Try the canvas at <Link href={sites.mermaidDemo}>mermaid.reactmarkdownkit.com</Link>.
 This page is for the React side: install, render, server-render, edit, and the one
@@ -125,9 +126,9 @@ export function Doc({ content }: { content: string }) {
 }
 ```
 
-`mermaid()` is the whole API. It turns a `mermaid` fence whose body is a flowchart into
-a `diagram` node, and the renderer draws that node as SVG. Every other fence, and every
-Mermaid diagram that is not a flowchart, stays an ordinary code block.
+`mermaid()` is the whole API. It turns every `mermaid` fence into a `diagram` node. The
+renderer draws flowcharts and sequence diagrams as SVG. Every other Mermaid diagram type
+is shown as source inside the figure, unless the host adds a fallback that renders it.
 
 The example below is rendered by the plugin, on this page, with no browser work: the
 SVG is in the HTML the server sent.
@@ -217,8 +218,8 @@ How each row was measured:
   the Markdown pipeline the plugin plugs into.
 
 For one flowchart, that is {ratio} times less gzipped JavaScript. Mermaid.js does far
-more with its bytes. If the document needs a sequence diagram, this plugin will not
-draw it.
+more with its bytes. If the document needs a diagram type other than a flowchart or a
+sequence diagram, this plugin will not draw it.
 
 ## Server rendering
 
@@ -319,21 +320,25 @@ The format is specified in
 <Link href={blob('plugins/mermaid/LAYOUT_ANNOTATION.md')}>`LAYOUT_ANNOTATION.md`</Link>,
 shipped with the package, and `LAYOUT_ANNOTATION_JSON_SCHEMA` is exported from the root.
 
-## Flowcharts only
+## Flowcharts and sequence diagrams
 
-The plugin renders flowcharts only. `flowchart` or `graph`, any direction, the bracket
+The plugin renders flowcharts and sequence diagrams. Flowcharts: `flowchart` or `graph`, any direction, the bracket
 shapes (`[ ]`, `( )`, `([ ])`, `(( ))`, `{ }`, `{{ }}`, `[( )]`, `[[ ]]`, `> ]`), edge
 labels in both spellings, lines, arrows, bidirectional arrows, chains, `&` groups,
 `subgraph … end` read through, `style` colours and a front-matter title. `classDef`,
 `click` and `linkStyle` are ignored.
 
-Sequence, class, state, Gantt, pie and every other diagram type stay ordinary code
-blocks: rendered as source, edited as text, never opened on the canvas
+Sequence diagrams render as static SVG from the text and are edited as text with a live
+preview, never on the canvas. The subset is listed in the
+<Link to="/docs/mermaid">plugin reference</Link>.
+
+Class, state, Gantt, pie and every other diagram type is shown as source inside the
+figure: rendered as source, edited as text, never opened on the canvas
 (<Link href={blob('plugins/mermaid/tests/extension.test.tsx#L163')}>test</Link>). The
 subset is covered by
 <Link href={blob('plugins/mermaid/tests/mermaid-parse.test.ts')}>`mermaid-parse.test.ts`</Link>.
-If a document needs those types, render them with Mermaid.js; the two can share a page,
-since this plugin leaves the fences it does not read untouched.
+If a document needs those types, add the plugin's fallback entry and render them with
+Mermaid.js; the plugin hands every fence it does not draw to the host.
 
 ## FAQ
 

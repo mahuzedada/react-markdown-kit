@@ -78,7 +78,7 @@ const GUIDES: readonly PageLink[] = [
   { to: '/markdown-template-engine', label: 'Markdown template engine', what: 'Typed variables, schemas, formatters and locales, resolved in the parser.' },
   { to: '/docs/guides/markdown-template-variables', label: 'Markdown template variables', what: 'Placeholder syntax in a .md file, and why data cannot inject structure.' },
   { to: '/personalized-markdown', label: 'Personalized Markdown', what: 'One authored report, resolved per customer and per locale.' },
-  { to: '/react-mermaid', label: 'Mermaid in React', what: 'Flowcharts as static SVG without Mermaid.js. Flowcharts only.' },
+  { to: '/react-mermaid', label: 'Mermaid in React', what: 'Flowcharts and sequence diagrams as static SVG without Mermaid.js.' },
   { to: '/docs/slides', label: 'Markdown presentations in React', what: 'A deck from one Markdown file, with present mode and speaker notes.' },
 ]
 

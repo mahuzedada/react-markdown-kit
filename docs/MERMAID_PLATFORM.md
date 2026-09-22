@@ -32,7 +32,7 @@ Reasons:
 2. Strip `%%{ … }%%` directives.
 3. Strip `%%` comment lines.
 4. The leading word is `/^\s*([A-Za-z][A-Za-z0-9-]*)/` on the remaining text. A registered kind matches when one of its `keywords` equals the word, or the word is the keyword followed by `-` and more characters (`flowchart-elk`). Matching is case-sensitive. Kinds are tried in registration order. `graphTD` matches nothing.
-5. No registered match: the word is looked up, exactly, in `MERMAID_KEYWORDS`: `classDiagram`, `classDiagram-v2`, `stateDiagram`, `stateDiagram-v2`, `erDiagram`, `journey`, `gantt`, `pie`, `quadrantChart`, `requirementDiagram`, `requirement`, `gitGraph`, `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment`, `mindmap`, `timeline`, `zenuml`, `sankey-beta`, `sankey`, `xychart-beta`, `xychart`, `block-beta`, `block`, `packet-beta`, `packet`, `kanban`, `architecture-beta`, `architecture`, `radar-beta`, `treemap-beta`, `treemap`, `info`. A hit gives that `kind` and support `source`.
+5. No registered match: the word is looked up, exactly, in `MERMAID_KEYWORDS`: `flowchart`, `graph`, `flowchart-elk`, `sequenceDiagram`, `classDiagram`, `classDiagram-v2`, `stateDiagram`, `stateDiagram-v2`, `erDiagram`, `journey`, `gantt`, `pie`, `quadrantChart`, `requirementDiagram`, `requirement`, `gitGraph`, `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment`, `mindmap`, `timeline`, `zenuml`, `sankey-beta`, `sankey`, `xychart-beta`, `xychart`, `block-beta`, `block`, `packet-beta`, `packet`, `kanban`, `architecture-beta`, `architecture`, `radar-beta`, `treemap-beta`, `treemap`, `info`. A hit gives that `kind` and support `source`. The built-in kinds' keywords are in the table so that a registry without one of them still names its fences.
 6. Otherwise `kind` is `unknown`, support `source`. When the word equals a registered keyword or a `MERMAID_KEYWORDS` entry case-insensitively, the result carries `hint` with the correct spelling.
 
 Result: `{ kind: string; support: 'static' | 'source'; registered?: DiagramKind; hint?: string }`. Front matter, directives and comments never fail detection. Text still starting with `---` after step 1 is `unknown`.
@@ -137,7 +137,8 @@ Two kinds sharing a name or a keyword make `mermaid()` throw `MarkdownConfigurat
 - `@{ … }` node config, `e1@` edge ids, `~~~` invisible links, `click`, `classDef`, `class`, comments and directives are retained lines. `click`, `classDef` and `class` are not problems. `@{ … }`, `e1@` and `~~~` are `FLOWCHART_SYNTAX_IGNORED` (`ignored`).
 - A `:::cls` suffix becomes a retained body line `class <id> cls`.
 - A rejected layout annotation is problem `FLOWCHART_LAYOUT_INVALID` (`invalid`) with the validator's `path` and message; the model is auto-laid out.
-- `lossy` names, fixed strings: `subgraph`, `edge-style` (dotted, thick, invisible, circle and cross heads, long arrows), `shape` (a bracket written back as another shape: `[/ /]`, `[\ \]`, `{{ }}`, `((( )))`, `([ ])`), `linkStyle`, `style-property` (a `style` declaration other than fill or stroke). `linkStyle` lines are not retained.
+- `lossy` names, fixed strings: `subgraph`, `edge-style` (dotted, thick, invisible, circle and cross heads, long arrows), `shape` (a bracket written back as another shape: `[/ /]`, `[\ \]`, `{{ }}`, `((( )))`, `( )`, `(( ))`, since the writer emits `[ ]` and `([ ])`), `linkStyle`, `style-property` (a `style` declaration other than fill or stroke). `linkStyle` lines are not retained.
+- The parser rounds all geometry to two decimals, so the fixed-point rule (`parse(write(parse(x))) = parse(write(x))`) holds for auto layout as well as for annotated diagrams.
 
 `write` is `drawingToMermaid` and emits, in order: one `---` block holding `title:` and the retained front-matter lines (omitted when both are empty); the header; node lines; edge lines; `style` lines; the retained body lines in original order; the `%% rmk-layout v1` line last. Ids the parser accepted are written unchanged; only ids that are not valid Mermaid ids (`/^[A-Za-z0-9_]+(-[A-Za-z0-9_]+)*$/`) are rewritten, and canvas-created ids are always valid. Retained lines are re-emitted verbatim; a reference in them to an id that no longer exists is valid Mermaid and not reported. `LAYOUT_ANNOTATION.md` section 8 is updated to match.
 
@@ -187,7 +188,7 @@ Diagnostics live in `plugins/mermaid/src/diagnostics.ts` on the slides pattern: 
 | `DIAGRAM_SYNTAX_INVALID` | warning | Each `invalid` problem, at most 20 per fence. | "Line N: <problem message>" |
 | `DIAGRAM_SYNTAX_IGNORED` | info | Each `ignored` problem, at most 20 per fence. | "Line N: <problem message>" |
 
-Per-problem diagnostics narrow `range` to the fence line the problem names (fence start line plus one plus `problem.line`), or the whole fence when `line` is absent. `path` is set only for `DIAGRAM_LAYOUT_INVALID`.
+Per-problem diagnostics narrow `range` to the fence line the problem names (fence start line plus `problem.line`; the opening fence is the start line), or the whole fence when `line` is absent. `path` is set only for `DIAGRAM_LAYOUT_INVALID`.
 
 ## 6. Rendering
 
@@ -247,7 +248,7 @@ Kinds without payload colours take colours from custom properties. `svg/theme.ts
 | `--rmk-diagram-activation-stroke` | activationBorderColor | `#666666` |
 | `--rmk-diagram-number-text` | sequenceNumberColor | `#ffffff` |
 
-The autonumber badge fill is `--rmk-diagram-signal`. Attributes are written as `fill="var(--rmk-diagram-note-fill, #fff5ad)"`. `styles.css` declares no colour for these tokens; `public-sites/shared/kit.css` maps them for both colour modes; `mermaid.mdx` documents them. Front-matter `config.theme` and `themeVariables` are retained lines, not read.
+The autonumber badge fill is `--rmk-diagram-signal`. Attributes are written as `fill="var(--rmk-diagram-note-fill, #fff5ad)"`. `styles.css` declares no colour for these tokens; `public-sites/shared/kit.css` maps them for both colour modes, on both `.rmk-document` and `.rmk-editor`, and narrows its dark-mode invert filter to `[data-rmk-diagram-kind='flowchart'] svg` so token-coloured kinds are not inverted; `mermaid.mdx` documents them. Front-matter `config.theme` and `themeVariables` are retained lines, not read.
 
 ## 8. The `sequenceDiagram` kind
 
@@ -283,18 +284,18 @@ Statements, case-insensitive on the keyword, terminated by newline or `;`. The p
 | Construct | Source | Notes |
 | --- | --- | --- |
 | Participant | `participant A`, `participant A as Label`, `actor A`, `actor A as Label` | declaration order; undeclared ids are appended on first use |
-| Box | `box [colour] [label]` … `end` | colour is retained in the label as Mermaid does; boxes hold participant statements only |
+| Box | `box [colour] [label]` … `end` | colour is retained in the label as Mermaid does; boxes hold participant statements only, and any other statement inside one is `SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT` |
 | Message | `A->B: text` with `->`, `-->`, `->>`, `-->>`, `<<->>`, `<<-->>`, `-x`, `--x`, `-)`, `--)` | `+`/`-` after the arrow sets `activate` |
-| Activation | `activate A`, `deactivate A` | `Activation.start`/`end` are flattened item indices; an activation still open at the end ends at the last index and is a problem |
+| Activation | `activate A`, `deactivate A` | `Activation.start`/`end` are flattened item indices; an activation still open at the end ends at the last index and is an `ignored` problem |
 | Note | `Note left of A: t`, `Note right of A: t`, `Note over A: t`, `Note over A,B: t` | |
-| Frame | `loop t`, `alt t`/`else t`, `opt t`, `par t`/`and t`, `critical t`/`option t`, `break t`, `rect colour` … `end` | nested arbitrarily; `rect`'s colour is its section label |
+| Frame | `loop t`, `alt t`/`else t`, `opt t`, `par t`/`and t`, `critical t`/`option t`, `break t`, `rect colour` … `end` | nested arbitrarily; `par_over t` opens a `par` frame; `rect`'s colour is its section label |
 | Autonumber | `autonumber`, `autonumber N`, `autonumber N M` | before the first message; later forms and `autonumber off` are retained and `ignored` |
-| Title | front matter `title:`, `title X`, `title: X` | |
+| Title | front matter `title:`, `title X`, `title: X` | a body `title` statement overrides the front-matter title |
 | Text | `<br/>`, `#NN;` | decoded with `decodeText` |
 
-`invalid` problems: `SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT` (message adds "use #59; for a semicolon in text" when the residue follows a `;`), `SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE`, `SEQUENCE_DIAGRAM_END_WITHOUT_OPENER`, `SEQUENCE_DIAGRAM_SECTION_OUTSIDE_FRAME` (`else`, `and`, `option` outside `alt`, `par`, `critical`), `SEQUENCE_DIAGRAM_FRAME_UNCLOSED`, `SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED`.
+`invalid` problems: `SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT` (message adds "use #59; for a semicolon in text" when the residue follows a `;`), `SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE`, `SEQUENCE_DIAGRAM_END_WITHOUT_OPENER`, `SEQUENCE_DIAGRAM_SECTION_OUTSIDE_FRAME` (`else`, `and`, `option` outside `alt`, `par`, `critical`), `SEQUENCE_DIAGRAM_FRAME_UNCLOSED`.
 
-`ignored` problems, all retained: `SEQUENCE_DIAGRAM_STATEMENT_IGNORED` for `link`, `links`, `properties`, `details`, `create`, `destroy`, `accTitle`, `accDescr`, half-arrows, `()` connections, `@{ … }` participant config, `autonumber off`.
+`ignored` problems, all retained: `SEQUENCE_DIAGRAM_STATEMENT_IGNORED` for `link`, `links`, `properties`, `details`, `create`, `destroy`, `accTitle`, `accDescr`, half-arrows, `()` connections, `@{ … }` participant config, `autonumber off`; `SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED` (Mermaid.js accepts it; the bar is drawn to the last item).
 
 `problems` is what keeps LLM-written diagrams readable: a statement the kind does not model degrades the rendering, never the document, and an `invalid` problem tells the author that Mermaid.js itself would reject the fence.
 
@@ -311,7 +312,7 @@ Deterministic, needs no annotation. `core/sequence/layout.ts` is pure.
 
 ### 8.4 Rendering
 
-`svg/sequence-render.ts` emits hast through the existing `h`, `text`, `n` helpers and the section 7 tokens. Dotted lines use `stroke-dasharray`. Arrowheads: filled triangle (`arrow`), open chevron (`open`), cross (`cross`). Fonts follow `drawing-data.ts` constants.
+`svg/sequence-render.ts` emits hast through the existing `h`, `text`, `n` helpers and the section 7 tokens. Colours come only from tokens, so a `rect` frame draws as a filled rectangle using the label tokens at reduced opacity, and a box likewise; the colour named in the source is not read. Dotted lines use `stroke-dasharray`. Arrowheads: filled triangle (`arrow`), open chevron (`open`), cross (`cross`). Fonts follow `drawing-data.ts` constants.
 
 ## 9. Editing
 
@@ -326,6 +327,7 @@ class DiagramNode extends DecoratorNode {
   __format: DiagramFormat              // fence it came from; 'mermaid' once edited
   __raw: string | null                 // exact block bytes from import, fence included; null once edited
   __origin: DiagramMdastNode | null    // untouched import; null once edited
+  __meta: string | null                // fence meta from import, so an edited export keeps it
   getSource(): string
   getKind(): string
   getRaw(): string | null
@@ -335,11 +337,11 @@ class DiagramNode extends DecoratorNode {
 ```
 
 - `getType()` stays `rmk-diagram`.
-- `kinds` and `sourceEditor` reach components through `DiagramCanvasOptions`, published by `createDiagramPlugin` with `setDiagramOptions`. Nothing about kinds is module state. `parseDiagramSource(kinds, kind, source)` is memoised on `(kinds, kind, source)` in a bounded cache, as drawing JSON is today.
+- `kinds`, `sourceEditor` and `fallbackTitle` reach components through `DiagramCanvasOptions`, published by `createDiagramPlugin` with `setDiagramOptions`. Nothing about kinds is module state. The block adapter is created per registry by `createDiagramBlockAdapter(kinds)` and the toolbar contributions by `diagramCommands(kinds)`; both are internal to the editor entry. `parseDiagramSource(kinds, kind, source)` is memoised on `(kinds, kind, source)` in a bounded cache, as drawing JSON is today.
 - Legacy fences: on import of a `diagram` or `drawing` fence, `__source` is `flowchart.write(model)` (or of `EMPTY_DRAWING` when the payload did not parse), `__kind` is `flowchart`, `__format` is the legacy name, `__raw` and `__origin` hold the import. Byte-exact write-back comes from `__raw` while untouched, so the conversion is invisible until the first edit, after which the block is written as ```` ```mermaid ````.
 - Serialized node version 2: `{ source, kind, format }`. Version 1 payloads (`data` JSON) import by converting with `flowchart.write`. Both produce edited nodes.
 - Clipboard: `exportDOM` writes `pre[data-rmk-mermaid][data-rmk-diagram-kind]` with the body, so a pasted block renders on GitHub and Azure DevOps. `importDOM` accepts `pre[data-rmk-mermaid]` and, for older clipboards, `pre[data-rmk-drawing]` converted with `flowchart.write`.
-- The block adapter's `$import(node, source)` stores `origin.value` as `__source` and `source === '' ? null : source` as `__raw`. `$export` returns `{ node: origin, raw: getRaw() }` while `__origin !== null`, else `{ node: diagramNodeFrom(source, 'mermaid', kinds, { meta }), raw: null }` with `meta` carried from the origin when present.
+- The block adapter's `$import(node, source)` stores `origin.value` as `__source` and `source === '' ? null : source` as `__raw`. `$export` returns `{ node: origin, raw: getRaw() }` while `__origin !== null`, else `{ node: diagramNodeFrom(source, 'mermaid', kinds, { meta }), raw: null }` with `meta` read from `__meta`, which holds the origin's `meta` when present.
 
 ### 9.2 The block
 
@@ -351,13 +353,13 @@ Mode: canvas when the format is legacy or the kind is the built-in `flowchart` a
 
 **Canvas.** The existing `DiagramCanvas`. Its input is the model from `parseDiagramSource`. On change it computes `written = flowchart.write(payload, { retained })`, sets `lastCommittedRef` to `serializeDrawingData(flowchart.parse(written).model)`, then calls `setSource(written, kinds)`. While `lossy` is non-empty and unacknowledged, the canvas mounts read-only, with no tool row, no pointer editing and no height grip, behind a notice that lists the lossy features by name and offers "Edit on canvas" (acknowledges for this block, in component state) and "Edit as text" (sets `sourceMode`). The first commit can only happen after "Edit on canvas".
 
-**Source.** A monospace `textarea` (Tab inserts two spaces, Shift+Tab removes up to two leading spaces, Enter is native, Escape moves focus to the header row), the live preview above it rendered by the kind's `render` through `hast-util-to-jsx-runtime` with `react/jsx-runtime`, and the problems list under it with line numbers, `invalid` problems first with the prefix "Mermaid rejects:". Kinds without `render` show the unsupported notice instead of a preview. When `DiagramCanvasOptions.sourceEditor` is `false` the textarea is absent and the block shows preview and problems only. Native listeners on the textarea call `stopPropagation` for `keydown`, `keyup`, `keypress`, `beforeinput`, `input`, `paste`, `cut`, `copy`, `drop`, `compositionstart`, `compositionupdate` and `compositionend`, following `canvas/text-edit-overlay.tsx`.
+**Source.** A monospace `textarea` (Tab inserts two spaces, Shift+Tab removes up to two leading spaces, Enter is native, Escape moves focus to the header row), the live preview above it rendered by the kind's `render` through `hast-util-to-jsx-runtime` with `react/jsx-runtime`, and the problems list under it with line numbers, `invalid` problems first with the prefix "Mermaid rejects:". Kinds without `render` show the unsupported notice instead of a preview. When `DiagramCanvasOptions.sourceEditor` is `false` the textarea is absent and the block shows preview and problems only. Without a textarea, a kind without `render` shows the source `pre` under the notice. Native listeners on the textarea call `stopPropagation` for `keydown`, `keyup`, `keypress`, `beforeinput`, `input`, `paste`, `cut`, `copy`, `drop`, `compositionstart`, `compositionupdate` and `compositionend`, following `canvas/text-edit-overlay.tsx`.
 
 History: the textarea is controlled by a local draft. Each change commits `setSource(draft, kinds)` in `editor.update(…, { discrete: true })` with the `history-merge` tag when the previous commit from this block was less than 300 ms ago, otherwise as a new history entry. Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y inside the textarea are prevented and dispatched as Lexical `UNDO_COMMAND`/`REDO_COMMAND`. When the node's source changes and differs from the last value this block committed, the draft is replaced and the caret placed at the end; a change equal to the last commit is ignored.
 
 ### 9.3 Insert
 
-`INSERT_DIAGRAM_COMMAND` payload gains `kind?: string`, default `flowchart`. A kind not in the registry makes the handler return `false` without inserting. The toolbar contributes one button per registered kind with a `starter`: id `diagram` for the flowchart (legacy id, so existing label overrides keep working) and `diagram-<kind>` for the others, group `diagram`, icon from the kind. The `diagram.` prefix stays reserved for canvas labels. After insertion the block receives focus: the canvas root for the flowchart, the textarea with the caret at the end for source kinds.
+`INSERT_DIAGRAM_COMMAND` payload gains `kind?: string`, default `flowchart`. A kind not in the registry makes the handler return `false` without inserting. The toolbar contributes one button per registered kind with a `starter`: id `diagram` for the flowchart (legacy id, so existing label overrides keep working) and `diagram-<kind>` for the others, group `diagram`, icon from the kind. The `diagram.` prefix stays reserved for canvas labels. The insert writes the kind's `starter` verbatim. After insertion the block receives focus: the canvas root for the flowchart, the textarea with the caret at the end for source kinds.
 
 ### 9.4 Mistake-proofing
 
@@ -401,7 +403,7 @@ History: the textarea is controlled by a local draft. Each change commits `setSo
 - Status chip reads the lifted node: "Flowchart · auto layout", "Flowchart · rmk-layout v1", "Sequence diagram · static", "Class diagram · source only", "Not Mermaid" for `unknown` with the hint as its message. The "Not a flowchart" state is removed. `invalid` problems show as "Mermaid rejects line N".
 - Samples are grouped: Flowcharts (the existing eight) and Sequence diagrams (sign-in with alt/else, API call with activation and notes, parallel work, loop with autonumber). Every sample compiles with no diagnostic. No sample contains a raw `;` in text.
 - Code-pane highlighting takes its keyword set from the detected kind.
-- The right pane shows the block: canvas for flowcharts, preview and problems for sequence diagrams, the source `pre` for source-only kinds. The demo CSS generalises its `.rmk-diagram*` selectors so every mode fills the pane.
+- The right pane shows the block: canvas for flowcharts, preview and problems for sequence diagrams, the unsupported notice over the source `pre` for source-only kinds. The demo CSS generalises its `.rmk-diagram*` selectors so every mode fills the pane.
 - Export works for every static kind.
 - Landing copy, meta description, FAQ, `index.html` and `public-sites/shared/llms/llms.txt` say flowcharts and sequence diagrams; every measured figure stays verbatim; the SEO surface test stays green.
 - `tests/mermaid-demo.dom.test.tsx` is committed with the change: "has nothing to export for a diagram type the canvas does not open" becomes "exports an SVG for the sequence sample"; the sample loop asserts no diagnostics for every sample.

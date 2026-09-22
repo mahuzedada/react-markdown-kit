@@ -193,6 +193,7 @@ export function DiagramSourceEditor({
       ) : (
         <Notice kind={kind} registered={registered} source={source} kinds={kinds} />
       )}
+      {!showTextarea && registered?.render === undefined && <DiagramSourcePre source={source} />}
       {showTextarea && (
         <textarea
           ref={ref}
@@ -259,6 +260,15 @@ export function DiagramPreview({ kind, model, fallbackTitle }: { kind: DiagramKi
     <div className="rmk-diagram-preview" aria-label={labels.preview}>
       {rendered}
     </div>
+  )
+}
+
+/** The source as the document renders it when nothing draws it. */
+export function DiagramSourcePre({ source }: { source: string }): ReactElement {
+  return (
+    <pre className="rmk-diagram-source-pre">
+      <code>{source}</code>
+    </pre>
   )
 }
 

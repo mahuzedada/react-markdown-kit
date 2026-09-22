@@ -381,7 +381,7 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
   const lastIndex = Math.max(0, flat - 1)
   for (const [id, open] of openActivations) {
     for (const activation of open) {
-      problem(SEQUENCE_PROBLEM_CODES.activationUnclosed, 'invalid', `"${id}" is still active at the end.`, activation.line)
+      problem(SEQUENCE_PROBLEM_CODES.activationUnclosed, 'ignored', `"${id}" is still active at the end.`, activation.line)
       activations.push({ participantId: id, start: activation.start, end: lastIndex })
     }
   }

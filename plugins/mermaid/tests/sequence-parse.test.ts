@@ -268,8 +268,8 @@ describe('parseSequenceDiagram: activation', () => {
   it('closes an activation still open at the end on the last item and reports it', () => {
     const p = parse('sequenceDiagram\n    A->>+B: hi\n    B->>A: yo\n    activate A')
     expect(p.problems).toEqual([
-      { code: 'SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED', severity: 'invalid', message: '"B" is still active at the end.', line: 2 },
-      { code: 'SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED', severity: 'invalid', message: '"A" is still active at the end.', line: 4 },
+      { code: 'SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED', severity: 'ignored', message: '"B" is still active at the end.', line: 2 },
+      { code: 'SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED', severity: 'ignored', message: '"A" is still active at the end.', line: 4 },
     ])
     expect(p.model.activations).toEqual([
       { participantId: 'B', start: 0, end: 1 },

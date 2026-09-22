@@ -335,12 +335,14 @@ describe('mermaid({ kinds })', () => {
   it('a trimmed registry shows the other kinds as source', () => {
     const extensions = [mermaid({ kinds: [flowchart()] })]
     const { document, node } = diagram('```mermaid\nsequenceDiagram\n    A->>B: hi\n```\n', { extensions })
-    // `sequenceDiagram` is a kind keyword, not a `MERMAID_KEYWORDS` entry, so
-    // without its kind the fence is undetected rather than unsupported.
-    expect(node.kind).toBe('unknown')
+    // `sequenceDiagram` is also a `MERMAID_KEYWORDS` entry, so without its
+    // kind the fence is named and unsupported rather than undetected.
+    expect(node.kind).toBe('sequenceDiagram')
     expect(node.support).toBe('source')
     expect(node.model).toBeUndefined()
-    expect(document.diagnostics.map((d) => d.code)).toEqual(['DIAGRAM_KIND_UNKNOWN'])
+    expect(document.diagnostics).toEqual([
+      expect.objectContaining({ code: 'DIAGRAM_KIND_UNSUPPORTED', severity: 'info', message: 'sequenceDiagram diagrams are shown as source.' }),
+    ])
     const html = render('```mermaid\nsequenceDiagram\n    A->>B: hi\n```\n', { extensions })
     expect(html).toContain('<code class="language-mermaid">')
     expect(html).toMatch(/<figure[^>]*data-rmk-diagram-support="source"[^>]*>/)

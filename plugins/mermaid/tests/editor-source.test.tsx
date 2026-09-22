@@ -266,6 +266,17 @@ describe('source mode', () => {
     expect(view.container.querySelector('.rmk-diagram-source-input')).toBeNull()
     expect(view.container.querySelector('.rmk-diagram-preview svg')).not.toBeNull()
     expect(view.container.querySelectorAll('.rmk-diagram-problems li')).toHaveLength(2)
+    expect(view.container.querySelector('.rmk-diagram-source-pre')).toBeNull()
+  })
+
+  it('sourceEditor: false shows the source pre under the notice for a kind without render', () => {
+    const { view } = open('```mermaid\nclassDiagram\n    A <|-- B\n```\n', { sourceEditor: false })
+    expect(view.container.querySelector('.rmk-diagram-source-input')).toBeNull()
+    expect(view.container.querySelector('.rmk-diagram-notice')?.textContent).toBe('classDiagram diagrams are shown as source.')
+    expect(view.container.querySelector('.rmk-diagram-notice + .rmk-diagram-source-pre')?.textContent).toBe('classDiagram\n    A <|-- B')
+
+    const withTextarea = open('```mermaid\nclassDiagram\n    A <|-- B\n```\n')
+    expect(withTextarea.view.container.querySelector('.rmk-diagram-source-pre')).toBeNull()
   })
 
   it('renders read-only as the preview only', () => {

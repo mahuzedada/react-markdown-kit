@@ -191,8 +191,8 @@ import { lexicalAdapter } from '@react-markdown-kit/editor/lexical'
 
 const editorCapability = lexicalAdapter({
   nodes: [DiagramNode],
-  blocks: [diagramBlockAdapter],
-  commands: [insertDiagramCommand],
+  blocks: [/* the plugin's diagram block adapter, built for its kind registry */],
+  commands: [/* one insert command per diagram kind */],
 })
 ```
 

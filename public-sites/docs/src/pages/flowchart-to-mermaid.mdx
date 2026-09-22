@@ -65,9 +65,10 @@ the editor writes the Mermaid flowchart syntax as you draw. It does not read
 an image, a photo or a PDF of a flowchart. If you have a picture, redraw it
 on the canvas and copy the text. Three boxes and two arrows is five drags.
 
-The editor and the plugin behind it, `@react-markdown-kit/mermaid`, handle
-flowcharts only. Sequence, class, Gantt and the other Mermaid diagram types
-stay ordinary code blocks
+The canvas in the editor draws flowcharts. The plugin behind it,
+`@react-markdown-kit/mermaid`, also renders sequence diagrams as static SVG,
+edited as text. Class, Gantt and the other Mermaid diagram types are shown as
+source
 ([`mermaid-parse.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts)).
 The editor is free, open source under MIT, and runs in the browser with no
 account.

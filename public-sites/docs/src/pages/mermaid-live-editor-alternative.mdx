@@ -21,7 +21,7 @@ export const FAQ = [
   {
     question: 'Is there a Mermaid live editor with drag and drop?',
     answer:
-      'Yes. mermaid.reactmarkdownkit.com puts a drawing canvas next to the code pane. Drag a box or a connector and the Mermaid text updates, with the positions stored in one %% rmk-layout v1 comment. It supports flowcharts only.',
+      'Yes. mermaid.reactmarkdownkit.com puts a drawing canvas next to the code pane. Drag a box or a connector and the Mermaid text updates, with the positions stored in one %% rmk-layout v1 comment. The canvas opens flowcharts. Sequence diagrams render as static SVG and are edited as text.',
   },
   {
     question: 'Is there an open source Mermaid editor besides mermaid.live?',
@@ -31,7 +31,7 @@ export const FAQ = [
   {
     question: 'Does the Mermaid visual editor support sequence diagrams?',
     answer:
-      'No. The plugin renders flowcharts only. Sequence, class, Gantt, pie and every other Mermaid diagram type stay ordinary code blocks. For those, stay on mermaid.live, which renders every type through Mermaid.js.',
+      'As text with a live preview. The plugin renders sequence diagrams as static SVG; the drag and drop canvas is for flowcharts. Class, Gantt, pie and every other Mermaid diagram type is shown as source. For those, stay on mermaid.live, which renders every type through Mermaid.js.',
   },
 ]
 
@@ -72,11 +72,12 @@ sequenceDiagram
 free, open source under MIT, and renders every diagram type that Mermaid.js
 renders. This page compares it with the visual editor at
 <a href={sites.mermaidDemo}>mermaid.reactmarkdownkit.com</a>, which adds a drag
-and drop canvas and a layout comment, and supports flowcharts only.
+and drop canvas and a layout comment for flowcharts, and renders sequence
+diagrams as static SVG.
 
 The short version: if you edit flowcharts and want to move boxes with the
-mouse, try the canvas. If you need any other diagram type, stay on
-mermaid.live.
+mouse, try the canvas. If you need a diagram type other than those two, stay
+on mermaid.live.
 
 ## Side by side
 
@@ -94,7 +95,7 @@ Every fact about this editor links to the code or test that backs it.
 | Open source and licence | Yes, MIT ([LICENSE](https://github.com/mermaid-js/mermaid-live-editor/blob/develop/LICENSE)). | Yes, MIT ([package.json](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/package.json)). The editor is the same plugin you install from npm. |
 | Offline use | Self-host with the Docker image in the [README](https://github.com/mermaid-js/mermaid-live-editor#readme). | Once the page is open, editing and share links need no server: the diagram lives in the URL hash ([share.ts](https://github.com/mahuzedada/react-markdown-kit/blob/main/public-sites/mermaid-demo/src/share.ts)). Self-host by building `public-sites/mermaid-demo` from the repository. |
 | Rendering engine | Mermaid.js, version 12 ([package.json](https://github.com/mermaid-js/mermaid-live-editor/blob/develop/package.json)). | Its own flowchart parser and a static SVG writer. No Mermaid.js is loaded ([extension.ts](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/src/extension.ts)). |
-| Diagram types | Every type Mermaid.js renders. The README names flowcharts, sequence diagrams and Gantt charts. | Flowcharts only, written as `flowchart` or `graph` ([parser tests](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts)). Other types stay code blocks. |
+| Diagram types | Every type Mermaid.js renders. The README names flowcharts, sequence diagrams and Gantt charts. | Flowcharts, written as `flowchart` or `graph`, and sequence diagrams ([flowchart tests](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts), [sequence tests](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/sequence-parse.test.ts)). Other types are shown as source. |
 | Export | Save the result as an SVG (README). | Copy as Mermaid. The SVG is what the renderer emits in your own app; the demo has no download button. |
 
 ## What the canvas changes
@@ -134,8 +135,9 @@ in the visual editor.
 Be honest with yourself before switching. Stay on mermaid.live if any of
 these apply.
 
-- **You use any diagram type other than flowcharts.** Sequence, class, state,
-  ER, Gantt, pie, mindmap, timeline and the rest render there and not here.
+- **You use a diagram type other than flowcharts and sequence diagrams.**
+  Class, state, ER, Gantt, pie, mindmap, timeline and the rest render there
+  and not here.
 - **You rely on flowchart features outside the subset.** `classDef`, `class`,
   `click` and `linkStyle` are ignored by this plugin, and `subgraph` groups
   are read but not drawn. The full subset is listed in the
@@ -146,10 +148,11 @@ these apply.
   exist on mermaid.live. Here the link always opens the editor, and the SVG
   comes from the renderer in your own app.
 
-This is what a sequence diagram does in this editor: it stays a code block.
+This is what a sequence diagram does in this editor: it renders as static SVG
+from the text, with no canvas.
 
 <RenderExample
-  title="Not a flowchart, so not a diagram"
+  title="A sequence diagram, rendered from the text"
   markdown={sequence}
   rendererProps={{ extensions: [mermaid()] }}
 />

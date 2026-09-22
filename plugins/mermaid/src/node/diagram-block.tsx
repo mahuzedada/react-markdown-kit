@@ -23,7 +23,7 @@ import { DiagramCanvas } from '../canvas/drawing-canvas.js'
 import { Icon, UI_ICONS } from '../canvas/icons.js'
 import { useDiagramLabels } from '../canvas/labels.js'
 import { canvasKindOf, takeDiagramFocus, useDiagramOptions } from '../canvas/options.js'
-import { DiagramPreview, DiagramSourceEditor } from './source-editor.js'
+import { DiagramPreview, DiagramSourceEditor, DiagramSourcePre } from './source-editor.js'
 
 type Mode = 'canvas' | 'source'
 
@@ -186,9 +186,5 @@ function ReadOnlyBody({
   if (registered?.render !== undefined && parsed !== undefined && !('error' in parsed)) {
     return <DiagramPreview kind={registered} model={parsed.model} fallbackTitle={fallbackTitle} />
   }
-  return (
-    <pre className="rmk-diagram-source-pre">
-      <code>{source}</code>
-    </pre>
-  )
+  return <DiagramSourcePre source={source} />
 }

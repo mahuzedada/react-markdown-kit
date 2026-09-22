@@ -4,15 +4,24 @@
  * directives and `%%` comment lines are skipped, and the first word of what
  * remains decides. Registered kinds are tried first, in registry order, then
  * the keywords Mermaid itself knows, so a `classDiagram` fence is named even
- * though nothing here renders it. Matching is case-sensitive like Mermaid's;
+ * though nothing here renders it, and a `sequenceDiagram` fence is named
+ * when its kind is not registered. Matching is case-sensitive like Mermaid's;
  * a case slip is reported as a hint with the expected spelling instead of
  * being guessed, because Mermaid.js would reject the fence.
  */
 import { splitFrontMatter } from './front-matter.js'
 import type { DiagramKind } from './kind.js'
 
-/** Mermaid diagram keywords no built-in kind renders. Detection names them, support level `source`. */
+/**
+ * Every Mermaid diagram keyword, the built-in kinds' first. Detection names
+ * a keyword no registered kind claims, support level `source`, so a registry
+ * without `sequenceDiagram()` still reports a sequence fence by its kind.
+ */
 export const MERMAID_KEYWORDS: readonly string[] = [
+  'flowchart',
+  'graph',
+  'flowchart-elk',
+  'sequenceDiagram',
   'classDiagram',
   'classDiagram-v2',
   'stateDiagram',

@@ -195,7 +195,7 @@ line.
 | `SEQUENCE_DIAGRAM_END_WITHOUT_OPENER` | invalid | An `end` with no open frame or box. |
 | `SEQUENCE_DIAGRAM_SECTION_OUTSIDE_FRAME` | invalid | `else`, `and` or `option` outside `alt`, `par` or `critical`. |
 | `SEQUENCE_DIAGRAM_FRAME_UNCLOSED` | invalid | A frame or box still open at the end. |
-| `SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED` | invalid | An activation still open at the end. |
+| `SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED` | ignored | An activation still open at the end. Mermaid.js accepts it; the bar is drawn to the last item. |
 | `SEQUENCE_DIAGRAM_STATEMENT_IGNORED` | ignored | `link`, `links`, `properties`, `details`, `create`, `destroy`, `accTitle`, `accDescr`, half arrows, `()` connections, `@{ … }` participant config, `autonumber off`, a later `autonumber`. |
 
 Problems name a line, a keyword or an id, never a line of your content. They
