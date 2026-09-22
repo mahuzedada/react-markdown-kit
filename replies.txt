@@ -1,0 +1,20 @@
+remarkjs discussion #1148
+https://github.com/orgs/remarkjs/discussions/1148
+
+Late to this, but it answers the objection above about Lexical. React Markdown Kit's editor (@react-markdown-kit/editor) is built on Lexical without the model leaking: the value you pass in and get back is a Markdown string, `mode` switches between rich, source and preview (so, tabs rather than scroll sync, which it does not do), and it ships a default toolbar. Unchanged blocks are written back from their original source bytes, so opening and closing a file does not touch it; the repo asserts that on 22 documents. Preview uses the kit's own renderer, which covers react-markdown's props and has a codemod for existing code. Demo: https://editor.reactmarkdownkit.com
+
+MIT, no account. If scroll sync is a hard requirement, this is not it.
+
+
+mermaid-live-editor issue #1284
+https://github.com/mermaid-js/mermaid-live-editor/issues/1284
+
+There is one now, if it still helps anyone landing here. https://mermaid.reactmarkdownkit.com is an MIT drag-and-drop editor for Mermaid: paste a flowchart, move nodes and route edges on the canvas, and copy plain Mermaid back. Positions go in a single `%% rmk-layout v1 {...}` comment on the last line, so the output stays valid Mermaid and renders unchanged on GitHub, GitLab, mermaid.live or anywhere else; the editor reads the comment back so the layout survives a round trip. A fence you never touched is written back byte for byte.
+
+Limits: flowcharts only today, no sequence or class diagrams. The document lives in the URL hash, so a link is the file. Source is in the same repo as the React Markdown plugin that renders it: https://github.com/mahuzedada/react-markdown-kit
+
+
+mermaid-js discussion #4626
+https://github.com/orgs/mermaid-js/discussions/4626
+
+Flowcharts only for now, no sequence or class diagrams. The diagram is in the URL hash, so a link is the file. Source, along with the React Markdown plugin that renders the same fences as static SVG: https://github.com/mahuzedada/react-markdown-kit

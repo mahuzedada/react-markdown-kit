@@ -15,6 +15,7 @@ export {
   encodeShareHash,
   isShareHash,
 } from '../../shared/share'
+import { encodeShareHash } from '../../shared/share'
 
 /** The badge a README links to this editor with, served from public/. */
 export const BADGE_URL = `${sites.mermaidDemo}/badge.svg`
@@ -30,10 +31,36 @@ export function badgeMarkdown(link: string): string {
 }
 
 /** The iframe a blog post or docs page pastes: the editor without the site chrome. */
-export function embedHtml(link: string): string {
+export function embedHtml(link: string, width = '100%', height = '520'): string {
   const url = new URL(link)
   url.searchParams.set('embed', '1')
-  return `<iframe src="${url.href}" width="100%" height="520" style="border:0" title="Mermaid visual editor" loading="lazy"></iframe>`
+  return `<iframe src="${url.href}" width="${width}" height="${height}" style="border:0" title="Mermaid visual editor" loading="lazy"></iframe>`
+}
+
+/**
+ * mermaid.live's hash carries a JSON editor state (`{"code": …, "mermaid":
+ * …}`) rather than bare source, so a link copied from there and pointed at
+ * this host still opens: the code is lifted out of the state. Bare source
+ * passes through untouched.
+ */
+export function sourceFromShared(payload: string): string {
+  const trimmed = payload.trimStart()
+  if (!trimmed.startsWith('{')) return payload
+  try {
+    const state: unknown = JSON.parse(trimmed)
+    if (typeof state === 'object' && state !== null && typeof (state as { code?: unknown }).code === 'string') {
+      return (state as { code: string }).code
+    }
+  } catch {
+    // Not JSON after all: it is source that happens to start with a brace.
+  }
+  return payload
+}
+
+/** The same diagram opened on mermaid.live, in the state form its editor reads. */
+export async function mermaidLiveUrl(code: string): Promise<string> {
+  const state = JSON.stringify({ code, mermaid: '{\n  "theme": "default"\n}', autoSync: true, updateDiagram: true })
+  return `https://mermaid.live/edit#${await encodeShareHash(state)}`
 }
 
 /**

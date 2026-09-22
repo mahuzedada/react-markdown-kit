@@ -1,156 +1,483 @@
-/* Chrome for the Mermaid live editor. The canvas and the static SVG are styled
+/* Chrome for the Mermaid visual editor, laid out like mermaid.live: a
+   header, a column of rounded cards on the left and the drawing on the
+   right with floating controls. Colours come from the theme tokens; only
+   the geometry is this page's own. The canvas and the static SVG are styled
    by the kit's own stylesheets and shared/kit.css. */
 
 .shell {
-  height: calc(100dvh - var(--site-header-height));
+  --pane-radius: 16px;
+  --pane-border: 2px solid var(--border);
+  --page-gap: 1.5rem;
+  --side-width: 27.375rem;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid var(--border);
   overflow: hidden;
-  background: var(--card);
+  background: var(--background);
+  color: var(--foreground);
 }
+
+.shellEmbed {
+  --page-gap: 0.75rem;
+  --side-width: 22rem;
+}
+
+/* ------------------------------------------------------------ header */
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: none;
+  min-height: 4rem;
+  padding: 0 var(--page-gap);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--primary-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.brand img {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.by {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.by a {
+  color: inherit;
+}
+
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.navDivider {
+  width: 1px;
+  height: 1.4rem;
+  margin: 0 0.35rem;
+  background: var(--border);
+}
+
+/* -------------------------------------------------------------- body */
 
 .body {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  grid-template-columns: var(--side-width) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
+  gap: var(--page-gap);
   flex: 1;
   min-height: 0;
-}@media (max-width: 900px) {
-  .body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
-  .col + .col { border-left: 0; border-top: 1px solid var(--border); }
+  padding: 0 var(--page-gap) var(--page-gap);
 }
 
-.col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.shellEmbed .body {
+  padding-top: var(--page-gap);
+}
 
-.col + .col { border-left: 1px solid var(--border); }
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
 
-.colHead {
+/* -------------------------------------------------------------- cards */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  border: var(--pane-border);
+  border-radius: var(--pane-radius);
+  background: var(--card);
+  overflow: hidden;
+}
+
+.codeCard {
+  flex: 1 1 auto;
+  min-height: 16rem;
+}
+
+.cardHead {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.45rem 0.8rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+  background: var(--muted);
   border-bottom: 1px solid var(--border);
 }
 
-.badgeOk, .badgeWarn {
-  font-size: 0.66rem;
-  letter-spacing: 0.03em;
-  text-transform: none;
-  padding: 0.05rem 0.45rem;
-  border-radius: var(--radius-sm);
-}
-
-.badgeOk {
-  background: color-mix(in oklab, var(--success) 14%, transparent);
-  color: var(--success-text);
-}
-
-.badgeWarn {
-  background: color-mix(in oklab, var(--warning) 14%, transparent);
-  color: var(--warning-text);
-}
-
-/* The Mermaid source: a plain textarea, no editor chrome. */
-.code {
-  flex: 1;
-  min-height: 0;
+.cardToggle {
+  width: 100%;
   margin: 0;
-  padding: 0.8rem;
   border: 0;
-  outline: none;
-  resize: none;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  line-height: 1.55;
-  color: var(--foreground);
-  background: transparent;
-  tab-size: 4;
+  border-bottom: 1px solid transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.code:focus-visible {
-  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--primary) 40%, transparent);
+.cardToggle[aria-expanded='true'] {
+  border-bottom-color: var(--border);
+}
+
+.cardToggle:hover {
+  background: var(--accent);
+}
+
+.cardToggle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.cardTitle {
+  flex: 1;
+}
+
+.chevron {
+  transition: transform var(--duration-normal);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* The code card's head is a tab strip: "Code" is the active tab, the
+   status sits in the middle and the docs link at the end. */
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow-1);
+}
+
+.status {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.statusOk { color: var(--success-text); }
+.statusWarn { color: var(--warning-text); }
+
+.headLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.headLink:hover {
+  background: var(--accent);
 }
 
 .problem {
   margin: 0;
-  padding: 0.5rem 0.8rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.78rem;
   color: var(--warning-text);
   border-top: 1px solid var(--border);
   background: color-mix(in oklab, var(--warning) 8%, transparent);
 }
 
-/* The editor fills its pane; the canvas has its own tools, so the Markdown toolbar is off. */
-.editorWrap { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
-.editorWrap > :global(.rmk-editor) { flex: 1; min-height: 0; border: 0; border-radius: 0; }
-.editorWrap :global(.rmk-editor .rmk-content) { flex: 1; min-height: 0; overflow: auto; padding: 0.85rem 1.1rem; }
-
-.hint {
-  padding: 0.5rem 0.9rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.78rem;
-  color: var(--muted-foreground);
+/* Sample chips and action buttons: mermaid.live's 32px pills. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
 }
 
-/* Copy link and Share, next to the status badge in the code pane's head. */
+.chip {
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
 .actions {
   display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem;
+}
+
+.actionRow {
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.6rem;
+}
+
+.actionLabel {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.segment {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.actionGrid > * {
   min-width: 0;
 }
 
-/* The share panel: the link, the README badge and the embed snippet. */
-.share {
+.actionProblem {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--warning-text);
+}
+
+/* --------------------------------------------------------------- view */
+
+.view {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  padding: 0.6rem 0.8rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--muted);
+  min-width: 0;
+  min-height: 0;
+  border: var(--pane-border);
+  border-radius: var(--pane-radius);
+  background: var(--card);
+  overflow: hidden;
 }
 
-.shareRow {
-  display: grid;
-  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 0.4rem;
+/* Fullscreen through the API paints the element alone; the fallback pins it. */
+.view:fullscreen,
+.viewFull {
+  border: 0;
+  border-radius: 0;
 }
 
-.shareLabel {
-  padding-top: 0.3rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
+.viewFull:not(:fullscreen) {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
 }
 
-.mono {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+.viewScroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
 }
 
-.shareNote {
+.zoomBox {
+  position: relative;
+}
+
+.zoomInner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+/* The drawing surface is the pane. The editor, its content, the diagram
+   block and the canvas each stretch to the height they are given, so the
+   kit's toolbar sits along the top edge and the SVG takes the rest; the
+   canvas's own border, background and focus ring are the pane's now. */
+.zoomInner :global(.rmk-editor),
+.zoomInner :global(.rmk-editor .rmk-content),
+.zoomInner :global(.rmk-editor .rmk-content > *),
+.zoomInner :global(.rmk-editor .rmk-diagram),
+.zoomInner :global(.rmk-editor .rmk-diagram-canvas),
+.zoomInner :global(.rmk-editor .rmk-diagram-stage) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.zoomInner :global(.rmk-editor) {
+  --rmk-diagram-radius: 0;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.zoomInner :global(.rmk-editor .rmk-content) {
+  padding: 0;
+  overflow: auto;
+}
+
+.zoomInner :global(.rmk-editor .rmk-content > *),
+.zoomInner :global(.rmk-editor .rmk-content > [contenteditable]),
+.zoomInner :global(.rmk-editor .rmk-diagram) {
   margin: 0;
-  font-size: 0.74rem;
+  padding: 0;
+}
+
+.zoomInner :global(.rmk-editor .rmk-diagram-canvas) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.zoomInner :global(.rmk-editor .rmk-diagram-canvas.is-editable:focus-within) {
+  box-shadow: none;
+}
+
+.zoomInner :global(.rmk-editor .rmk-diagram-surface) {
+  flex: 1 0 auto;
+}
+
+/* Everything that floats over the canvas sits along the bottom edge, on
+   the left; the kit's own resize grip keeps the bottom right corner. */
+.floats {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: calc(100% - 4rem);
+}
+
+.float {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.25rem;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(8px);
+}
+
+.floatText,
+.floatLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
   color: var(--muted-foreground);
+  white-space: nowrap;
 }
 
-.shareNote a {
-  color: var(--primary-text);
+.floatText {
+  min-width: 3.2rem;
+  justify-content: center;
 }
 
-.shareNote code {
-  font-family: var(--font-mono);
-  font-size: 0.95em;
+.floatLink {
+  border-radius: 8px;
+  color: var(--foreground);
+  text-decoration: none;
 }
 
-.hint a {
-  color: var(--primary-text);
+.floatLink:hover {
+  background: var(--accent);
+}
+
+/* The plugin version, in the header next to the docs link. */
+.version {
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  text-decoration: none;
+}
+
+.version:hover {
+  color: var(--foreground);
+}
+
+/* ------------------------------------------------------------ narrow */
+
+@media (max-width: 900px) {
+  .shell {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .nav {
+    flex-wrap: wrap;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .navActions {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  /* Narrow screens keep the brand, the docs, the repo, the theme and Share;
+     the version and Copy link are in the header for wide screens only, and
+     Copy link stays available in the Actions card. */
+  .by,
+  .version,
+  .navCopyLink {
+    display: none;
+  }
+
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .side {
+    overflow: visible;
+  }
+
+  .codeCard {
+    min-height: 18rem;
+    max-height: 50dvh;
+  }
+
+  .view {
+    min-height: 70dvh;
+  }
 }

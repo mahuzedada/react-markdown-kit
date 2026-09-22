@@ -1,0 +1,81 @@
+/* The highlighted layer and the textarea share every metric below, so the
+   caret sits exactly over the coloured text. */
+
+.pane {
+  --code-gutter: 3rem;
+  --code-pad: 0.75rem;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  tab-size: 4;
+}
+
+.layer,
+.input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: var(--code-pad) var(--code-pad) var(--code-pad) 0;
+  border: 0;
+  font: inherit;
+  line-height: inherit;
+  tab-size: inherit;
+  white-space: pre;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.layer {
+  color: var(--foreground);
+  pointer-events: none;
+  overflow: hidden;
+  background: transparent;
+}
+
+.line {
+  display: flex;
+  min-width: max-content;
+}
+
+.number {
+  flex: 0 0 var(--code-gutter);
+  padding-right: 0.9rem;
+  text-align: right;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+  user-select: none;
+}
+
+.text {
+  flex: 1;
+}
+
+.input {
+  padding-left: var(--code-gutter);
+  color: transparent;
+  caret-color: var(--foreground);
+  background: transparent;
+  outline: none;
+  resize: none;
+}
+
+.input::selection {
+  background: color-mix(in oklab, var(--primary) 30%, transparent);
+}
+
+.input::placeholder {
+  color: var(--muted-foreground);
+}
+
+/* Token colours, all derived from the theme's intent colours. */
+.comment { color: var(--muted-foreground); font-style: italic; }
+.string { color: var(--success-text); }
+.label { color: var(--success-text); }
+.edge { color: var(--warning-text); font-weight: 600; }
+.color { color: var(--danger-text); }
+.keyword { color: var(--primary-text); font-weight: 600; }
+.direction { color: var(--primary-text); }
+.bracket { color: var(--muted-foreground); }

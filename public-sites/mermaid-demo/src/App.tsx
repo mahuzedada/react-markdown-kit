@@ -21,6 +21,7 @@ export default function App(): ReactNode {
   )
   // The built index.html carries the Shell and the landing copy for crawlers
   // (src/static.tsx); in embed mode the client mounts only the editor over it.
+  // The editor draws its own header, so the Shell contributes the footer.
   if (embed) return demo
   return (
     <Shell site="mermaid">

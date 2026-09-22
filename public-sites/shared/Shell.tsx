@@ -35,17 +35,24 @@ export interface ShellProps {
   readonly children: ReactNode
 }
 
+export interface ThemeState {
+  readonly theme: Theme
+  readonly toggle: () => void
+}
+
 /**
- * The demo is the first thing on the page, so there is no header. Everything
- * that is not the demo (the home page, the other sites, the docs, the colour
- * mode) sits in a footer after it. `index.html` sets the initial `data-theme` before paint;
- * the toggle only reads and updates it.
+ * The colour mode, read from `<html data-theme>` after mount (index.html sets
+ * it before paint) and written back with the choice remembered. Any control
+ * on a page can toggle it: the footer here, or a page's own header.
  */
-export function Shell({ site, children }: ShellProps): ReactNode {
+export function useTheme(): ThemeState {
   const [theme, setTheme] = useState<Theme>('light')
 
   useEffect(() => {
     setTheme(readTheme())
+    const observer = new MutationObserver(() => setTheme(readTheme()))
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
   }, [])
 
   const toggle = (): void => {
@@ -53,6 +60,18 @@ export function Shell({ site, children }: ShellProps): ReactNode {
     applyTheme(next)
     setTheme(next)
   }
+
+  return { theme, toggle }
+}
+
+/**
+ * The demo is the first thing on the page, so there is no header. Everything
+ * that is not the demo (the home page, the other sites, the docs, the colour
+ * mode) sits in a footer after it. `index.html` sets the initial `data-theme` before paint;
+ * the toggle only reads and updates it.
+ */
+export function Shell({ site, children }: ShellProps): ReactNode {
+  const { theme, toggle } = useTheme()
 
   return (
     <>
