@@ -147,6 +147,19 @@ Two kinds that share a name or a keyword make `mermaid()` throw
 | `@{ … }` node config, `e1@` edge ids, `~~~` invisible links | Retained lines, reported as `FLOWCHART_SYNTAX_IGNORED` |
 | Anything else | Retained line, reported as `FLOWCHART_UNKNOWN_STATEMENT` |
 
+The flowchart parser reports what Mermaid.js would reject, so an author sees
+the mistake before pasting the fence into GitHub or Azure DevOps.
+
+| Code | Severity | When |
+| --- | --- | --- |
+| `FLOWCHART_UNKNOWN_STATEMENT` | invalid | A statement the parser cannot read, including an `end` outside a subgraph. Retained. |
+| `FLOWCHART_LABEL_NEEDS_QUOTES` | invalid | An unquoted label holding `(`, `)`, `[`, `]`, `{`, `}`, `"` or `\|`. The node stays; the writer quotes it. |
+| `FLOWCHART_LABEL_EMPTY` | invalid | `A[]`, `A[""]`, `A()` or `\|\|`. The node stays with no text. |
+| `FLOWCHART_RESERVED_ID` | invalid | `end`, `subgraph`, `graph`, `flowchart`, `style`, `classDef`, `class`, `click` or `linkStyle` used as a node id. Retained. |
+| `FLOWCHART_TRAILING_COMMENT` | invalid | A `%%` comment after a statement on the same line. The statement is read; the comment moves to its own line. |
+| `FLOWCHART_LAYOUT_INVALID` | invalid | A rejected `%% rmk-layout` annotation, with the dotted path of the first bad member. |
+| `FLOWCHART_SYNTAX_IGNORED` | ignored | `@{ … }` config, `e1@` edge ids, `~~~` links, a `direction` after the first node, a `style` naming a node that never appears. Retained. |
+
 <RenderExample title="Direction down, a decision" markdown={decision} rendererProps={{ extensions: [mermaid()] }} />
 
 The parser is tolerant. A statement it cannot model is a **problem** and a
@@ -190,11 +203,12 @@ line.
 
 | Code | Severity | When |
 | --- | --- | --- |
-| `SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT` | invalid | A statement that is not sequence diagram syntax. After a `;` the message adds "use #59; for a semicolon in text". |
+| `SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT` | invalid | A statement that is not sequence diagram syntax. After a `;` the message names the entity codes to use instead of `;`, `&`, `<` and `>`. |
 | `SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE` | invalid | `deactivate` or a `-` arrow on a participant that is not active. |
 | `SEQUENCE_DIAGRAM_END_WITHOUT_OPENER` | invalid | An `end` with no open frame or box. |
 | `SEQUENCE_DIAGRAM_SECTION_OUTSIDE_FRAME` | invalid | `else`, `and` or `option` outside `alt`, `par` or `critical`. |
 | `SEQUENCE_DIAGRAM_FRAME_UNCLOSED` | invalid | A frame or box still open at the end. |
+| `SEQUENCE_DIAGRAM_RESERVED_ID` | invalid | A message end or note target named like a sequence keyword (`end`, `loop`, `note`, …), which Mermaid.js reads as the keyword. |
 | `SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED` | ignored | An activation still open at the end. Mermaid.js accepts it; the bar is drawn to the last item. |
 | `SEQUENCE_DIAGRAM_STATEMENT_IGNORED` | ignored | `link`, `links`, `properties`, `details`, `create`, `destroy`, `accTitle`, `accDescr`, half arrows, `()` connections, `@{ … }` participant config, `autonumber off`, a later `autonumber`. |
 
