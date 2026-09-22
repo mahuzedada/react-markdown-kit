@@ -80,6 +80,52 @@ export interface DiagramLabels {
   readonly notMermaid: string
   /** Case-slip hint, with the expected spelling */
   readonly keywordHint: (keyword: string) => string
+  /** `aria-label` of the sequence canvas without a title */
+  readonly sequenceCanvas: string
+  readonly sequenceTools: string
+  readonly addParticipant: string
+  readonly addActor: string
+  readonly autonumber: string
+  /** Hint shown on an editable sequence canvas with no participants */
+  readonly sequenceEmpty: string
+  readonly participantKind: string
+  readonly participantType: string
+  readonly actorType: string
+  readonly deleteParticipant: string
+  readonly messageLine: string
+  readonly solidLine: string
+  readonly dottedLine: string
+  readonly messageHead: string
+  readonly headArrow: string
+  readonly headOpen: string
+  readonly headCross: string
+  readonly headNone: string
+  readonly activation: string
+  readonly activateReceiver: string
+  readonly deactivateSender: string
+  readonly noActivation: string
+  readonly swapEnds: string
+  readonly deleteMessage: string
+  readonly addNote: string
+  readonly notePlacement: string
+  readonly noteLeft: string
+  readonly noteRight: string
+  readonly noteOver: string
+  readonly noteSecond: string
+  readonly noteSecondNone: string
+  readonly deleteNote: string
+  readonly wrapIn: string
+  readonly wrapLoop: string
+  readonly wrapAlt: string
+  readonly wrapOpt: string
+  readonly wrapPar: string
+  readonly wrapCritical: string
+  readonly wrapBreak: string
+  readonly wrapRect: string
+  readonly addSection: string
+  readonly unwrapFrame: string
+  readonly frameLabelPlaceholder: string
+  readonly extendFrame: string
 }
 
 /** Keys of `DiagramLabels` whose value is a plain string. */
@@ -143,6 +189,50 @@ export const DIAGRAM_LABELS: DiagramLabels = {
   unsupported: (label) => `${label} diagrams are shown as source.`,
   notMermaid: 'The block does not start with a Mermaid diagram keyword.',
   keywordHint: (keyword) => `Mermaid keywords are case-sensitive; expected \`${keyword}\`.`,
+  sequenceCanvas: 'Sequence diagram',
+  sequenceTools: 'Sequence diagram tools',
+  addParticipant: 'Add participant',
+  addActor: 'Add actor',
+  autonumber: 'Autonumber',
+  sequenceEmpty: 'Add a participant above, then drag between lifelines to add a message',
+  participantKind: 'Participant kind',
+  participantType: 'Participant',
+  actorType: 'Actor',
+  deleteParticipant: 'Delete participant',
+  messageLine: 'Line',
+  solidLine: 'Solid line',
+  dottedLine: 'Dotted line',
+  messageHead: 'Arrowhead',
+  headArrow: 'Filled arrowhead',
+  headOpen: 'Open arrowhead',
+  headCross: 'Cross',
+  headNone: 'No arrowhead',
+  activation: 'Activation',
+  activateReceiver: 'Activate the receiver (+)',
+  deactivateSender: 'Deactivate the sender (-)',
+  noActivation: 'No activation',
+  swapEnds: 'Swap ends',
+  deleteMessage: 'Delete message',
+  addNote: 'Add note',
+  notePlacement: 'Note placement',
+  noteLeft: 'Left of',
+  noteRight: 'Right of',
+  noteOver: 'Over',
+  noteSecond: 'Second participant',
+  noteSecondNone: 'None',
+  deleteNote: 'Delete note',
+  wrapIn: 'Wrap in',
+  wrapLoop: 'Wrap in loop',
+  wrapAlt: 'Wrap in alt',
+  wrapOpt: 'Wrap in opt',
+  wrapPar: 'Wrap in par',
+  wrapCritical: 'Wrap in critical',
+  wrapBreak: 'Wrap in break',
+  wrapRect: 'Wrap in rect',
+  addSection: 'Add section',
+  unwrapFrame: 'Unwrap frame',
+  frameLabelPlaceholder: 'Label',
+  extendFrame: 'Drag to extend the frame',
 }
 
 /** Prefix of the canvas's keys in the editor's flat `labels` map. */

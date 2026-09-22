@@ -1,20 +1,50 @@
 /**
- * Mermaid text entities, decoded once for every kind.
+ * Mermaid text entities, encoded and decoded once for every kind.
  *
  * Mermaid escapes a character inside a label as `#NN;` (its code point),
  * with `#quot;`, `#lt;` and `#gt;` as named forms, and `<br/>` as a line
  * break. HTML entities are accepted too because authors paste them. The
- * flowchart and sequence parsers both run label text through this, so a
- * label means the same thing in every kind.
+ * flowchart and sequence parsers both run label text through `decodeText`,
+ * and both writers escape through `escapeText`, so a label means the same
+ * thing in every kind and a round trip is exact.
+ *
+ * `escapeText` is one pass over the characters, so `#` in the author's
+ * text becomes `#35;` while the `#` and `;` an entity introduces are never
+ * escaped again, and text that already looks like an entity survives.
+ * `&` and `%` become `#38;` and `#37;` so `&quot;` stays text and `%%{`
+ * can never open a directive inside a label. `escapeStatementText` adds
+ * `;`, for the sequence dialect where text is unquoted and a `;` would end
+ * the statement; flowchart text is quoted, so it keeps its `;`.
  *
  * The numeric form is decoded last so an escaped `#` (`#35;quot;`) yields
- * the literal text `#quot;` rather than a quote: that is what keeps the
- * flowchart writer's `escapeText` and this decoder symmetric. A code point
- * that is not an XML character (control characters, surrogates, U+FFFE,
- * U+FFFF, anything past U+10FFFF) becomes U+FFFD instead of a character
- * the SVG could not carry, and never a thrown RangeError: `parse` must not
- * throw and Mermaid.js accepts these entities.
+ * the literal text `#quot;` rather than a quote: that is what keeps
+ * `escapeText` and `decodeText` symmetric. A code point that is not an XML
+ * character (control characters, surrogates, U+FFFE, U+FFFF, anything past
+ * U+10FFFF) becomes U+FFFD instead of a character the SVG could not carry,
+ * and never a thrown RangeError: `parse` must not throw and Mermaid.js
+ * accepts these entities.
  */
+
+const ENTITIES: Readonly<Record<string, string>> = {
+  '#': '#35;',
+  '&': '#38;',
+  '%': '#37;',
+  '"': '#quot;',
+  '<': '#lt;',
+  '>': '#gt;',
+}
+const SEMICOLON = '#59;'
+
+/** Escape user text for a Mermaid label: `#`, `&`, `%`, quotes and angle brackets as entities, line breaks as `<br/>`. */
+export function escapeText(text: string): string {
+  return text.replace(/[#&%"<>]/g, (char) => ENTITIES[char] ?? char).replace(/\r?\n/g, '<br/>')
+}
+
+/** `escapeText` for unquoted statement text, where a `;` would end the statement: it becomes `#59;` too. */
+export function escapeStatementText(text: string): string {
+  return text.replace(/[#&%"<>;]/g, (char) => (char === ';' ? SEMICOLON : (ENTITIES[char] ?? char))).replace(/\r?\n/g, '<br/>')
+}
+
 export function decodeText(text: string): string {
   return text
     .replace(/<br\s*\/?>/gi, '\n')

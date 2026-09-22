@@ -81,7 +81,7 @@ describe('parseSequenceDiagram: header and errors', () => {
     const kind = sequenceDiagram()
     expect(kind.name).toBe('sequenceDiagram')
     expect(kind.keywords).toEqual(['sequenceDiagram'])
-    expect(kind.write).toBeUndefined()
+    expect(kind.write).toBeDefined()
     expect(kind.parse('sequenceDiagram\n    A->>B: hi')).toEqual(parseSequenceDiagram('sequenceDiagram\n    A->>B: hi'))
     expect(kind.parse(kind.starter)).toMatchObject({ problems: [], retained: [] })
     expect(kind.starter.split('\n')).toHaveLength(3)
@@ -102,6 +102,7 @@ describe('parseSequenceDiagram: header and errors', () => {
 
   it('reads an empty diagram as an empty model', () => {
     expect(parse('sequenceDiagram')).toEqual({ model: { participants: [], boxes: [], items: [], activations: [] }, problems: [], retained: [], lossy: [] })
+    expect(sequenceDiagram().parse('sequenceDiagram')).toMatchObject({ lossy: [] })
   })
 })
 
@@ -450,6 +451,14 @@ describe('parseSequenceDiagram: retained lines and ignored statements', () => {
       ['SEQUENCE_DIAGRAM_STATEMENT_IGNORED', 'ignored', 7],
     ])
     expect(p.retained.map((r) => r.line)).toEqual([3, 5, 7])
+    expect(p.lossy).toEqual(['create-destroy'])
+  })
+
+  it('names create-destroy in lossy once, for create alone and for destroy alone', () => {
+    expect(parse('sequenceDiagram\n    create participant C\n    A->>C: hi').lossy).toEqual(['create-destroy'])
+    expect(parse('sequenceDiagram\n    A->>C: hi\n    destroy C\n    A->>C: bye').lossy).toEqual(['create-destroy'])
+    expect(parse('sequenceDiagram\n    create participant C\n    create actor D\n    A->>C: hi\n    destroy C\n    destroy D').lossy).toEqual(['create-destroy'])
+    expect(parse('sequenceDiagram\n    create\n    A->>C: hi').lossy).toEqual([])
   })
 
   it('reports an unknown statement and retains it', () => {

@@ -21,7 +21,7 @@ export const FAQ = [
   {
     question: 'Is there a Mermaid live editor with drag and drop?',
     answer:
-      'Yes. mermaid.reactmarkdownkit.com puts a drawing canvas next to the code pane. Drag a box or a connector and the Mermaid text updates, with the positions stored in one %% rmk-layout v1 comment. The canvas opens flowcharts. Sequence diagrams render as static SVG and are edited as text.',
+      'Yes. mermaid.reactmarkdownkit.com puts a drawing canvas next to the code pane. Drag a box or a connector and the Mermaid text updates, with the positions stored in one %% rmk-layout v1 comment. The canvas opens flowcharts and sequence diagrams; a sequence diagram writes plain Mermaid with no layout comment.',
   },
   {
     question: 'Is there an open source Mermaid editor besides mermaid.live?',
@@ -31,7 +31,7 @@ export const FAQ = [
   {
     question: 'Does the Mermaid visual editor support sequence diagrams?',
     answer:
-      'As text with a live preview. The plugin renders sequence diagrams as static SVG; the drag and drop canvas is for flowcharts. Class, Gantt, pie and every other Mermaid diagram type is shown as source. For those, stay on mermaid.live, which renders every type through Mermaid.js.',
+      'Yes. A sequence diagram opens on its own canvas: add and reorder participants, draw a message from one lifeline to another, drag messages and notes into order, wrap them in loop, alt, opt, par, critical, break or rect frames, and set activation and autonumber. The text written back is plain Mermaid with no layout comment. Class, Gantt, pie and every other Mermaid diagram type is shown as source. For those, stay on mermaid.live, which renders every type through Mermaid.js.',
   },
 ]
 
@@ -72,11 +72,11 @@ sequenceDiagram
 free, open source under MIT, and renders every diagram type that Mermaid.js
 renders. This page compares it with the visual editor at
 <a href={sites.mermaidDemo}>mermaid.reactmarkdownkit.com</a>, which adds a drag
-and drop canvas and a layout comment for flowcharts, and renders sequence
-diagrams as static SVG.
+and drop canvas for flowcharts and sequence diagrams, with a layout comment
+for flowcharts.
 
-The short version: if you edit flowcharts and want to move boxes with the
-mouse, try the canvas. If you need a diagram type other than those two, stay
+The short version: if you edit flowcharts or sequence diagrams and want to
+move things with the mouse, try the canvas. If you need a diagram type other than those two, stay
 on mermaid.live.
 
 ## Side by side
@@ -88,7 +88,7 @@ Every fact about this editor links to the code or test that backs it.
 | | mermaid.live | mermaid.reactmarkdownkit.com |
 | --- | --- | --- |
 | Text editing | Yes. A code editor with a live preview. The README says "Edit and preview flowcharts, sequence diagrams, gantt diagrams in real time." | Yes. A code pane on the left; the canvas re-parses as you type ([MermaidDemo.tsx](https://github.com/mahuzedada/react-markdown-kit/blob/main/public-sites/mermaid-demo/src/MermaidDemo.tsx)). |
-| Visual (drag and drop) editing | No. The request for one, [issue #1284](https://github.com/mermaid-js/mermaid-live-editor/issues/1284), was closed as not planned. | Yes. Drag boxes and connectors on a canvas; the code pane shows what will be saved ([canvas source](https://github.com/mahuzedada/react-markdown-kit/tree/main/plugins/mermaid/src/canvas)). |
+| Visual (drag and drop) editing | No. The request for one, [issue #1284](https://github.com/mermaid-js/mermaid-live-editor/issues/1284), was closed as not planned. | Yes. Drag boxes and connectors on the flowchart canvas, and participants, messages, notes and frames on the sequence canvas; the code pane shows what will be saved ([canvas source](https://github.com/mahuzedada/react-markdown-kit/tree/main/plugins/mermaid/src/canvas)). |
 | Where positions go | Not stored. Mermaid has no syntax for positions, so the layout is recomputed on every render. | One `%% rmk-layout v1` comment on the last line of the fence. Other Mermaid renderers ignore it as a comment; this plugin reads it back ([LAYOUT_ANNOTATION.md](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/LAYOUT_ANNOTATION.md)). |
 | Sharing links | Yes. A viewer link and an edit link, with the diagram in the URL hash as `pako:` or `base64:` ([serde.ts](https://github.com/mermaid-js/mermaid-live-editor/blob/develop/src/lib/util/serde.ts)). | Yes. An edit link with the diagram in the URL hash as `#pako:` or `#base64:`, plus a README badge and an `?embed=1` iframe snippet. No separate viewer link ([share.ts](https://github.com/mahuzedada/react-markdown-kit/blob/main/public-sites/mermaid-demo/src/share.ts), [test](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/mermaid-share.test.ts)). |
 | Price | Free. The hosted editor is the one the [Mermaid docs](https://mermaid.js.org/intro/) link to. | Free. No account, no paywall. |
@@ -149,10 +149,11 @@ these apply.
   comes from the renderer in your own app.
 
 This is what a sequence diagram does in this editor: it renders as static SVG
-from the text, with no canvas.
+and opens on the sequence canvas, where participants, messages, notes and
+frames are dragged and the text is written back as plain Mermaid.
 
 <RenderExample
-  title="A sequence diagram, rendered from the text"
+  title="A sequence diagram, rendered as static SVG"
   markdown={sequence}
   rendererProps={{ extensions: [mermaid()] }}
 />
@@ -160,6 +161,7 @@ from the text, with no canvas.
 ## Who should try the canvas
 
 - You edit flowcharts and want to move boxes and route connectors by hand.
+- You edit sequence diagrams and want to reorder messages and participants by dragging.
 - You paste flowcharts from AI chats or wikis and fix their layout by dragging
   instead of rewriting the text.
 - You render Markdown with React and want the same fence to become static SVG

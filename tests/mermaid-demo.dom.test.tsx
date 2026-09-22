@@ -2,27 +2,37 @@
  * The Mermaid demo's own pieces (public-sites/mermaid-demo/src): every sample
  * compiles with no diagnostic and sits in one of the two groups, the status
  * chip reads the lifted node with the labels docs/MERMAID_PLATFORM.md section
- * 11 fixes, the highlighter never changes the text it colours and switches
- * its keyword set with the kind, a mermaid.live hash pointed at this host
- * opens, the link the other way carries the editor state mermaid.live reads,
- * and the export helpers produce a self-contained SVG for every static kind.
+ * 11 fixes, the block the demo's preset mounts on the right is the flowchart
+ * canvas, the sequence canvas or the source pre by kind, the highlighter
+ * never changes the text it colours and switches its keyword set with the
+ * kind, a mermaid.live hash pointed at this host opens, the link the other
+ * way carries the editor state mermaid.live reads, and the export helpers
+ * produce a self-contained SVG for every static kind.
  */
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { inflateSync } from 'node:zlib'
-import { compileMarkdown, defineMarkdownPreset } from '@react-markdown-kit/renderer'
-import { flowchart, mermaid, sequenceDiagram } from '@react-markdown-kit/mermaid'
+import { compileMarkdown } from '@react-markdown-kit/renderer'
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { flowchart, sequenceDiagram, type DiagramKind } from '@react-markdown-kit/mermaid'
+import { mount, type Mounted } from '../packages/editor/tests/helpers/mount.js'
 import { DEFAULT_CODE, SAMPLES, SAMPLE_GROUPS } from '../public-sites/mermaid-demo/src/samples'
+import { KINDS, preset } from '../public-sites/mermaid-demo/src/preset'
 import { tokenize, tokenizeLine } from '../public-sites/mermaid-demo/src/highlight'
 import { mermaidLiveUrl, sourceFromShared } from '../public-sites/mermaid-demo/src/share'
 import { diagramFileName, diagramSvg } from '../public-sites/mermaid-demo/src/export'
 import { diagramStatus, kindLabel } from '../public-sites/mermaid-demo/src/status'
 
-const kinds = [flowchart(), sequenceDiagram()]
-const preset = defineMarkdownPreset({ extensions: [mermaid({ kinds })] })
+const kinds = KINDS
 const wrap = (code: string): string => `\`\`\`mermaid\n${code}\n\`\`\`\n`
-const status = (code: string) => diagramStatus(compileMarkdown(wrap(code), { preset }), kinds)
+const status = (code: string, registry: readonly DiagramKind[] = kinds) => diagramStatus(compileMarkdown(wrap(code), { preset }), registry)
+
+/** A kind that parses and renders but does not write, so the block edits it as text (spec 9.2). */
+function sourceOnly(kind: DiagramKind): DiagramKind {
+  return Object.fromEntries(Object.entries(kind).filter(([key]) => key !== 'write')) as unknown as DiagramKind
+}
 
 const sequenceSample = SAMPLES.find((sample) => sample.id === 'signin')?.code ?? ''
+const CLASS_DIAGRAM = 'classDiagram\n    Animal <|-- Duck'
 
 describe('samples', () => {
   it('start with the default diagram and have distinct ids and labels', () => {
@@ -60,12 +70,14 @@ describe('status chip', () => {
     expect(laidOut.label).toBe('Flowchart · rmk-layout v1')
   })
 
-  it('names a sequence diagram as static', () => {
-    expect(status(sequenceSample)).toMatchObject({ tone: 'ok', label: 'Sequence diagram · static', kind: 'sequenceDiagram' })
+  it('names a sequence diagram as canvas, and as static when its kind does not write', () => {
+    expect(status(sequenceSample)).toMatchObject({ tone: 'ok', label: 'Sequence diagram · canvas', kind: 'sequenceDiagram' })
+    const textOnly = status(sequenceSample, [flowchart(), sourceOnly(sequenceDiagram())])
+    expect(textOnly).toMatchObject({ tone: 'ok', label: 'Sequence diagram · static', kind: 'sequenceDiagram' })
   })
 
   it('names a Mermaid type nothing renders as source only', () => {
-    const chip = status('classDiagram\n    Animal <|-- Duck')
+    const chip = status(CLASS_DIAGRAM)
     expect(chip).toMatchObject({ tone: 'warn', label: 'Class diagram · source only', kind: 'classDiagram' })
     expect(chip.message).toContain('shown as source')
     expect(kindLabel('gantt', kinds)).toBe('Gantt chart')
@@ -86,6 +98,64 @@ describe('status chip', () => {
     expect(chip.label).toBe('Mermaid rejects line 3')
     expect(chip.message).toBeDefined()
     expect(status('flowchart LR\n    a --> b\n    this is not a statement').label).toBe('Mermaid rejects line 3')
+  })
+})
+
+describe('the block', () => {
+  const views: Mounted[] = []
+  afterEach(() => {
+    for (const view of views.splice(0)) view.unmount()
+  })
+
+  /** The demo's right pane: the same preset, the same props, the sample's fence as the whole document. */
+  function open(code: string): HTMLElement {
+    const view = mount(<MarkdownEditor preset={preset} value={wrap(code)} toolbar={false} aria-label="Diagram block" />)
+    views.push(view)
+    return view.container
+  }
+
+  const block = (container: HTMLElement): Element => {
+    const found = container.querySelector('.rmk-diagram-block')
+    if (found === null) throw new Error('No diagram block.')
+    return found
+  }
+
+  it('mounts the sequence canvas, editable with its tool row, for every sequence sample', () => {
+    for (const sample of SAMPLE_GROUPS[1].samples) {
+      const container = open(sample.code)
+      const canvas = block(container).querySelector('.rmk-diagram-canvas.rmk-sequence-canvas')
+      expect(canvas, sample.id).not.toBeNull()
+      expect(canvas?.classList.contains('is-editable'), sample.id).toBe(true)
+      expect(canvas?.querySelector('.rmk-diagram-toolbar'), sample.id).not.toBeNull()
+      expect(canvas?.querySelector('.rmk-sequence-viewport .rmk-sequence-picture svg[role="img"]'), sample.id).not.toBeNull()
+      expect(canvas?.querySelector('.rmk-sequence-layer'), sample.id).not.toBeNull()
+      expect(block(container).querySelector('.rmk-diagram-source'), sample.id).toBeNull()
+    }
+  })
+
+  it('mounts the flowchart canvas for every flowchart sample', () => {
+    for (const sample of SAMPLE_GROUPS[0].samples) {
+      const container = open(sample.code)
+      expect(block(container).querySelector('.rmk-diagram-canvas .rmk-diagram-surface'), sample.id).not.toBeNull()
+      expect(block(container).querySelector('.rmk-sequence-canvas'), sample.id).toBeNull()
+    }
+  })
+
+  it('shows the source under the unsupported notice, with no textarea, for a Mermaid type nothing renders', () => {
+    const container = open(CLASS_DIAGRAM)
+    expect(block(container).querySelector('.rmk-diagram-canvas')).toBeNull()
+    expect(block(container).querySelector('.rmk-diagram-notice')).not.toBeNull()
+    expect(block(container).querySelector('.rmk-diagram-source-pre')?.textContent).toContain('Animal <|-- Duck')
+    // The code pane on the left is the demo's source editor for every kind.
+    expect(block(container).querySelector('.rmk-diagram-source-input')).toBeNull()
+  })
+
+  it('offers the Text/Canvas toggle for both canvas kinds', () => {
+    for (const code of [DEFAULT_CODE, sequenceSample]) {
+      const mode = block(open(code)).querySelector('.rmk-diagram-mode')
+      expect(mode, code.split('\n')[0]).not.toBeNull()
+    }
+    expect(block(open(CLASS_DIAGRAM)).querySelector('.rmk-diagram-mode')).toBeNull()
   })
 })
 
@@ -168,7 +238,7 @@ describe('export', () => {
   })
 
   it('has nothing to export for a Mermaid type shown as source', () => {
-    expect(diagramSvg(wrap('classDiagram\n    Animal <|-- Duck'), preset)).toBeUndefined()
+    expect(diagramSvg(wrap(CLASS_DIAGRAM), preset)).toBeUndefined()
   })
 
   it('names the file after the front-matter title when there is one', () => {

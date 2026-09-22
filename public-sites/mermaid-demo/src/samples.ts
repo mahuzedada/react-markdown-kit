@@ -1,7 +1,7 @@
 /*
  * The sample diagrams the left column offers, in two groups: flowcharts,
- * which the canvas opens, and sequence diagrams, which render as static
- * SVG with a live preview and are edited as text. Each one stays inside
+ * which open on the drawing canvas, and sequence diagrams, which open on
+ * the sequence canvas and render as static SVG. Each one stays inside
  * the subset the plugin parses (docs.reactmarkdownkit.com/docs/mermaid) and
  * compiles with no diagnostic: every shape bracket, every edge style,
  * `subgraph`, `style` lines and comments on the flowchart side; alt/else,

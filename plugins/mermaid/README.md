@@ -3,8 +3,9 @@
 Mermaid in React, as a Markdown plugin, plus a Mermaid visual editor that
 writes plain Mermaid back. A ```` ```mermaid ```` fence holds the diagram, the
 renderer draws flowcharts and sequence diagrams as static SVG with no
-Mermaid.js runtime, the editor opens a flowchart on a drawing canvas and every
-other kind in a source editor with a preview, and the template plugin leaves
+Mermaid.js runtime, the editor opens flowcharts and sequence diagrams on a
+canvas and every other kind in a source editor with a preview, and the
+template plugin leaves
 the fence alone. Every other Mermaid type is shown as source, or drawn by the
 host through the `/client` fallback entry.
 
@@ -47,7 +48,7 @@ and comments, as Mermaid's own `detectType` does. Keywords are case-sensitive.
 | Kind | Header | Rendered | Edited |
 | --- | --- | --- | --- |
 | Flowchart | `flowchart`, `graph`, `flowchart-elk` | Static SVG | Canvas, or text |
-| Sequence diagram | `sequenceDiagram` | Static SVG | Text, with a live preview |
+| Sequence diagram | `sequenceDiagram` | Static SVG | Canvas, or text |
 | Every other Mermaid type (`classDiagram`, `stateDiagram`, `gantt`, `pie`, …) | its keyword | Source, or the host fallback | Text |
 
 Kinds are configuration values like `gfm()`. The default registry is
@@ -59,7 +60,8 @@ writer re-emits, and reports a statement it cannot model as a problem instead
 of failing the fence. The sequence parser covers participants and actors,
 boxes, the ten message arrows, activation, notes, `loop`, `alt`/`else`,
 `opt`, `par`/`and`, `critical`/`option`, `break`, `rect` and `autonumber`,
-with a deterministic layout that needs no annotation. The
+with a deterministic layout that needs no annotation. Its writer emits the
+model as plain Mermaid, retained lines included. The
 [docs page](https://docs.reactmarkdownkit.com/docs/mermaid) lists both
 subsets and every problem code.
 
@@ -121,6 +123,19 @@ authoritative for the graph and colours; the annotation never repeats them.
 generators; `readLayoutAnnotation` and `writeLayoutAnnotation` are the
 reference reader and writer.
 
+A sequence diagram needs no annotation, since its layout is deterministic.
+The sequence canvas writes plain Mermaid: front-matter title, header,
+`autonumber`, participants and boxes in declaration order, the retained
+lines (`link`, `links`, `properties`, `details`, `accTitle`, `accDescr`,
+directives and comments) verbatim, then messages, notes and frames depth
+first. Activation bars are written as `+`/`-` suffixes where the messages
+carry them and as `activate`/`deactivate` statements otherwise. `create` and
+`destroy` cannot keep their position, so the parser names `create-destroy`
+under `lossy`, the writer drops them, and the canvas stays read-only behind
+a notice until the author chooses "Edit on canvas". The written text parses
+back to the same model and is accepted by Mermaid.js for every example in
+the conformance corpus.
+
 ## The plugin is the API
 
 `mermaid()` is a plain `MarkdownExtension` and the package's way in. The
@@ -132,7 +147,7 @@ understand.
 | `syntax` | Every ```` ```mermaid ```` fence (or a legacy ```` ```diagram ```` / ```` ```drawing ```` JSON fence) becomes a `diagram` node with its kind and support level, parsed once; it serializes back to the same fence |
 | `renderer` | The node becomes `<figure data-rmk-diagram data-rmk-diagram-kind data-rmk-diagram-support>` holding a static SVG, or the source for a kind no registered kind renders. No script, no `foreignObject`, no DOM needed |
 | `template` | The fence is literal. `{{placeholders}}` inside it are never resolved |
-| `editor` | On `@react-markdown-kit/mermaid/editor` only: a Lexical node, the canvas, the source editor, one insert button per kind |
+| `editor` | On `@react-markdown-kit/mermaid/editor` only: a Lexical node, the flowchart canvas, the sequence canvas, the source editor, one insert button per kind |
 
 The root entry also exports the kind factories `flowchart()` and
 `sequenceDiagram()`, `MERMAID_KEYWORDS` and the `DiagramKind` types, so a
@@ -170,15 +185,28 @@ import { mermaid } from '@react-markdown-kit/mermaid/editor'
 <MarkdownEditor extensions={[mermaid()]} value={value} onChange={setValue} />
 ```
 
-An untouched diagram writes back byte for byte. A flowchart opens on the
-canvas, with a toggle to the text; every other kind opens in a source editor
-with a live preview and the problems listed with line numbers. Editing a
-flowchart on the canvas writes ```` ```mermaid ```` with the layout annotation,
-and **Copy as Mermaid** on the canvas copies that same text. The toolbar has
-one insert button per kind: id `diagram` for the flowchart, `diagram-<kind>`
-for the others. Options: `style` (`clean` or hand-drawn `ink`),
-`newBlockWidth` and `sourceEditor` (`false` shows preview and problems only). The canvas was ported from `@zuilib/text-editor` (MIT), so
-the kit keeps its no-design-system rule.
+An untouched diagram writes back byte for byte. A flowchart and a sequence
+diagram open on a canvas, with a toggle to the text; every other kind opens
+in a source editor with a live preview and the problems listed with line
+numbers. Editing a flowchart on the canvas writes ```` ```mermaid ```` with
+the layout annotation, and **Copy as Mermaid** on the canvas copies that same
+text. The sequence canvas edits the rendered picture: add participants and
+actors, drag columns to reorder them, drag from one lifeline to another to
+add a message, drag messages and notes to reorder them, pick the line, head,
+two-way and activation of a message in the property bar, add notes from the
+"+" on a lifeline gap, wrap a range of items in `loop`, `alt`, `opt`, `par`,
+`critical`, `break` or `rect`, add sections, drag a frame's bottom edge, and
+toggle `autonumber`. Every gesture is one undo step, and every label edits
+inline. The toolbar has one insert button per kind: id `diagram` for the
+flowchart, `diagram-<kind>` for the others. Options: `style` (`clean` or
+hand-drawn `ink`), `newBlockWidth`, `sourceEditor` (`false` shows preview
+and problems only) and `editors`, a map from kind name to the component that
+edits it, so a kind of your own gets a canvas and a built-in canvas can be
+replaced. A component takes `DiagramKindEditorProps` (`kind`, `source`,
+`parse`, `readOnly` and a `commit(source, { merge? })` the block turns into
+history entries); the types are exported from the editor entry. The
+flowchart canvas was ported from `@zuilib/text-editor` (MIT), so the kit
+keeps its no-design-system rule.
 
 ## Styling and safety
 

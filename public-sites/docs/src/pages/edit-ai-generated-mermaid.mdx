@@ -86,9 +86,9 @@ connectors into place, and copy the text back. The editor writes the
 positions into one comment line that other Mermaid renderers ignore, so the
 diagram still renders on GitHub and still round-trips through the model.
 
-The canvas opens flowcharts, written as `flowchart` or `graph`. Sequence
-diagrams render as static SVG and are edited as text. The editor does not
-open class, Gantt or any other Mermaid diagram type. See
+The canvas opens flowcharts, written as `flowchart` or `graph`, and sequence
+diagrams, which get a canvas of their own. The editor does not open class,
+Gantt or any other Mermaid diagram type. See
 [what to do with those](#when-the-model-emits-a-sequence-or-class-diagram) below.
 
 ## Before: what a model gives you
@@ -194,11 +194,14 @@ what moved.
 
 ## When the model emits a sequence or class diagram
 
-The canvas does not open them. A `sequenceDiagram` renders as static SVG
-from the text and is edited as text with a live preview. `classDiagram`,
-`gantt`, `pie` and the other Mermaid diagram types are shown as source in the
-plugin: rendered as source, edited as text, never mistaken for something the
-canvas can open. The parser is covered by
+A `sequenceDiagram` opens on the sequence canvas: participants, messages,
+notes and frames are dragged and edited in place, and the text is written
+back as plain Mermaid with no layout comment, since a sequence diagram's
+layout is deterministic. There is nothing to fix by dragging; what the
+model got wrong is the order of the messages, and the canvas reorders them.
+`classDiagram`, `gantt`, `pie` and the other Mermaid diagram types are shown
+as source in the plugin: rendered as source, edited as text, never mistaken
+for something a canvas can open. The parser is covered by
 [`mermaid-parse.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts),
 and the exact flowchart subset is listed in the
 <Link to="/docs/mermaid">plugin reference</Link>.

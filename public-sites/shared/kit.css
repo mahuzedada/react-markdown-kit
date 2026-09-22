@@ -98,11 +98,12 @@ html .rmk-document {
 }
 
 /*
- * The editor's block previews a sequence diagram (and a flowchart switched
- * to text) with the same SVG, so the editor takes the same tokens. The
- * preview surface follows the document's in dark mode, with the flowchart
- * preview inverted as the document's flowchart is, and the canvas keeps its
- * white surface and filter untouched.
+ * The editor's block previews a flowchart switched to text with the same
+ * SVG, and the sequence canvas draws that SVG as its picture, so the editor
+ * takes the same tokens. The preview and the sequence viewport follow the
+ * document's surface in dark mode, with the flowchart preview inverted as
+ * the document's flowchart is; the flowchart canvas keeps its white surface
+ * and filter untouched.
  */
 html .rmk-editor {
   --rmk-diagram-actor-fill: var(--secondary);
@@ -124,6 +125,10 @@ html .rmk-editor {
 
 html[data-theme='dark'] .rmk-editor .rmk-diagram-preview {
   background-color: color-mix(in oklab, var(--background), black 30%);
+}
+
+html[data-theme='dark'] .rmk-editor .rmk-sequence-viewport {
+  --rmk-diagram-surface: color-mix(in oklab, var(--background), black 30%);
 }
 
 html[data-theme='dark'] .rmk-editor [data-rmk-diagram-kind='flowchart'] .rmk-diagram-preview svg {

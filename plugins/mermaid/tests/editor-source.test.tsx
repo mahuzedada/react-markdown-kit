@@ -6,13 +6,25 @@
  * across an undo or an outside change, undo keys route to Lexical, Tab
  * indents, Escape moves to the header, a read-only toggle releases the
  * mode hold, unregistered kinds show their notice, and `sourceEditor:
- * false` hides the textarea.
+ * false` hides the textarea. The sequence kind is registered without its
+ * writer here, so these blocks stay in source mode whatever the built-in
+ * kind gains; the canvas slot is covered by editor-block.test.tsx.
  */
 import type { ReactElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MarkdownEditor, useMarkdownEditorContext, type MarkdownEditorInstance } from '@react-markdown-kit/editor'
 import { mount, run, type Mounted } from '../../../packages/editor/tests/helpers/mount.js'
-import { mermaid } from '../src/editor.js'
+import { flowchart, mermaid, sequenceDiagram, type DiagramKind } from '../src/editor.js'
+
+/** The kind without `write`: the block edits it as text whatever the built-in gains. */
+function sourceOnly(kind: DiagramKind): DiagramKind {
+  return Object.fromEntries(Object.entries(kind).filter(([key]) => key !== 'write')) as unknown as DiagramKind
+}
+
+/** The registry these tests edit with: the flowchart canvas and a text-only sequence kind. */
+function kinds(): readonly DiagramKind[] {
+  return [flowchart(), sourceOnly(sequenceDiagram())]
+}
 
 const SEQUENCE = 'sequenceDiagram\n    Alice->>Bob: Hello\n    Bob-->>Alice: Hi'
 const SEQUENCE_DOC = `Before.\n\n\`\`\`mermaid\n${SEQUENCE}\n\`\`\`\n\nAfter.\n`
@@ -29,7 +41,7 @@ const views: Mounted[] = []
 function open(value: string, options: Parameters<typeof mermaid>[0] = {}): { view: Mounted; editor: () => MarkdownEditorInstance } {
   let editor!: MarkdownEditorInstance
   const view = mount(
-    <MarkdownEditor extensions={[mermaid(options)]} defaultValue={value}>
+    <MarkdownEditor extensions={[mermaid({ kinds: kinds(), ...options })]} defaultValue={value}>
       <Capture onReady={(value) => (editor = value)} />
     </MarkdownEditor>,
   )
@@ -83,7 +95,7 @@ describe('source mode', () => {
     expect(block?.getAttribute('data-rmk-diagram-mode')).toBe('source')
     expect(view.container.querySelector('.rmk-diagram-kind')?.textContent).toBe('Sequence diagram')
     expect(view.container.querySelector('.rmk-diagram-badge')?.textContent).toBe('Static')
-    // No canvas toggle for a kind the canvas does not draw.
+    // No canvas toggle for a kind that does not write.
     expect(view.container.querySelector('.rmk-diagram-mode')).toBeNull()
     const svg = view.container.querySelector('.rmk-diagram-preview svg')
     expect(svg?.getAttribute('role')).toBe('img')
@@ -295,7 +307,7 @@ describe('source mode', () => {
   // read-only toggle unmounts it without a blur; the hold must go with it.
   it('releases the mode hold when the textarea unmounts without a blur', () => {
     const render = (readOnly: boolean): ReactElement => (
-      <MarkdownEditor extensions={[mermaid()]} defaultValue={'```mermaid\nsequenceDiagram\n    A->>B: x\n```\n'} readOnly={readOnly} />
+      <MarkdownEditor extensions={[mermaid({ kinds: kinds() })]} defaultValue={'```mermaid\nsequenceDiagram\n    A->>B: x\n```\n'} readOnly={readOnly} />
     )
     const view = mount(render(false))
     views.push(view)

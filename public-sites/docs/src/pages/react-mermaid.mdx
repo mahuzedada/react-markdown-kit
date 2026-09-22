@@ -1,6 +1,6 @@
 ---
 title: "React Mermaid: diagrams, no Mermaid.js"
-description: "React Mermaid without Mermaid.js: one plugin renders Mermaid flowcharts and sequence diagrams in React Markdown as static SVG, on the server or in the browser."
+description: "React Mermaid without Mermaid.js: one plugin renders flowcharts and sequence diagrams in React Markdown as static SVG, on the server or in the browser."
 ---
 
 import Link from '@docusaurus/Link'
@@ -328,8 +328,8 @@ labels in both spellings, lines, arrows, bidirectional arrows, chains, `&` group
 `subgraph … end` read through, `style` colours and a front-matter title. `classDef`,
 `click` and `linkStyle` are ignored.
 
-Sequence diagrams render as static SVG from the text and are edited as text with a live
-preview, never on the canvas. The subset is listed in the
+Sequence diagrams render as static SVG and are edited on a canvas of their own, which
+writes plain Mermaid back. The subset is listed in the
 <Link to="/docs/mermaid">plugin reference</Link>.
 
 Class, state, Gantt, pie and every other diagram type is shown as source inside the

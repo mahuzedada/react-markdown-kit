@@ -11,9 +11,15 @@
  * inside their parents. Everything is finally shifted so the leftmost
  * element starts at the margin, which keeps notes left of the first
  * participant and wide frames inside the picture.
+ *
+ * The layout is also the canvas's hit geometry (docs/MERMAID_PLATFORM.md
+ * section 9.5): every message, note and frame carries its flat index, the
+ * anchor row of every flat index is listed in `rows`, and the rect helpers
+ * at the end give the box a pointer must be in to pick a column, a
+ * message, a frame tab or a section. What is edited is what is drawn.
  */
 import { FONT_SIZE, LINE_HEIGHT, SMALL_FONT_SIZE } from '../drawing-data.js'
-import { textBoxSize, wrapText } from '../geometry.js'
+import { textBoxSize, wrapText, type Rect } from '../geometry.js'
 import type { Frame, Message, Note, Participant, SequenceItem, SequenceModel } from './model.js'
 
 export const SEQUENCE_METRICS = {
@@ -74,6 +80,8 @@ export interface LayoutBox {
 
 export interface LayoutMessage {
   readonly message: Message
+  /** Index into the depth-first flattening of the model's items. */
+  readonly index: number
   readonly fromX: number
   readonly toX: number
   /** The line's y; for a self message the top of the loop. */
@@ -85,6 +93,8 @@ export interface LayoutMessage {
 
 export interface LayoutNote {
   readonly note: Note
+  /** Index into the depth-first flattening of the model's items. */
+  readonly index: number
   readonly x: number
   readonly y: number
   readonly width: number
@@ -100,6 +110,8 @@ export interface LayoutSection {
 
 export interface LayoutFrame {
   readonly frame: Frame
+  /** Index into the depth-first flattening of the model's items. */
+  readonly index: number
   readonly x: number
   readonly y: number
   readonly width: number
@@ -120,6 +132,12 @@ export interface SequenceLayout {
   readonly height: number
   readonly lifelineTop: number
   readonly lifelineBottom: number
+  /**
+   * The anchor y of every flat item index, in order: a message's line (or
+   * the top of its self loop), a note's centre, a frame's top. Insertion
+   * rows and drop targets are read off it.
+   */
+  readonly rows: readonly number[]
   readonly columns: readonly LayoutColumn[]
   readonly boxes: readonly LayoutBox[]
   readonly messages: readonly LayoutMessage[]
@@ -182,7 +200,7 @@ export function layoutSequence(model: SequenceModel): SequenceLayout {
           widen(extent, Math.min(fromX, toX), Math.max(fromX, toX))
         }
         anchors.push(y)
-        messages.push({ message: item, fromX, toX, y, self, lines, number })
+        messages.push({ message: item, index: anchors.length - 1, fromX, toX, y, self, lines, number })
         continue
       }
       if (item.type === 'note') {
@@ -205,11 +223,12 @@ export function layoutSequence(model: SequenceModel): SequenceLayout {
         }
         anchors.push(y + height / 2)
         widen(extent, x, x + width)
-        notes.push({ note: item, x, y, width, height, lines })
+        notes.push({ note: item, index: anchors.length - 1, x, y, width, height, lines })
         continue
       }
       const y = cursor + M.row / 2
       anchors.push(y)
+      const index = anchors.length - 1
       cursor = y + (item.kind === 'rect' ? M.row / 2 : M.frameLabelHeight)
       const inner: Extent = { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY }
       const sections: LayoutSection[] = []
@@ -233,7 +252,7 @@ export function layoutSequence(model: SequenceModel): SequenceLayout {
       const x = inner.min - M.framePad
       const width = inner.max - inner.min + 2 * M.framePad
       widen(extent, x, x + width)
-      frames.push({ frame: item, x, y, width, height: bottom - y, sections })
+      frames.push({ frame: item, index, x, y, width, height: bottom - y, sections })
     }
   }
 
@@ -289,6 +308,7 @@ export function layoutSequence(model: SequenceModel): SequenceLayout {
     height: lifelineBottom + headerHeight + (model.boxes.length === 0 ? 0 : M.boxPad) + M.margin,
     lifelineTop,
     lifelineBottom,
+    rows: anchors,
     columns: columns.map((c) => ({ ...c, x: c.x + shift })),
     boxes: boxes.map((b) => ({ ...b, x: b.x + shift })),
     messages: messages.map((m) => ({ ...m, fromX: m.fromX + shift, toX: m.toX + shift })),
@@ -307,6 +327,111 @@ export function textLines(value: string): string[] {
 /** Width a frame's label tab needs. */
 export function frameTabWidth(label: string): number {
   return textBoxSize(label, SMALL_FONT_SIZE).w + 16
+}
+
+/* ---------------------------------------------------------- hit geometry */
+
+/** The top participant box of a column. */
+export function columnRect(column: LayoutColumn): Rect {
+  return { x: column.x - column.width / 2, y: column.top, w: column.width, h: column.height }
+}
+
+/** The mirrored bottom box of a column. */
+export function columnBottomRect(column: LayoutColumn): Rect {
+  return { x: column.x - column.width / 2, y: column.bottom, w: column.width, h: column.height }
+}
+
+/**
+ * The boxes a pointer picks a message in: the strip along its line (or
+ * around its self loop) and, when it has text, the text's own box. Two
+ * boxes rather than their union, so the lifeline gap between two rows
+ * stays free beside a message's text and a note can be added there.
+ */
+export function messageHitRects(message: LayoutMessage, pad = 6): Rect[] {
+  const M = SEQUENCE_METRICS
+  const textHeight = message.lines.length * LINE_H
+  const textWidth = message.lines.length === 0 ? 0 : textBoxSize(message.lines.join('\n')).w
+  if (message.self) {
+    const loop = { x: message.fromX - pad, y: message.y - pad, w: M.selfLoopWidth + 2 * pad, h: M.selfLoopHeight + 2 * pad }
+    if (textHeight === 0) return [loop]
+    const textX = message.fromX + M.selfLoopWidth + M.textPad / 2
+    return [loop, { x: textX - pad, y: message.y + M.selfLoopHeight / 2 - textHeight / 2 - pad, w: textWidth + 2 * pad, h: textHeight + 2 * pad }]
+  }
+  const left = Math.min(message.fromX, message.toX)
+  const right = Math.max(message.fromX, message.toX)
+  const line = { x: left - pad, y: message.y - pad, w: right - left + 2 * pad, h: 2 * pad }
+  if (textHeight === 0) return [line]
+  const cx = (left + right) / 2
+  return [line, { x: cx - textWidth / 2 - pad, y: message.y - 6 - textHeight - pad, w: textWidth + 2 * pad, h: textHeight + 2 * pad }]
+}
+
+/** The union of `messageHitRects`, for the selection outline. */
+export function messageRect(message: LayoutMessage, pad = 6): Rect {
+  const rects = messageHitRects(message, pad)
+  const x = Math.min(...rects.map((r) => r.x))
+  const y = Math.min(...rects.map((r) => r.y))
+  const right = Math.max(...rects.map((r) => r.x + r.w))
+  const bottom = Math.max(...rects.map((r) => r.y + r.h))
+  return { x, y, w: right - x, h: bottom - y }
+}
+
+export function noteRect(note: LayoutNote): Rect {
+  return { x: note.x, y: note.y, w: note.width, h: note.height }
+}
+
+export function frameRect(frame: LayoutFrame): Rect {
+  return { x: frame.x, y: frame.y, w: frame.width, h: frame.height }
+}
+
+/** The label tab at a frame's top left; a `rect` frame, which draws no tab, gets a strip along its top edge. */
+export function frameTabRect(frame: LayoutFrame): Rect {
+  const M = SEQUENCE_METRICS
+  if (frame.frame.kind === 'rect') return { x: frame.x, y: frame.y, w: frame.width, h: M.row / 2 }
+  const label = frame.sections[0]?.label ?? ''
+  const w = frameTabWidth(frame.frame.kind) + (label === '' ? 0 : textBoxSize(`[${label}]`, SMALL_FONT_SIZE).w + 8)
+  return { x: frame.x, y: frame.y, w: Math.min(frame.width, w), h: M.frameLabelHeight }
+}
+
+/** The strip along a section's divider where its label sits; the first section's is its frame's tab. */
+export function sectionRect(frame: LayoutFrame, section: number): Rect {
+  const M = SEQUENCE_METRICS
+  const current = frame.sections[section]
+  if (current === undefined) return frameRect(frame)
+  if (section === 0) return frameTabRect(frame)
+  return { x: frame.x, y: current.y - M.row / 4, w: frame.width, h: M.frameLabelHeight }
+}
+
+/** The strip along a frame's bottom edge, dragged to extend or shrink it. */
+export function frameBottomRect(frame: LayoutFrame, pad = 5): Rect {
+  return { x: frame.x, y: frame.y + frame.height - pad, w: frame.width, h: 2 * pad }
+}
+
+/** The x of the column nearest a point, as an index into `columns`. */
+export function columnAt(layout: SequenceLayout, x: number): number {
+  let best = 0
+  let distance = Number.POSITIVE_INFINITY
+  layout.columns.forEach((column, i) => {
+    const d = Math.abs(column.x - x)
+    if (d < distance) {
+      distance = d
+      best = i
+    }
+  })
+  return best
+}
+
+/**
+ * The flat insertion index for a pointer at `y`: how many rows sit above
+ * it, so a new item goes before the row under the pointer and after the
+ * last row when the pointer is below every row.
+ */
+export function rowAt(layout: SequenceLayout, y: number): number {
+  return layout.rows.filter((row) => row <= y).length
+}
+
+/** True when the point is inside the rect. */
+export function within(rect: Rect, x: number, y: number): boolean {
+  return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h
 }
 
 function widen(extent: Extent, min: number, max: number): void {

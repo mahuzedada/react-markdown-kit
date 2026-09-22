@@ -4,8 +4,9 @@ import type { DiagramKind, DiagramNode } from '@react-markdown-kit/mermaid'
 /*
  * The status chip in the code card's head, read from the lifted `diagram`
  * node rather than from the diagnostics alone: which kind the plugin
- * detected, whether it renders it, and the first thing Mermaid itself would
- * reject. Pure, so the labels are pinned by tests/mermaid-demo.dom.test.tsx.
+ * detected, whether it renders it, whether the block edits it on a canvas,
+ * and the first thing Mermaid itself would reject. Pure, so the labels are
+ * pinned by tests/mermaid-demo.dom.test.tsx.
  */
 
 export interface DiagramStatus {
@@ -84,5 +85,8 @@ export function diagramStatus(document: MarkdownDocument, kinds: readonly Diagra
   if (layoutInvalid !== undefined) return { tone: 'warn', label: 'Layout rejected', message: layoutInvalid, kind }
   if (node.support === 'source') return { tone: 'warn', label: `${label} · source only`, message: find('DIAGRAM_KIND_UNSUPPORTED'), kind }
   if (kind === 'flowchart') return { tone: 'ok', label: LAYOUT_LINE.test(node.value) ? 'Flowchart · rmk-layout v1' : 'Flowchart · auto layout', kind }
-  return { tone: 'ok', label: `${label} · static`, kind }
+  // A kind that writes Mermaid back opens on its canvas in the block
+  // (spec 9.2); one that only parses is drawn and edited as text.
+  const writes = kinds.find((candidate) => candidate.name === kind)?.write !== undefined
+  return { tone: 'ok', label: `${label} · ${writes ? 'canvas' : 'static'}`, kind }
 }

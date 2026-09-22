@@ -14,7 +14,7 @@ export const TITLE = 'Free Online Mermaid Visual Editor'
 
 /** Also the meta description in index.html; tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
-  'Free, open source Mermaid visual editor: drag flowchart nodes on a canvas, preview sequence diagrams as you type, and get plain Mermaid back. No account.'
+  'Free, open source Mermaid visual editor: edit flowcharts and sequence diagrams on a canvas, watch the code follow, and get plain Mermaid back. No account.'
 
 const RENDER = `import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
 import { mermaid } from '@react-markdown-kit/mermaid'
@@ -53,7 +53,7 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'Can I drag and drop nodes in Mermaid?',
     answer:
-      'Yes. Drag a box or a connector on the canvas and the code pane updates. The positions are saved as one %% rmk-layout v1 comment on the last line, which every other Mermaid renderer ignores.',
+      'Yes. Drag a box or a connector on the flowchart canvas and the code pane updates. The positions are saved as one %% rmk-layout v1 comment on the last line, which every other Mermaid renderer ignores. In a sequence diagram, drag a participant to reorder the columns or a message to move it, and the Mermaid is rewritten with no extra comment.',
     more: { href: docsUrl('/docs/mermaid'), label: 'How the layout comment works.' },
   },
   {
@@ -69,7 +69,7 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'Which Mermaid diagram types does it support?',
     answer:
-      'Flowcharts, written as flowchart or graph, open on the canvas. Sequence diagrams render as static SVG and are edited as text with a live preview. Class, state, Gantt and the other types are shown as source, and a host app can render them with its own Mermaid.js through the plugin fallback entry. A document that mixes them still round-trips.',
+      'Flowcharts, written as flowchart or graph, and sequence diagrams both open on a canvas: drag nodes and connectors in a flowchart; add participants, draw messages between lifelines, add notes and wrap items in loop, alt or par frames in a sequence diagram. Both render as static SVG. Class, state, Gantt and the other types are shown as source, and a host app can render them with its own Mermaid.js through the plugin fallback entry. A document that mixes them still round-trips.',
   },
   {
     question: 'Can I share a diagram by link?',
@@ -90,10 +90,9 @@ export default function Landing(): ReactNode {
         <span className="site-eyebrow">Free, open source, no account</span>
         <h1>{TITLE}</h1>
         <p className="site-lede">
-          Draw the flowchart, get the Mermaid. Edit the Mermaid, the drawing follows. Paste a
-          diagram from GitHub, a wiki or an AI chat, fix its layout by dragging, and copy plain
-          Mermaid syntax back. Flowcharts on the canvas, sequence diagrams as text with a live
-          preview.
+          Draw the diagram, get the Mermaid. Edit the Mermaid, the drawing follows. Paste a
+          flowchart or a sequence diagram from GitHub, a wiki or an AI chat, fix it by dragging,
+          and copy plain Mermaid syntax back. Both kinds are edited on a canvas.
         </p>
         <p className="site-hero-links">
           <a href={docsUrl('/docs/mermaid')}>Plugin docs</a>
@@ -106,8 +105,8 @@ export default function Landing(): ReactNode {
       <ul className="site-features">
         <li>
           <strong>Two-way sync</strong>
-          Type Mermaid on the left and the diagram re-parses. Drag a flowchart on the right and
-          the code pane shows exactly what would be saved.
+          Type Mermaid on the left and the diagram re-parses. Drag a flowchart node or a sequence
+          message on the right and the code pane shows exactly what would be saved.
         </li>
         <li>
           <strong>Plain Mermaid out</strong>
@@ -162,7 +161,8 @@ export default function Landing(): ReactNode {
             <code>mermaid()</code> in the editor&rsquo;s preset. Dragging a flowchart writes Mermaid
             back with one <code>%% rmk-layout v1</code> comment on the last line, which every other
             renderer ignores and this plugin reads back, so a drawing round-trips without loss. A
-            sequence diagram is edited as text next to its live preview.
+            sequence diagram is edited on its own canvas, which writes plain Mermaid with no
+            comment at all: participants, messages, notes and frames are the syntax.
             <pre className="site-code">
               <code>{EDIT}</code>
             </pre>
@@ -188,9 +188,9 @@ export default function Landing(): ReactNode {
         <ul>
           <li>
             The left pane is Mermaid syntax; the right pane is the same fence as the plugin edits
-            it: a canvas for a flowchart, a live preview with the problems Mermaid would reject
-            for a sequence diagram. Type and it re-parses; drag and the code pane shows exactly
-            what would be saved.
+            it: a drawing canvas for a flowchart, a sequence canvas for a sequence diagram. Type
+            and it re-parses; drag and the code pane shows exactly what would be saved. The chip
+            over the code names the first statement Mermaid itself would reject.
           </li>
           <li>
             Class, state, Gantt and the other Mermaid diagram types are shown as source, so a

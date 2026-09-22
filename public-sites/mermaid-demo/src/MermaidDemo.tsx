@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { compileMarkdown, defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { compileMarkdown } from '@react-markdown-kit/renderer'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
-import { flowchart, mermaid, sequenceDiagram } from '@react-markdown-kit/mermaid/editor'
 import mermaidPackage from '@react-markdown-kit/mermaid/package.json'
 import { docsUrl, sites, useTheme } from '../../shared/Shell'
 import { decodeShareHash, encodeShareHash, mermaidLiveUrl, shareUrl, sourceFromShared } from './share'
 import { DEFAULT_CODE, SAMPLE_GROUPS } from './samples'
+import { KINDS, preset } from './preset'
 import { diagramStatus } from './status'
 import CodePane from './CodePane'
 import ShareDialog from './ShareDialog'
@@ -40,17 +40,6 @@ import '@react-markdown-kit/mermaid/styles.css'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
 import { cn } from '@zuilib/primitives/lib/cn'
-
-// The editor entry's `mermaid()` carries the block editor; the same preset
-// also renders, because the renderer reads only the capabilities it
-// understands. The kinds are the plugin's defaults, listed here so the
-// status chip can name them. `ink` draws hand-drawn strokes on the canvas
-// (index.html loads Recursive, the face the ink style uses); the static SVG
-// the exports, the preview and the renderer draw is the clean style. The
-// block's own textarea is off: the code pane on the left is the source
-// editor for every kind.
-const KINDS = [flowchart(), sequenceDiagram()]
-const preset = defineMarkdownPreset({ extensions: [mermaid({ style: 'ink', sourceEditor: false, kinds: KINDS })] })
 
 const FENCE = /```mermaid\n([\s\S]*?)\n```/
 
@@ -226,12 +215,12 @@ export interface MermaidDemoProps {
  * The Mermaid visual editor, laid out like mermaid.live: a column of cards
  * on the left (the code with line numbers and colours, sample diagrams,
  * actions) and the diagram block on the right with zoom and fullscreen
- * controls: the canvas for a flowchart, the static preview with its
- * problems for a sequence diagram, the source for every other Mermaid
- * type. Typing re-parses the diagram; dragging on the canvas writes
- * Mermaid back with one `%% rmk-layout v1` annotation, and the code pane
- * shows exactly what would be saved. The source also lives in the URL hash
- * (src/share.ts), so a link carries the diagram.
+ * controls: the drawing canvas for a flowchart, the sequence canvas for a
+ * sequence diagram, the source for every other Mermaid type. Typing
+ * re-parses the diagram; a gesture on either canvas writes Mermaid back
+ * (a flowchart's with one `%% rmk-layout v1` annotation), and the code
+ * pane shows exactly what would be saved. The source also lives in the URL
+ * hash (src/share.ts), so a link carries the diagram.
  */
 export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactNode {
   const [code, setCode] = useState(DEFAULT_CODE)

@@ -2,15 +2,20 @@
  * The canvas mounted inside <MarkdownEditor>: the block renders the header
  * and the canvas for a flowchart, the toolbar gains one insert button per
  * kind, labels and options reach the canvas, read-only shows the static
- * output, a lossy flowchart mounts read-only behind its notice, "Copy as
- * Mermaid" copies what a commit would write, and a commit lands in the
- * document before the handler returns.
+ * output, a lossy flowchart mounts read-only behind the block's notice,
+ * "Copy as Mermaid" copies what a commit would write, and a commit lands in
+ * the document before the handler returns.
  */
 import mermaidJs from 'mermaid'
 import { describe, expect, it, vi } from 'vitest'
 import { MarkdownEditor, useMarkdownEditorContext, type MarkdownEditorInstance } from '@react-markdown-kit/editor'
 import { button, click, mount, run, runAsync } from '../../../packages/editor/tests/helpers/mount.js'
-import { mermaid } from '../src/editor.js'
+import { flowchart, mermaid, sequenceDiagram, type DiagramKind } from '../src/editor.js'
+
+/** The kind without `write`: the block edits it as text whatever the built-in gains. */
+function sourceOnly(kind: DiagramKind): DiagramKind {
+  return Object.fromEntries(Object.entries(kind).filter(([key]) => key !== 'write')) as unknown as DiagramKind
+}
 
 const DOCUMENT = `Before.
 
@@ -68,10 +73,10 @@ describe('the diagram canvas in <MarkdownEditor>', () => {
     view.unmount()
   })
 
-  it('inserts the sequence starter as text and focuses the textarea with the caret at the end', () => {
+  it('inserts the starter of a kind without a writer as text and focuses the textarea with the caret at the end', () => {
     let editor!: MarkdownEditorInstance
     const view = mount(
-      <MarkdownEditor extensions={[mermaid()]} defaultValue="Hello.">
+      <MarkdownEditor extensions={[mermaid({ kinds: [flowchart(), sourceOnly(sequenceDiagram())] })]} defaultValue="Hello.">
         <Capture onReady={(value) => (editor = value)} />
       </MarkdownEditor>,
     )
@@ -128,6 +133,8 @@ describe('the diagram canvas in <MarkdownEditor>', () => {
     expect(view.container.querySelector('.rmk-diagram-toolbar')).toBeNull()
     expect(view.container.querySelector('.rmk-diagram-resize')).toBeNull()
     const notice = view.container.querySelector('.rmk-diagram-lossy')
+    // The block owns the notice; it sits above the canvas, not inside it.
+    expect(notice?.closest('.rmk-diagram-canvas')).toBeNull()
     expect(notice?.textContent).toContain('Editing on the canvas cannot keep: subgraph, edge-style')
     const actions = [...(notice?.querySelectorAll('button') ?? [])].map((action) => action.textContent)
     expect(actions).toEqual(['Edit on canvas', 'Edit as text'])

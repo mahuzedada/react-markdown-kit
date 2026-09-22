@@ -70,6 +70,14 @@ Inputs Mermaid.js rejects, which the parser must report as `invalid`, live
 in `tests/sequence-conformance.dom.test.ts`, since every corpus file must
 parse without an invalid problem.
 
+Left out, with the reason:
+
+- "Create and destroy": the writer drops `create` and `destroy` by design
+  (the parser names `create-destroy` in `lossy`), so its written output
+  cannot contain every retained line as the corpus rule requires. The
+  example is checked in `tests/conformance.dom.test.ts` instead: Mermaid.js
+  accepts it and the written output, which parses to an equal model.
+
 ### Added after the platform review
 
 - "Markdown Strings" (`markdown-strings.mmd`): the parser now joins a quoted

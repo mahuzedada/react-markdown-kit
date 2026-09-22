@@ -24,6 +24,11 @@
  * an invalid reserved id here; declarations (`participant`, `activate`,
  * `box`) take any id, as Mermaid's lexer does in its id state. A line with
  * several statements is retained once when any of them is.
+ *
+ * `create` and `destroy` are read for the participant they declare and
+ * retained, but their position among the messages is not modelled, so the
+ * writer drops them and the parse names `create-destroy` in `lossy`: the
+ * canvas then locks until the author accepts that an edit flattens them.
  */
 import { readFrontMatterTitle, splitFrontMatter } from '../front-matter.js'
 import type { DiagramParse, DiagramParseError, DiagramProblem, RetainedLine } from '../kind.js'
@@ -40,6 +45,9 @@ export const SEQUENCE_PROBLEM_CODES = {
   activationUnclosed: 'SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED',
   statementIgnored: 'SEQUENCE_DIAGRAM_STATEMENT_IGNORED',
 } as const
+
+/** The `lossy` name for `create` and `destroy` statements, which the writer cannot keep in place. */
+export const LOSSY_CREATE_DESTROY = 'create-destroy'
 
 const HEADER = 'sequenceDiagram'
 /** The header token, case-sensitive like detection; what follows on the line is the first statement. */
@@ -151,6 +159,7 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
   let headerSeen = false
   let flat = 0
   let accDescrOpen = false
+  let createDestroySeen = false
 
   const problem = (code: string, severity: DiagramProblem['severity'], message: string, line: number): void => {
     if (problems.some((p) => p.code === code && p.line === line)) return
@@ -282,11 +291,13 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
           continue
         }
         ignore(line, text, '"create" is not drawn; the participant is shown from the start.')
+        createDestroySeen = true
         continue
       }
       if (IGNORED_KEYWORD.test(s)) {
         const keyword = (/^[a-z]+/i.exec(s)?.[0] ?? '').toLowerCase()
         ignore(line, text, keyword === 'destroy' ? '"destroy" is not drawn; the participant is shown to the end.' : `"${keyword}" statements are not drawn.`)
+        if (keyword === 'destroy') createDestroySeen = true
         continue
       }
       const acc = ACC.exec(s)
@@ -459,7 +470,7 @@ export function parseSequenceDiagram(source: string): DiagramParse<SequenceModel
     ...(numbering === undefined ? {} : { numbering }),
   }
   const retained = [...retainedByLine.values()].sort((a, b) => a.line - b.line)
-  return { model, problems, retained, lossy: [] }
+  return { model, problems, retained, lossy: createDestroySeen ? [LOSSY_CREATE_DESTROY] : [] }
 }
 
 /** Mermaid's text token: an optional `wrap:`/`nowrap:` prefix, then the text, entities decoded. */

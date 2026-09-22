@@ -335,18 +335,19 @@
 }
 
 /* The block is the pane. The editor, its content, the diagram node, the
-   block and whichever editing component it holds (the canvas with its
-   stage, the source editor with its preview, or the source pre) each
-   stretch to the height they are given, so the block's header and the
-   kit's toolbar sit along the top edge and the drawing takes the rest; the
-   block's own border, background and focus ring are the pane's now. */
+   block and whichever editing component it holds (the flowchart canvas
+   with its stage, the sequence canvas with its viewport, the source editor
+   with its preview, or the source pre) each stretch to the height they are
+   given, so the block's header and the kit's toolbar sit along the top
+   edge and the drawing takes the rest; the block's own border, background
+   and focus ring are the pane's now. */
 .zoomInner :global(.rmk-editor),
 .zoomInner :global(.rmk-editor .rmk-content),
 .zoomInner :global(.rmk-editor .rmk-content > *),
 .zoomInner :global(.rmk-editor .rmk-diagram),
 .zoomInner :global(.rmk-editor .rmk-diagram-block),
 .zoomInner :global(.rmk-editor .rmk-diagram-canvas),
-.zoomInner :global(.rmk-editor .rmk-diagram-stage),
+.zoomInner :global(.rmk-editor .rmk-diagram-stage:not(.rmk-sequence-stage)),
 .zoomInner :global(.rmk-editor .rmk-diagram-source) {
   display: flex;
   flex-direction: column;
@@ -382,7 +383,8 @@
   background: transparent;
 }
 
-.zoomInner :global(.rmk-editor .rmk-diagram-header) {
+.zoomInner :global(.rmk-editor .rmk-diagram-header),
+.zoomInner :global(.rmk-editor .rmk-diagram-toolbar) {
   flex: none;
 }
 
@@ -394,7 +396,23 @@
   flex: 1 0 auto;
 }
 
-/* Source mode (a sequence diagram, or a flowchart switched to text): the
+/* The sequence canvas: the viewport takes the height and scrolls in both
+   directions, and the picture sits centred at its own width, the way
+   mermaid.live shows a diagram. The interaction layer reads the picture's
+   screen matrix, so where the stage sits does not matter to a gesture. */
+.zoomInner :global(.rmk-editor .rmk-sequence-viewport) {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1.5rem;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.zoomInner :global(.rmk-editor .rmk-sequence-stage) {
+  margin: 0 auto;
+}
+
+/* Source mode (a flowchart or a sequence diagram switched to text): the
    preview takes the height and scrolls, the problems stay along the bottom.
    A kind nothing renders shows its source the same way. */
 .zoomInner :global(.rmk-editor .rmk-diagram-preview),

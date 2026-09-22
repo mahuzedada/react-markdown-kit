@@ -84,6 +84,53 @@ export const UI_ICONS = {
   ),
   /** Lossy notice */
   warning: <path d="M10 3.5l7 12.5H3zM10 8.5v3.5M10 14.2v.01" />,
+  /** Sequence canvas: a participant box on its lifeline */
+  participant: (
+    <g>
+      <rect x="4" y="3" width="12" height="6" rx="1.2" />
+      <path d="M10 9v8" />
+    </g>
+  ),
+  /** Sequence canvas: the autonumber badge */
+  autonumber: (
+    <g>
+      <circle cx="10" cy="10" r="6.5" />
+      <path d="M8.5 8.5l1.5-1v5" />
+    </g>
+  ),
+  solidLine: <path d="M3 10h14" />,
+  dottedLine: <path d="M3 10h2.5M8.5 10h3M14.5 10h2.5" />,
+  headArrow: <path d="M3 10h9M11 6l5 4-5 4z" fill="currentColor" />,
+  headOpen: <path d="M3 10h13M12 6l4 4-4 4" />,
+  headCross: <path d="M3 10h9M12 7l5 6M17 7l-5 6" />,
+  headNone: <path d="M3 10h14" />,
+  /** `+`: a bar opens on the receiver */
+  activate: <path d="M4 10h7M13 6.5v7M10.5 10h5" />,
+  /** `-`: a bar closes on the sender */
+  deactivate: <path d="M4 10h7M13 10h3" />,
+  swap: <path d="M4 7h11M12 4l3 3-3 3M16 13H5M8 10l-3 3 3 3" />,
+  noteLeft: (
+    <g>
+      <rect x="3" y="5.5" width="8" height="9" rx="1" />
+      <path d="M15 3v14" />
+    </g>
+  ),
+  noteRight: (
+    <g>
+      <rect x="9" y="5.5" width="8" height="9" rx="1" />
+      <path d="M5 3v14" />
+    </g>
+  ),
+  noteOver: (
+    <g>
+      <rect x="5" y="6" width="10" height="8" rx="1" />
+      <path d="M10 3v3M10 14v3" />
+    </g>
+  ),
+  /** A frame around rows */
+  wrap: <path d="M6 3.5H3.5v13H6M14 3.5h2.5v13H14M6.5 8h7M6.5 12h7" />,
+  section: <path d="M3.5 3.5h13v13h-13zM3.5 10h13" strokeDasharray="2 2" />,
+  unwrap: <path d="M6 3.5H3.5v13H6M14 3.5h2.5v13H14M8 7l4 6M12 7l-4 6" />,
 }
 
 /** A kind's own 24x24 icon path, drawn like the 20x20 glyphs. */

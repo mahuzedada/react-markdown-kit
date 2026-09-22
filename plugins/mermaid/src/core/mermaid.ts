@@ -18,12 +18,13 @@
  * accepted are written unchanged; only an id that is not a valid Mermaid id
  * is rewritten, and canvas-created ids are always valid.
  *
- * Text is quoted and escaped so the parser reads back exactly what the
- * model held and Mermaid.js accepts the line: `#` becomes `#35;` before
- * any other entity is written (so text that already looks like an entity
- * survives), `&` and `%` become `#38;` and `#37;` (so `&quot;` stays text
- * and `%%{` can never open a directive inside a label), and the title is a
- * JSON-quoted YAML scalar whatever characters it holds.
+ * Text is quoted and escaped through the shared `escapeText` of `text.ts`
+ * so the parser reads back exactly what the model held and Mermaid.js
+ * accepts the line: `#` becomes `#35;` in the same pass as every other
+ * entity (so text that already looks like an entity survives), `&` and `%`
+ * become `#38;` and `#37;` (so `&quot;` stays text and `%%{` can never open
+ * a directive inside a label), and the title is a JSON-quoted YAML scalar
+ * whatever characters it holds.
  */
 import {
   isNodeShapeType,
@@ -44,6 +45,7 @@ import {
 import type { RetainedLine } from './kind.js'
 import { isMermaidId, sanitizeMermaidId } from './mermaid-parse.js'
 import { writeFrontMatterTitle } from './front-matter.js'
+import { escapeText } from './text.js'
 
 export type MermaidDirection = 'LR' | 'TD'
 
@@ -235,16 +237,4 @@ function styleLine(box: DrawingShape, id: string): string | null {
   // node isn't repainted by Mermaid's theme
   if (box.fill === DEFAULT_FILL) props.unshift(`fill:${DEFAULT_FILL}`)
   return `style ${id} ${props.join(',')}`
-}
-
-/** Escape user text for a quoted Mermaid string; `#` goes first so no other entity is re-escaped; newlines become `<br/>` */
-function escapeText(text: string): string {
-  return text
-    .replace(/#/g, '#35;')
-    .replace(/&/g, '#38;')
-    .replace(/%/g, '#37;')
-    .replace(/"/g, '#quot;')
-    .replace(/</g, '#lt;')
-    .replace(/>/g, '#gt;')
-    .replace(/\r?\n/g, '<br/>')
 }

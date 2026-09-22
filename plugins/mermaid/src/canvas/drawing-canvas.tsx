@@ -4,21 +4,24 @@
  * text editing and height grip. Local state during a gesture, committed to
  * the Lexical node on release.
  *
- * The node stores Mermaid source, so a commit goes through the flowchart
- * kind's `write` with the lines the parser read through, and what comes
- * back is the model of that source: the canvas remembers it as its last
- * commit so its own echo never resets a gesture. "Copy as Mermaid" writes
+ * The canvas is the block's `flowchart` editor, written to the
+ * `DiagramKindEditorProps` contract: its input is the parse of the node's
+ * source, and a gesture goes out as source through the kind's `write` with
+ * the lines the parser read through. What the block hands back is the
+ * model of that source, so the canvas remembers that model as its last
+ * commit and its own echo never resets a gesture. "Copy as Mermaid" writes
  * the same way, from the same payload, so the clipboard holds what a commit
  * would put in the document: title, description, width and retained lines
- * included. Features the writer cannot keep (`lossy`) lock the canvas
- * behind a notice until the author accepts the loss or switches to text;
- * the first commit can only happen after that.
+ * included. The block owns the lossy lock: it mounts the canvas with
+ * `readOnly` while the author has not accepted the loss, so the first
+ * commit can only happen after that.
  *
- * Commits are discrete, like every other editing path of the package, so
- * the document read right after a gesture is the gesture's result. That is
- * why `updateShapes` applies its updater to a ref instead of React's queue:
- * a discrete update runs Lexical's listeners at once, which must not happen
- * inside a state updater React may run while rendering.
+ * The block commits discretely, like every other editing path of the
+ * package, so the document read right after a gesture is the gesture's
+ * result. That is why `updateShapes` applies its updater to a ref instead
+ * of React's queue: a discrete update runs Lexical's listeners at once,
+ * which must not happen inside a state updater React may run while
+ * rendering.
  */
 import {
   useCallback,
@@ -30,7 +33,6 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactElement,
 } from 'react'
-import { $getNodeByKey, type NodeKey } from 'lexical'
 import { useLexicalEditor } from '@react-markdown-kit/editor/lexical'
 import type { BlockWidth } from '../core/block-width.js'
 import { bindEndpoints, nodeShapeOutline, findNodeShapeAt, createBinding, resolveBindings } from '../core/bindings.js'
@@ -51,9 +53,8 @@ import {
   type Point,
 } from '../core/drawing-data.js'
 import { COLOR_PRESETS, type ColorName } from '../core/skeleton.js'
-import type { DiagramKind, RetainedLine } from '../core/kind.js'
+import type { DiagramKind } from '../core/kind.js'
 import { parseDiagramSource } from '../extension.js'
-import { $isDiagramNode } from '../node/diagram-node.js'
 import { DIAGRAM_FOCUS_COMMAND } from '../node/commands.js'
 import { Icon, UI_ICONS } from './icons.js'
 import {
@@ -66,24 +67,12 @@ import {
   type DragState,
 } from './interaction.js'
 import { useDiagramLabels } from './labels.js'
-import { canvasKindOf, useDiagramOptions } from './options.js'
+import { useDiagramOptions, type DiagramKindEditorProps } from './options.js'
 import { PropertyBar } from './property-bar.js'
 import { GroupSelectionOverlay, MarqueeOverlay, SelectionOverlay } from './selection-overlay.js'
 import { HitArea, ShapeView, slotAt } from './shape-view.js'
 import { TextEditOverlay } from './text-edit-overlay.js'
 import { DiagramToolbar, type Tool } from './toolbar.js'
-
-type Props = Readonly<{
-  nodeKey: NodeKey
-  /** The model of the node's source. */
-  data: DrawingData
-  /** Lines the parser read through; the writer re-emits them. */
-  retained: readonly RetainedLine[]
-  /** Features a canvas edit cannot keep; non-empty locks the canvas until acknowledged. */
-  lossy: readonly string[]
-  /** "Edit as text" in the lossy notice. */
-  onEditAsText: () => void
-}>
 
 const MIN_HEIGHT = 120
 const MAX_HEIGHT = 1200
@@ -140,12 +129,11 @@ function computePaths(shapes: readonly DrawingShape[]): Map<string, Point[]> {
   return paths
 }
 
-export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: Props): ReactElement {
-  const { editor, readOnly } = useLexicalEditor()
-  // A lossy source is shown, not edited, until the author accepts the loss.
-  const [acknowledged, setAcknowledged] = useState(false)
-  const locked = lossy.length > 0 && !acknowledged
-  const isEditable = !readOnly && !locked
+export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSource }: DiagramKindEditorProps): ReactElement {
+  const { editor } = useLexicalEditor()
+  const isEditable = !readOnly
+  const data = parse.model as DrawingData
+  const { retained } = parse
 
   const [shapes, setShapes] = useState<readonly DrawingShape[]>(data.shapes)
   const [canvasHeight, setCanvasHeight] = useState(data.canvasHeight)
@@ -154,6 +142,8 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
   const ink = options.style === 'ink'
   const optionsRef = useRef(options)
   optionsRef.current = options
+  const kindRef = useRef(kind as DiagramKind<DrawingData>)
+  kindRef.current = kind as DiagramKind<DrawingData>
   const retainedRef = useRef(retained)
   retainedRef.current = retained
   const labels = useDiagramLabels()
@@ -264,11 +254,9 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
   )
 
   // The source of a payload through the kind's writer, with the lines the
-  // parser read through; undefined when no registered kind writes.
-  const writeSource = useCallback((payload: DrawingData): { kind: DiagramKind; written: string } | undefined => {
-    const kind = canvasKindOf(optionsRef.current.kinds)
-    const written = (kind as DiagramKind<DrawingData> | undefined)?.write?.(payload, { retained: retainedRef.current })
-    return kind === undefined || written === undefined ? undefined : { kind, written }
+  // parser read through; undefined when the kind does not write.
+  const writeSource = useCallback((payload: DrawingData): string | undefined => {
+    return kindRef.current.write?.(payload, { retained: retainedRef.current })
   }, [])
 
   const commit = useCallback(
@@ -276,25 +264,16 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
       const payload = payloadOf(nextShapes, options)
       const json = serializeDrawingData(payload)
       if (json === lastCommittedRef.current) return
-      const source = writeSource(payload)
-      if (source === undefined) return
-      const { kind, written } = source
-      // The node stores source: write it, and remember the model that
-      // source parses to, which is what comes back as `data`.
-      const { kinds } = optionsRef.current
-      const reparsed = parseDiagramSource(kinds, kind.name, written)
+      const written = writeSource(payload)
+      if (written === undefined) return
+      // The node stores source: remember the model that source parses to,
+      // which is what comes back as the parse, then hand the block the text.
+      const reparsed = parseDiagramSource(optionsRef.current.kinds, kindRef.current.name, written)
       lastCommittedRef.current =
         reparsed !== undefined && !('error' in reparsed) ? serializeDrawingData(reparsed.model as DrawingData) : json
-      // Discrete, so the document holds the gesture when the handler returns.
-      editor.update(
-        () => {
-          const node = $getNodeByKey(nodeKey)
-          if ($isDiagramNode(node) && node.getSource() !== written) node.setSource(written, kinds)
-        },
-        { discrete: true },
-      )
+      commitSource(written)
     },
-    [editor, nodeKey, payloadOf, writeSource],
+    [commitSource, payloadOf, writeSource],
   )
 
   // Updates chain through `shapesRef`, so consecutive calls in one handler
@@ -741,10 +720,10 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
 
   // What a commit of the current state would write, retained lines and all.
   const copyMermaid = useCallback(async () => {
-    const source = writeSource(payloadOf(shapesRef.current))
-    if (source === undefined) return false
+    const written = writeSource(payloadOf(shapesRef.current))
+    if (written === undefined) return false
     try {
-      await navigator.clipboard.writeText(source.written)
+      await navigator.clipboard.writeText(written)
       return true
     } catch {
       return false
@@ -768,20 +747,6 @@ export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: 
         editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, null)
       }}
     >
-      {locked && !readOnly && (
-        <div className="rmk-diagram-lossy" role="status">
-          <Icon>{UI_ICONS.warning}</Icon>
-          <span className="rmk-diagram-lossy-text">
-            {labels.lossyNotice} {lossy.join(', ')}
-          </span>
-          <button type="button" className="rmk-diagram-lossy-action" onClick={() => setAcknowledged(true)}>
-            {labels.editOnCanvas}
-          </button>
-          <button type="button" className="rmk-diagram-lossy-action" onClick={onEditAsText}>
-            {labels.editAsText}
-          </button>
-        </div>
-      )}
       {isEditable && (
         <div className="rmk-diagram-toolbar" onPointerDown={(e) => e.stopPropagation()}>
           <DiagramToolbar
