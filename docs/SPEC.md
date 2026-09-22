@@ -13,6 +13,7 @@
 Companion documents in this folder:
 
 - `STYLING.md` — the styling-independence contract (no ZUI, no Tailwind, no design system). Binding on all three packages.
+- `MERMAID_PLATFORM.md` — the diagram-kind platform of `@react-markdown-kit/mermaid`: detection, kinds, the `sequenceDiagram` kind, uniform editing, the host fallback and theme tokens.
 - `AUDIT.md` — CORE-01, the audit of the prior ZUI editor whose gaps this specification exists to fix.
 - `COMPATIBILITY.md` — the generated react-markdown compatibility matrix.
 
