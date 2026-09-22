@@ -5,7 +5,7 @@
  * the items they cover, and the whole picture shifted to the margin.
  */
 import { describe, expect, it } from 'vitest'
-import { layoutSequence, SEQUENCE_METRICS, type SequenceLayout } from '../src/core/sequence/layout.js'
+import { insertionAt, layoutSequence, rowAt, sectionAt, SEQUENCE_METRICS, type SequenceLayout } from '../src/core/sequence/layout.js'
 import type { SequenceModel } from '../src/core/sequence/model.js'
 import { parseSequenceDiagram } from '../src/core/sequence/parse.js'
 
@@ -225,5 +225,53 @@ describe('layoutSequence: numbering and determinism', () => {
     expect(l.columns).toEqual([])
     expect(l.width).toBeGreaterThan(0)
     expect(l.height).toBeGreaterThan(0)
+  })
+})
+
+describe('layoutSequence: sections under a pointer', () => {
+  // Flat rows: alt 0, one 1, two 2, loop 3, three 4, four 5; the middle section is empty.
+  const source = 'sequenceDiagram\n    alt a\n        A->>B: one\n    else\n    else b\n        B->>A: two\n        loop l\n            A->>B: three\n        end\n    end\n    A->>B: four'
+
+  it('sectionAt finds the innermost section holding y, with the sections above it, and whether y is under its last row', () => {
+    const l = layout(source)
+    const alt = l.frames[0]!
+    const loop = l.frames[1]!
+    expect(sectionAt(l, alt.y - 1)).toBeUndefined()
+    expect(sectionAt(l, alt.y + alt.height + 1)).toBeUndefined()
+    // The tab area of the first section is above its first row.
+    expect(sectionAt(l, alt.y + 1)).toEqual({ trail: [{ index: 0, section: 0 }], belowLastRow: false })
+    // Between `one` and the first divider: under the last row of section 0.
+    expect(sectionAt(l, (l.rows[1]! + alt.sections[1]!.y) / 2)).toEqual({ trail: [{ index: 0, section: 0 }], belowLastRow: true })
+    // The empty middle section is under its (missing) last row everywhere.
+    expect(sectionAt(l, (alt.sections[1]!.y + alt.sections[2]!.y) / 2)).toEqual({ trail: [{ index: 0, section: 1 }], belowLastRow: true })
+    expect(sectionAt(l, alt.sections[1]!.y)).toEqual({ trail: [{ index: 0, section: 1 }], belowLastRow: true })
+    // Section 2 above `two`, then inside the nested loop, then the loop's bottom pad, then the alt's bottom pad.
+    expect(sectionAt(l, l.rows[2]! - 1)).toEqual({ trail: [{ index: 0, section: 2 }], belowLastRow: false })
+    expect(sectionAt(l, loop.y + 1)).toEqual({ trail: [{ index: 0, section: 2 }, { index: 3, section: 0 }], belowLastRow: false })
+    expect(sectionAt(l, loop.y + loop.height - 1)).toEqual({ trail: [{ index: 0, section: 2 }, { index: 3, section: 0 }], belowLastRow: true })
+    expect(sectionAt(l, loop.y + loop.height + 1)).toEqual({ trail: [{ index: 0, section: 2 }], belowLastRow: true })
+    expect(sectionAt(l, alt.y + alt.height)).toEqual({ trail: [{ index: 0, section: 2 }], belowLastRow: true })
+  })
+
+  it('insertionAt gives the flat row above a section\'s last row and the end of the section under it', () => {
+    const l = layout(source)
+    const alt = l.frames[0]!
+    const loop = l.frames[1]!
+    expect(insertionAt(l, alt.y - 1)).toBe(0)
+    expect(insertionAt(l, alt.y + 1)).toBe(1)
+    expect(insertionAt(l, (l.rows[1]! + alt.sections[1]!.y) / 2)).toEqual({ trail: [{ index: 0, section: 0 }], position: 1 })
+    expect(insertionAt(l, (alt.sections[1]!.y + alt.sections[2]!.y) / 2)).toEqual({ trail: [{ index: 0, section: 1 }], position: 0 })
+    expect(insertionAt(l, l.rows[2]! - 1)).toBe(2)
+    expect(insertionAt(l, loop.y + 1)).toBe(4)
+    expect(insertionAt(l, loop.y + loop.height - 1)).toEqual({ trail: [{ index: 0, section: 2 }, { index: 3, section: 0 }], position: 1 })
+    expect(insertionAt(l, loop.y + loop.height + 1)).toEqual({ trail: [{ index: 0, section: 2 }], position: 2 })
+    expect(insertionAt(l, alt.y + alt.height + 1)).toBe(5)
+    // Where the flat row is used it is `rowAt`, and outside every frame it always is.
+    const plain = layout('sequenceDiagram\n    A->>B: one\n    B->>A: two')
+    for (const y of [0, plain.rows[0]! - 1, plain.rows[0]!, plain.rows[1]! + 1, plain.height]) expect(insertionAt(plain, y)).toBe(rowAt(plain, y))
+    // An empty frame is one section under its last row.
+    const empty = layout('sequenceDiagram\n    participant A\n    opt\n    end')
+    const frame = empty.frames[0]!
+    expect(insertionAt(empty, frame.y + frame.height / 2)).toEqual({ trail: [{ index: 0, section: 0 }], position: 0 })
   })
 })

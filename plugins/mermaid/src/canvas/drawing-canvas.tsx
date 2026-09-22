@@ -129,6 +129,18 @@ function computePaths(shapes: readonly DrawingShape[]): Map<string, Point[]> {
   return paths
 }
 
+/**
+ * True for a key pressed on one of the canvas's own controls (the tool row,
+ * the property bar, a select or a field) rather than on the root: Enter
+ * activates that control and Backspace edits it, so the canvas leaves the
+ * key alone.
+ */
+export function isControlKey(e: KeyboardEvent, root: HTMLElement): boolean {
+  const target = e.target
+  if (!(target instanceof Element) || target === root) return false
+  return target.closest('button, select, input, textarea, [role="toolbar"]') !== null
+}
+
 export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSource }: DiagramKindEditorProps): ReactElement {
   const { editor } = useLexicalEditor()
   const isEditable = !readOnly
@@ -214,20 +226,24 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
     }
   }, [data])
 
-  // Scaled canvases need the HTML overlays and the height grip scaled too
+  // Scaled canvases need the HTML overlays and the height grip scaled too.
+  // The width is measured untransformed (`offsetWidth`, never a client
+  // rect): the overlays sit inside any zoom transform a host puts around
+  // the editor, so that transform must not scale them a second time. The
+  // surface is as wide as its logical width, capped by the stage.
   useEffect(() => {
-    const svg = svgRef.current
-    if (!logicalWidth || !svg || typeof ResizeObserver === 'undefined') {
+    const stage = stageRef.current
+    if (!logicalWidth || !stage || typeof ResizeObserver === 'undefined') {
       setScale(1)
       return
     }
     const update = (): void => {
-      const rect = svg.getBoundingClientRect()
-      setScale(rect.width > 0 ? rect.width / logicalWidth : 1)
+      const width = Math.min(stage.offsetWidth, logicalWidth)
+      setScale(width > 0 ? width / logicalWidth : 1)
     }
     update()
     const observer = new ResizeObserver(update)
-    observer.observe(svg)
+    observer.observe(stage)
     return () => observer.disconnect()
   }, [logicalWidth])
 
@@ -582,7 +598,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
     const root = rootRef.current
     if (!root || !isEditable) return
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (editingRef.current) return
+      if (editingRef.current || isControlKey(e, root)) return
       const ids = selectedRef.current
       if ((e.key === 'Delete' || e.key === 'Backspace') && ids.size) {
         e.preventDefault()

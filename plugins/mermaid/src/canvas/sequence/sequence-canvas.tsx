@@ -16,12 +16,14 @@
  * block's echo of the commit never resets a selection. A structural change
  * is one history entry; an inline label edit commits on every keystroke
  * with `merge`, so a burst of typing undoes as one step under the block's
- * 300 ms rule. The block owns the lossy lock: with `readOnly` the canvas
- * draws the picture and nothing else.
+ * 300 ms rule, and Escape takes the burst back through Lexical's undo, so
+ * a cancelled edit leaves no entry behind. The block owns the lossy lock:
+ * with `readOnly` the canvas draws the picture and nothing else.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactElement, type ReactNode } from 'react'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime'
+import { UNDO_COMMAND } from 'lexical'
 import { useLexicalEditor } from '@react-markdown-kit/editor/lexical'
 import { FONT_SIZE, LINE_HEIGHT, SMALL_FONT_SIZE, type Point } from '../../core/drawing-data.js'
 import { textBoxSize, type Rect } from '../../core/geometry.js'
@@ -30,6 +32,7 @@ import {
   columnAt,
   columnRect,
   frameTabWidth,
+  insertionAt,
   layoutSequence,
   sectionRect,
   SEQUENCE_METRICS,
@@ -63,13 +66,16 @@ import {
   unwrapFrame,
   wrapInFrame,
   type FrameKind,
+  type Insertion,
+  type RenameParticipantOptions,
 } from '../../core/sequence/operations.js'
 import { parseDiagramSource } from '../../extension.js'
 import { DIAGRAM_FOCUS_COMMAND } from '../../node/commands.js'
+import { isControlKey } from '../drawing-canvas.js'
 import { CLICK_TOLERANCE } from '../interaction.js'
 import { useDiagramLabels } from '../labels.js'
 import { useDiagramOptions, type DiagramKindEditorProps } from '../options.js'
-import { gapAt, hitAt, insertionY, itemRect, rowAtY } from './hit.js'
+import { gapAt, hitAt, insertionPointY, insertionY, itemRect, rowAtY, sameInsertion } from './hit.js'
 import { LabelOverlay } from './label-overlay.js'
 import { selectionRange, type SequenceEditing, type SequenceSelection } from './selection.js'
 import { SequencePropertyBar, type SequencePropertyActions } from './sequence-property-bar.js'
@@ -77,16 +83,29 @@ import { SequenceToolbar } from './sequence-toolbar.js'
 
 const M = SEQUENCE_METRICS
 const LINE_H = FONT_SIZE * LINE_HEIGHT
+/** The block's rule: a commit this close to the previous one merges into its history entry when asked. */
+const HISTORY_MERGE_WINDOW = 300
 
 type Drag =
   | { readonly mode: 'column'; readonly column: number; readonly origin: Point; readonly target: number; readonly moved: boolean }
   | { readonly mode: 'row'; readonly index: number; readonly origin: Point; readonly row: number; readonly moved: boolean }
-  | { readonly mode: 'draw'; readonly column: number; readonly origin: Point; readonly current: Point; readonly target: number | undefined; readonly row: number }
+  | { readonly mode: 'draw'; readonly column: number; readonly origin: Point; readonly current: Point; readonly target: number | undefined; readonly at: Insertion }
   | { readonly mode: 'extend'; readonly index: number; readonly origin: Point; readonly current: Point; readonly delta: number }
 
 interface Gap {
   readonly column: number
-  readonly row: number
+  readonly at: Insertion
+}
+
+/**
+ * The commits of one inline edit: the model shown before the first, the
+ * history entries the commits made under the block's 300 ms rule
+ * (mirrored here from the same clock) and when the last one was.
+ */
+interface EditBurst {
+  readonly start: SequenceModel
+  entries: number
+  lastAt: number
 }
 
 function classes(...names: readonly (string | false | null | undefined)[]): string {
@@ -132,8 +151,10 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
   const [editing, setEditing] = useState<SequenceEditing | null>(null)
   const editingRef = useRef(editing)
   editingRef.current = editing
-  /** True once the current inline edit has committed a change: later ones merge into it, never into the entry before. */
-  const editBurstRef = useRef(false)
+  /** Set once the current inline edit has committed a change: later ones merge into it, never into the entry before. */
+  const editBurstRef = useRef<EditBurst | null>(null)
+  /** The rename options for the participant edit that is open, decided when it opened. */
+  const renameRef = useRef<RenameParticipantOptions | undefined>(undefined)
   const [drag, setDrag] = useState<Drag | null>(null)
   const dragRef = useRef<Drag | null>(null)
   const [gap, setGap] = useState<Gap | null>(null)
@@ -147,6 +168,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
   optionsRef.current = options
 
   const rootRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
   const layerRef = useRef<SVGSVGElement>(null)
 
   const layout = useMemo(() => layoutSequence(model), [model])
@@ -164,22 +186,26 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
     setModel(incoming)
     setSelection(null)
     setEditing(null)
+    editBurstRef.current = null
   }, [incoming])
 
-  // The HTML overlay (the inline field) scales with the picture.
+  // The HTML overlay (the inline field) scales with the picture. The stage
+  // is measured untransformed (`offsetWidth`, never a client rect): the
+  // overlay sits inside any zoom transform a host puts around the editor,
+  // so that transform must not scale it a second time.
   useEffect(() => {
-    const layer = layerRef.current
-    if (!layer || typeof ResizeObserver === 'undefined') {
+    const stage = stageRef.current
+    if (!stage || typeof ResizeObserver === 'undefined') {
       setScale(1)
       return
     }
     const update = (): void => {
-      const rect = layer.getBoundingClientRect()
-      setScale(rect.width > 0 ? rect.width / layout.width : 1)
+      const width = stage.offsetWidth
+      setScale(width > 0 ? width / layout.width : 1)
     }
     update()
     const observer = new ResizeObserver(update)
-    observer.observe(layer)
+    observer.observe(stage)
     return () => observer.disconnect()
   }, [layout.width])
 
@@ -235,6 +261,18 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
   const focusRoot = (): void => rootRef.current?.focus({ preventScroll: true })
 
   /**
+   * Opens a participant's label for editing. Whether the id follows the
+   * label is decided here, once: the edit commits every keystroke, and a
+   * decision per keystroke would stop following as soon as an intermediate
+   * label was taken or a keyword.
+   */
+  const editParticipant = (column: number): void => {
+    const participant = modelRef.current.participants[column]
+    renameRef.current = participant === undefined ? undefined : { follow: participant.label === participant.id, originalId: participant.id }
+    setEditing({ target: 'participant', column })
+  }
+
+  /**
    * Selects an item where an operation's result put it. The index is read
    * off the operation's own model, since what `apply` then shows is the
    * reparse of the written text, same rows but new objects.
@@ -280,7 +318,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
         return
       case 'lifeline':
         setSelection(null)
-        updateDrag({ mode: 'draw', column: hit.column, origin: point, current: point, target: undefined, row: rowAtY(current, point.y) })
+        updateDrag({ mode: 'draw', column: hit.column, origin: point, current: point, target: undefined, at: insertionAt(current, point.y) })
         return
     }
   }
@@ -292,7 +330,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
     const active = dragRef.current
     if (active === null) {
       const next = gapAt(current, point.x, point.y)
-      setGap((previous) => (previous?.column === next?.column && previous?.row === next?.row ? previous : (next ?? null)))
+      setGap((previous) => (previous !== null && next !== undefined && previous.column === next.column && sameInsertion(previous.at, next.at) ? previous : (next ?? null)))
       return
     }
     switch (active.mode) {
@@ -342,7 +380,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
         const from = model.participants[active.column]
         const to = target === undefined ? undefined : model.participants[target]
         if (from === undefined || to === undefined) return
-        const added = addMessage(model, from.id, to.id, active.row)
+        const added = addMessage(model, from.id, to.id, active.at)
         apply(added.model)
         setSelection({ kind: 'item', index: added.index })
         setEditing({ target: 'item', index: added.index })
@@ -366,7 +404,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
     if (hit === undefined) return
     if (hit.kind === 'participant') {
       setSelection({ kind: 'participant', column: hit.column })
-      setEditing({ target: 'participant', column: hit.column })
+      editParticipant(hit.column)
     } else if (hit.kind === 'message' || hit.kind === 'note') {
       setSelection({ kind: 'item', index: hit.index })
       setEditing({ target: 'item', index: hit.index })
@@ -380,7 +418,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
     const current = selectionRef.current
     if (current === null) return
     if (current.kind === 'participant') {
-      setEditing({ target: 'participant', column: current.column })
+      editParticipant(current.column)
       return
     }
     const item = flattenItems(modelRef.current.items)[current.index]
@@ -403,12 +441,13 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
   }, [apply])
 
   // Native listener: the keys are handled (and stopped) before they bubble
-  // to Lexical's root, which owns the same keys for the document.
+  // to Lexical's root, which owns the same keys for the document. A key on
+  // one of the canvas's own controls is that control's.
   useEffect(() => {
     const root = rootRef.current
     if (!root || !editable) return
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (editingRef.current) return
+      if (editingRef.current || isControlKey(e, root)) return
       const current = selectionRef.current
       if ((e.key === 'Delete' || e.key === 'Backspace') && current !== null) {
         e.preventDefault()
@@ -431,7 +470,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
     const model = modelRef.current
     const participant = model.participants[at.column]
     if (participant === undefined) return
-    const added = addNote(model, participant.id, at.row)
+    const added = addNote(model, participant.id, at.at)
     apply(added.model)
     setGap(null)
     setSelection({ kind: 'item', index: added.index })
@@ -518,24 +557,57 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
 
   // The first change of an inline edit is a new history entry, so it never
   // folds into the structural change that opened the field; the rest of
-  // the burst merges into it under the block's 300 ms rule.
+  // the burst merges into it under the block's 300 ms rule. The entries
+  // the burst makes are counted here by the same rule, for a cancel.
   const onEditChange = (value: string): void => {
     const target = editingRef.current
     const model = modelRef.current
     if (target === null) return
     const next =
       target.target === 'participant'
-        ? renameOf(model, target.column, value)
+        ? renameOf(model, target.column, value, renameRef.current)
         : target.target === 'item'
           ? setText(model, target.index, value)
           : setSectionLabel(model, target.index, target.section, value)
     if (next === model) return
-    apply(next, editBurstRef.current ? { merge: true } : undefined)
-    editBurstRef.current = true
+    const now = Date.now()
+    const burst = editBurstRef.current
+    if (burst === null) {
+      editBurstRef.current = { start: model, entries: 1, lastAt: now }
+      apply(next)
+      return
+    }
+    if (now - burst.lastAt >= HISTORY_MERGE_WINDOW) burst.entries += 1
+    burst.lastAt = now
+    apply(next, { merge: true })
   }
 
-  const onEditFinish = (): void => {
-    editBurstRef.current = false
+  /**
+   * Escape: the burst's entries are undone, so the document, the picture
+   * and the history are as they were when the field opened, and nothing
+   * is committed. The undo's echo is what this canvas remembers, so the
+   * selection survives; with nothing typed there is nothing to take back.
+   */
+  const cancelEdit = (): void => {
+    const burst = editBurstRef.current
+    if (burst === null) return
+    modelRef.current = burst.start
+    lastCommittedRef.current = serialize(burst.start)
+    setModel(burst.start)
+    for (let i = 0; i < burst.entries; i += 1) {
+      editor.update(
+        () => {
+          editor.dispatchCommand(UNDO_COMMAND, undefined)
+        },
+        { discrete: true },
+      )
+    }
+  }
+
+  const onEditFinish = (cancelled: boolean): void => {
+    if (cancelled) cancelEdit()
+    editBurstRef.current = null
+    renameRef.current = undefined
     setEditing(null)
     focusRoot()
   }
@@ -572,7 +644,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
       )}
 
       <div className="rmk-sequence-viewport">
-        <div className="rmk-diagram-stage rmk-sequence-stage" style={{ width: layout.width, maxWidth: '100%' }}>
+        <div ref={stageRef} className="rmk-diagram-stage rmk-sequence-stage" style={{ width: layout.width, maxWidth: '100%' }}>
           <div className="rmk-sequence-picture" aria-label={model.title ?? labels.sequenceCanvas}>
             {picture}
           </div>
@@ -629,9 +701,9 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
   )
 }
 
-function renameOf(model: SequenceModel, column: number, label: string): SequenceModel {
+function renameOf(model: SequenceModel, column: number, label: string, options: RenameParticipantOptions | undefined): SequenceModel {
   const participant = model.participants[column]
-  return participant === undefined ? model : renameParticipant(model, participant.id, label)
+  return participant === undefined ? model : renameParticipant(model, participant.id, label, options)
 }
 
 function editingKey(editing: SequenceEditing): string {
@@ -763,7 +835,7 @@ function DragFeedback({ layout, drag }: { layout: SequenceLayout; drag: Drag }):
     case 'draw': {
       const from = layout.columns[drag.column]
       if (from === undefined) return null
-      const y = insertionY(layout, drag.row)
+      const y = insertionPointY(layout, drag.at)
       const target = drag.target === undefined ? undefined : layout.columns[drag.target]
       return (
         <g className="rmk-diagram-selection rmk-sequence-drop">
@@ -783,7 +855,7 @@ function DragFeedback({ layout, drag }: { layout: SequenceLayout; drag: Drag }):
 function AddNoteAffordance({ layout, gap, label, onAdd }: { layout: SequenceLayout; gap: Gap; label: string; onAdd: () => void }): ReactElement | null {
   const column = layout.columns[gap.column]
   if (column === undefined) return null
-  const y = insertionY(layout, gap.row)
+  const y = insertionPointY(layout, gap.at)
   return (
     <g
       className="rmk-diagram-selection rmk-sequence-add-note"

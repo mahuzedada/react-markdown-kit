@@ -12,6 +12,7 @@ import {
   columnBottomRect,
   columnRect,
   frameBottomRect,
+  insertionAt,
   messageHitRects,
   messageRect,
   noteRect,
@@ -21,6 +22,8 @@ import {
   type LayoutFrame,
   type SequenceLayout,
 } from '../../core/sequence/layout.js'
+import { flattenItems } from '../../core/sequence/model.js'
+import type { Insertion } from '../../core/sequence/operations.js'
 
 export type Hit =
   | { readonly kind: 'participant'; readonly column: number }
@@ -89,6 +92,38 @@ export function insertionY(layout: SequenceLayout, row: number): number {
   return layout.lifelineTop + M.row / 2
 }
 
+/**
+ * The y an item inserted at `at` would sit at: `insertionY` for a flat row;
+ * for the end of a frame section, between the section's last row and its
+ * bottom, or the middle of an empty section.
+ */
+export function insertionPointY(layout: SequenceLayout, at: Insertion): number {
+  if (typeof at === 'number') return insertionY(layout, at)
+  const M = SEQUENCE_METRICS
+  const step = at.trail[at.trail.length - 1]
+  const frame = step === undefined ? undefined : layout.frames.find((f) => f.index === step.index)
+  if (step === undefined || frame === undefined) return insertionY(layout, layout.rows.length)
+  const section = frame.sections[step.section]
+  const top = section === undefined ? frame.y : step.section === 0 ? frame.y + (frame.frame.kind === 'rect' ? M.row / 2 : M.frameLabelHeight) : section.y
+  const bottom = frame.sections[step.section + 1]?.y ?? frame.y + frame.height
+  const last = lastRowOf(layout, frame, step.section)
+  return last === undefined ? (top + bottom) / 2 : (last + bottom) / 2
+}
+
+/** The anchor y of the last row inside a frame section, nested frames included; undefined for an empty section. */
+function lastRowOf(layout: SequenceLayout, frame: LayoutFrame, section: number): number | undefined {
+  let base = frame.index + 1
+  for (let i = 0; i < section; i += 1) base += flattenItems(frame.frame.sections[i]?.items ?? []).length
+  const count = flattenItems(frame.frame.sections[section]?.items ?? []).length
+  return count === 0 ? undefined : layout.rows[base + count - 1]
+}
+
+/** True when two insertion points name the same place. */
+export function sameInsertion(a: Insertion, b: Insertion): boolean {
+  if (typeof a === 'number' || typeof b === 'number') return a === b
+  return a.position === b.position && a.trail.length === b.trail.length && a.trail.every((step, i) => step.index === b.trail[i]?.index && step.section === b.trail[i]?.section)
+}
+
 /** The rect of the item at a flat index, for the selection outline. */
 export function itemRect(layout: SequenceLayout, index: number): Rect | undefined {
   const message = layout.messages.find((m) => m.index === index)
@@ -101,15 +136,16 @@ export function itemRect(layout: SequenceLayout, index: number): Rect | undefine
 
 /**
  * The lifeline gap under a hovering pointer, where a note can be added:
- * the column whose lifeline is within reach and the insertion row the
- * pointer is in, unless the pointer is on a message or note already.
+ * the column whose lifeline is within reach and where the pointer inserts
+ * (the flat row it is in, or the end of the frame section it is under
+ * every row of), unless the pointer is on a message or note already.
  */
-export function gapAt(layout: SequenceLayout, x: number, y: number): { readonly column: number; readonly row: number } | undefined {
+export function gapAt(layout: SequenceLayout, x: number, y: number): { readonly column: number; readonly at: Insertion } | undefined {
   const hit = hitAt(layout, x, y)
   if (hit !== undefined && hit.kind !== 'lifeline') return undefined
   const column = lifelineAt(layout, x, y)
   if (column === undefined) return undefined
-  return { column, row: rowAtY(layout, y) }
+  return { column, at: insertionAt(layout, y) }
 }
 
 /** `rowAt` of the layout, kept here so the canvas has one import for pointer geometry. */

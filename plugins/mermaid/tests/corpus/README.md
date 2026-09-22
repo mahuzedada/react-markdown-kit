@@ -90,3 +90,18 @@ Left out, with the reason:
   unquoted, keywords as ids, trailing comments, top-level `direction`) live in
   `tests/flowchart-kind.dom.test.ts`, which asserts both what Mermaid accepts
   and what it rejects, not in this corpus.
+
+### Added after the second review (sequence parser and writer)
+
+Five more sequence regression inputs, each accepted by Mermaid.js and once
+read or written wrongly (review findings S7, S8, S10 and S17):
+
+- `actor-hash.mmd`: a bare `#` inside a message actor and a note target is
+  part of the id (`A#1`), as Mermaid's actor token reads it.
+- `alias-config-text.mmd`: `@{` after ` as ` is the alias text, not
+  participant config.
+- `config-alias.mmd`: an alias after a `@{ }` config; the config line is
+  retained and the alias kept.
+- `cross-uppercase.mmd`: `-X` and `--X` are the cross arrows.
+- `email-ids.mmd`: ids holding `@` in messages, which Mermaid accepts in a
+  message but never in a declaration; the writer must not declare them.

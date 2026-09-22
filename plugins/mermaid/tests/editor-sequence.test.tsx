@@ -2,9 +2,15 @@
  * The sequence canvas inside <MarkdownEditor> (docs/MERMAID_PLATFORM.md
  * section 9.5): every gesture through pointer and keyboard events in jsdom,
  * each asserting the Mermaid written into the document; one history entry
- * per structural change and merged entries for inline typing; byte-exact
- * write-back while untouched; the `create-destroy` lock; read-only
- * rendering; and `mermaid({ editors })` replacing the built-in canvas.
+ * per structural change and merged entries for inline typing, a cancelled
+ * edit undone without a trace; byte-exact write-back while untouched; the
+ * `create-destroy` lock; read-only rendering; and `mermaid({ editors })`
+ * replacing the built-in canvas.
+ *
+ * The writer declares only the participants a declaration is needed for
+ * (an alias, an actor, a box, an unused one, or the column order), so a
+ * fence whose messages introduce its participants is written without
+ * `participant` lines.
  *
  * jsdom has no pointer events and no layout, so pointer events are mouse
  * events by another name and the layer's screen matrix is the identity:
@@ -52,7 +58,36 @@ function open(body: string, options: MermaidEditorOptions = {}, readOnly = false
 afterEach(() => {
   for (const view of views.splice(0)) view.unmount()
   vi.useRealTimers()
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
+
+/** Lexical's root, whose listeners own the document's keys, clipboard and composition. */
+function lexicalRoot(view: Mounted): HTMLElement {
+  return query<HTMLElement>(view, '.rmk-content > [contenteditable]')
+}
+
+/** Events of an inline field that the source textarea stops as well; `input` bubbles on for React's `onChange`. */
+const FIELD_EVENTS = ['keyup', 'keypress', 'beforeinput', 'paste', 'cut', 'copy', 'drop', 'compositionstart', 'compositionupdate', 'compositionend'] as const
+
+/**
+ * A stage 200 px wide inside a host zoom that doubles every client rect:
+ * `offsetWidth` is the untransformed width, the rect the transformed one.
+ */
+function zoomedStage(stageClass: string): void {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    },
+  )
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+    return this.classList.contains(stageClass) ? 200 : 0
+  })
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 0, width: 400, height: 0, toJSON: () => ({}) } as DOMRect)
+}
 
 function fence(editor: MarkdownEditorInstance): string {
   const match = /```mermaid\n([\s\S]*?)\n```/.exec(editor.getMarkdown())
@@ -152,9 +187,10 @@ describe('the sequence canvas: mounting', () => {
     expect(editor().getMarkdown()).toBe(doc(body))
   })
 
-  it('renders the picture only in a read-only editor', () => {
+  it('never mounts the canvas in a read-only editor: the block renders the kind output instead', () => {
     const { view } = open(SIMPLE, {}, true)
     expect(view.container.querySelector('.rmk-sequence-canvas')).toBeNull()
+    expect(view.container.querySelector('.rmk-diagram-canvas')).toBeNull()
     expect(view.container.querySelector('.rmk-diagram-toolbar')).toBeNull()
     expect(query(view, '.rmk-diagram-preview svg').getAttribute('role')).toBe('img')
   })
@@ -178,7 +214,7 @@ describe('the sequence canvas: mounting', () => {
     expect(editor().getMarkdown()).toBe(doc(body))
     // The first edit flattens create/destroy, as the notice said.
     click(tool(view, 'Autonumber'))
-    expect(statements(editor())).toEqual(['autonumber', 'participant A', 'participant B', 'participant C', 'A->>B: one', 'B->>C: two'])
+    expect(statements(editor())).toEqual(['autonumber', 'A->>B: one', 'B->>C: two'])
   })
 
   it('is replaced by name through mermaid({ editors })', () => {
@@ -207,18 +243,20 @@ describe('the sequence canvas: mounting', () => {
 describe('the sequence canvas: participants', () => {
   it('"Add participant" and "Add actor" append a fresh participant, select it, and each is one history entry', () => {
     const { view, editor } = open(SIMPLE)
+    // The bare `Participant` and `Actor` are Mermaid keywords, so the series starts at 1; the unused
+    // participant needs a declaration, and so do the columns before it.
     click(tool(view, 'Add participant'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'participant Participant', 'A->>B: one', 'B-->>A: two'])
+    expect(statements(editor())).toEqual(['participant A', 'participant B', 'participant Participant1', 'A->>B: one', 'B-->>A: two'])
     expect(view.container.querySelectorAll('.rmk-sequence-outline')).toHaveLength(1)
     expect(view.container.querySelector('[role="radiogroup"][aria-label="Participant kind"]')).not.toBeNull()
     click(tool(view, 'Add actor'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'participant Participant', 'actor Actor', 'A->>B: one', 'B-->>A: two'])
+    expect(statements(editor())).toEqual(['participant A', 'participant B', 'participant Participant1', 'actor Actor1', 'A->>B: one', 'B-->>A: two'])
     run(() => editor().undo())
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'participant Participant', 'A->>B: one', 'B-->>A: two'])
+    expect(statements(editor())).toEqual(['participant A', 'participant B', 'participant Participant1', 'A->>B: one', 'B-->>A: two'])
     run(() => editor().undo())
     expect(editor().getMarkdown()).toBe(doc(SIMPLE))
     run(() => editor().redo())
-    expect(statements(editor())).toContain('participant Participant')
+    expect(statements(editor())).toContain('participant Participant1')
   })
 
   it('a click selects a participant, Escape clears the selection, Delete removes it with its messages', () => {
@@ -228,11 +266,18 @@ describe('the sequence canvas: participants', () => {
     press(view, a.x, a.y)
     expect(view.container.querySelectorAll('.rmk-sequence-outline')).toHaveLength(1)
     expect(view.container.querySelector('.rmk-diagram-tool[aria-label="Delete participant"]')).not.toBeNull()
+    // Review S5: a key on a tool row or property bar control is that control's, not the selection's.
+    const kindButton = tool(view, 'Actor')
+    run(() => kindButton.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })))
+    expect(view.container.querySelector('.rmk-sequence-text-input')).toBeNull()
+    run(() => kindButton.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true })))
+    expect(editor().getMarkdown()).toBe(doc('sequenceDiagram\n    A->>B: one\n    B-->>A: two\n    B->>C: three'))
+    expect(view.container.querySelectorAll('.rmk-sequence-outline')).toHaveLength(1)
     key(view, 'Escape')
     expect(view.container.querySelectorAll('.rmk-sequence-outline')).toHaveLength(0)
     press(view, a.x, a.y)
     key(view, 'Delete')
-    expect(statements(editor())).toEqual(['participant B', 'participant C', 'B->>C: three'])
+    expect(statements(editor())).toEqual(['B->>C: three'])
     run(() => editor().undo())
     expect(editor().getMarkdown()).toBe(doc('sequenceDiagram\n    A->>B: one\n    B-->>A: two\n    B->>C: three'))
   })
@@ -243,10 +288,10 @@ describe('the sequence canvas: participants', () => {
     const a = center(columnRect(layout.columns[0]!))
     press(view, a.x, a.y)
     click(tool(view, 'Actor'))
-    expect(statements(editor())[0]).toBe('actor A')
+    expect(statements(editor())).toEqual(['actor A', 'A->>B: one', 'B-->>A: two'])
     expect(tool(view, 'Actor').getAttribute('aria-pressed')).toBe('true')
     click(tool(view, 'Participant'))
-    expect(statements(editor())[0]).toBe('participant A')
+    expect(statements(editor())).toEqual(['A->>B: one', 'B-->>A: two'])
   })
 
   it('dragging a participant box reorders the columns to the one under the pointer', () => {
@@ -255,7 +300,8 @@ describe('the sequence canvas: participants', () => {
     const a = center(columnRect(layout.columns[0]!))
     const c = center(columnRect(layout.columns[2]!))
     drag(view, a, c)
-    expect(statements(editor())).toEqual(['participant B', 'participant C', 'participant A', 'A->>C: x'])
+    // B and C are declared for the column order (A, first in the body, would otherwise lead); A follows from the body.
+    expect(statements(editor())).toEqual(['participant B', 'participant C', 'A->>C: x'])
     // The moved participant stays selected at its new column.
     expect(view.container.querySelectorAll('.rmk-sequence-outline')).toHaveLength(1)
     run(() => editor().undo())
@@ -279,7 +325,7 @@ describe('the sequence canvas: participants', () => {
     type(input, 'Auth')
     vi.advanceTimersByTime(50)
     type(input, 'Auth Service')
-    expect(statements(editor())).toEqual(['participant AuthService as Auth Service', 'participant B', 'AuthService->>B: one', 'B-->>AuthService: two'])
+    expect(statements(editor())).toEqual(['participant AuthService as Auth Service', 'AuthService->>B: one', 'B-->>AuthService: two'])
     fieldKey(input, 'Enter')
     expect(view.container.querySelector('.rmk-sequence-text-input')).toBeNull()
     expect(document.activeElement).toBe(root(view))
@@ -296,10 +342,90 @@ describe('the sequence canvas: participants', () => {
     const second = field(view)
     expect(second.value).toBe('B')
     type(second, 'Bob')
-    expect(statements(editor())[1]).toBe('participant Bob')
+    expect(statements(editor())).toEqual(['participant AuthService as Auth Service', 'AuthService->>Bob: one', 'Bob-->>AuthService: two'])
     fieldKey(second, 'Escape')
     expect(view.container.querySelector('.rmk-sequence-text-input')).toBeNull()
-    expect(statements(editor())[1]).toBe('participant B')
+    expect(statements(editor())).toEqual(['participant AuthService as Auth Service', 'AuthService->>B: one', 'B-->>AuthService: two'])
+  })
+
+  // Review S12: the id follows the label of the whole edit, not of each keystroke.
+  it('the id follows the label through an intermediate label that is taken or a keyword', () => {
+    const { view, editor } = open(SIMPLE)
+    const layout = layoutOf(fence(editor()))
+    const a = center(columnRect(layout.columns[0]!))
+    pointer(layer(view), 'dblclick', a.x, a.y)
+    const input = field(view)
+    type(input, 'B')
+    expect(statements(editor())).toEqual(['participant A as B', 'A->>B: one', 'B-->>A: two'])
+    type(input, 'Bo')
+    expect(statements(editor())).toEqual(['Bo->>B: one', 'B-->>Bo: two'])
+    type(input, 'Bob')
+    expect(statements(editor())).toEqual(['Bob->>B: one', 'B-->>Bob: two'])
+    fieldKey(input, 'Enter')
+    const again = layoutOf(fence(editor()))
+    const b = center(columnRect(again.columns[1]!))
+    pointer(layer(view), 'dblclick', b.x, b.y)
+    const second = field(view)
+    type(second, 'end')
+    // B needs a declaration for its alias, so Bob, the column before it, gets one for the order.
+    expect(statements(editor())).toEqual(['participant Bob', 'participant B as end', 'Bob->>B: one', 'B-->>Bob: two'])
+    type(second, 'endpoint')
+    expect(statements(editor())).toEqual(['Bob->>endpoint: one', 'endpoint-->>Bob: two'])
+    fieldKey(second, 'Enter')
+    // Back to a taken label at the end: the id falls back to the one the edit started with, not to an intermediate.
+    const third = layoutOf(fence(editor()))
+    pointer(layer(view), 'dblclick', center(columnRect(third.columns[0]!)).x, center(columnRect(third.columns[0]!)).y)
+    const field3 = field(view)
+    type(field3, 'Bo')
+    type(field3, 'endpoint')
+    expect(statements(editor())).toEqual(['participant Bob as endpoint', 'Bob->>endpoint: one', 'endpoint-->>Bob: two'])
+    fieldKey(field3, 'Enter')
+  })
+
+  // Review S14: a cancelled edit is undone, so the history holds no entry for it.
+  it('Escape takes a typing burst back through undo, leaving no history entry; with nothing typed it commits nothing', () => {
+    vi.useFakeTimers()
+    const { view, editor } = open(SIMPLE)
+    click(tool(view, 'Autonumber'))
+    const numbered = ['autonumber', 'A->>B: one', 'B-->>A: two']
+    expect(statements(editor())).toEqual(numbered)
+    const layout = layoutOf(fence(editor()))
+    const b = center(columnRect(layout.columns[1]!))
+    pointer(layer(view), 'dblclick', b.x, b.y)
+    const input = field(view)
+    type(input, 'Bo')
+    vi.advanceTimersByTime(50)
+    type(input, 'Bob')
+    expect(statements(editor())).toEqual(['autonumber', 'A->>Bob: one', 'Bob-->>A: two'])
+    fieldKey(input, 'Escape')
+    expect(view.container.querySelector('.rmk-sequence-text-input')).toBeNull()
+    expect(statements(editor())).toEqual(numbered)
+    expect(query(view, '.rmk-sequence-picture svg').textContent).not.toContain('Bob')
+    // The participant stays selected, and the first undo is the autonumber, not a no-op.
+    expect(view.container.querySelectorAll('.rmk-sequence-outline')).toHaveLength(1)
+    run(() => editor().undo())
+    expect(editor().getMarkdown()).toBe(doc(SIMPLE))
+    run(() => editor().redo())
+    expect(statements(editor())).toEqual(numbered)
+
+    // A pause over the block's 300 ms window splits the burst into two entries; Escape takes both back.
+    pointer(layer(view), 'dblclick', b.x, b.y)
+    const second = field(view)
+    type(second, 'Bo')
+    vi.advanceTimersByTime(400)
+    type(second, 'Bob')
+    fieldKey(second, 'Escape')
+    expect(statements(editor())).toEqual(numbered)
+    run(() => editor().undo())
+    expect(editor().getMarkdown()).toBe(doc(SIMPLE))
+    run(() => editor().redo())
+
+    // Nothing typed: nothing committed, nothing to undo but the autonumber.
+    pointer(layer(view), 'dblclick', b.x, b.y)
+    fieldKey(field(view), 'Escape')
+    expect(statements(editor())).toEqual(numbered)
+    run(() => editor().undo())
+    expect(editor().getMarkdown()).toBe(doc(SIMPLE))
   })
 })
 
@@ -310,16 +436,16 @@ describe('the sequence canvas: messages', () => {
     const [a, b] = layout.columns
     const y = insertionY(layout, 1)
     drag(view, { x: a!.x, y }, { x: b!.x, y })
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>B: one', 'A->>B:', 'B-->>A: two'])
+    expect(statements(editor())).toEqual(['A->>B: one', 'A->>B:', 'B-->>A: two'])
     const input = field(view)
     expect(input.value).toBe('')
     type(input, 'hello')
-    expect(statements(editor())[3]).toBe('A->>B: hello')
+    expect(statements(editor())[1]).toBe('A->>B: hello')
     fieldKey(input, 'Enter')
     expect(view.container.querySelector('.rmk-sequence-text-input')).toBeNull()
     // The message and its text are one undo step each: structure, then the typing burst.
     run(() => editor().undo())
-    expect(statements(editor())[3]).toBe('A->>B:')
+    expect(statements(editor())[1]).toBe('A->>B:')
     run(() => editor().undo())
     expect(editor().getMarkdown()).toBe(doc(SIMPLE))
   })
@@ -332,7 +458,34 @@ describe('the sequence canvas: messages', () => {
     expect(editor().getMarkdown()).toBe(doc(SIMPLE))
     const bottom = insertionY(layout, 2)
     drag(view, { x: a.x, y: bottom - 12 }, { x: a.x + 4, y: bottom })
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>B: one', 'B-->>A: two', 'A->>A:'])
+    expect(statements(editor())).toEqual(['A->>B: one', 'B-->>A: two', 'A->>A:'])
+  })
+
+  // Review S6: a section with no rows, or the tail of a middle section, is
+  // reachable: the drop resolves to the section under the pointer.
+  it('a message drawn inside an empty middle or last section, or under the last row of a middle section, lands in that section', () => {
+    const middle = open('sequenceDiagram\n    alt a\n        A->>B: one\n    else b\n    else c\n        B-->>A: two\n    end')
+    const layout = layoutOf(fence(middle.editor()))
+    const [a, b] = layout.columns
+    const frame = layout.frames[0]!
+    const inEmpty = (frame.sections[1]!.y + frame.sections[2]!.y) / 2
+    drag(middle.view, { x: a!.x, y: inEmpty }, { x: b!.x, y: inEmpty })
+    expect(statements(middle.editor())).toEqual(['alt a', 'A->>B: one', 'else b', 'A->>B:', 'else c', 'B-->>A: two', 'end'])
+    fieldKey(field(middle.view), 'Enter')
+
+    const last = open('sequenceDiagram\n    alt a\n        A->>B: one\n    else b\n    end')
+    const lastLayout = layoutOf(fence(last.editor()))
+    const lastFrame = lastLayout.frames[0]!
+    const inLast = (lastFrame.sections[1]!.y + lastFrame.y + lastFrame.height) / 2
+    drag(last.view, { x: lastLayout.columns[0]!.x, y: inLast }, { x: lastLayout.columns[1]!.x, y: inLast })
+    expect(statements(last.editor())).toEqual(['alt a', 'A->>B: one', 'else b', 'A->>B:', 'end'])
+    fieldKey(field(last.view), 'Enter')
+
+    const tail = open('sequenceDiagram\n    alt a\n        A->>B: one\n    else b\n        B-->>A: two\n    else c\n        A->>B: three\n    end')
+    const tailLayout = layoutOf(fence(tail.editor()))
+    const under = tailLayout.messages[1]!.y + 8
+    drag(tail.view, { x: tailLayout.columns[0]!.x, y: under }, { x: tailLayout.columns[1]!.x, y: under })
+    expect(statements(tail.editor())).toEqual(['alt a', 'A->>B: one', 'else b', 'B-->>A: two', 'A->>B:', 'else c', 'A->>B: three', 'end'])
   })
 
   it('a drag released away from any lifeline adds nothing', () => {
@@ -349,7 +502,8 @@ describe('the sequence canvas: messages', () => {
     const layout = layoutOf(fence(editor()))
     const first = messageMid(layout.messages[0]!)
     drag(view, first, { x: first.x, y: insertionY(layout, 3) })
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'B-->>A: two', 'A->>B: three', 'A->>B: one'])
+    // A keeps the first column although B now leads the body, so A is declared.
+    expect(statements(editor())).toEqual(['participant A', 'B-->>A: two', 'A->>B: three', 'A->>B: one'])
     expect(view.container.querySelectorAll('.rmk-sequence-outline')).toHaveLength(1)
     run(() => editor().undo())
     expect(editor().getMarkdown()).toBe(doc('sequenceDiagram\n    A->>B: one\n    B-->>A: two\n    A->>B: three'))
@@ -361,21 +515,21 @@ describe('the sequence canvas: messages', () => {
     const first = messageMid(layout.messages[0]!)
     press(view, first.x, first.y)
     click(tool(view, 'Dotted line'))
-    expect(statements(editor())[2]).toBe('A-->>B: one')
+    expect(statements(editor())[0]).toBe('A-->>B: one')
     click(tool(view, 'Open arrowhead'))
-    expect(statements(editor())[2]).toBe('A--)B: one')
+    expect(statements(editor())[0]).toBe('A--)B: one')
     click(tool(view, 'Cross'))
-    expect(statements(editor())[2]).toBe('A--xB: one')
+    expect(statements(editor())[0]).toBe('A--xB: one')
     click(tool(view, 'No arrowhead'))
-    expect(statements(editor())[2]).toBe('A-->B: one')
+    expect(statements(editor())[0]).toBe('A-->B: one')
     click(tool(view, 'Two-way arrow'))
-    expect(statements(editor())[2]).toBe('A<<-->>B: one')
+    expect(statements(editor())[0]).toBe('A<<-->>B: one')
     click(tool(view, 'Solid line'))
-    expect(statements(editor())[2]).toBe('A<<->>B: one')
+    expect(statements(editor())[0]).toBe('A<<->>B: one')
     click(tool(view, 'One-way arrow'))
-    expect(statements(editor())[2]).toBe('A->>B: one')
+    expect(statements(editor())[0]).toBe('A->>B: one')
     click(tool(view, 'Swap ends'))
-    expect(statements(editor())[2]).toBe('B->>A: one')
+    expect(statements(editor())).toEqual(['participant A', 'B->>A: one', 'B-->>A: two'])
     // Eight changes, eight entries.
     for (let i = 0; i < 8; i += 1) run(() => editor().undo())
     expect(editor().getMarkdown()).toBe(doc(SIMPLE))
@@ -388,14 +542,14 @@ describe('the sequence canvas: messages', () => {
     press(view, first.x, first.y)
     expect(tool(view, 'Deactivate the sender (-)').disabled).toBe(true)
     click(tool(view, 'Activate the receiver (+)'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>+B: one', 'B-->>A: two', 'deactivate B'])
+    expect(statements(editor())).toEqual(['A->>+B: one', 'B-->>A: two', 'deactivate B'])
     const second = messageMid(layoutOf(fence(editor())).messages[1]!)
     press(view, second.x, second.y)
     expect(tool(view, 'Deactivate the sender (-)').disabled).toBe(false)
     click(tool(view, 'Deactivate the sender (-)'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>+B: one', 'B-->>-A: two'])
+    expect(statements(editor())).toEqual(['A->>+B: one', 'B-->>-A: two'])
     click(tool(view, 'No activation'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>+B: one', 'B-->>A: two', 'deactivate B'])
+    expect(statements(editor())).toEqual(['A->>+B: one', 'B-->>A: two', 'deactivate B'])
   })
 
   it('a double click edits a message text inline, and Delete removes the selected message', () => {
@@ -406,12 +560,43 @@ describe('the sequence canvas: messages', () => {
     const input = field(view)
     expect(input.value).toBe('one')
     type(input, 'first #1; go')
-    expect(statements(editor())[2]).toBe('A->>B: first #35;1#59; go')
+    expect(statements(editor())[0]).toBe('A->>B: first #35;1#59; go')
     fieldKey(input, 'Enter')
     const second = messageMid(layoutOf(fence(editor())).messages[1]!)
     press(view, second.x, second.y)
     key(view, 'Backspace')
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>B: first #35;1#59; go'])
+    expect(statements(editor())).toEqual(['A->>B: first #35;1#59; go'])
+  })
+
+  // Review S3: `cut` at Lexical's root removes the document selection, so
+  // nothing but `input` (React's `onChange`) may leave the field.
+  it('the inline field keeps its clipboard, drop, key and composition events from Lexical\'s root', () => {
+    const { view, editor } = open(SIMPLE)
+    const layout = layoutOf(fence(editor()))
+    const first = messageMid(layout.messages[0]!)
+    pointer(layer(view), 'dblclick', first.x, first.y)
+    const input = field(view)
+    const seen = vi.fn()
+    const lexical = lexicalRoot(view)
+    for (const name of FIELD_EVENTS) lexical.addEventListener(name, seen)
+    for (const name of FIELD_EVENTS) run(() => input.dispatchEvent(new Event(name, { bubbles: true, cancelable: true })))
+    expect(seen).not.toHaveBeenCalled()
+    expect(editor().getMarkdown()).toBe(doc(SIMPLE))
+    type(input, 'still typing')
+    expect(statements(editor())[0]).toBe('A->>B: still typing')
+    fieldKey(input, 'Enter')
+  })
+
+  // Review S4: the overlay sits inside a host's zoom transform, so its scale
+  // comes from the untransformed stage width, never from a client rect.
+  it('scales the inline field by the untransformed stage width under a host zoom', () => {
+    zoomedStage('rmk-sequence-stage')
+    const { view, editor } = open(SIMPLE)
+    const layout = layoutOf(fence(editor()))
+    const first = messageMid(layout.messages[0]!)
+    pointer(layer(view), 'dblclick', first.x, first.y)
+    const overlay = query<HTMLElement>(view, '.rmk-diagram-overlay')
+    expect(overlay.style.transform).toBe(`scale(${200 / layout.width})`)
   })
 })
 
@@ -425,10 +610,10 @@ describe('the sequence canvas: notes', () => {
     const affordance = query(view, '.rmk-sequence-add-note')
     expect(affordance.querySelector('title')?.textContent).toBe('Add note')
     pointer(affordance, 'pointerdown', b.x, insertionY(layout, 1))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>B: one', 'Note over B:', 'B-->>A: two'])
+    expect(statements(editor())).toEqual(['A->>B: one', 'Note over B:', 'B-->>A: two'])
     const input = field(view)
     type(input, 'wait')
-    expect(statements(editor())[3]).toBe('Note over B: wait')
+    expect(statements(editor())[1]).toBe('Note over B: wait')
     fieldKey(input, 'Enter')
     // Over a message, no affordance.
     const mid = messageMid(layoutOf(fence(editor())).messages[0]!)
@@ -442,23 +627,40 @@ describe('the sequence canvas: notes', () => {
     const note = center(noteRect(layout.notes[0]!))
     press(view, note.x, note.y)
     click(tool(view, 'Left of'))
-    expect(statements(editor())[3]).toBe('Note left of A: n')
+    expect(statements(editor())[1]).toBe('Note left of A: n')
     click(tool(view, 'Right of'))
-    expect(statements(editor())[3]).toBe('Note right of A: n')
+    expect(statements(editor())[1]).toBe('Note right of A: n')
     click(tool(view, 'Over'))
-    expect(statements(editor())[3]).toBe('Note over A: n')
+    expect(statements(editor())[1]).toBe('Note over A: n')
     const select = query<HTMLSelectElement>(view, 'select[aria-label="Second participant"]')
     expect([...select.options].map((option) => option.textContent)).toEqual(['None', 'B'])
     run(() => {
       select.value = 'B'
       select.dispatchEvent(new Event('change', { bubbles: true }))
     })
-    expect(statements(editor())[3]).toBe('Note over A,B: n')
+    expect(statements(editor())[1]).toBe('Note over A,B: n')
     run(() => {
       query<HTMLSelectElement>(view, 'select[aria-label="Second participant"]').value = ''
       query<HTMLSelectElement>(view, 'select[aria-label="Second participant"]').dispatchEvent(new Event('change', { bubbles: true }))
     })
-    expect(statements(editor())[3]).toBe('Note over A: n')
+    expect(statements(editor())[1]).toBe('Note over A: n')
+    // Review S5: Backspace in the select clears the select, not the note.
+    run(() => query<HTMLSelectElement>(view, 'select[aria-label="Second participant"]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true })))
+    expect(statements(editor())[1]).toBe('Note over A: n')
+  })
+
+  // Review S6: the "+" affordance under every row of an empty section adds the note into that section.
+  it('the "+" affordance inside an empty section adds the note there', () => {
+    const { view, editor } = open('sequenceDiagram\n    alt a\n        A->>B: one\n    else b\n    end')
+    const layout = layoutOf(fence(editor()))
+    const frame = layout.frames[0]!
+    const b = layout.columns[1]!
+    const y = (frame.sections[1]!.y + frame.y + frame.height) / 2
+    pointer(layer(view), 'pointermove', b.x, y)
+    const affordance = query(view, '.rmk-sequence-add-note')
+    pointer(affordance, 'pointerdown', b.x, y)
+    expect(statements(editor())).toEqual(['alt a', 'A->>B: one', 'else b', 'Note over B:', 'end'])
+    fieldKey(field(view), 'Enter')
   })
 
   it('dragging a note vertically reorders it', () => {
@@ -466,7 +668,7 @@ describe('the sequence canvas: notes', () => {
     const layout = layoutOf(fence(editor()))
     const note = center(noteRect(layout.notes[0]!))
     drag(view, note, { x: note.x, y: insertionY(layout, 0) })
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'Note over A: n', 'A->>B: one', 'B-->>A: two'])
+    expect(statements(editor())).toEqual(['Note over A: n', 'A->>B: one', 'B-->>A: two'])
   })
 })
 
@@ -477,15 +679,15 @@ describe('the sequence canvas: frames', () => {
     const first = messageMid(layout.messages[0]!)
     press(view, first.x, first.y)
     click(tool(view, 'Wrap in loop'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'loop', 'A->>B: one', 'end', 'B-->>A: two', 'A->>B: three'])
+    expect(statements(editor())).toEqual(['loop', 'A->>B: one', 'end', 'B-->>A: two', 'A->>B: three'])
     const label = field(view)
     expect(label.value).toBe('')
     type(label, 'retry')
-    expect(statements(editor())[2]).toBe('loop retry')
+    expect(statements(editor())[0]).toBe('loop retry')
     fieldKey(label, 'Enter')
     // The wrap and the typing burst are one entry each.
     run(() => editor().undo())
-    expect(statements(editor())[2]).toBe('loop')
+    expect(statements(editor())[0]).toBe('loop')
     run(() => editor().undo())
     expect(editor().getMarkdown()).toBe(doc('sequenceDiagram\n    A->>B: one\n    B-->>A: two\n    A->>B: three'))
 
@@ -496,7 +698,7 @@ describe('the sequence canvas: frames', () => {
     press(view, third.x, third.y, { shiftKey: true })
     expect(view.container.querySelectorAll('.rmk-sequence-outline')).toHaveLength(2)
     click(tool(view, 'Wrap in alt'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>B: one', 'alt', 'B-->>A: two', 'A->>B: three', 'end'])
+    expect(statements(editor())).toEqual(['A->>B: one', 'alt', 'B-->>A: two', 'A->>B: three', 'end'])
     fieldKey(field(view), 'Escape')
   })
 
@@ -508,10 +710,10 @@ describe('the sequence canvas: frames', () => {
     press(view, tab.x, tab.y)
     expect(view.container.querySelectorAll('.rmk-sequence-outline')).toHaveLength(1)
     click(tool(view, 'Add section'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'alt a', 'A->>B: one', 'else', 'else b', 'B-->>A: two', 'end'])
+    expect(statements(editor())).toEqual(['alt a', 'A->>B: one', 'else', 'else b', 'B-->>A: two', 'end'])
     const label = field(view)
     type(label, 'maybe')
-    expect(statements(editor())[4]).toBe('else maybe')
+    expect(statements(editor())[2]).toBe('else maybe')
     fieldKey(label, 'Enter')
     // A divider strip selects its section; the new one goes after it.
     const withThree = layoutOf(fence(editor()))
@@ -519,15 +721,15 @@ describe('the sequence canvas: frames', () => {
     press(view, divider.x, divider.y)
     click(tool(view, 'Add section'))
     fieldKey(field(view), 'Escape')
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'alt a', 'A->>B: one', 'else maybe', 'else b', 'B-->>A: two', 'else', 'end'])
+    expect(statements(editor())).toEqual(['alt a', 'A->>B: one', 'else maybe', 'else b', 'B-->>A: two', 'else', 'end'])
     click(tool(view, 'Unwrap frame'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>B: one', 'B-->>A: two'])
+    expect(statements(editor())).toEqual(['A->>B: one', 'B-->>A: two'])
     run(() => editor().undo())
     const restored = layoutOf(fence(editor()))
     const restoredTab = center(frameTabRect(restored.frames[0]!))
     press(view, restoredTab.x, restoredTab.y)
     key(view, 'Delete')
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>B: one', 'B-->>A: two'])
+    expect(statements(editor())).toEqual(['A->>B: one', 'B-->>A: two'])
     // A loop has no dividers, so no "Add section".
     const loop = open('sequenceDiagram\n    loop l\n        A->>B: one\n    end')
     const loopTab = center(frameTabRect(layoutOf(fence(loop.editor())).frames[0]!))
@@ -545,14 +747,14 @@ describe('the sequence canvas: frames', () => {
     expect(label.value).toBe('a')
     type(label, 'yes')
     fieldKey(label, 'Enter')
-    expect(statements(editor())[2]).toBe('alt yes')
+    expect(statements(editor())[0]).toBe('alt yes')
     const divider = center(sectionRect(layoutOf(fence(editor())).frames[0]!, 1))
     pointer(layer(view), 'dblclick', divider.x, divider.y)
     const second = field(view)
     expect(second.value).toBe('b')
     type(second, 'no')
     fieldKey(second, 'Enter')
-    expect(statements(editor())[4]).toBe('else no')
+    expect(statements(editor())[2]).toBe('else no')
   })
 
   it('dragging a frame bottom edge extends it over following siblings and shrinks it back', () => {
@@ -561,11 +763,11 @@ describe('the sequence canvas: frames', () => {
     const frame = layout.frames[0]!
     const edge = center(frameBottomRect(frame))
     drag(view, edge, { x: edge.x, y: layout.messages[1]!.y + 4 })
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'loop l', 'A->>B: one', 'B-->>A: two', 'end', 'A->>B: three'])
+    expect(statements(editor())).toEqual(['loop l', 'A->>B: one', 'B-->>A: two', 'end', 'A->>B: three'])
     const grown = layoutOf(fence(editor()))
     const grownEdge = center(frameBottomRect(grown.frames[0]!))
     drag(view, grownEdge, { x: grownEdge.x, y: grown.messages[0]!.y + 4 })
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'loop l', 'A->>B: one', 'end', 'B-->>A: two', 'A->>B: three'])
+    expect(statements(editor())).toEqual(['loop l', 'A->>B: one', 'end', 'B-->>A: two', 'A->>B: three'])
   })
 })
 
@@ -576,7 +778,7 @@ describe('the sequence canvas: tool row', () => {
     expect(statements(editor())[0]).toBe('autonumber')
     expect(tool(view, 'Autonumber').getAttribute('aria-pressed')).toBe('true')
     click(tool(view, 'Autonumber'))
-    expect(statements(editor())).toEqual(['participant A', 'participant B', 'A->>B: one', 'B-->>A: two'])
+    expect(statements(editor())).toEqual(['A->>B: one', 'B-->>A: two'])
     run(() => editor().undo())
     run(() => editor().undo())
     expect(editor().getMarkdown()).toBe(doc(SIMPLE))
@@ -591,9 +793,9 @@ describe('the sequence canvas: tool row', () => {
     await runAsync(() => new Promise((resolve) => setTimeout(resolve, 0)))
     expect(writeText).toHaveBeenCalledTimes(1)
     const copied = writeText.mock.calls[0]?.[0] ?? ''
-    expect(copied).toBe('sequenceDiagram\n    participant A\n    participant B\n    %% kept\n    A->>B: one')
+    expect(copied).toBe('sequenceDiagram\n    %% kept\n    A->>B: one')
     click(tool(view, 'Autonumber'))
-    expect(fence(editor())).toBe('sequenceDiagram\n    autonumber\n    participant A\n    participant B\n    %% kept\n    A->>B: one')
+    expect(fence(editor())).toBe('sequenceDiagram\n    autonumber\n    %% kept\n    A->>B: one')
   })
 
   it('adopts an outside change: an undo from the toolbar drops the selection and shows the restored picture', () => {

@@ -8,12 +8,16 @@
  * flattening the layout and the activations use, because that is the row
  * the pointer is on. A flat index is located in the item tree, the list
  * that holds it is rebuilt along the trail of frames and sections down to
- * it, and every untouched item keeps its identity. Activations are then
- * carried across by identity: a span remembers the items it starts and
- * ends on, not their numbers, so an insertion or a reorder above it never
- * moves the bar, and a span whose start or end item is gone goes with it.
- * The result is sorted the way the parser sorts, so `parse(write(m))`
- * deep-equals `m`.
+ * it, and every untouched item keeps its identity; a frame rebuilt on the
+ * way records what replaced it. Activations are then carried across by
+ * identity: a span remembers the items it starts and ends on, not their
+ * numbers, so an insertion or a reorder above it never moves the bar. A
+ * span whose start item is gone goes with it; one whose end item is gone
+ * runs to the last row, as it does when its `-` is cleared. Finally the
+ * `+` and `-` suffixes are made to spell the spans again: a `+` stays only
+ * where a span of the receiver starts, a `-` only where a span of the
+ * sender ends, since that is what the parser reads them as. The result is
+ * sorted the way the parser sorts, so `parse(write(m))` deep-equals `m`.
  *
  * An operation Mermaid.js would reject is not performed: a message that
  * would deactivate nothing keeps its spelling, a section is only added to a
@@ -33,8 +37,35 @@ interface Located {
   readonly index: number
 }
 
+/** The items an operation rebuilt, old to new, so a span anchored on one follows it. */
+type Replaced = Map<SequenceItem, SequenceItem>
+
 export type FrameKind = Frame['kind']
 export type NotePlacement = Note['placement']
+
+/** One frame on the way down to a section: the frame's flat index and the section number in it. */
+export interface SectionStep {
+  readonly index: number
+  readonly section: number
+}
+
+/**
+ * A place among the direct items of a frame section: the sections down to
+ * it, outermost first (the layout's `sectionAt` gives it), and the
+ * position in the innermost section's item list, clamped to its length.
+ * Only the innermost step is looked up.
+ */
+export interface SectionInsertion {
+  readonly trail: readonly SectionStep[]
+  readonly position: number
+}
+
+/**
+ * Where a new item goes: before the item at a flat index, after every item
+ * when the index is past the end, or at a position inside a section, which
+ * is how an empty section or the end of a middle section is reached.
+ */
+export type Insertion = number | SectionInsertion
 
 /** The frame kinds whose sections a divider keyword separates. */
 export const SECTIONED_FRAME_KINDS: readonly FrameKind[] = ['alt', 'par', 'critical']
@@ -48,24 +79,47 @@ const RESERVED_ID =
 
 /* ------------------------------------------------------------ participants */
 
-/** Appends a participant with a fresh id that is also its label. */
+/**
+ * Appends a participant with a fresh id that is also its label: the first
+ * free of `Participant1`, `Participant2`, … or `Actor1`, `Actor2`, …. The
+ * bare words are Mermaid keywords, which a message or note cannot name.
+ */
 export function addParticipant(model: SequenceModel, kind: Participant['kind']): { readonly model: SequenceModel; readonly id: string } {
   const id = freeId(model, kind === 'actor' ? 'Actor' : 'Participant')
   return { model: { ...model, participants: [...model.participants, { id, label: id, kind }] }, id }
+}
+
+export interface RenameParticipantOptions {
+  /**
+   * Whether the id follows the label. Absent, it follows when the label is
+   * the id, which is right for one rename. An inline edit commits every
+   * change, so the canvas decides once at edit start and passes the same
+   * answer with every change, with `originalId` the id at edit start: the
+   * id is then recomputed from the whole label each time and falls back to
+   * the original id, never to an intermediate one, when the sanitised label
+   * is empty, taken or a keyword.
+   */
+  readonly follow?: boolean
+  /** The id at edit start, the fallback when following; `id` when absent. */
+  readonly originalId?: string
 }
 
 /**
  * Sets a participant's label. The id is kept unless the label was the id,
  * in which case the id follows a sanitised form of the new label (letters,
  * digits and `_`) when that is free and not a keyword, so a hand-written
- * diagram keeps its ids and a canvas-made one reads well as text.
+ * diagram keeps its ids and a canvas-made one reads well as text. An
+ * empty label falls back to the id.
  */
-export function renameParticipant(model: SequenceModel, id: string, label: string): SequenceModel {
+export function renameParticipant(model: SequenceModel, id: string, label: string, options: RenameParticipantOptions = {}): SequenceModel {
   const participant = model.participants.find((p) => p.id === id)
   if (participant === undefined) return model
-  const nextLabel = label.trim() === '' ? id : label
-  const follow = participant.label === participant.id ? sanitiseId(nextLabel) : ''
-  const nextId = follow !== '' && !RESERVED_ID.test(follow) && !model.participants.some((p) => p.id === follow && p.id !== id) ? follow : id
+  const free = (candidate: string): boolean => !model.participants.some((p) => p.id === candidate && p.id !== id)
+  const follow = options.follow ?? participant.label === participant.id
+  const original = options.originalId !== undefined && free(options.originalId) ? options.originalId : id
+  const sanitised = follow ? sanitiseId(label) : ''
+  const nextId = sanitised !== '' && !RESERVED_ID.test(sanitised) && free(sanitised) ? sanitised : follow ? original : id
+  const nextLabel = label.trim() === '' ? nextId : label
   if (nextLabel === participant.label && nextId === id) return model
   const renamed = model.participants.map((p) => (p.id === id ? { ...p, id: nextId, label: nextLabel } : p))
   if (nextId === id) return { ...model, participants: renamed }
@@ -87,7 +141,8 @@ export function renameParticipant(model: SequenceModel, id: string, label: strin
  * Moves a participant to column `index`. A box travels as a unit: its
  * members stay contiguous in the box's order, and a participant dropped
  * between two members lands beside the box, since the writer opens a box
- * where its first member sits.
+ * where its first member sits. The boxes follow their first members, the
+ * order the parser reads them back in.
  */
 export function reorderParticipant(model: SequenceModel, id: string, index: number): SequenceModel {
   const moving = model.participants.find((p) => p.id === id)
@@ -109,10 +164,10 @@ export function reorderParticipant(model: SequenceModel, id: string, index: numb
   }
   if (participants.every((p, i) => p === model.participants[i])) return model
   const rank = new Map(participants.map((p, i) => [p.id, i]))
-  const boxes = model.boxes.map((box) => ({
-    ...box,
-    participantIds: [...box.participantIds].sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0)),
-  }))
+  const rankOf = (participantId: string): number => rank.get(participantId) ?? Number.POSITIVE_INFINITY
+  const boxes = model.boxes
+    .map((box) => ({ ...box, participantIds: [...box.participantIds].sort((a, b) => rankOf(a) - rankOf(b)) }))
+    .sort((a, b) => rankOf(a.participantIds[0] ?? '') - rankOf(b.participantIds[0] ?? ''))
   return { ...model, participants, boxes }
 }
 
@@ -125,37 +180,41 @@ export function setParticipantKind(model: SequenceModel, id: string, kind: Parti
 /** Removes a participant with every message and note that names it; a box left empty goes too. */
 export function removeParticipant(model: SequenceModel, id: string): SequenceModel {
   if (!model.participants.some((p) => p.id === id)) return model
-  const items = filterItems(model.items, (item) => {
-    if (item.type === 'message') return item.from !== id && item.to !== id
-    if (item.type === 'note') return !item.participantIds.includes(id)
-    return true
-  })
+  const replaced: Replaced = new Map()
+  const items = filterItems(
+    model.items,
+    (item) => {
+      if (item.type === 'message') return item.from !== id && item.to !== id
+      if (item.type === 'note') return !item.participantIds.includes(id)
+      return true
+    },
+    replaced,
+  )
   const boxes = model.boxes
     .map((box) => ({ ...box, participantIds: box.participantIds.filter((p) => p !== id) }))
     .filter((box) => box.participantIds.length > 0)
+  const activations = remapActivations(model, items, replaced).filter((a) => a.participantId !== id)
   return {
     ...model,
     participants: model.participants.filter((p) => p.id !== id),
     boxes,
-    items,
-    activations: remapActivations(model, items).filter((a) => a.participantId !== id),
+    items: spellSuffixes(items, activations),
+    activations,
   }
 }
 
 /* ------------------------------------------------------------------ items */
 
-/** Inserts a `->>` message with empty text before flat index `row` (after every item when `row` is past the end). */
-export function addMessage(model: SequenceModel, from: string, to: string, row: number): { readonly model: SequenceModel; readonly index: number } {
+/** Inserts a `->>` message with empty text at `at` (see `Insertion`) and reports its flat index. */
+export function addMessage(model: SequenceModel, from: string, to: string, at: Insertion): { readonly model: SequenceModel; readonly index: number } {
   const message: Message = { type: 'message', from, to, line: 'solid', head: 'arrow', bidirectional: false, text: '' }
-  const items = insertBefore(model.items, row, message)
-  return { model: { ...model, items, activations: remapActivations(model, items) }, index: flattenItems(items).indexOf(message) }
+  return insertItem(model, message, at)
 }
 
-/** Inserts a note over `participantId` with empty text before flat index `row`. */
-export function addNote(model: SequenceModel, participantId: string, row: number): { readonly model: SequenceModel; readonly index: number } {
+/** Inserts a note over `participantId` with empty text at `at` (see `Insertion`) and reports its flat index. */
+export function addNote(model: SequenceModel, participantId: string, at: Insertion): { readonly model: SequenceModel; readonly index: number } {
   const note: Note = { type: 'note', placement: 'over', participantIds: [participantId], text: '' }
-  const items = insertBefore(model.items, row, note)
-  return { model: { ...model, items, activations: remapActivations(model, items) }, index: flattenItems(items).indexOf(note) }
+  return insertItem(model, note, at)
 }
 
 /**
@@ -175,17 +234,24 @@ export function reorderItem(model: SequenceModel, index: number, row: number): S
   if (at < 0) at = rest.length
   const next = [...rest.slice(0, at), item, ...rest.slice(at)]
   if (next.every((entry, i) => entry === list[i])) return model
-  const items = withList(model.items, located.trail, () => next)
-  return { ...model, items, activations: remapActivations(model, items) }
+  const replaced: Replaced = new Map()
+  const items = withList(model.items, located.trail, () => next, replaced)
+  return { ...model, ...settle(model, items, replaced) }
 }
 
-/** Removes a message or note; a frame is unwrapped instead, so nothing inside it is lost. */
+/**
+ * Removes a message or note; a frame is unwrapped instead, so nothing
+ * inside it is lost. A bar that started on the item goes with it, and the
+ * `-` that ended it is cleared; a bar that ended on the item runs to the
+ * last row, as if its `-` had been cleared.
+ */
 export function removeItem(model: SequenceModel, index: number): SequenceModel {
   const item = flattenItems(model.items)[index]
   if (item === undefined) return model
   if (item.type === 'frame') return unwrapFrame(model, index)
-  const items = filterItems(model.items, (candidate) => candidate !== item)
-  return { ...model, items, activations: remapActivations(model, items) }
+  const replaced: Replaced = new Map()
+  const items = filterItems(model.items, (candidate) => candidate !== item, replaced)
+  return { ...model, ...settle(model, items, replaced) }
 }
 
 export interface MessageStyle {
@@ -249,10 +315,12 @@ export function canDeactivate(model: SequenceModel, index: number): boolean {
  * Sets a message's activation suffix and keeps `activations`, the source
  * of truth for the bars, in step with it, mirroring what the same edit in
  * text does: `+` starts a bar on the receiver that runs to its next reply
- * (or the last row); `-` ends the sender's covering bar here, or starts
- * one from the last message to the sender when none covers the row; no
- * suffix drops the bar a `+` started and lets the bar a `-` ended run to
- * the last row.
+ * (or the last row), skipping a reply the bar could only cross, since
+ * Mermaid's stack cannot spell two bars that cross; `-` ends the sender's
+ * covering bar here, or starts one from the last message to the sender
+ * when none covers the row; no suffix drops the bar a `+` started and lets
+ * the bar a `-` ended run to the last row. The suffix on the other end of a
+ * bar that went or moved is cleared with it.
  */
 export function setActivation(model: SequenceModel, index: number, suffix: Message['activate'] | undefined): SequenceModel {
   const flat = flattenItems(model.items)
@@ -269,8 +337,7 @@ export function setActivation(model: SequenceModel, index: number, suffix: Messa
   }
   if (suffix === '+') {
     if (!activations.some((a) => a.participantId === message.to && a.start === index)) {
-      const reply = flat.findIndex((item, i) => i > index && item.type === 'message' && item.from === message.to)
-      activations.push({ participantId: message.to, start: index, end: reply < 0 ? last : reply })
+      activations.push({ participantId: message.to, start: index, end: replyRow(flat, activations, message.to, index) })
     }
   } else if (suffix === '-') {
     const covering = coveringSpan(activations, message.from, index)
@@ -284,8 +351,12 @@ export function setActivation(model: SequenceModel, index: number, suffix: Messa
   }
   const { activate: _activate, ...rest } = message
   const next: Message = suffix === undefined ? rest : { ...rest, activate: suffix }
-  const items = mapItems(model.items, (item) => (item === message ? next : item))
-  return { ...model, items, activations: sortActivations(activations) }
+  const sorted = sortActivations(activations)
+  const items = spellSuffixes(
+    mapItems(model.items, (item) => (item === message ? next : item)),
+    sorted,
+  )
+  return { ...model, items, activations: sorted }
 }
 
 /** Moves a note between `left of`, `right of` and `over`; `over` may name a second participant. */
@@ -319,8 +390,10 @@ export function wrapInFrame(
   const hi = Math.max(first.index, second.index)
   const list = listAt(model.items, first.trail)
   const frame: Frame = { type: 'frame', kind, sections: [{ label: '', items: list.slice(lo, hi + 1) }] }
-  const items = withList(model.items, first.trail, (current) => [...current.slice(0, lo), frame, ...current.slice(hi + 1)])
-  return { model: { ...model, items, activations: remapActivations(model, items) }, index: flattenItems(items).indexOf(frame) }
+  const replaced: Replaced = new Map()
+  const items = withList(model.items, first.trail, (current) => [...current.slice(0, lo), frame, ...current.slice(hi + 1)], replaced)
+  const index = flattenItems(items).indexOf(frame)
+  return { model: { ...model, ...settle(model, items, replaced) }, index }
 }
 
 /** Adds an empty section after section `after` of an `alt`, `par` or `critical` frame. */
@@ -332,7 +405,11 @@ export function addSection(model: SequenceModel, index: number, after: number): 
   return replaceItem(model, item, { ...item, sections })
 }
 
-/** Replaces a frame with the items of its sections, in order. */
+/**
+ * Replaces a frame with the items of its sections, in order. A bar
+ * anchored on the frame's own row (an `activate` written right after the
+ * opener) moves to the first unwrapped item; only an empty frame loses it.
+ */
 export function unwrapFrame(model: SequenceModel, index: number): SequenceModel {
   const located = locate(model.items, index)
   if (located === undefined) return model
@@ -340,8 +417,11 @@ export function unwrapFrame(model: SequenceModel, index: number): SequenceModel 
   const frame = list[located.index]
   if (frame === undefined || frame.type !== 'frame') return model
   const inner = frame.sections.flatMap((section) => section.items)
-  const items = withList(model.items, located.trail, (current) => [...current.slice(0, located.index), ...inner, ...current.slice(located.index + 1)])
-  return { ...model, items, activations: remapActivations(model, items) }
+  const replaced: Replaced = new Map()
+  const items = withList(model.items, located.trail, (current) => [...current.slice(0, located.index), ...inner, ...current.slice(located.index + 1)], replaced)
+  const first = inner[0]
+  if (first !== undefined) replaced.set(frame, first)
+  return { ...model, ...settle(model, items, replaced) }
 }
 
 /**
@@ -358,21 +438,25 @@ export function extendFrame(model: SequenceModel, index: number, delta: number):
   const lastSection = frame.sections[frame.sections.length - 1]
   if (lastSection === undefined) return model
   let next: SequenceItem[]
+  let rebuilt: Frame
   if (delta > 0) {
     const taken = list.slice(located.index + 1, located.index + 1 + delta)
     if (taken.length === 0) return model
     const sections = frame.sections.map((section) => (section === lastSection ? { ...section, items: [...section.items, ...taken] } : section))
-    next = [...list.slice(0, located.index), { ...frame, sections }, ...list.slice(located.index + 1 + taken.length)]
+    rebuilt = { ...frame, sections }
+    next = [...list.slice(0, located.index), rebuilt, ...list.slice(located.index + 1 + taken.length)]
   } else {
     const count = Math.min(lastSection.items.length, -delta)
     if (count === 0) return model
     const kept = lastSection.items.slice(0, lastSection.items.length - count)
     const moved = lastSection.items.slice(lastSection.items.length - count)
     const sections = frame.sections.map((section) => (section === lastSection ? { ...section, items: kept } : section))
-    next = [...list.slice(0, located.index), { ...frame, sections }, ...moved, ...list.slice(located.index + 1)]
+    rebuilt = { ...frame, sections }
+    next = [...list.slice(0, located.index), rebuilt, ...moved, ...list.slice(located.index + 1)]
   }
-  const items = withList(model.items, located.trail, () => next)
-  return { ...model, items, activations: remapActivations(model, items) }
+  const replaced: Replaced = new Map([[frame, rebuilt]])
+  const items = withList(model.items, located.trail, () => next, replaced)
+  return { ...model, ...settle(model, items, replaced) }
 }
 
 /**
@@ -415,12 +499,14 @@ export function setNumbering(model: SequenceModel, on: boolean): SequenceModel {
 
 /* ---------------------------------------------------------------- helpers */
 
+/** `base` when it is free and not a keyword, else the first free of `base1`, `base2`, …; a keyword base is never used bare. */
 function freeId(model: SequenceModel, base: string): string {
   const taken = new Set(model.participants.map((p) => p.id))
-  if (!taken.has(base)) return base
-  for (let n = 2; ; n += 1) {
+  const reserved = RESERVED_ID.test(base)
+  if (!reserved && !taken.has(base)) return base
+  for (let n = reserved ? 1 : 2; ; n += 1) {
     const candidate = `${base}${n}`
-    if (!taken.has(candidate)) return candidate
+    if (!taken.has(candidate) && !RESERVED_ID.test(candidate)) return candidate
   }
 }
 
@@ -457,18 +543,21 @@ function listAt(items: readonly SequenceItem[], trail: readonly Step[]): readonl
   return list
 }
 
-/** The items with the list at the end of `trail` replaced by `fn` of it; every frame on the way is rebuilt, nothing else. */
+/** The items with the list at the end of `trail` replaced by `fn` of it; every frame on the way is rebuilt and recorded, nothing else. */
 function withList(
   items: readonly SequenceItem[],
   trail: readonly Step[],
   fn: (list: readonly SequenceItem[]) => readonly SequenceItem[],
+  replaced?: Replaced,
 ): SequenceItem[] {
   const [step, ...rest] = trail
   if (step === undefined) return [...fn(items)]
   return items.map((item, i) => {
     if (i !== step.item || item.type !== 'frame') return item
-    const sections = item.sections.map((section, s) => (s === step.section ? { ...section, items: withList(section.items, rest, fn) } : section))
-    return { ...item, sections }
+    const sections = item.sections.map((section, s) => (s === step.section ? { ...section, items: withList(section.items, rest, fn, replaced) } : section))
+    const rebuilt: Frame = { ...item, sections }
+    replaced?.set(item, rebuilt)
+    return rebuilt
   })
 }
 
@@ -476,25 +565,58 @@ function sameTrail(a: readonly Step[], b: readonly Step[]): boolean {
   return a.length === b.length && a.every((step, i) => step.item === b[i]?.item && step.section === b[i]?.section)
 }
 
-function insertBefore(items: readonly SequenceItem[], row: number, item: SequenceItem): SequenceItem[] {
-  const located = locate(items, row)
-  if (located === undefined) return [...items, item]
-  return withList(items, located.trail, (list) => [...list.slice(0, located.index), item, ...list.slice(located.index)])
+/** The new item inserted at `at`, with the bars carried across, and its flat index. */
+function insertItem(model: SequenceModel, item: SequenceItem, at: Insertion): { readonly model: SequenceModel; readonly index: number } {
+  const replaced: Replaced = new Map()
+  const items = typeof at === 'number' ? insertBefore(model.items, at, item, replaced) : insertInSection(model.items, at, item, replaced)
+  const index = flattenItems(items).indexOf(item)
+  return { model: { ...model, ...settle(model, items, replaced) }, index }
 }
 
-/** Every item mapped through `fn`, frames included (their sections are mapped first). */
-function mapItems(items: readonly SequenceItem[], fn: (item: SequenceItem) => SequenceItem): SequenceItem[] {
+function insertBefore(items: readonly SequenceItem[], row: number, item: SequenceItem, replaced?: Replaced): SequenceItem[] {
+  const located = locate(items, row)
+  if (located === undefined) return [...items, item]
+  return withList(items, located.trail, (list) => [...list.slice(0, located.index), item, ...list.slice(located.index)], replaced)
+}
+
+/** Inserts into the innermost section of the trail at its position; a trail that names no frame section appends after every item. */
+function insertInSection(items: readonly SequenceItem[], at: SectionInsertion, item: SequenceItem, replaced?: Replaced): SequenceItem[] {
+  const step = at.trail[at.trail.length - 1]
+  const located = step === undefined ? undefined : locate(items, step.index)
+  const frame = located === undefined ? undefined : listAt(items, located.trail)[located.index]
+  if (step === undefined || located === undefined || frame === undefined || frame.type !== 'frame' || frame.sections[step.section] === undefined) {
+    return [...items, item]
+  }
+  const trail = [...located.trail, { item: located.index, section: step.section }]
+  return withList(
+    items,
+    trail,
+    (list) => {
+      const position = Math.max(0, Math.min(list.length, Math.trunc(at.position)))
+      return [...list.slice(0, position), item, ...list.slice(position)]
+    },
+    replaced,
+  )
+}
+
+/** Every item mapped through `fn`, frames included (their sections are mapped first); what changed is recorded. */
+function mapItems(items: readonly SequenceItem[], fn: (item: SequenceItem) => SequenceItem, replaced?: Replaced): SequenceItem[] {
   return items.map((item) => {
-    if (item.type !== 'frame') return fn(item)
-    const sections = item.sections.map((section) => {
-      const mapped = mapItems(section.items, fn)
-      return mapped.every((entry, i) => entry === section.items[i]) ? section : { ...section, items: mapped }
-    })
-    return fn(sections.every((section, i) => section === item.sections[i]) ? item : { ...item, sections })
+    let current = item
+    if (item.type === 'frame') {
+      const sections = item.sections.map((section) => {
+        const mapped = mapItems(section.items, fn, replaced)
+        return mapped.every((entry, i) => entry === section.items[i]) ? section : { ...section, items: mapped }
+      })
+      if (!sections.every((section, i) => section === item.sections[i])) current = { ...item, sections }
+    }
+    const next = fn(current)
+    if (next !== item) replaced?.set(item, next)
+    return next
   })
 }
 
-function filterItems(items: readonly SequenceItem[], keep: (item: SequenceItem) => boolean): SequenceItem[] {
+function filterItems(items: readonly SequenceItem[], keep: (item: SequenceItem) => boolean, replaced?: Replaced): SequenceItem[] {
   const out: SequenceItem[] = []
   for (const item of items) {
     if (!keep(item)) continue
@@ -503,17 +625,24 @@ function filterItems(items: readonly SequenceItem[], keep: (item: SequenceItem) 
       continue
     }
     const sections = item.sections.map((section) => {
-      const kept = filterItems(section.items, keep)
+      const kept = filterItems(section.items, keep, replaced)
       return kept.length === section.items.length && kept.every((entry, i) => entry === section.items[i]) ? section : { ...section, items: kept }
     })
-    out.push(sections.every((section, i) => section === item.sections[i]) ? item : { ...item, sections })
+    if (sections.every((section, i) => section === item.sections[i])) {
+      out.push(item)
+      continue
+    }
+    const rebuilt: Frame = { ...item, sections }
+    replaced?.set(item, rebuilt)
+    out.push(rebuilt)
   }
   return out
 }
 
 function replaceItem(model: SequenceModel, previous: SequenceItem, next: SequenceItem): SequenceModel {
-  const items = mapItems(model.items, (item) => (item === previous ? next : item))
-  return { ...model, items, activations: remapActivations(model, items, new Map([[previous, next]])) }
+  const replaced: Replaced = new Map()
+  const items = mapItems(model.items, (item) => (item === previous ? next : item), replaced)
+  return { ...model, ...settle(model, items, replaced) }
 }
 
 function replaceMessage(model: SequenceModel, index: number, fn: (message: Message) => Message): SequenceModel {
@@ -539,16 +668,38 @@ function previousMessageTo(model: SequenceModel, participantId: string, index: n
 }
 
 /**
+ * Where a bar of `participantId` started at `index` ends: at its next
+ * reply, a message from the participant, or the last row. The bar may not
+ * cross another bar of the participant, since Mermaid's stack cannot spell
+ * that: it stays inside a bar that covers `index`, and it skips a reply
+ * that sits inside a later bar without reaching that bar's end, so the
+ * result either contains that bar or ends before it.
+ */
+function replyRow(flat: readonly SequenceItem[], activations: readonly Activation[], participantId: string, index: number): number {
+  const own = activations.filter((a) => a.participantId === participantId)
+  const cap = Math.min(flat.length - 1, ...own.filter((a) => a.start < index && a.end >= index).map((a) => a.end))
+  const crosses = (end: number): boolean => own.some((a) => a.start > index && a.start <= end && a.end > end)
+  for (let i = index + 1; i <= cap; i += 1) {
+    const item = flat[i]
+    if (item !== undefined && item.type === 'message' && item.from === participantId && !crosses(i)) return i
+  }
+  return Math.max(index, cap)
+}
+
+/** The items and activations of `model` carried over to the new items: the bars follow their items, and the suffixes spell the bars. */
+function settle(model: SequenceModel, items: readonly SequenceItem[], replaced: Replaced): { readonly items: SequenceItem[]; readonly activations: Activation[] } {
+  const activations = remapActivations(model, items, replaced)
+  return { items: spellSuffixes(items, activations), activations }
+}
+
+/**
  * The activations of `model` on the new items: each span follows the items
  * it starts and ends on by identity (through `replaced` when one was
- * rebuilt); a span that lost either is dropped, and one whose items
- * crossed keeps the range between them.
+ * rebuilt). A span whose start item is gone is dropped; one whose end item
+ * is gone runs to the last row; one whose items crossed keeps the range
+ * between them.
  */
-function remapActivations(
-  model: SequenceModel,
-  items: readonly SequenceItem[],
-  replaced: ReadonlyMap<SequenceItem, SequenceItem> = new Map(),
-): Activation[] {
+function remapActivations(model: SequenceModel, items: readonly SequenceItem[], replaced: Replaced): Activation[] {
   const before = flattenItems(model.items)
   const after = flattenItems(items)
   const position = new Map(after.map((item, i) => [item, i]))
@@ -560,11 +711,34 @@ function remapActivations(
   const out: Activation[] = []
   for (const span of model.activations) {
     const start = find(span.start)
-    const end = find(span.end)
-    if (start === undefined || end === undefined) continue
+    if (start === undefined) continue
+    const end = find(span.end) ?? after.length - 1
     out.push({ participantId: span.participantId, start: Math.min(start, end), end: Math.max(start, end) })
   }
   return sortActivations(out)
+}
+
+/**
+ * The items with every `+` and `-` that spells no span cleared: the parser
+ * reads a `+` as a span of the receiver starting at the message and a `-`
+ * as a span of the sender ending there, so a suffix left over from a bar
+ * that went or moved would come back as a bar the model does not hold.
+ * Items keep their identity unless a suffix goes.
+ */
+function spellSuffixes(items: readonly SequenceItem[], activations: readonly Activation[]): SequenceItem[] {
+  const stale = new Map<SequenceItem, Message>()
+  flattenItems(items).forEach((item, i) => {
+    if (item.type !== 'message' || item.activate === undefined) return
+    const spelled =
+      item.activate === '+'
+        ? activations.some((a) => a.participantId === item.to && a.start === i)
+        : activations.some((a) => a.participantId === item.from && a.start < i && a.end === i)
+    if (spelled) return
+    const { activate: _activate, ...rest } = item
+    stale.set(item, rest)
+  })
+  if (stale.size === 0) return [...items]
+  return mapItems(items, (item) => stale.get(item) ?? item)
 }
 
 /** The parser's order: start ascending, end descending, then participant id. */

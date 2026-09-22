@@ -1,14 +1,17 @@
 /**
  * Inline textarea laid over a label of the sequence picture, following the
  * flowchart's `text-edit-overlay`: same font metrics as the SVG text so
- * nothing jumps, native key listeners so Lexical never sees a keystroke,
- * Enter commits, Escape cancels, blur commits. The value is reported live
- * on every change so the picture follows the typing and the commits merge
- * into one history entry; `onFinish` says how the edit ended.
+ * nothing jumps, native listeners so Lexical never sees a keystroke, a
+ * clipboard or a composition event, Enter commits, Escape cancels, blur
+ * commits. The value is reported live on every change so the picture
+ * follows the typing and the commits merge into one history entry;
+ * `onFinish` says how the edit ended, and a cancel is the canvas's to
+ * undo, so the field itself never reports the original value back.
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react'
 import { LINE_HEIGHT } from '../../core/drawing-data.js'
 import type { Rect } from '../../core/geometry.js'
+import { STOPPED_FIELD_EVENTS } from '../text-edit-overlay.js'
 
 export interface LabelOverlayProps {
   /** Where the field sits, in picture coordinates. */
@@ -18,16 +21,13 @@ export interface LabelOverlayProps {
   readonly align: 'start' | 'center'
   readonly placeholder: string
   readonly onChange: (value: string) => void
-  /** The edit ended: `cancelled` when Escape restored the original value. */
+  /** The edit ended: `cancelled` when Escape asked for the changes to be taken back. */
   readonly onFinish: (cancelled: boolean) => void
 }
 
 export function LabelOverlay({ rect, value: original, fontSize, align, placeholder, onChange, onFinish }: LabelOverlayProps): ReactElement {
   const [value, setValue] = useState(original)
   const ref = useRef<HTMLTextAreaElement>(null)
-  const originalRef = useRef(original)
-  const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
   const onFinishRef = useRef(onFinish)
   onFinishRef.current = onFinish
 
@@ -45,22 +45,15 @@ export function LabelOverlay({ rect, value: original, fontSize, align, placehold
         onFinishRef.current(false)
       } else if (e.key === 'Escape') {
         e.preventDefault()
-        onChangeRef.current(originalRef.current)
         onFinishRef.current(true)
       }
     }
     const stop = (e: Event): void => e.stopPropagation()
     el.addEventListener('keydown', onKeyDown)
-    el.addEventListener('keyup', stop)
-    el.addEventListener('keypress', stop)
-    el.addEventListener('beforeinput', stop)
-    el.addEventListener('paste', stop)
+    for (const name of STOPPED_FIELD_EVENTS) el.addEventListener(name, stop)
     return () => {
       el.removeEventListener('keydown', onKeyDown)
-      el.removeEventListener('keyup', stop)
-      el.removeEventListener('keypress', stop)
-      el.removeEventListener('beforeinput', stop)
-      el.removeEventListener('paste', stop)
+      for (const name of STOPPED_FIELD_EVENTS) el.removeEventListener(name, stop)
     }
   }, [])
 

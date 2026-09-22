@@ -3,11 +3,13 @@
  * and the canvas for a flowchart, the toolbar gains one insert button per
  * kind, labels and options reach the canvas, read-only shows the static
  * output, a lossy flowchart mounts read-only behind the block's notice,
- * "Copy as Mermaid" copies what a commit would write, and a commit lands in
- * the document before the handler returns.
+ * "Copy as Mermaid" copies what a commit would write, a commit lands in
+ * the document before the handler returns, keys on the canvas's own
+ * controls stay theirs, the inline field keeps its events from Lexical's
+ * root, and the overlay scale ignores a host's zoom transform.
  */
 import mermaidJs from 'mermaid'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MarkdownEditor, useMarkdownEditorContext, type MarkdownEditorInstance } from '@react-markdown-kit/editor'
 import { button, click, mount, run, runAsync } from '../../../packages/editor/tests/helpers/mount.js'
 import { flowchart, mermaid, sequenceDiagram, type DiagramKind } from '../src/editor.js'
@@ -31,6 +33,40 @@ const LOSSY = 'Before.\n\n```mermaid\nflowchart LR\n    a --> b\n    a ==> c\n  
 function Capture({ onReady }: { onReady: (editor: MarkdownEditorInstance) => void }): null {
   onReady(useMarkdownEditorContext())
   return null
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
+
+/** jsdom has no pointer capture; the canvas captures on every press. */
+function withPointerCapture(): void {
+  if (!('setPointerCapture' in Element.prototype)) {
+    Object.defineProperty(Element.prototype, 'setPointerCapture', { value: () => {}, configurable: true, writable: true })
+  }
+}
+
+function fire(target: Element, type: string, init: MouseEventInit = {}): void {
+  run(() => {
+    target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, ...init }))
+  })
+}
+
+function keyOn(target: Element, key: string): void {
+  run(() => {
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+  })
+}
+
+/** Selects the shape by a click on its group. */
+function selectShape(container: HTMLElement, id: string): Element {
+  const shape = container.querySelector(`[data-shape-id="${id}"]`)
+  const surface = container.querySelector('.rmk-diagram-surface')
+  if (shape === null || surface === null) throw new Error('No shape.')
+  fire(shape, 'pointerdown', { clientX: 30, clientY: 50 })
+  fire(surface, 'pointerup', { clientX: 30, clientY: 50 })
+  return shape
 }
 
 describe('the diagram canvas in <MarkdownEditor>', () => {
@@ -234,6 +270,82 @@ describe('the diagram canvas in <MarkdownEditor>', () => {
     const canvasButton = view.container.querySelector<HTMLButtonElement>('.rmk-diagram-mode-button[aria-label="Canvas"]')
     run(() => canvasButton?.click())
     expect(view.container.querySelector('.rmk-diagram-lossy')).not.toBeNull()
+    view.unmount()
+  })
+
+  // Review S5: Enter on a focused tool activates the tool; Backspace there edits nothing of the selection.
+  it('a key on a tool row or property bar control never edits or deletes the selection', () => {
+    withPointerCapture()
+    let editor!: MarkdownEditorInstance
+    const view = mount(
+      <MarkdownEditor extensions={[mermaid()]} defaultValue={DOCUMENT}>
+        <Capture onReady={(value) => (editor = value)} />
+      </MarkdownEditor>,
+    )
+    const shape = selectShape(view.container, 'a')
+    expect(shape.classList.contains('is-selected')).toBe(true)
+    const tool = view.container.querySelector('.rmk-diagram-toolbar button')
+    if (tool === null) throw new Error('No tool.')
+    keyOn(tool, 'Enter')
+    expect(view.container.querySelector('.rmk-diagram-text-input')).toBeNull()
+    keyOn(tool, 'Backspace')
+    expect(view.container.querySelector('[data-shape-id="a"]')).not.toBeNull()
+    expect(editor.getMarkdown()).toBe(DOCUMENT)
+    const root = view.container.querySelector('.rmk-diagram-canvas')
+    if (root === null) throw new Error('No canvas.')
+    keyOn(root, 'Enter')
+    expect(view.container.querySelector('.rmk-diagram-text-input')).not.toBeNull()
+    view.unmount()
+  })
+
+  // Review S3: `cut` at Lexical's root removes the document selection, so nothing but `input` may leave the field.
+  it("the inline text field keeps its clipboard, drop, key and composition events from Lexical's root", () => {
+    withPointerCapture()
+    let editor!: MarkdownEditorInstance
+    const view = mount(
+      <MarkdownEditor extensions={[mermaid()]} defaultValue={DOCUMENT}>
+        <Capture onReady={(value) => (editor = value)} />
+      </MarkdownEditor>,
+    )
+    const shape = view.container.querySelector('[data-shape-id="a"]')
+    if (shape === null) throw new Error('No shape.')
+    fire(shape, 'dblclick', { clientX: 30, clientY: 50 })
+    const input = view.container.querySelector<HTMLTextAreaElement>('.rmk-diagram-text-input')
+    const lexical = view.container.querySelector('.rmk-content > [contenteditable]')
+    if (input === null || lexical === null) throw new Error('No field.')
+    const seen = vi.fn()
+    const events = ['keyup', 'keypress', 'beforeinput', 'paste', 'cut', 'copy', 'drop', 'compositionstart', 'compositionupdate', 'compositionend']
+    for (const name of events) lexical.addEventListener(name, seen)
+    for (const name of events) run(() => input.dispatchEvent(new Event(name, { bubbles: true, cancelable: true })))
+    expect(seen).not.toHaveBeenCalled()
+    expect(editor.getMarkdown()).toBe(DOCUMENT)
+    view.unmount()
+  })
+
+  // Review S4: the overlay sits inside a host's zoom transform, so its scale
+  // comes from the untransformed stage width, never from a client rect.
+  it('scales the inline text field by the untransformed stage width under a host zoom', () => {
+    withPointerCapture()
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
+    // The stage is 200 px wide; a host zoom doubles every client rect.
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('rmk-diagram-stage') ? 200 : 0
+    })
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 0, width: 400, height: 0, toJSON: () => ({}) } as DOMRect)
+    const sized = DOCUMENT.replace('"canvasHeight":200', '"canvasHeight":200,"canvasWidth":400')
+    const view = mount(<MarkdownEditor extensions={[mermaid()]} defaultValue={sized} />)
+    const shape = view.container.querySelector('[data-shape-id="a"]')
+    if (shape === null) throw new Error('No shape.')
+    fire(shape, 'dblclick', { clientX: 30, clientY: 50 })
+    const overlay = view.container.querySelector<HTMLElement>('.rmk-diagram-overlay')
+    expect(overlay?.style.transform).toBe('scale(0.5)')
     view.unmount()
   })
 })

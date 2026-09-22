@@ -233,7 +233,7 @@ describe('sequenceDiagram writer against Mermaid.js', () => {
   /** Models the canvas must not produce but the writer still repairs: Mermaid.js accepts the output even though it cannot equal the model. */
   const repairedModels: Record<string, SequenceModel> = {
     'a - that closes nothing is dropped': { participants: two, boxes: [], items: [message('B', 'A', 'y', { activate: '-' })], activations: [] },
-    'a + without a listed span still opens': { participants: two, boxes: [], items: [message('A', 'B', 'x', { activate: '+' })], activations: [] },
+    'a + without a listed span is dropped': { participants: two, boxes: [], items: [message('A', 'B', 'x', { activate: '+' })], activations: [] },
     'a span outside the items is clamped': { participants: two, boxes: [], items: [message('A', 'B', 'x')], activations: [{ participantId: 'B', start: 5, end: 9 }] },
     'extra sections of a loop are merged': {
       participants: two,
@@ -250,4 +250,162 @@ describe('sequenceDiagram writer against Mermaid.js', () => {
       expect(parsed(written).problems.filter((p) => p.severity === 'invalid')).toEqual([])
     })
   }
+})
+
+/** Second review: inputs the findings compared against Mermaid.js (S7, S8, S10, S17), as severities and as writer output. */
+describe('sequenceDiagram second review against Mermaid.js', () => {
+  const kind = sequenceDiagram()
+  const parsed = (source: string): DiagramParse<SequenceModel> => {
+    const result = kind.parse(source)
+    if ('error' in result) throw new Error(result.error)
+    return result
+  }
+  const invalid = (source: string): string[] => parsed(source).problems.filter((p) => p.severity === 'invalid').map((p) => `${p.code}@${p.line}`)
+  const message = (from: string, to: string, text: string, extra: Partial<Message> = {}): Message => ({
+    type: 'message',
+    from,
+    to,
+    line: 'solid',
+    head: 'arrow',
+    bidirectional: false,
+    text,
+    ...extra,
+  })
+  const participant = (id: string, label = id, kind: 'participant' | 'actor' = 'participant') => ({ id, label, kind })
+
+  const accepted: Record<string, string> = {
+    'S17: # inside a message actor': 'sequenceDiagram\n    A#1->>B: hi',
+    'S17: # inside a note target': 'sequenceDiagram\n    Note over A#1: n',
+    'S17: # after whitespace inside an actor': 'sequenceDiagram\n    A->>B #1: hi',
+    'S17: hyphens inside actors': 'sequenceDiagram\n    A-b-c->>B- c: hi\n    A->>B -c: yo',
+    'S17: upper-case cross arrows': 'sequenceDiagram\n    A--XB: hi\n    A-XB: yo',
+    'S8: @ in message ids': 'sequenceDiagram\n    alice@example.com->>bob@example.com: hi',
+    'S8: @ in an alias': 'sequenceDiagram\n    participant A as x@y',
+    'S10: @{ after as is the alias': 'sequenceDiagram\n    participant shapex as @{shape: x}',
+    'S10: alias after a config': 'sequenceDiagram\n    participant A@{ "type": "boundary" } as Alice\n    A->>B: x',
+    'S7: + before an id starting with x': 'sequenceDiagram\n    A->>+Xavier: x\n    deactivate Xavier',
+  }
+  const rejected: Record<string, { source: string; problems: string[] }> = {
+    'S7: - before an id starting with X': { source: 'sequenceDiagram\n    B->>+A: x\n    A-->>-Xavier: y', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'] },
+    'S7: - before an id starting with x': { source: 'sequenceDiagram\n    B->>+A: x\n    A-->>-xavier: y', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'] },
+    'S7: - before an x id after -)': { source: 'sequenceDiagram\n    A->>+B: x\n    B-)-xA: y', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'] },
+    'S8: @ in a participant declaration': { source: 'sequenceDiagram\n    participant a@b', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S8: @ in an aliased declaration': { source: 'sequenceDiagram\n    participant a@b as Label', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S8: @ in an actor declaration': { source: 'sequenceDiagram\n    actor c@d', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S8: @ in activate': { source: 'sequenceDiagram\n    activate a@b\n    deactivate a@b', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2', 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'] },
+    'S8: @ in a box member': { source: 'sequenceDiagram\n    box G\n    participant a@b\n    end', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'] },
+    'S10: @{ after whitespace': { source: 'sequenceDiagram\n    participant A @{x}', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S17: -x inside an id': { source: 'sequenceDiagram\n    A-xray->>B: hi', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S17: -x then an arrow': { source: 'sequenceDiagram\n    A-x->>B: hi', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S17: trailing - in an id': { source: 'sequenceDiagram\n    A-->>B-: hi', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S17: -- inside an id': { source: 'sequenceDiagram\n    A--1->>B: hi', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S17: leading - in an id': { source: 'sequenceDiagram\n    -A->>B: hi', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S17: # where the to actor starts': { source: 'sequenceDiagram\n    A->>#B: hi', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S17: # where a second note target starts': { source: 'sequenceDiagram\n    Note over A,#B: n', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S0: ; residue': { source: 'sequenceDiagram\n    A->>B: Hello; how are you?', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S2: HTML entity residue': { source: 'sequenceDiagram\n    A->>B: Tom &amp; Jerry', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+    'S0: frame opener residue': { source: 'sequenceDiagram\n    loop x; garbage\n    end', problems: ['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'] },
+  }
+
+  for (const [name, source] of Object.entries(accepted)) {
+    it(`${name}: Mermaid.js accepts it, the kind reports nothing invalid, and the written output is accepted`, async () => {
+      await expect(accepts(source)).resolves.toBeTruthy()
+      expect(invalid(source)).toEqual([])
+      const first = parsed(source)
+      const written = kind.write!(first.model, { retained: first.retained })
+      await expect(accepts(written)).resolves.toBeTruthy()
+      expect(parsed(written).model).toEqual(first.model)
+    })
+  }
+
+  for (const [name, { source, problems }] of Object.entries(rejected)) {
+    it(`${name}: Mermaid.js rejects it and the kind reports it invalid`, async () => {
+      await expect(accepts(source)).rejects.toThrow()
+      expect(invalid(source)).toEqual(problems)
+    })
+  }
+
+  /** Models a canvas gesture produces on the findings' inputs; each written output is accepted and a fixed point. */
+  const models: Record<string, SequenceModel> = {
+    'S7: a - before an x id becomes a deactivate statement': {
+      participants: [participant('B'), participant('A'), participant('Xavier')],
+      boxes: [],
+      items: [message('B', 'A', 'x', { activate: '+' }), message('A', 'Xavier', 'y', { activate: '-', line: 'dotted' })],
+      activations: [{ participantId: 'A', start: 0, end: 1 }],
+    },
+    'S8: @ ids reordered stay undeclared': {
+      participants: [participant('bob@example.com'), participant('alice@example.com')],
+      boxes: [],
+      items: [message('bob@example.com', 'alice@example.com', 'yo')],
+      activations: [],
+    },
+    'S8: a declared prefix keeps a column order the body does not give': {
+      participants: [participant('C'), participant('A'), participant('B')],
+      boxes: [],
+      items: [message('A', 'B', 'x'), message('B', 'C', 'y')],
+      activations: [],
+    },
+    'S9: a reordered + message keeps one bar': {
+      participants: [participant('A'), participant('B')],
+      boxes: [],
+      items: [message('B', 'A', 'y'), message('A', 'B', 'x')],
+      activations: [{ participantId: 'B', start: 0, end: 1 }],
+    },
+    'S10: a label holding @{': {
+      participants: [participant('shapex', '@{shape: x}'), participant('B')],
+      boxes: [],
+      items: [message('shapex', 'B', 'hi')],
+      activations: [],
+    },
+    'S17: an id holding #': {
+      participants: [participant('A#1'), participant('B')],
+      boxes: [],
+      items: [message('A#1', 'B', 'hi'), { type: 'note', placement: 'over', participantIds: ['A#1'], text: 'n' }],
+      activations: [],
+    },
+  }
+
+  for (const [name, model] of Object.entries(models)) {
+    it(`${name}: Mermaid.js accepts the written output, which is a fixed point`, async () => {
+      const written = kind.write!(model, { retained: [] })
+      await expect(accepts(written)).resolves.toBeTruthy()
+      const back = parsed(written)
+      expect(back.problems.filter((p) => p.severity === 'invalid')).toEqual([])
+      expect(kind.write!(back.model, { retained: back.retained })).toBe(written)
+    })
+  }
+
+  it('S7: the model with the - on an x id is written as a deactivate statement, and the reparse differs only by that suffix', async () => {
+    const model = models['S7: a - before an x id becomes a deactivate statement']!
+    const written = kind.write!(model, { retained: [] })
+    expect(written.split('\n').slice(1)).toEqual(['    B->>+A: x', '    A-->>Xavier: y', '    deactivate A'])
+    const back = parsed(written)
+    expect(back.model.activations).toEqual(model.activations)
+    expect(back.model.items[1]).toEqual(message('A', 'Xavier', 'y', { line: 'dotted' }))
+  })
+
+  it('S9, S11: a stale + or - spells no bar, so the written output is accepted with no problem', async () => {
+    const stale: SequenceModel = {
+      participants: [participant('A'), participant('B')],
+      boxes: [],
+      items: [message('B', 'A', 'y', { activate: '-' }), message('A', 'B', 'x', { activate: '+' })],
+      activations: [{ participantId: 'B', start: 0, end: 1 }],
+    }
+    const written = kind.write!(stale, { retained: [] })
+    await expect(accepts(written)).resolves.toBeTruthy()
+    expect(parsed(written).problems).toEqual([])
+    expect(parsed(written).model.activations).toEqual(stale.activations)
+    const dropped: SequenceModel = { participants: [participant('A'), participant('B')], boxes: [], items: [message('A', 'B', 'x', { activate: '+' }), message('A', 'B', 'z')], activations: [] }
+    const cleared = kind.write!(dropped, { retained: [] })
+    await expect(accepts(cleared)).resolves.toBeTruthy()
+    expect(parsed(cleared).problems).toEqual([])
+    expect(parsed(cleared).model.activations).toEqual([])
+  })
+
+  it('S8: a written declaration of an @ id would be rejected, which is why the writer never emits one', async () => {
+    await expect(accepts('sequenceDiagram\n    participant alice@example.com\n    alice@example.com->>B: hi')).rejects.toThrow()
+    const written = kind.write!({ participants: [participant('alice@example.com'), participant('B')], boxes: [], items: [message('alice@example.com', 'B', 'hi')], activations: [] }, { retained: [] })
+    expect(written).toBe('sequenceDiagram\n    alice@example.com->>B: hi')
+    await expect(accepts(written)).resolves.toBeTruthy()
+  })
 })

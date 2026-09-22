@@ -500,7 +500,7 @@ interface DiagramKindEditorProps {
   readonly kind: DiagramKind
   readonly source: string
   readonly parse: DiagramParse<unknown>
-  /** True while the block locks the canvas: read-only editor, or a lossy source not yet acknowledged. */
+  /** True while the block locks the canvas behind the lossy notice (a lossy source not yet acknowledged). A read-only editor never mounts the component: the block renders the kind's output instead. */
   readonly readOnly: boolean
   /** Writes `source` to the node as one history entry. `merge` folds it into the previous commit under the 300 ms rule. */
   readonly commit: (source: string, options?: { readonly merge?: boolean }) => void

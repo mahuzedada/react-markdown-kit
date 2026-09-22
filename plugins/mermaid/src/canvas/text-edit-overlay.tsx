@@ -1,7 +1,9 @@
 /**
  * Ported from @zuilib/text-editor (MIT). Inline textarea laid over a shape's
  * text slot, with the same font metrics as the SVG text so nothing jumps on
- * commit.
+ * commit. Native listeners keep the field's keystrokes, clipboard and
+ * composition events from Lexical's root, which owns the same events for
+ * the document (a `cut` there removes the document selection).
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react'
 import { connectorMidpoint } from '../core/connectors.js'
@@ -17,6 +19,25 @@ import {
 } from '../core/drawing-data.js'
 import { useDiagramLabels } from './labels.js'
 import { CONNECTOR_FONT_SIZE, CONNECTOR_LABEL_MAX_WIDTH, slotLayout, textColorFor } from './shape-view.js'
+
+/**
+ * Events of an inline field that must never reach Lexical's root listeners,
+ * the list the source textarea stops. `keydown` is handled by each field,
+ * and `input` bubbles on: React's delegated `onChange` is that event, and
+ * Lexical's own `input` handler returns for a decorator's field.
+ */
+export const STOPPED_FIELD_EVENTS = [
+  'keyup',
+  'keypress',
+  'beforeinput',
+  'paste',
+  'cut',
+  'copy',
+  'drop',
+  'compositionstart',
+  'compositionupdate',
+  'compositionend',
+] as const
 
 export function TextEditOverlay({
   shape,
@@ -68,12 +89,10 @@ export function TextEditOverlay({
     }
     const stop = (e: Event): void => e.stopPropagation()
     el.addEventListener('keydown', onKeyDown)
-    el.addEventListener('keyup', stop)
-    el.addEventListener('keypress', stop)
+    for (const name of STOPPED_FIELD_EVENTS) el.addEventListener(name, stop)
     return () => {
       el.removeEventListener('keydown', onKeyDown)
-      el.removeEventListener('keyup', stop)
-      el.removeEventListener('keypress', stop)
+      for (const name of STOPPED_FIELD_EVENTS) el.removeEventListener(name, stop)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

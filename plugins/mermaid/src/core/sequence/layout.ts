@@ -16,11 +16,15 @@
  * section 9.5): every message, note and frame carries its flat index, the
  * anchor row of every flat index is listed in `rows`, and the rect helpers
  * at the end give the box a pointer must be in to pick a column, a
- * message, a frame tab or a section. What is edited is what is drawn.
+ * message, a frame tab or a section, and `insertionAt` turns a pointer
+ * into the place a drawn message or note goes, inside the frame section
+ * under it. What is edited is what is drawn.
  */
 import { FONT_SIZE, LINE_HEIGHT, SMALL_FONT_SIZE } from '../drawing-data.js'
 import { textBoxSize, wrapText, type Rect } from '../geometry.js'
 import type { Frame, Message, Note, Participant, SequenceItem, SequenceModel } from './model.js'
+import { flattenItems } from './model.js'
+import type { Insertion, SectionStep } from './operations.js'
 
 export const SEQUENCE_METRICS = {
   /** Space around the whole picture. */
@@ -427,6 +431,65 @@ export function columnAt(layout: SequenceLayout, x: number): number {
  */
 export function rowAt(layout: SequenceLayout, y: number): number {
   return layout.rows.filter((row) => row <= y).length
+}
+
+/** The frame sections a pointer is in, from `sectionAt`. */
+export interface SectionHit {
+  /** The sections down to the pointer, outermost first; the last step is the innermost section. */
+  readonly trail: readonly SectionStep[]
+  /**
+   * True when the pointer is under every row of the innermost section, an
+   * empty section included: an item inserted there goes last in it, where
+   * the flat row under the pointer would put it in the next section or
+   * after the frame.
+   */
+  readonly belowLastRow: boolean
+}
+
+/**
+ * The innermost frame section whose vertical extent holds `y`, with the
+ * sections above it: a section runs from the frame's top (the first) or
+ * its divider to the next divider or the frame's bottom edge, bottom pad
+ * included. Undefined outside every frame. Only `y` counts, as for the
+ * flat rows: a frame grows to what it holds.
+ */
+export function sectionAt(layout: SequenceLayout, y: number): SectionHit | undefined {
+  const trail: SectionStep[] = []
+  let belowLastRow = false
+  // Outer frames come first, and frames nest or are vertically disjoint, so the matches are the trail.
+  for (const frame of layout.frames) {
+    if (y < frame.y || y > frame.y + frame.height) continue
+    let section = 0
+    frame.sections.forEach((entry, i) => {
+      if (entry.y <= y) section = i
+    })
+    trail.push({ index: frame.index, section })
+    belowLastRow = y > lastRowOfSection(layout, frame, section)
+  }
+  return trail.length === 0 ? undefined : { trail, belowLastRow }
+}
+
+/**
+ * Where a pointer at `y` inserts, for `addMessage` and `addNote`: the flat
+ * row under it, or the end of the frame section it is in when it is under
+ * every row of that section, so an empty section and the tail of a middle
+ * section can be drawn into.
+ */
+export function insertionAt(layout: SequenceLayout, y: number): Insertion {
+  const hit = sectionAt(layout, y)
+  const step = hit?.trail[hit.trail.length - 1]
+  if (hit === undefined || step === undefined || !hit.belowLastRow) return rowAt(layout, y)
+  const frame = layout.frames.find((entry) => entry.index === step.index)
+  return { trail: hit.trail, position: frame?.frame.sections[step.section]?.items.length ?? 0 }
+}
+
+/** The anchor y of the last row inside a frame section, nested frames included; negative infinity for an empty section. */
+function lastRowOfSection(layout: SequenceLayout, frame: LayoutFrame, section: number): number {
+  let base = frame.index + 1
+  for (let i = 0; i < section; i += 1) base += flattenItems(frame.frame.sections[i]?.items ?? []).length
+  const count = flattenItems(frame.frame.sections[section]?.items ?? []).length
+  if (count === 0) return Number.NEGATIVE_INFINITY
+  return layout.rows[base + count - 1] ?? Number.NEGATIVE_INFINITY
 }
 
 /** True when the point is inside the rect. */

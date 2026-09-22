@@ -61,8 +61,8 @@ describe('writeSequenceDiagram: order', () => {
     const parsed = parse(kind.starter)
     expect(kind.write).toBeDefined()
     expect(kind.write!(parsed.model, { retained: parsed.retained })).toBe(writeSequenceDiagram(parsed.model))
-    // The parser declares the participants a message names, so the written starter declares them too.
-    expect(kind.write!(parsed.model, { retained: [] })).toBe('sequenceDiagram\n    participant Alice\n    participant Bob\n    Alice->>Bob: Hello Bob\n    Bob-->>Alice: Hi Alice')
+    // The messages introduce the participants in column order, so the written starter is the starter: no declaration is needed.
+    expect(kind.write!(parsed.model, { retained: [] })).toBe(kind.starter)
     expect(writeSequenceDiagram(parsed.model)).not.toMatch(/\n$/)
   })
 
@@ -129,7 +129,7 @@ describe('writeSequenceDiagram: order', () => {
   })
 
   it('omits the front matter block when there is no title and no retained front-matter line', () => {
-    const body = 'sequenceDiagram\n    participant A\n    participant B\n    A->>B: x'
+    const body = 'sequenceDiagram\n    A->>B: x'
     expect(rewrite('sequenceDiagram\n    A->>B: x')).toBe(body)
     expect(rewrite('---\ntitle: T\n---\nsequenceDiagram\n    A->>B: x')).toBe(`---\ntitle: "T"\n---\n${body}`)
     expect(rewrite('---\nconfig:\n  theme: base\n---\nsequenceDiagram\n    A->>B: x')).toBe(`---\nconfig:\n  theme: base\n---\n${body}`)
@@ -172,7 +172,8 @@ describe('writeSequenceDiagram: participants and boxes', () => {
       participants: [participant('Alice Smith'), participant('api-gw', 'API'), participant('Bob(2)')],
       items: [message('Alice Smith', 'api-gw', 'hi'), message('api-gw', 'Bob(2)', 'yo', { line: 'dotted' })],
     })
-    expect(writeSequenceDiagram(m).split('\n').slice(4)).toEqual(['    Alice Smith->>api-gw: hi', '    api-gw-->>Bob(2): yo'])
+    // The alias makes api-gw need a declaration, and Alice Smith precedes it; Bob(2) is introduced by its message.
+    expect(writeSequenceDiagram(m).split('\n').slice(1)).toEqual(['    participant Alice Smith', '    participant api-gw as API', '    Alice Smith->>api-gw: hi', '    api-gw-->>Bob(2): yo'])
     expectFixedPoint(m)
   })
 
@@ -206,7 +207,7 @@ describe('writeSequenceDiagram: items', () => {
     items.push(message('A', 'B', 'two-way', { bidirectional: true }), message('A', 'B', 'two-way dotted', { bidirectional: true, line: 'dotted' }))
     items.push(message('A', 'B', '', { activate: '+' }), message('B', 'A', '', { activate: '-' }))
     const m = model({ participants: [participant('A'), participant('B')], items, activations: [span('B', 10, 11)] })
-    expect(writeSequenceDiagram(m).split('\n').slice(3)).toEqual([
+    expect(writeSequenceDiagram(m).split('\n').slice(1)).toEqual([
       '    A->B: solid none',
       '    A->>B: solid arrow',
       '    A-xB: solid cross',
@@ -237,7 +238,7 @@ describe('writeSequenceDiagram: items', () => {
         { type: 'note', placement: 'over', participantIds: ['A', 'B'], text: '' },
       ],
     })
-    expect(writeSequenceDiagram(m).split('\n').slice(3)).toEqual(['    Note left of A: l', '    Note right of B: r', '    Note over A: o', '    Note over A,B:'])
+    expect(writeSequenceDiagram(m).split('\n').slice(1)).toEqual(['    Note left of A: l', '    Note right of B: r', '    Note over A: o', '    Note over A,B:'])
     expectFixedPoint(m)
     expect(writeSequenceDiagram(model({ items: [{ type: 'note', placement: 'left', participantIds: ['A', 'B'], text: 'x' }] }))).toContain('Note left of A: x')
     expect(writeSequenceDiagram(model({ items: [{ type: 'note', placement: 'over', participantIds: [], text: 'x' }] }))).toBe('sequenceDiagram')
@@ -272,7 +273,7 @@ describe('writeSequenceDiagram: items', () => {
     ].join('\n')
     const parsed = parse(source)
     expect(parsed.problems).toEqual([])
-    expect(rewrite(source)).toBe(source.replace('sequenceDiagram', 'sequenceDiagram\n    participant A\n    participant B'))
+    expect(rewrite(source)).toBe(source)
     expectFixedPoint(parsed.model)
   })
 
@@ -342,41 +343,39 @@ describe('writeSequenceDiagram: activations', () => {
 
   it('spells a span by + and - when its messages carry them', () => {
     const m = model({ participants: two, items: [message('A', 'B', 'x', { activate: '+' }), message('B', 'A', 'y', { activate: '-' })], activations: [span('B', 0, 1)] })
-    expect(writeSequenceDiagram(m).split('\n').slice(3)).toEqual(['    A->>+B: x', '    B->>-A: y'])
+    expect(writeSequenceDiagram(m).split('\n').slice(1)).toEqual(['    A->>+B: x', '    B->>-A: y'])
     expectFixedPoint(m)
   })
 
   it('spells a span the suffixes do not carry as activate and deactivate statements after its items', () => {
     const m = model({ participants: two, items: [message('A', 'B', 'x'), message('B', 'A', 'y'), message('A', 'B', 'z')], activations: [span('B', 0, 1)] })
-    expect(writeSequenceDiagram(m).split('\n').slice(3)).toEqual(['    A->>B: x', '    activate B', '    B->>A: y', '    deactivate B', '    A->>B: z'])
+    expect(writeSequenceDiagram(m).split('\n').slice(1)).toEqual(['    A->>B: x', '    activate B', '    B->>A: y', '    deactivate B', '    A->>B: z'])
     expectFixedPoint(m)
   })
 
   it('keeps the source spelling of every corpus activation', () => {
     expect(rewrite(readFileSync(join(CORPUS, 'activation.mmd'), 'utf8'))).toBe(
-      'sequenceDiagram\n    participant Alice\n    participant John\n    Alice->>John: Hello John, how are you?\n    activate John\n    John-->>Alice: Great!\n    deactivate John',
+      'sequenceDiagram\n    Alice->>John: Hello John, how are you?\n    activate John\n    John-->>Alice: Great!\n    deactivate John',
     )
-    expect(rewrite(readFileSync(join(CORPUS, 'activation-stacked.mmd'), 'utf8'))).toBe(
-      readFileSync(join(CORPUS, 'activation-stacked.mmd'), 'utf8').replace('sequenceDiagram', 'sequenceDiagram\n    participant Alice\n    participant John').trimEnd(),
-    )
+    expect(rewrite(readFileSync(join(CORPUS, 'activation-stacked.mmd'), 'utf8'))).toBe(readFileSync(join(CORPUS, 'activation-stacked.mmd'), 'utf8').trimEnd())
   })
 
   it('mixes suffixes and statements on one participant, longest span opened first', () => {
     const items = [message('A', 'B', 'x', { activate: '+' }), message('B', 'A', 'y', { activate: '-' }), message('A', 'B', 'z')]
     const m = model({ participants: two, items, activations: [span('B', 0, 2), span('B', 0, 1)] })
-    expect(writeSequenceDiagram(m).split('\n').slice(3)).toEqual(['    A->>+B: x', '    activate B', '    B->>-A: y', '    A->>B: z', '    deactivate B'])
+    expect(writeSequenceDiagram(m).split('\n').slice(1)).toEqual(['    A->>+B: x', '    activate B', '    B->>-A: y', '    A->>B: z', '    deactivate B'])
     expectFixedPoint(m)
   })
 
   it('writes a span that starts and ends on one item, and adjacent spans, in the order the stack needs', () => {
     const self = model({ participants: two, items: [message('A', 'B', 'x'), message('A', 'B', 'y')], activations: [span('B', 0, 0), span('B', 1, 1)] })
-    expect(writeSequenceDiagram(self).split('\n').slice(3)).toEqual(['    A->>B: x', '    activate B', '    deactivate B', '    A->>B: y', '    activate B', '    deactivate B'])
+    expect(writeSequenceDiagram(self).split('\n').slice(1)).toEqual(['    A->>B: x', '    activate B', '    deactivate B', '    A->>B: y', '    activate B', '    deactivate B'])
     expectFixedPoint(self)
     const adjacent = model({ participants: two, items: [message('A', 'B', 'x'), message('A', 'B', 'y'), message('A', 'B', 'z')], activations: [span('B', 0, 1), span('B', 1, 2)] })
-    expect(writeSequenceDiagram(adjacent).split('\n').slice(3)).toEqual(['    A->>B: x', '    activate B', '    A->>B: y', '    deactivate B', '    activate B', '    A->>B: z', '    deactivate B'])
+    expect(writeSequenceDiagram(adjacent).split('\n').slice(1)).toEqual(['    A->>B: x', '    activate B', '    A->>B: y', '    deactivate B', '    activate B', '    A->>B: z', '    deactivate B'])
     expectFixedPoint(adjacent)
     const plusSelf = model({ participants: two, items: [message('A', 'B', 'x', { activate: '+' })], activations: [span('B', 0, 0)] })
-    expect(writeSequenceDiagram(plusSelf).split('\n').slice(3)).toEqual(['    A->>+B: x', '    deactivate B'])
+    expect(writeSequenceDiagram(plusSelf).split('\n').slice(1)).toEqual(['    A->>+B: x', '    deactivate B'])
     expectFixedPoint(plusSelf)
   })
 
@@ -384,7 +383,7 @@ describe('writeSequenceDiagram: activations', () => {
     const frame: SequenceItem = { type: 'frame', kind: 'alt', sections: [{ label: 'a', items: [message('A', 'B', 'x')] }, { label: 'b', items: [message('A', 'B', 'y')] }] }
     // Flat indices: w 0, the frame 1, x 2, y 3, z 4. Spans are listed as the parser sorts them: start, then longest first.
     const m = model({ participants: two, items: [message('A', 'B', 'w'), frame, message('B', 'A', 'z')], activations: [span('B', 0, 4), span('A', 1, 1)] })
-    expect(writeSequenceDiagram(m).split('\n').slice(3)).toEqual([
+    expect(writeSequenceDiagram(m).split('\n').slice(1)).toEqual([
       '    A->>B: w',
       '    activate B',
       '    alt a',
@@ -400,7 +399,7 @@ describe('writeSequenceDiagram: activations', () => {
     expectFixedPoint(m)
     const inner = model({ participants: two, items: [frame], activations: [span('B', 1, 1)] })
     // Flat indices: the frame 0, x 1, y 2.
-    expect(writeSequenceDiagram(inner).split('\n').slice(3)).toEqual(['    alt a', '        A->>B: x', '        activate B', '        deactivate B', '    else b', '        A->>B: y', '    end'])
+    expect(writeSequenceDiagram(inner).split('\n').slice(1)).toEqual(['    alt a', '        A->>B: x', '        activate B', '        deactivate B', '    else b', '        A->>B: y', '    end'])
     expectFixedPoint(inner)
   })
 
@@ -408,23 +407,66 @@ describe('writeSequenceDiagram: activations', () => {
     const parsed = parse('sequenceDiagram\n    A->>+B: x\n    B->>A: y')
     expect(parsed.problems.map((p) => p.code)).toEqual(['SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED'])
     const written = expectFixedPoint(parsed.model)
-    expect(written.split('\n').slice(3)).toEqual(['    A->>+B: x', '    B->>A: y', '    deactivate B'])
+    expect(written.split('\n').slice(1)).toEqual(['    A->>+B: x', '    B->>A: y', '    deactivate B'])
     expect(parse(written).problems).toEqual([])
     const empty = parse('sequenceDiagram\n    activate A\n    deactivate A')
-    expect(expectFixedPoint(empty.model)).toBe('sequenceDiagram\n    participant A\n    activate A\n    deactivate A')
+    expect(expectFixedPoint(empty.model)).toBe('sequenceDiagram\n    activate A\n    deactivate A')
   })
 
-  it('drops a - that closes nothing, which Mermaid rejects, and keeps every +', () => {
+  // S9, S11: `activations` is the source of truth, so a suffix that spells no span is dropped, for `-` and `+` alike.
+  it('drops a - that closes nothing, which Mermaid rejects, and a + where no span starts', () => {
     const dangling = model({ participants: two, items: [message('B', 'A', 'y', { activate: '-' })] })
-    expect(writeSequenceDiagram(dangling)).toBe('sequenceDiagram\n    participant A\n    participant B\n    B->>A: y')
+    expect(writeSequenceDiagram(dangling)).toBe('sequenceDiagram\n    participant A\n    B->>A: y')
     const extra = model({ participants: two, items: [message('A', 'B', 'x', { activate: '+' })] })
-    expect(writeSequenceDiagram(extra)).toContain('A->>+B: x')
-    expect(parse(writeSequenceDiagram(extra)).model.activations).toEqual([span('B', 0, 0)])
+    expect(writeSequenceDiagram(extra)).toBe('sequenceDiagram\n    A->>B: x')
+    expect(parse(writeSequenceDiagram(extra)).model.activations).toEqual([])
+    expect(parse(writeSequenceDiagram(extra)).problems).toEqual([])
+  })
+
+  // S9: after reorderItem moves a `+` message below its `-` reply, the model holds one span and stale suffixes.
+  it('writes one bar for a span whose messages carry stale suffixes, with no problem and a fixed point', () => {
+    const reordered = model({ participants: two, items: [message('B', 'A', 'y', { activate: '-' }), message('A', 'B', 'x', { activate: '+' })], activations: [span('B', 0, 1)] })
+    const written = writeSequenceDiagram(reordered)
+    expect(written.split('\n').slice(1)).toEqual(['    participant A', '    B->>A: y', '    activate B', '    A->>B: x', '    deactivate B'])
+    const back = parse(written)
+    expect(back.problems).toEqual([])
+    expect(back.model.activations).toEqual([span('B', 0, 1)])
+    expect(writeSequenceDiagram(back.model)).toBe(written)
+    expect(writeSequenceDiagram(parse(writeSequenceDiagram(back.model)).model)).toBe(written)
+  })
+
+  // S11: after removeItem drops the `-` reply, the span is gone but the `+` stays; the writer must not regrow the bar.
+  it('writes no bar for a + whose span was dropped, so Delete on the reply adds no problem', () => {
+    const removed = model({ participants: two, items: [message('A', 'B', 'x', { activate: '+' }), message('A', 'B', 'z')] })
+    const written = writeSequenceDiagram(removed)
+    expect(written.split('\n').slice(1)).toEqual(['    A->>B: x', '    A->>B: z'])
+    const back = parse(written)
+    expect(back.problems).toEqual([])
+    expect(back.model.activations).toEqual([])
+    expect(writeSequenceDiagram(back.model)).toBe(written)
+  })
+
+  // S7: `-` before a `to` starting with x or X would be lexed by Mermaid as the `-x` cross arrow.
+  it('writes a - before an id starting with x as a deactivate statement instead', () => {
+    const m = model({
+      participants: [participant('B'), participant('A'), participant('Xavier')],
+      items: [message('B', 'A', 'x', { activate: '+' }), message('A', 'Xavier', 'y', { activate: '-', line: 'dotted' })],
+      activations: [span('A', 0, 1)],
+    })
+    const written = writeSequenceDiagram(m)
+    expect(written.split('\n').slice(1)).toEqual(['    B->>+A: x', '    A-->>Xavier: y', '    deactivate A'])
+    const back = parse(written)
+    expect(back.problems).toEqual([])
+    expect(back.model.activations).toEqual([span('A', 0, 1)])
+    expect(writeSequenceDiagram(back.model)).toBe(written)
+    const lower = model({ participants: [participant('A'), participant('xavier')], items: [message('A', 'xavier', 'y', { activate: '-', head: 'open' })], activations: [span('A', 0, 0)] })
+    expect(writeSequenceDiagram(lower).split('\n').slice(1)).toEqual(['    A-)xavier: y', '    activate A', '    deactivate A'])
+    expectFixedPoint(model({ ...lower, items: [message('A', 'xavier', 'y', { head: 'open' })] }))
   })
 
   it('clamps a span outside the items and skips one that is not a number', () => {
     const m = model({ participants: two, items: [message('A', 'B', 'x')], activations: [span('B', 3, 9), span('B', Number.NaN, 1)] })
-    expect(writeSequenceDiagram(m).split('\n').slice(3)).toEqual(['    A->>B: x', '    activate B', '    deactivate B'])
+    expect(writeSequenceDiagram(m).split('\n').slice(1)).toEqual(['    A->>B: x', '    activate B', '    deactivate B'])
   })
 })
 
@@ -462,7 +504,6 @@ describe('writeSequenceDiagram: retained lines', () => {
       '---',
       'sequenceDiagram',
       '    actor A',
-      '    participant B',
       '%% header comment',
       '    %%{init: {"a": 1}}%%',
       '    link A: Docs @ https://example.com',
@@ -485,7 +526,7 @@ describe('writeSequenceDiagram: retained lines', () => {
 
   it('never depends on the previous source: retained lines are exactly what the options carry', () => {
     const parsed = parse('sequenceDiagram\n    %% gone\n    A->>B: x')
-    expect(writeSequenceDiagram(parsed.model)).toBe('sequenceDiagram\n    participant A\n    participant B\n    A->>B: x')
+    expect(writeSequenceDiagram(parsed.model)).toBe('sequenceDiagram\n    A->>B: x')
     expect(writeSequenceDiagram(parsed.model, { retained: [{ line: 9, text: '    %% other', place: 'body' }] })).toContain('\n    %% other\n')
   })
 
@@ -521,7 +562,82 @@ describe('writeSequenceDiagram: retained lines', () => {
   it('drops a create or destroy after a ; on a retained line, and keeps a comment that mentions them', () => {
     const parsed = parse('sequenceDiagram\n    participant A; destroy A\n    %% create or destroy\n    A->>B: x')
     expect(parsed.lossy).toEqual(['create-destroy'])
-    expect(writeSequenceDiagram(parsed.model, { retained: parsed.retained })).toBe('sequenceDiagram\n    participant A\n    participant B\n    %% create or destroy\n    A->>B: x')
+    expect(parsed.retained).toEqual([
+      { line: 2, text: 'destroy A', place: 'body' },
+      { line: 3, text: '    %% create or destroy', place: 'body' },
+    ])
+    expect(writeSequenceDiagram(parsed.model, { retained: parsed.retained })).toBe('sequenceDiagram\n    %% create or destroy\n    A->>B: x')
+  })
+})
+
+describe('writeSequenceDiagram: second review findings', () => {
+  const two = [participant('A'), participant('B')]
+
+  // S0, S2: a line with a modelled statement and a `;` residue is a fixed point whose model does not grow.
+  it('re-emits only the residue of a partly modelled line, so the model and the text are fixed points', () => {
+    for (const source of ['sequenceDiagram\n    A->>B: Hello; how are you?', 'sequenceDiagram\n    A->>B: Tom &amp; Jerry', 'sequenceDiagram\n    loop x; garbage\n    end']) {
+      const parsed = parse(source)
+      const written = writeSequenceDiagram(parsed.model, { retained: parsed.retained })
+      const back = parse(written)
+      expect(back.model, source).toEqual(parsed.model)
+      expect(writeSequenceDiagram(back.model, { retained: back.retained }), source).toBe(written)
+      const again = parse(writeSequenceDiagram(back.model, { retained: back.retained }))
+      expect(again.model, source).toEqual(parsed.model)
+      expect(again.problems.map((problem) => problem.code), source).toEqual(back.problems.map((problem) => problem.code))
+    }
+    const hello = parse('sequenceDiagram\n    A->>B: Hello; how are you?')
+    expect(writeSequenceDiagram(hello.model, { retained: hello.retained })).toBe('sequenceDiagram\nhow are you?\n    A->>B: Hello')
+    const entity = parse('sequenceDiagram\n    A->>B: Tom &amp; Jerry')
+    expect(writeSequenceDiagram(entity.model, { retained: entity.retained })).toBe('sequenceDiagram\nJerry\n    A->>B: Tom #38;amp')
+    const frame = parse('sequenceDiagram\n    loop x; garbage\n    end')
+    expect(writeSequenceDiagram(frame.model, { retained: frame.retained })).toBe('sequenceDiagram\ngarbage\n    loop x\n    end')
+    expect(parse(writeSequenceDiagram(frame.model, { retained: frame.retained })).problems.map((problem) => problem.code)).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT'])
+  })
+
+  // S8: only participants whose declaration says something the body does not are declared.
+  it('declares a participant only for an alias, an actor, a box, no use, or to keep the column order', () => {
+    const introduced = model({ participants: two, items: [message('A', 'B', 'x')] })
+    expect(writeSequenceDiagram(introduced)).toBe('sequenceDiagram\n    A->>B: x')
+    expectFixedPoint(introduced)
+    const reordered = model({ participants: [participant('B'), participant('A')], items: [message('A', 'B', 'x')] })
+    expect(writeSequenceDiagram(reordered)).toBe('sequenceDiagram\n    participant B\n    A->>B: x')
+    expectFixedPoint(reordered)
+    const unused = model({ participants: [participant('A'), participant('B'), participant('C')], items: [message('A', 'B', 'x')] })
+    expect(writeSequenceDiagram(unused)).toBe('sequenceDiagram\n    participant A\n    participant B\n    participant C\n    A->>B: x')
+    expectFixedPoint(unused)
+    const actor = model({ participants: [participant('A'), participant('B', 'B', 'actor'), participant('C')], items: [message('A', 'B', 'x'), message('B', 'C', 'y')] })
+    expect(writeSequenceDiagram(actor)).toBe('sequenceDiagram\n    participant A\n    actor B\n    A->>B: x\n    B->>C: y')
+    expectFixedPoint(actor)
+    const boxed = model({ participants: [participant('A'), participant('B'), participant('C')], boxes: [{ label: 'G', participantIds: ['B'] }], items: [message('A', 'B', 'x'), message('B', 'C', 'y')] })
+    expect(writeSequenceDiagram(boxed)).toBe('sequenceDiagram\n    participant A\n    box G\n        participant B\n    end\n    A->>B: x\n    B->>C: y')
+    expectFixedPoint(boxed)
+    // Introduced by a note, by an activation statement, and by a retained config declaration.
+    const noted = model({ participants: [participant('A'), participant('B')], items: [{ type: 'note', placement: 'over', participantIds: ['A', 'B'], text: 'n' }] })
+    expect(writeSequenceDiagram(noted)).toBe('sequenceDiagram\n    Note over A,B: n')
+    expectFixedPoint(noted)
+    const activated = model({ participants: [participant('A'), participant('B')], items: [message('A', 'A', 'x')], activations: [span('B', 0, 0)] })
+    expect(writeSequenceDiagram(activated)).toBe('sequenceDiagram\n    A->>A: x\n    activate B\n    deactivate B')
+    expectFixedPoint(activated)
+    const configured = parse('sequenceDiagram\n    B->>A: x\n    participant A@{ "type": "boundary" }')
+    expect(writeSequenceDiagram(configured.model, { retained: configured.retained })).toBe('sequenceDiagram\n    participant B\n    participant A@{ "type": "boundary" }\n    B->>A: x')
+    expectFixedPoint(configured.model, configured.retained)
+  })
+
+  it('never declares an id holding @, which Mermaid rejects in a declaration', () => {
+    const emails = parse('sequenceDiagram\n    alice@example.com->>bob@example.com: hi')
+    expect(writeSequenceDiagram(emails.model)).toBe('sequenceDiagram\n    alice@example.com->>bob@example.com: hi')
+    expectFixedPoint(emails.model)
+    // Even where a declaration would be needed, an @ id is left to the body: the label and the box cannot be written.
+    const labelled = model({ participants: [participant('a@b', 'Label'), participant('C', 'C', 'actor')], boxes: [{ label: 'G', participantIds: ['a@b'] }], items: [message('a@b', 'C', 'x')] })
+    expect(writeSequenceDiagram(labelled)).toBe('sequenceDiagram\n    actor C\n    a@b->>C: x')
+  })
+
+  // S10: a label holding `@{` round-trips, since the parser reads config only directly after the id.
+  it('round-trips a label holding @{', () => {
+    const m = model({ participants: [participant('shapex', '@{shape: x}'), participant('B')], items: [message('shapex', 'B', 'hi')] })
+    expect(writeSequenceDiagram(m)).toBe('sequenceDiagram\n    participant shapex as @{shape: x}\n    shapex->>B: hi')
+    expectFixedPoint(m)
+    expectFixedPoint(model({ participants: [participant('A', 'x@y'), participant('B')], items: [message('A', 'B', 'hi')] }))
   })
 })
 

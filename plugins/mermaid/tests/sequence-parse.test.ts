@@ -213,7 +213,8 @@ describe('parseSequenceDiagram: messages', () => {
     expect(p.problems).toEqual([
       { code: 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT', severity: 'invalid', message: SEMICOLON_HINT, line: 2 },
     ])
-    expect(p.retained).toEqual([{ line: 2, text: '    A->>B: wait; then go', place: 'body' }])
+    // S0: the message was modelled, so only the residue is retained, as its own fragment.
+    expect(p.retained).toEqual([{ line: 2, text: 'then go', place: 'body' }])
     expect(messages('sequenceDiagram\n    A->>B: wait; then go\n    C->>D: ok')).toEqual(['A->>B: wait', 'C->>D: ok'])
   })
 
@@ -535,10 +536,15 @@ describe('parseSequenceDiagram: review findings', () => {
     expect(invalid('sequenceDiagram\n    activate A\n    deactivate A %% c')).toEqual(['SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE@3'])
   })
 
-  it('retains a line once when a statement on it is unknown and it also carries a comment', () => {
+  it('retains the residue and the comment of a partly modelled line as two fragments, and a wholly unknown line once, verbatim', () => {
     const p = parse('sequenceDiagram\n    A->>B: wait; then go; %% c')
     expect(p.problems).toEqual([{ code: 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT', severity: 'invalid', message: SEMICOLON_HINT, line: 2 }])
-    expect(p.retained).toEqual([{ line: 2, text: '    A->>B: wait; then go; %% c', place: 'body' }])
+    expect(p.retained).toEqual([
+      { line: 2, text: 'then go', place: 'body' },
+      { line: 2, text: '%% c', place: 'body' },
+    ])
+    const whole = parse('sequenceDiagram\n    foo; bar %% c')
+    expect(whole.retained).toEqual([{ line: 2, text: '    foo; bar %% c', place: 'body' }])
   })
 
   // C27: the header is the leading keyword token; the rest of its line is the first statement.
@@ -619,15 +625,117 @@ describe('parseSequenceDiagram: review findings', () => {
     const source = 'sequenceDiagram\n    participant W as Workstation\n    participant F as \\\\fileserver\\share\n    W->>F: copy C:\\Users\\jdoe\\report.docx\n    F-->>W: &lt;done&gt; &amp; 100%'
     const p = parse(source)
     expect(p.problems).toEqual([{ code: 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT', severity: 'invalid', message: SEMICOLON_HINT, line: 5 }])
-    expect(p.retained).toEqual([{ line: 5, text: '    F-->>W: &lt;done&gt; &amp; 100%', place: 'body' }])
+    expect(p.retained).toEqual([{ line: 5, text: 'done&gt; &amp; 100%', place: 'body' }])
     expect(messages(source)).toEqual(['W->>F: copy C:\\Users\\jdoe\\report.docx', 'F-->>W: &lt'])
     expect(problems('sequenceDiagram\n    foo; bar; baz\n    deactivate A; deactivate B')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2', 'SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE@3'])
   })
 })
 
+describe('parseSequenceDiagram: second review findings', () => {
+  // S0, S2: a line with a modelled statement and a residue after `;` retains only the residue, so the writer never re-emits the statement.
+  it('retains only the unmodelled residue of a line whose other statements were modelled', () => {
+    const hello = parse('sequenceDiagram\n    A->>B: Hello; how are you?')
+    expect(messages('sequenceDiagram\n    A->>B: Hello; how are you?')).toEqual(['A->>B: Hello'])
+    expect(hello.retained).toEqual([{ line: 2, text: 'how are you?', place: 'body' }])
+    expect(hello.problems).toEqual([{ code: 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT', severity: 'invalid', message: SEMICOLON_HINT, line: 2 }])
+    const entity = parse('sequenceDiagram\n    A->>B: Tom &amp; Jerry')
+    expect(messages('sequenceDiagram\n    A->>B: Tom &amp; Jerry')).toEqual(['A->>B: Tom &amp'])
+    expect(entity.retained).toEqual([{ line: 2, text: 'Jerry', place: 'body' }])
+    const frame = parse('sequenceDiagram\n    loop x; garbage\n    end')
+    expect(frame.model.items).toEqual([{ type: 'frame', kind: 'loop', sections: [{ label: 'x', items: [] }] }])
+    expect(frame.retained).toEqual([{ line: 2, text: 'garbage', place: 'body' }])
+    expect(invalid('sequenceDiagram\n    loop x; garbage\n    end')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'])
+    // Several residues join into one fragment; a wholly unmodelled line stays verbatim.
+    expect(parse('sequenceDiagram\n    A->>B: x; foo; bar').retained).toEqual([{ line: 2, text: 'foo; bar', place: 'body' }])
+    expect(parse('sequenceDiagram\n    foo; bar').retained).toEqual([{ line: 2, text: '    foo; bar', place: 'body' }])
+    // The header counts as modelled: the residue of its line is a fragment.
+    expect(parse('sequenceDiagram; foo').retained).toEqual([{ line: 1, text: 'foo', place: 'body' }])
+    // An ignored statement beside a modelled one is a fragment too, and a config declaration alone keeps its line.
+    expect(parse('sequenceDiagram\n    A->>B: x; link A: Docs @ https://example.com').retained).toEqual([{ line: 2, text: 'link A: Docs @ https://example.com', place: 'body' }])
+    expect(parse('sequenceDiagram\n    participant A@{ "type": "boundary" }; A->>B: x').retained).toEqual([{ line: 2, text: 'participant A@{ "type": "boundary" }', place: 'body' }])
+    expect(parse('sequenceDiagram\n    participant A@{ "type": "boundary" }').retained).toEqual([{ line: 2, text: '    participant A@{ "type": "boundary" }', place: 'body' }])
+    // A problem statement that closes nothing is kept once, even when it is reported twice.
+    expect(parse('sequenceDiagram\n    loop x\n    end; end foo').retained).toEqual([{ line: 3, text: 'end foo', place: 'body' }])
+  })
+
+  // S7: a `-` before a `to` starting with x or X is the `-x` arrow to Mermaid, not the deactivation suffix.
+  it('rejects a - suffix before an id starting with x, as Mermaid lexes -x there', () => {
+    expect(invalid('sequenceDiagram\n    B->>+A: x\n    A-->>-Xavier: y')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'])
+    expect(invalid('sequenceDiagram\n    B->>+A: x\n    A-->>-xavier: y')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'])
+    expect(invalid('sequenceDiagram\n    A->>+B: x\n    B-)-xA: y')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'])
+    expect(parse('sequenceDiagram\n    A->>+Xavier: x\n    A-->>Xavier: y\n    deactivate Xavier').problems).toEqual([])
+    expect(messages('sequenceDiagram\n    A-x-Xavier: y')).toEqual([])
+  })
+
+  // S8: `@` may appear in a message actor but never in a declared id.
+  it('accepts @ in message ids and rejects it in declarations, as Mermaid does', () => {
+    const emails = 'sequenceDiagram\n    alice@example.com->>bob@example.com: hi\n    Note over alice@example.com: n'
+    expect(parse(emails).problems).toEqual([])
+    expect(model(emails).participants.map((p) => p.id)).toEqual(['alice@example.com', 'bob@example.com'])
+    expect(invalid('sequenceDiagram\n    participant a@b\n    participant a@b as Label\n    actor c@d\n    participant A @{x}\n    activate a@b\n    create participant e@f')).toEqual([
+      'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2',
+      'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3',
+      'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@4',
+      'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@5',
+      'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@6',
+      'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@7',
+    ])
+    expect(invalid('sequenceDiagram\n    box G\n    participant a@b\n    end')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'])
+    expect(parse('sequenceDiagram\n    participant A as x@y').model.participants).toEqual([{ id: 'A', label: 'x@y', kind: 'participant' }])
+  })
+
+  // S10: `@{` is participant config only directly after the id; after ` as ` it is the alias.
+  it('reads @{ as config only directly after the id, and an alias after the config', () => {
+    const alias = parse('sequenceDiagram\n    participant shapex as @{shape: x}\n    shapex->>B: hi')
+    expect(alias.problems).toEqual([])
+    expect(alias.retained).toEqual([])
+    expect(alias.model.participants).toEqual([
+      { id: 'shapex', label: '@{shape: x}', kind: 'participant' },
+      { id: 'B', label: 'B', kind: 'participant' },
+    ])
+    const configured = parse('sequenceDiagram\n    participant A@{ "type": "boundary" } as Alice\n    A->>B: x')
+    expect(configured.model.participants[0]).toEqual({ id: 'A', label: 'Alice', kind: 'participant' })
+    expect(configured.problems).toEqual([{ code: 'SEQUENCE_DIAGRAM_STATEMENT_IGNORED', severity: 'ignored', message: 'The "@{ }" participant config is not drawn.', line: 2 }])
+    expect(configured.retained).toEqual([{ line: 2, text: '    participant A@{ "type": "boundary" } as Alice', place: 'body' }])
+    expect(parse('sequenceDiagram\n    actor A@{ "type": "boundary" }').model.participants).toEqual([{ id: 'A', label: 'A', kind: 'actor' }])
+  })
+
+  // S17: message ids are Mermaid's actor token.
+  it('rejects ids Mermaid rejects: -x, -- and a trailing - inside an id, and a leading -', () => {
+    for (const source of ['A-xray->>B: hi', 'A-x->>B: hi', 'A-->>B-: hi', 'A--1->>B: hi', '-A->>B: hi', 'A->>B--c: hi']) {
+      expect(invalid(`sequenceDiagram\n    ${source}`), source).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2'])
+    }
+    expect(messages('sequenceDiagram\n    A-b-c->>B- c: hi\n    A->>B -c: yo\n    api-gw-->>Bob(2): x')).toEqual(['A-b-c->>B- c: hi', 'A->>B -c: yo', 'api-gw-->>Bob(2): x'])
+  })
+
+  it('accepts a bare # inside an actor id, as Mermaid does, and reads it as a comment where a token starts or in text', () => {
+    expect(parse('sequenceDiagram\n    A#1->>B: hi').problems).toEqual([])
+    expect(messages('sequenceDiagram\n    A#1->>B: hi\n    A->>B #1: yo\n    Note over A#1: n')).toEqual(['A#1->>B: hi', 'A->>B #1: yo', 'note over A#1: n'])
+    expect(model('sequenceDiagram\n    A#1->>B: hi').participants.map((p) => p.id)).toEqual(['A#1', 'B'])
+    expect(messages('sequenceDiagram\n    A->>B: hi # not text\n    A->>B:#c')).toEqual(['A->>B: hi', 'A->>B: '])
+    expect(invalid('sequenceDiagram\n    A->>#B: hi\n    Note over A,#B: n\n    #A->>B: x\n    A->>B: y')).toEqual(['SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@2', 'SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT@3'])
+    expect(model('sequenceDiagram\n    participant A as B #c\n    loop x #c\n    end\n    participant D #e').participants).toEqual([
+      { id: 'A', label: 'B', kind: 'participant' },
+      { id: 'D #e', label: 'D #e', kind: 'participant' },
+    ])
+    expect(model('sequenceDiagram\n    loop x #c\n    end').items).toEqual([{ type: 'frame', kind: 'loop', sections: [{ label: 'x', items: [] }] }])
+    expect(model('sequenceDiagram\n    A->>B: x #c; B->>A: y').items).toHaveLength(1)
+  })
+
+  it('reads -X and --X as cross arrows, as Mermaid does', () => {
+    expect(messages('sequenceDiagram\n    A--XB: hi\n    A-XB: yo')).toEqual(['A--xB: hi', 'A-xB: yo'])
+    expect(parse('sequenceDiagram\n    A--XB: hi').problems).toEqual([])
+  })
+})
+
 describe('parseSequenceDiagram: corpus outlines', () => {
   const EXPECTED: Record<string, readonly string[]> = {
+    'actor-hash.mmd': ['participant A#1', 'participant B', 'A#1->>B: hi', 'note over A#1: n'],
     'actor-parens.mmd': ['participant Alice(1)', 'participant Bob(2)', 'Alice(1)->>Bob(2): Hi', 'Bob(2)-->>Alice(1): Hello'],
+    'alias-config-text.mmd': ['participant shapex as @{shape: x}', 'participant B', 'shapex->>B: hi'],
+    'config-alias.mmd': ['participant A as Alice', 'participant B', 'A->>B: x'],
+    'cross-uppercase.mmd': ['participant A', 'participant B', 'A--xB: hi', 'A-xB: yo'],
+    'email-ids.mmd': ['participant alice@example.com', 'participant bob@example.com', 'alice@example.com->>bob@example.com: hi', 'bob@example.com-->>alice@example.com: yo'],
     'activation-shorthand.mmd': ['participant Alice', 'participant John', 'Alice->>+John: Hello John, how are you?', 'John-->>-Alice: Great!', 'activation John 0-1'],
     'activation-stacked.mmd': [
       'participant Alice',
@@ -756,11 +864,12 @@ describe('parseSequenceDiagram: corpus outlines', () => {
     ],
     'title-front-matter.mmd': ['title Hello Title', 'participant Alice', 'participant Bob', 'Alice->>Bob: Hi'],
   }
-  const IGNORED: Record<string, readonly number[]> = { 'link.mmd': [4, 5, 6, 7], 'links.mmd': [4, 5] }
+  const IGNORED: Record<string, readonly number[]> = { 'config-alias.mmd': [2], 'link.mmd': [4, 5, 6, 7], 'links.mmd': [4, 5] }
   /** Retained body lines: comments, directives and the ignored statements above. */
   const RETAINED: Record<string, readonly number[]> = {
     'actor-parens.mmd': [],
     'comments.mmd': [3, 5],
+    'config-alias.mmd': [2],
     'directive-multi-line.mmd': [1, 2, 3],
     'directive.mmd': [1],
     'header-comment.mmd': [1],
