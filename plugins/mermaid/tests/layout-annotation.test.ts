@@ -272,7 +272,7 @@ describe('the extension reports a rejected annotation as DIAGRAM_LAYOUT_INVALID'
     expect(found?.range).toBeDefined()
     const node = document.tree.children?.[0]
     expect(node?.type).toBe('diagram')
-    expect(node !== undefined && 'data' in node).toBe(true)
+    expect(node !== undefined && 'model' in node).toBe(true)
     expect(document.diagnostics.some((d) => d.code === 'DIAGRAM_INVALID')).toBe(false)
   })
 

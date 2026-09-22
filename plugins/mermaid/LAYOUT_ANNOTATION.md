@@ -204,10 +204,22 @@ For any normalised `DrawingData` whose node ids are valid Mermaid ids:
 - `parse(write(d))` deep-equals `d` (lossless round trip);
 - `write(parse(write(d)))` equals `write(d)` byte for byte (fixed point).
 
-Node ids that are not valid Mermaid ids are rewritten (`my-box` becomes
-`my_box`, duplicates get a `_2` suffix); the round trip then preserves
-everything except those ids. Both guarantees are covered by
-`tests/mermaid-parse.test.ts` and `tests/layout-annotation.test.ts`.
+A valid Mermaid id matches `/^[A-Za-z0-9_]+(-[A-Za-z0-9_]+)*$/`: alphanumerics
+and underscores with single dashes between them, so `my-box` and `1st` are
+valid. Ids the parser accepted are written unchanged, and ids the canvas
+creates are always valid. Only an id that is not a valid Mermaid id is
+rewritten: characters outside the set become `_` (`my.box` becomes `my_box`)
+and a rewritten id that collides with another id gets a `_2`, `_3` suffix.
+A rewrite never displaces a valid id. The round trip then preserves
+everything except the rewritten ids. Both guarantees are covered by
+`tests/mermaid-parse.test.ts`, `tests/mermaid.test.ts` and
+`tests/layout-annotation.test.ts`.
+
+Lines the parser read through without modelling (`classDef`, `class`,
+`click`, comments, directives, front-matter keys other than `title`) are
+handed back as retained lines and re-emitted verbatim, each exactly once,
+before the annotation line. The writer always ends with exactly one
+annotation line and never retains one it read.
 
 An untouched fence is written back byte for byte by the editor, whether or
 not it carries an annotation.

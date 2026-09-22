@@ -1,0 +1,9 @@
+sequenceDiagram
+    critical Establish a connection to the DB
+        Alice->>John: I'm getting a fresh token.
+    option John says yes
+        John-->>Alice: I'm sending you the token.
+    option John says no
+        John-->>Alice: Security! No direct links allowed!
+    end
+    Alice->>John: Thanks!

@@ -1,7 +1,8 @@
 /**
- * Ported from @zuilib/text-editor (MIT). The canvas's UI strings, with
- * defaults, overridable through the editor's flat `labels` map under
- * `diagram.<key>` (functions keep their defaults).
+ * Ported from @zuilib/text-editor (MIT). The diagram block's UI strings
+ * (canvas, header row, source editor, notices), with defaults, overridable
+ * through the editor's flat `labels` map under `diagram.<key>` (functions
+ * keep their defaults).
  */
 import { useMemo } from 'react'
 import { useLexicalEditor } from '@react-markdown-kit/editor/lexical'
@@ -48,6 +49,37 @@ export interface DiagramLabels {
   readonly layoutCompact: string
   readonly layoutComfortable: string
   readonly layoutFull: string
+  /** `aria-label` of the block's header row */
+  readonly header: string
+  /** Kind label shown when the source starts with no Mermaid keyword */
+  readonly unknownKind: string
+  /** Support badge: a registered kind renders the block */
+  readonly staticBadge: string
+  /** Support badge: the block is shown as source */
+  readonly sourceBadge: string
+  /** Header toggle: edit the flowchart on the canvas */
+  readonly canvasMode: string
+  /** Header toggle: edit the flowchart as text */
+  readonly textMode: string
+  /** Lead-in of the notice listing what a canvas edit cannot keep */
+  readonly lossyNotice: string
+  readonly editOnCanvas: string
+  readonly editAsText: string
+  /** `aria-label` of the source textarea */
+  readonly source: string
+  /** `aria-label` of the live preview */
+  readonly preview: string
+  /** `aria-label` of the problems list */
+  readonly problems: string
+  /** Prefix of a problem Mermaid.js itself would reject */
+  readonly rejects: string
+  readonly problemLine: (line: number) => string
+  /** Notice for a kind that is shown as source */
+  readonly unsupported: (label: string) => string
+  /** Notice for a block whose leading word is no Mermaid keyword */
+  readonly notMermaid: string
+  /** Case-slip hint, with the expected spelling */
+  readonly keywordHint: (keyword: string) => string
 }
 
 /** Keys of `DiagramLabels` whose value is a plain string. */
@@ -94,6 +126,23 @@ export const DIAGRAM_LABELS: DiagramLabels = {
   layoutCompact: 'Compact (shrink to content)',
   layoutComfortable: 'Comfortable (text width)',
   layoutFull: 'Full width',
+  header: 'Diagram block',
+  unknownKind: 'Not Mermaid',
+  staticBadge: 'Static',
+  sourceBadge: 'Source only',
+  canvasMode: 'Canvas',
+  textMode: 'Text',
+  lossyNotice: 'Editing on the canvas cannot keep:',
+  editOnCanvas: 'Edit on canvas',
+  editAsText: 'Edit as text',
+  source: 'Diagram source',
+  preview: 'Preview',
+  problems: 'Problems',
+  rejects: 'Mermaid rejects:',
+  problemLine: (line) => `Line ${line}`,
+  unsupported: (label) => `${label} diagrams are shown as source.`,
+  notMermaid: 'The block does not start with a Mermaid diagram keyword.',
+  keywordHint: (keyword) => `Mermaid keywords are case-sensitive; expected \`${keyword}\`.`,
 }
 
 /** Prefix of the canvas's keys in the editor's flat `labels` map. */

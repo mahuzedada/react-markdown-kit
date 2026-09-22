@@ -2,9 +2,11 @@
 
 Mermaid in React, as a Markdown plugin, plus a Mermaid visual editor that
 writes plain Mermaid back. A ```` ```mermaid ```` fence holds the diagram, the
-renderer draws it as static SVG with no Mermaid.js runtime, the editor opens
-it on a drawing canvas, and the template plugin leaves it alone. The plugin
-renders flowcharts only.
+renderer draws flowcharts and sequence diagrams as static SVG with no
+Mermaid.js runtime, the editor opens a flowchart on a drawing canvas and every
+other kind in a source editor with a preview, and the template plugin leaves
+the fence alone. Every other Mermaid type is shown as source, or drawn by the
+host through the `/client` fallback entry.
 
 ```bash
 npm install @react-markdown-kit/renderer @react-markdown-kit/mermaid
@@ -37,6 +39,52 @@ flowchart LR
   the visual editor in the browser
 - Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
 
+## Diagram kinds
+
+The plugin reads the first word of the fence, after front matter, directives
+and comments, as Mermaid's own `detectType` does. Keywords are case-sensitive.
+
+| Kind | Header | Rendered | Edited |
+| --- | --- | --- | --- |
+| Flowchart | `flowchart`, `graph`, `flowchart-elk` | Static SVG | Canvas, or text |
+| Sequence diagram | `sequenceDiagram` | Static SVG | Text, with a live preview |
+| Every other Mermaid type (`classDiagram`, `stateDiagram`, `gantt`, `pie`, …) | its keyword | Source, or the host fallback | Text |
+
+Kinds are configuration values like `gfm()`. The default registry is
+`[flowchart(), sequenceDiagram()]`; `mermaid({ kinds: [flowchart()] })` trims
+the bundle, and a `DiagramKind` of your own goes in the same list. The
+flowchart parser reads every arrow spelling with or without spaces, keeps
+`classDef`, `class`, `click`, comments and directives as retained lines the
+writer re-emits, and reports a statement it cannot model as a problem instead
+of failing the fence. The sequence parser covers participants and actors,
+boxes, the ten message arrows, activation, notes, `loop`, `alt`/`else`,
+`opt`, `par`/`and`, `critical`/`option`, `break`, `rect` and `autonumber`,
+with a deterministic layout that needs no annotation. The
+[docs page](https://docs.reactmarkdownkit.com/docs/mermaid) lists both
+subsets and every problem code.
+
+### Host fallback
+
+The plugin never depends on Mermaid.js. `@react-markdown-kit/mermaid/client`
+exports `diagramFallback({ render })`: an extension, listed after
+`mermaid()`, whose `figure` component asks the host's `render(source, kind)`
+for SVG after mount and swaps it in for a fence shown as source. The host
+decides how the SVG is made (Mermaid.js, Kroki, a server) and owns that
+output.
+
+```tsx
+import { diagramFallback } from '@react-markdown-kit/mermaid/client'
+
+// Host code: any async function that returns SVG markup.
+async function render(source: string, kind: string): Promise<string> {
+  const { default: mermaidJs } = await import('mermaid')
+  const { svg } = await mermaidJs.render(`rmk-${kind}-${Date.now()}`, source)
+  return svg
+}
+
+const preset = defineMarkdownPreset({ extensions: [mermaid(), diagramFallback({ render })] })
+```
+
 ## What the editor writes
 
 Mermaid has no syntax for positions, sizes, stroke widths, elbow routing or
@@ -47,7 +95,8 @@ render mermaid fences, such as
 [GitHub](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams),
 ignore the line. This plugin reads it back, so a drawing round-trips without
 loss, and a hand-written flowchart with no annotation is auto-laid out. An
-untouched fence is written back byte for byte.
+untouched fence is written back byte for byte, and an edited one keeps every
+retained line.
 
 ````md
 ```mermaid
@@ -72,34 +121,35 @@ authoritative for the graph and colours; the annotation never repeats them.
 generators; `readLayoutAnnotation` and `writeLayoutAnnotation` are the
 reference reader and writer.
 
-## Flowcharts only
-
-The flowchart subset covers node shapes (`[ ]`, `( )`, `([ ])`, `(( ))`,
-`{ }`, `{{ }}`, `[( )]`, `[[ ]]`, `> ]`), edges with labels in either
-spelling, lines, arrows and bidirectional arrows, chains, `&` groups,
-`subgraph … end`, `style` colours and front-matter titles. Other Mermaid
-diagram types (sequence, class, Gantt, …) stay ordinary code blocks, and
-`classDef`, `click` and `linkStyle` are ignored. The parser is covered by
-[`plugins/mermaid/tests/mermaid-parse.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts).
-
 ## The plugin is the API
 
-`mermaid()` is a plain `MarkdownExtension` and the package's only way in.
-The renderer, the editor and the template plugin each read the capability
-they understand.
+`mermaid()` is a plain `MarkdownExtension` and the package's way in. The
+renderer, the editor and the template plugin each read the capability they
+understand.
 
 | Capability | What it does |
 | --- | --- |
-| `syntax` | A ```` ```mermaid ```` flowchart (or a legacy ```` ```diagram ```` / ```` ```drawing ```` JSON fence) becomes a `diagram` node, parsed once; it serializes back to the same fence |
-| `renderer` | The node becomes `<figure data-rmk-diagram>` holding a static SVG. No script, no `foreignObject`, no DOM needed |
-| `template` | The payload is literal. `{{placeholders}}` inside it are never resolved |
-| `editor` | On `@react-markdown-kit/mermaid/editor` only: a Lexical node, a canvas, an insert-diagram toolbar button |
+| `syntax` | Every ```` ```mermaid ```` fence (or a legacy ```` ```diagram ```` / ```` ```drawing ```` JSON fence) becomes a `diagram` node with its kind and support level, parsed once; it serializes back to the same fence |
+| `renderer` | The node becomes `<figure data-rmk-diagram data-rmk-diagram-kind data-rmk-diagram-support>` holding a static SVG, or the source for a kind no registered kind renders. No script, no `foreignObject`, no DOM needed |
+| `template` | The fence is literal. `{{placeholders}}` inside it are never resolved |
+| `editor` | On `@react-markdown-kit/mermaid/editor` only: a Lexical node, the canvas, the source editor, one insert button per kind |
 
-The root entry loads no Lexical, so a Node service that only compiles or
-templates documents with `compileMarkdown` installs no editor.
+The root entry also exports the kind factories `flowchart()` and
+`sequenceDiagram()`, `MERMAID_KEYWORDS` and the `DiagramKind` types, so a
+kind of your own is typed. No parser, renderer or writer is exported on its
+own. The root entry loads no React and no Lexical, so a Node service that
+only compiles or templates documents with `compileMarkdown` installs no
+editor.
 [`scripts/pack-check.mjs`](https://github.com/mahuzedada/react-markdown-kit/blob/main/scripts/pack-check.mjs)
 installs the packed tarball into a consumer with no Lexical and renders a
 diagram.
+
+Compile diagnostics: `DIAGRAM_INVALID` (a registered kind could not read the
+fence), `DIAGRAM_KIND_UNKNOWN` (no Mermaid keyword, with the expected spelling
+after a case slip), `DIAGRAM_KIND_UNSUPPORTED` (shown as source),
+`DIAGRAM_LAYOUT_INVALID` (annotation rejected, with a path),
+`DIAGRAM_SYNTAX_INVALID` and `DIAGRAM_SYNTAX_IGNORED` (one per problem, with
+the line, at most 20 each per fence).
 
 ## Legacy JSON fences
 
@@ -120,20 +170,27 @@ import { mermaid } from '@react-markdown-kit/mermaid/editor'
 <MarkdownEditor extensions={[mermaid()]} value={value} onChange={setValue} />
 ```
 
-An untouched diagram writes back byte for byte. Editing one writes
-```` ```mermaid ```` with the layout annotation, and **Copy as Mermaid** on the
-canvas copies that same text. Options: `style` (`clean` or
-hand-drawn `ink`) and `newBlockWidth`. The canvas was ported from
-`@zuilib/text-editor` (MIT), so the kit keeps its no-design-system rule.
+An untouched diagram writes back byte for byte. A flowchart opens on the
+canvas, with a toggle to the text; every other kind opens in a source editor
+with a live preview and the problems listed with line numbers. Editing a
+flowchart on the canvas writes ```` ```mermaid ```` with the layout annotation,
+and **Copy as Mermaid** on the canvas copies that same text. The toolbar has
+one insert button per kind: id `diagram` for the flowchart, `diagram-<kind>`
+for the others. Options: `style` (`clean` or hand-drawn `ink`),
+`newBlockWidth` and `sourceEditor` (`false` shows preview and problems only). The canvas was ported from `@zuilib/text-editor` (MIT), so
+the kit keeps its no-design-system rule.
 
 ## Styling and safety
 
 `styles.css` is optional and scoped to `.rmk-document` and `.rmk-editor`,
-every value a `--rmk-diagram-*` custom property. Shape colours are content.
-The parser accepts only the documented shapes, colours and numbers, never
-throws, and invalid JSON renders as visible source with a `DIAGRAM_INVALID`
-diagnostic. The SVG contains no script, no event attribute, no `foreignObject`
-and no URL;
+every value a `--rmk-diagram-*` custom property. Flowchart colours are
+content. The sequence renderer reads fifteen colour tokens
+(`--rmk-diagram-actor-fill`, `--rmk-diagram-note-fill`, …), each with a
+fallback from Mermaid's default theme, as
+`fill="var(--rmk-diagram-note-fill, #fff5ad)"`; the docs page lists them.
+The parsers never throw, and a fence a kind cannot read renders as visible
+source with a `DIAGRAM_INVALID` diagnostic. The SVG contains no script, no
+event attribute, no `foreignObject` and no URL;
 [`plugins/mermaid/tests/extension.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/extension.test.tsx)
 asserts it.
 

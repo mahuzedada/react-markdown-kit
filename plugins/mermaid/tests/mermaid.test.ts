@@ -123,16 +123,18 @@ describe('drawingToMermaid', () => {
     ])
   })
 
-  it('ids are sanitised and kept unique', () => {
+  it('valid Mermaid ids are written unchanged; only invalid ids are rewritten, and never onto a valid one', () => {
     const out = lines(drawing(
-      box('my-box', 'rect'), box('my.box', 'rect'), box('1st', 'rect'), box('my_box', 'rect'),
+      box('my-box', 'rect'), box('my.box', 'rect'), box('1st', 'rect'), box('my_box', 'rect'), box('a--b', 'rect'),
       connector('e', 'my-box', 'my.box'),
     ))
-    expect(out[1]).toBe('    my_box["my-box"]')
+    expect(out[1]).toBe('    my-box["my-box"]')
+    // `my.box` is invalid; `my_box` is taken by the valid id below, so it moves on.
     expect(out[2]).toBe('    my_box_2["my.box"]')
-    expect(out[3]).toBe('    n_1st["1st"]')
-    expect(out[4]).toBe('    my_box_3["my_box"]')
-    expect(out[5]).toBe('    my_box --> my_box_2')
+    expect(out[3]).toBe('    1st["1st"]')
+    expect(out[4]).toBe('    my_box["my_box"]')
+    expect(out[5]).toBe('    a__b["a--b"]')
+    expect(out[6]).toBe('    my-box --> my_box_2')
   })
 
   it('free text shapes are preserved as comments', () => {
@@ -142,6 +144,63 @@ describe('drawingToMermaid', () => {
     ))
     expect(out[2]).toBe('    %% note: Legend: red = error')
     expect(out.at(-1)).toBe('')
+  })
+})
+
+describe('retained lines', () => {
+  const retained = [
+    { line: 3, text: 'config:', place: 'frontMatter' as const },
+    { line: 4, text: '  theme: base', place: 'frontMatter' as const },
+    { line: 6, text: '%%{init: { "theme": "forest" } }%%', place: 'body' as const },
+    { line: 8, text: '    classDef hot fill:#f00', place: 'body' as const },
+    { line: 8, text: '    class a hot', place: 'body' as const },
+    { line: 9, text: '    click a "https://example.com"', place: 'body' as const },
+  ]
+  const data = { ...drawing(box('a', 'rect', { text: 'A', fill: '#ffc9c9' }), box('b', 'rect'), connector('e', 'a', 'b')), title: 'Flow' }
+
+  it('writes the title and the front-matter lines in one block, then header, nodes, edges, styles, body lines, annotation', () => {
+    const out = drawingToMermaid(data, { retained }).split('\n')
+    expect(out.slice(0, 12)).toEqual([
+      '---',
+      'title: Flow',
+      'config:',
+      '  theme: base',
+      '---',
+      'flowchart LR',
+      '    a["A"]',
+      '    b["b"]',
+      '    a --> b',
+      '    style a fill:#ffc9c9',
+      '%%{init: { "theme": "forest" } }%%',
+      '    classDef hot fill:#f00',
+    ])
+    expect(out.slice(12, 14)).toEqual(['    class a hot', '    click a "https://example.com"'])
+    expect(out[14]?.startsWith('    %% rmk-layout v1 {')).toBe(true)
+    expect(out[15]).toBe('')
+  })
+
+  it('opens a front-matter block for retained keys without a title, and none when both are empty', () => {
+    const untitled = drawing(box('a', 'rect'))
+    expect(drawingToMermaid(untitled, { retained: retained.slice(0, 2) }).split('\n').slice(0, 4)).toEqual(['---', 'config:', '  theme: base', '---'])
+    expect(drawingToMermaid(untitled, { retained: [] }).startsWith('flowchart LR\n')).toBe(true)
+    expect(drawingToMermaid(untitled).startsWith('flowchart LR\n')).toBe(true)
+  })
+
+  it('re-emits every retained line exactly once, in order, with the plain export too', () => {
+    const out = drawingToMermaid(data, { retained, omitLayout: true })
+    for (const line of retained) expect(out.split('\n').filter((candidate) => candidate === line.text)).toHaveLength(1)
+    const body = retained.filter((line) => line.place === 'body').map((line) => line.text)
+    expect(body.map((text) => out.indexOf(text))).toEqual([...body.map((text) => out.indexOf(text))].sort((x, y) => x - y))
+    expect(out).not.toContain('%% rmk-layout')
+  })
+
+  it('is a fixed point with retained lines and always ends with exactly one annotation line', () => {
+    const once = drawingToMermaid(data, { retained })
+    const twice = drawingToMermaid(data, { retained })
+    expect(twice).toBe(once)
+    const annotations = once.split('\n').filter((line) => line.includes('%% rmk-layout'))
+    expect(annotations).toHaveLength(1)
+    expect(once.trimEnd().split('\n').at(-1)).toBe(annotations[0])
   })
 })
 

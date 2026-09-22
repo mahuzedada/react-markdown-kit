@@ -11,7 +11,7 @@ the rendering stack.
 renderer  = display Markdown
 editor    = create and modify Markdown
 template  = plugin: personalize Markdown   (template({ data }) in the renderer, chips in the editor)
-mermaid   = plugin: Mermaid flowcharts     (static SVG in the renderer, a drawing canvas in the editor)
+mermaid   = plugin: Mermaid diagrams       (flowcharts and sequence diagrams as static SVG in the renderer, a canvas and a source editor in the editor)
 slides    = plugin: slides from Markdown   (a deck of <section>s in the renderer, present mode in /present, authoring in the editor)
 ```
 
@@ -20,7 +20,7 @@ slides    = plugin: slides from Markdown   (a deck of <section>s in the renderer
 | [`@react-markdown-kit/renderer`](packages/renderer) | `npm i @react-markdown-kit/renderer` | Markdown to React, safely |
 | [`@react-markdown-kit/editor`](packages/editor) | `npm i @react-markdown-kit/editor` | Rich, source and preview authoring |
 | [`@react-markdown-kit/template`](plugins/template) | `npm i @react-markdown-kit/template` | Typed variables, schemas, formatting, localization |
-| [`@react-markdown-kit/mermaid`](plugins/mermaid) | `npm i @react-markdown-kit/mermaid` | ```` ```mermaid ```` flowcharts as static SVG, edited on a canvas, saved as Mermaid |
+| [`@react-markdown-kit/mermaid`](plugins/mermaid) | `npm i @react-markdown-kit/mermaid` | ```` ```mermaid ```` flowcharts and sequence diagrams as static SVG, flowcharts edited on a canvas, saved as Mermaid; other types shown as source or drawn by the host |
 | [`@react-markdown-kit/slides`](plugins/slides) | `npm i @react-markdown-kit/slides` | A deck from one Markdown file: `---` splits slides, `???` starts the notes, `--` is a pause; presented, printed and edited |
 
 The renderer never requires the editor, and neither carries template,
@@ -80,7 +80,7 @@ different`, with the test that proves each one.
 packages/renderer     Markdown to React, compilation, policies
 packages/editor       Rich/source/preview authoring on a mdast <-> Lexical bridge
 plugins/template      Plugin: template({ data }) resolves placeholders; templateVariables() edits them as chips
-plugins/mermaid       Plugin: ```mermaid flowcharts as static SVG, edited on a canvas, written back as Mermaid
+plugins/mermaid       Plugin: ```mermaid flowcharts and sequence diagrams as static SVG, flowcharts edited on a canvas, written back as Mermaid
 plugins/slides        Plugin: slides() reads a deck from plain Markdown; /present shows it, /editor authors it
 internal/             Build-time shared contracts, not a fifth package
 fixtures/             CommonMark, GFM, compatibility, round-trip, security corpora

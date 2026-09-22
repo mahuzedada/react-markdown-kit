@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant Alice
+    participant John
+    rect rgb(200, 150, 255)
+        Note over Alice, John: color
+        Alice->>John: Great!
+        John->>Alice: How about you?
+    end
+    rect rgb(200, 200, 150)
+        Note over John: I am thinking
+        alt John is sick
+            John->>Alice: Not feeling well :(
+        else John is well
+            John->>Alice: Feeling fresh like a daisy
+        end
+    end

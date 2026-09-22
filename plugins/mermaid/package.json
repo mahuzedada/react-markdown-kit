@@ -29,6 +29,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
     "./editor": {
       "types": "./dist/editor.d.ts",
       "default": "./dist/editor.js"
@@ -39,12 +43,13 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "prepack": "pnpm build"
   },
   "dependencies": {
     "@types/hast": "^3.0.4",
-    "@types/mdast": "^4.0.4"
+    "@types/mdast": "^4.0.4",
+    "hast-util-to-jsx-runtime": "^2.3.2"
   },
   "peerDependencies": {
     "@lexical/utils": "^0.35.0",

@@ -9,6 +9,14 @@
  * connectors) goes into one `%% rmk-layout v1 {…}` annotation on the last
  * line (LAYOUT_ANNOTATION.md). Mermaid, GitHub and every other renderer
  * ignore the comment; `mermaid-parse.ts` reads it back.
+ *
+ * Lines the parser read through without modelling (`classDef`, `click`,
+ * comments, directives, front-matter keys) come back in `retained` and are
+ * re-emitted verbatim, each exactly once: front-matter lines inside the
+ * `---` block after the title, body lines after the statements and before
+ * the annotation (docs/MERMAID_PLATFORM.md section 4.3). Ids the parser
+ * accepted are written unchanged; only an id that is not a valid Mermaid id
+ * is rewritten, and canvas-created ids are always valid.
  */
 import {
   isNodeShapeType,
@@ -26,6 +34,7 @@ import {
   type LayoutNode,
   type LayoutSlot,
 } from './layout-annotation.js'
+import type { RetainedLine } from './kind.js'
 
 export type MermaidDirection = 'LR' | 'TD'
 
@@ -33,11 +42,15 @@ export type MermaidOptions = Readonly<{
   direction?: MermaidDirection
   /** Leave the `%% rmk-layout` annotation out, for a plain export. Default false. */
   omitLayout?: boolean
+  /** Lines the parser read through, re-emitted verbatim in their places. Default none. */
+  retained?: readonly RetainedLine[]
 }>
 
 const INDENT = '    '
 const DEFAULT_STROKE: string = STROKE_COLORS[0]
 const DEFAULT_FILL = 'transparent'
+/** A Mermaid node id the parser accepts as is: alphanumerics with single dashes between them. */
+const VALID_ID = /^[A-Za-z0-9_]+(-[A-Za-z0-9_]+)*$/
 
 /** Export a drawing as a Mermaid `flowchart`. */
 export function drawingToMermaid(data: DrawingData, options: MermaidOptions = {}): string {
@@ -50,9 +63,14 @@ export function drawingToMermaid(data: DrawingData, options: MermaidOptions = {}
   const texts = data.shapes.filter((s) => s.type === 'text')
   const mermaidIds = assignMermaidIds(boxes)
   const mermaidId = (shapeId: string): string => mermaidIds.get(shapeId) ?? shapeId
+  const retained = options.retained ?? []
+  const frontMatter = retained.filter((line) => line.place === 'frontMatter').map((line) => line.text)
+  const body = retained.filter((line) => line.place === 'body').map((line) => line.text)
 
   const lines = [
-    ...(data.title === undefined ? [] : ['---', `title: ${data.title}`, '---']),
+    ...(data.title === undefined && frontMatter.length === 0
+      ? []
+      : ['---', ...(data.title === undefined ? [] : [`title: ${data.title}`]), ...frontMatter, '---']),
     `flowchart ${options.direction ?? autoDirection(edges)}`,
     ...boxes.map((box) => INDENT + nodeLine(box, mermaidId(box.id))),
     ...edges.map((edge) => INDENT + edgeLine(edge, mermaidId)),
@@ -60,6 +78,7 @@ export function drawingToMermaid(data: DrawingData, options: MermaidOptions = {}
       const style = styleLine(box, mermaidId(box.id))
       return style ? [INDENT + style] : []
     }),
+    ...body,
     ...(options.omitLayout === true
       ? texts.map((t) => `${INDENT}%% note: ${(t.text ?? '').replace(/\s*\n\s*/g, ' ')}`)
       : [INDENT + writeLayoutAnnotation(layoutAnnotation(data, boxes, edges, loose, texts, mermaidId))]),
@@ -140,10 +159,21 @@ function autoDirection(edges: readonly DrawingShape[]): MermaidDirection {
   return horizontal * 2 >= edges.length ? 'LR' : 'TD'
 }
 
+/**
+ * Valid ids are written as they are and claimed first, so a rewritten id
+ * never displaces one the parser accepted. Invalid ids are sanitised and
+ * suffixed `_2`, `_3` until unique.
+ */
 function assignMermaidIds(boxes: readonly DrawingShape[]): Map<string, string> {
   const ids = new Map<string, string>()
   const used = new Set<string>()
   for (const box of boxes) {
+    if (!VALID_ID.test(box.id) || used.has(box.id)) continue
+    used.add(box.id)
+    ids.set(box.id, box.id)
+  }
+  for (const box of boxes) {
+    if (ids.has(box.id) && ids.get(box.id) === box.id) continue
     const base = sanitizeId(box.id)
     let candidate = base
     for (let n = 2; used.has(candidate); n += 1) candidate = `${base}_${n}`
@@ -155,7 +185,7 @@ function assignMermaidIds(boxes: readonly DrawingShape[]): Map<string, string> {
 
 function sanitizeId(id: string): string {
   const cleaned = id.replace(/[^A-Za-z0-9_]/g, '_')
-  return cleaned === '' || /^[0-9]/.test(cleaned) ? `n_${cleaned}` : cleaned
+  return cleaned === '' ? 'n_' : cleaned
 }
 
 /** Bracket per shape. Types with no Mermaid bracket are recorded in the annotation. */

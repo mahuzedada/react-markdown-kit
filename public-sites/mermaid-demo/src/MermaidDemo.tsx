@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { compileMarkdown, defineMarkdownPreset } from '@react-markdown-kit/renderer'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
-import { mermaid } from '@react-markdown-kit/mermaid/editor'
+import { flowchart, mermaid, sequenceDiagram } from '@react-markdown-kit/mermaid/editor'
 import mermaidPackage from '@react-markdown-kit/mermaid/package.json'
 import { docsUrl, sites, useTheme } from '../../shared/Shell'
 import { decodeShareHash, encodeShareHash, mermaidLiveUrl, shareUrl, sourceFromShared } from './share'
-import { DEFAULT_CODE, SAMPLES } from './samples'
+import { DEFAULT_CODE, SAMPLE_GROUPS } from './samples'
+import { diagramStatus } from './status'
 import CodePane from './CodePane'
 import ShareDialog from './ShareDialog'
 import { copyImage, diagramFileName, diagramSvg, download, svgToPng } from './export'
@@ -40,12 +41,16 @@ import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
 import { cn } from '@zuilib/primitives/lib/cn'
 
-// The editor entry's `mermaid()` carries the canvas; the same preset also
-// renders, because the renderer reads only the capabilities it understands.
-// `ink` draws hand-drawn strokes on the canvas (index.html loads Recursive,
-// the face the ink style uses); the static SVG the exports and the renderer
-// draw is the clean style, which the plugin's renderer has alone.
-const preset = defineMarkdownPreset({ extensions: [mermaid({ style: 'ink' })] })
+// The editor entry's `mermaid()` carries the block editor; the same preset
+// also renders, because the renderer reads only the capabilities it
+// understands. The kinds are the plugin's defaults, listed here so the
+// status chip can name them. `ink` draws hand-drawn strokes on the canvas
+// (index.html loads Recursive, the face the ink style uses); the static SVG
+// the exports, the preview and the renderer draw is the clean style. The
+// block's own textarea is off: the code pane on the left is the source
+// editor for every kind.
+const KINDS = [flowchart(), sequenceDiagram()]
+const preset = defineMarkdownPreset({ extensions: [mermaid({ style: 'ink', sourceEditor: false, kinds: KINDS })] })
 
 const FENCE = /```mermaid\n([\s\S]*?)\n```/
 
@@ -220,10 +225,12 @@ export interface MermaidDemoProps {
 /**
  * The Mermaid visual editor, laid out like mermaid.live: a column of cards
  * on the left (the code with line numbers and colours, sample diagrams,
- * actions) and the drawing on the right with zoom and fullscreen controls.
- * Typing re-parses the flowchart; dragging on the canvas writes Mermaid
- * back with one `%% rmk-layout v1` annotation, and the code pane shows
- * exactly what would be saved. The source also lives in the URL hash
+ * actions) and the diagram block on the right with zoom and fullscreen
+ * controls: the canvas for a flowchart, the static preview with its
+ * problems for a sequence diagram, the source for every other Mermaid
+ * type. Typing re-parses the diagram; dragging on the canvas writes
+ * Mermaid back with one `%% rmk-layout v1` annotation, and the code pane
+ * shows exactly what would be saved. The source also lives in the URL hash
  * (src/share.ts), so a link carries the diagram.
  */
 export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactNode {
@@ -262,23 +269,12 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hash])
 
-  // What the parser makes of the code right now: a diagram node, or a plain
-  // code block when it is not a flowchart, or a diagram with an error.
-  const status = useMemo(() => {
-    const document = compileMarkdown(markdown, { preset })
-    const node = document.tree.children?.[0]
-    const invalid = document.diagnostics.find((diagnostic) => diagnostic.code === 'DIAGRAM_INVALID')
-    const layoutInvalid = document.diagnostics.find((diagnostic) => diagnostic.code === 'DIAGRAM_LAYOUT_INVALID')
-    if (node?.type === 'code')
-      return { kind: 'not-flowchart' as const, label: 'Not a flowchart', message: 'Only `flowchart` and `graph` diagrams open on the canvas. Other Mermaid types stay code blocks.' }
-    if (invalid !== undefined) return { kind: 'invalid' as const, label: 'Syntax error', message: invalid.message }
-    if (layoutInvalid !== undefined) return { kind: 'layout-invalid' as const, label: 'Layout rejected', message: layoutInvalid.message }
-    const hasLayout = /^\s*%%\s+rmk-layout\s/m.test(code)
-    return { kind: 'ok' as const, label: hasLayout ? 'Flowchart · rmk-layout v1' : 'Flowchart · auto layout', message: undefined }
-  }, [markdown, code])
+  // What the plugin makes of the code right now: which kind, whether it
+  // renders, and the first statement Mermaid itself would reject.
+  const status = useMemo(() => diagramStatus(compileMarkdown(markdown, { preset }), KINDS), [markdown])
 
-  // The canvas edited the block: keep only the fence body, which is Mermaid
-  // syntax plus the layout annotation the canvas wrote.
+  // The block edited the fence: keep only the body, which is Mermaid syntax
+  // plus, after a canvas edit, the layout annotation the canvas wrote.
   const onEditorChange = useCallback((next: string) => {
     const body = FENCE.exec(next)?.[1]
     if (body !== undefined) setCode(body)
@@ -290,7 +286,7 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
     async (key: string, work: (svg: string) => Promise<void>): Promise<void> => {
       const image = svg()
       if (image === undefined) {
-        setExportProblem('Nothing to export: the code is not a flowchart the canvas can draw.')
+        setExportProblem('Nothing to export: this diagram type is shown as source, so there is no SVG to save.')
         return
       }
       try {
@@ -369,13 +365,13 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                   <CodeIcon />
                   Code
                 </span>
-                <span className={cn(styles.status, status.kind === 'ok' ? styles.statusOk : styles.statusWarn)}>{status.label}</span>
+                <span className={cn(styles.status, status.tone === 'ok' ? styles.statusOk : styles.statusWarn)}>{status.label}</span>
                 <a className={styles.headLink} href={docsUrl('/docs/mermaid')} data-zui-tag="docs-syntax">
                   <BookIcon />
                   Docs
                 </a>
               </div>
-              <CodePane value={code} onChange={setCode} label="Mermaid source" />
+              <CodePane value={code} onChange={setCode} label="Mermaid source" kind={status.kind} />
               {unreadable ? (
                 <p className={styles.problem}>
                   This link could not be read in this browser, so the default diagram is shown. The address bar still holds the shared link; editing
@@ -391,24 +387,29 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                 <span className={styles.cardTitle}>Sample diagrams</span>
                 <ChevronIcon className={cn(styles.chevron, samplesOpen && styles.chevronOpen)} />
               </button>
-              {samplesOpen ? (
-                <div className={styles.chips}>
-                  {SAMPLES.map((sample) => (
-                    <Button
-                      key={sample.id}
-                      variant={code === sample.code ? 'solid' : 'outline'}
-                      tone="primary"
-                      size="sm"
-                      className={cn(styles.chip)}
-                      track={`sample-${sample.id}`}
-                      aria-pressed={code === sample.code}
-                      onClick={() => setCode(sample.code)}
-                    >
-                      {sample.label}
-                    </Button>
-                  ))}
-                </div>
-              ) : null}
+              {samplesOpen
+                ? SAMPLE_GROUPS.map((group) => (
+                    <div key={group.label} className={styles.chipGroup} role="group" aria-label={group.label}>
+                      <span className={styles.chipsHeading}>{group.label}</span>
+                      <div className={styles.chips}>
+                        {group.samples.map((sample) => (
+                          <Button
+                            key={sample.id}
+                            variant={code === sample.code ? 'solid' : 'outline'}
+                            tone="primary"
+                            size="sm"
+                            className={cn(styles.chip)}
+                            track={`sample-${sample.id}`}
+                            aria-pressed={code === sample.code}
+                            onClick={() => setCode(sample.code)}
+                          >
+                            {sample.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                : null}
             </section>
 
             <section className={styles.card} aria-label="Actions">
@@ -474,7 +475,7 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
             <div ref={scroller} className={styles.viewScroll}>
               <div className={styles.zoomBox} style={{ width: paneWidth * zoom || undefined, height: paneHeight * zoom || undefined }}>
                 <div className={styles.zoomInner} style={{ width: paneWidth || undefined, height: paneHeight || undefined, transform: `scale(${zoom})` }}>
-                  <MarkdownEditor preset={preset} value={markdown} onChange={onEditorChange} toolbar={false} aria-label="Diagram canvas" />
+                  <MarkdownEditor preset={preset} value={markdown} onChange={onEditorChange} toolbar={false} aria-label="Diagram block" />
                 </div>
               </div>
             </div>

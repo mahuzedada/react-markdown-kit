@@ -1,0 +1,10 @@
+sequenceDiagram
+    Alice->>Bob: Hello Bob, how are you?
+    alt Bob is sick
+        Bob->>John: Not feeling well :(
+    else Bob is well
+        Bob->>John: Feeling fresh like a daisy
+    end
+    opt Extra response
+        John-->>Alice: Thanks for asking
+    end

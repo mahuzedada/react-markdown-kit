@@ -14,7 +14,7 @@ export const TITLE = 'Free Online Mermaid Visual Editor'
 
 /** Also the meta description in index.html; tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
-  'Free, open source Mermaid visual editor: drag flowchart nodes on a canvas and get plain Mermaid back, or paste Mermaid and edit it visually. No account.'
+  'Free, open source Mermaid visual editor: drag flowchart nodes on a canvas, preview sequence diagrams as you type, and get plain Mermaid back. No account.'
 
 const RENDER = `import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
 import { mermaid } from '@react-markdown-kit/mermaid'
@@ -64,12 +64,12 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'Does the Mermaid it writes render on GitHub?',
     answer:
-      'Yes. The output is ordinary flowchart syntax, so the same fence renders on GitHub, GitLab, Notion and Obsidian, and in the React Markdown Kit renderer as static SVG.',
+      'Yes. The output is ordinary Mermaid syntax, so the same fence renders on GitHub, GitLab, Notion and Obsidian, and in the React Markdown Kit renderer as static SVG.',
   },
   {
     question: 'Which Mermaid diagram types does it support?',
     answer:
-      'Flowcharts only, written as flowchart or graph. Sequence, class, Gantt and the other diagram types stay ordinary code blocks, so a document that mixes them still round-trips.',
+      'Flowcharts, written as flowchart or graph, open on the canvas. Sequence diagrams render as static SVG and are edited as text with a live preview. Class, state, Gantt and the other types are shown as source, and a host app can render them with its own Mermaid.js through the plugin fallback entry. A document that mixes them still round-trips.',
   },
   {
     question: 'Can I share a diagram by link?',
@@ -79,7 +79,7 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'Does it need Mermaid.js or a server?',
     answer:
-      'No. The plugin parses the flowchart subset itself and draws static SVG, so nothing loads Mermaid.js. Once the page is open the editor needs no server, and nothing you type leaves your browser.',
+      'No. The plugin parses flowcharts and sequence diagrams itself and draws static SVG, so nothing loads Mermaid.js. Once the page is open the editor needs no server, and nothing you type leaves your browser.',
   },
 ]
 
@@ -92,7 +92,8 @@ export default function Landing(): ReactNode {
         <p className="site-lede">
           Draw the flowchart, get the Mermaid. Edit the Mermaid, the drawing follows. Paste a
           diagram from GitHub, a wiki or an AI chat, fix its layout by dragging, and copy plain
-          Mermaid syntax back. Flowcharts only.
+          Mermaid syntax back. Flowcharts on the canvas, sequence diagrams as text with a live
+          preview.
         </p>
         <p className="site-hero-links">
           <a href={docsUrl('/docs/mermaid')}>Plugin docs</a>
@@ -105,17 +106,18 @@ export default function Landing(): ReactNode {
       <ul className="site-features">
         <li>
           <strong>Two-way sync</strong>
-          Type Mermaid on the left and the canvas re-parses. Drag on the right and the code pane
-          shows exactly what would be saved.
+          Type Mermaid on the left and the diagram re-parses. Drag a flowchart on the right and
+          the code pane shows exactly what would be saved.
         </li>
         <li>
           <strong>Plain Mermaid out</strong>
-          What you save is ordinary flowchart syntax plus one layout comment, so it renders on
-          GitHub, GitLab, Notion and Obsidian unchanged.
+          What you save is ordinary Mermaid syntax, plus one layout comment on a flowchart, so it
+          renders on GitHub, GitLab, Notion and Obsidian unchanged.
         </li>
         <li>
           <strong>No Mermaid.js</strong>
-          The plugin parses flowcharts itself and draws static SVG: no script, no{' '}
+          The plugin parses flowcharts and sequence diagrams itself and draws static SVG: no
+          script, no{' '}
           <code>foreignObject</code>, and nothing loaded from a CDN.
         </li>
       </ul>
@@ -131,8 +133,9 @@ export default function Landing(): ReactNode {
         </pre>
         <p>
           Rendering needs only the first line. The editor is what turns the fence into a drawing
-          canvas. Nothing here loads the Mermaid library: the plugin parses the flowchart subset
-          itself and draws static SVG, so it renders in a server component or a static build.
+          canvas or a source editor with a preview. Nothing here loads the Mermaid library: the
+          plugin parses the flowchart and sequence diagram subsets itself and draws static SVG,
+          so it renders in a server component or a static build.
         </p>
 
         <span className="site-eyebrow">How to</span>
@@ -148,17 +151,18 @@ export default function Landing(): ReactNode {
           </li>
           <li>
             <strong>Write plain Mermaid.</strong> The same fence renders on GitHub, GitLab, Notion
-            and Obsidian, because it is ordinary flowchart syntax. Without positions it is laid out
-            for you.
+            and Obsidian, because it is ordinary Mermaid syntax. Without positions a flowchart is
+            laid out for you; a sequence diagram always is.
             <pre className="site-code">
               <code>{FENCE}</code>
             </pre>
           </li>
           <li>
             <strong>Edit on a canvas.</strong> Use the <code>/editor</code> entry&rsquo;s{' '}
-            <code>mermaid()</code> in the editor&rsquo;s preset. Dragging writes Mermaid back with one{' '}
-            <code>%% rmk-layout v1</code> comment on the last line, which every other renderer
-            ignores and this plugin reads back, so a drawing round-trips without loss.
+            <code>mermaid()</code> in the editor&rsquo;s preset. Dragging a flowchart writes Mermaid
+            back with one <code>%% rmk-layout v1</code> comment on the last line, which every other
+            renderer ignores and this plugin reads back, so a drawing round-trips without loss. A
+            sequence diagram is edited as text next to its live preview.
             <pre className="site-code">
               <code>{EDIT}</code>
             </pre>
@@ -169,7 +173,8 @@ export default function Landing(): ReactNode {
           <p>
             <strong>Go deeper.</strong> The <a href={docsUrl('/docs/mermaid')}>Mermaid plugin docs</a> list the
             flowchart subset (every node shape, edge style, <code>subgraph</code>, <code>style</code>{' '}
-            colours and front-matter titles), the layout annotation format and the editor options.{' '}
+            colours and front-matter titles), the sequence diagram subset, the layout annotation
+            format and the editor options.{' '}
             <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> covers the editor the canvas lives in.
             Four guides cover one job each:{' '}
             <a href={docsUrl('/react-mermaid')}>Mermaid in React without Mermaid.js</a>,{' '}
@@ -182,12 +187,15 @@ export default function Landing(): ReactNode {
         <h2>About this editor</h2>
         <ul>
           <li>
-            The left pane is Mermaid syntax; the right pane is a visual editor for the same fence.
-            Type and the canvas re-parses; drag and the code pane shows exactly what would be saved.
+            The left pane is Mermaid syntax; the right pane is the same fence as the plugin edits
+            it: a canvas for a flowchart, a live preview with the problems Mermaid would reject
+            for a sequence diagram. Type and it re-parses; drag and the code pane shows exactly
+            what would be saved.
           </li>
           <li>
-            Sequence, class, Gantt and the other Mermaid diagram types stay ordinary code blocks, so
-            a document that mixes them still round-trips. Delete the layout comment and the
+            Class, state, Gantt and the other Mermaid diagram types are shown as source, so a
+            document that mixes them still round-trips, and a host app can draw them with its own
+            Mermaid.js through the plugin&rsquo;s fallback entry. Delete the layout comment and the
             flowchart is auto-laid out again.
           </li>
           <li>

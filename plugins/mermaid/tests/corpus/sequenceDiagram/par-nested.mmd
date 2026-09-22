@@ -1,0 +1,10 @@
+sequenceDiagram
+    par Alice to Bob
+        Alice->>Bob: Go help John
+    and Alice to John
+        par Alice to John
+            Alice->>John: Hi John, how are you?
+        and John to Alice
+            John->>Alice: Hi Alice, I'm good!
+        end
+    end

@@ -9,17 +9,20 @@ export interface CodePaneProps {
   readonly onChange: (value: string) => void
   /** Accessible name of the textarea. */
   readonly label: string
+  /** The detected diagram kind, which picks the keyword set. Default flowchart. */
+  readonly kind?: string
 }
 
 /**
  * The Mermaid source with line numbers and syntax colours: a highlighted
  * layer under a transparent textarea, kept in step by sharing one font, one
- * padding and one scroll position. Tab indents, Enter keeps the indentation
- * of the line above, as a code editor does. No editor library is loaded.
+ * padding and one scroll position. The colours follow the detected kind.
+ * Tab indents, Enter keeps the indentation of the line above, as a code
+ * editor does. No editor library is loaded.
  */
-export default function CodePane({ value, onChange, label }: CodePaneProps): ReactNode {
+export default function CodePane({ value, onChange, label, kind = 'flowchart' }: CodePaneProps): ReactNode {
   const layer = useRef<HTMLPreElement>(null)
-  const lines = useMemo(() => tokenize(value), [value])
+  const lines = useMemo(() => tokenize(value, kind), [value, kind])
 
   const onScroll = useCallback((event: UIEvent<HTMLTextAreaElement>) => {
     const pre = layer.current

@@ -96,7 +96,7 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
               Open in mermaid.live
             </Button>
           </div>
-          <p className={styles.note}>The same source in the Mermaid project&rsquo;s editor. The layout comment travels along and is ignored there.</p>
+          <p className={styles.note}>The same source in the Mermaid project&rsquo;s editor. A flowchart&rsquo;s layout comment travels along and is ignored there.</p>
         </section>
       </DialogBody>
       </DialogPanel>

@@ -129,7 +129,11 @@ describe('package boundaries (spec 3.1, 12.3)', () => {
       expect(pkg.exports['./styles.css']).toBeDefined()
     })
 
-    it(`${name}'s root entry exports extension factories and no standalone API`, () => {
+    it(`${name}'s root entry exports extension and kind factories, types, schemas; no standalone API`, () => {
+      // Configuration values only: the extension factory and, for mermaid,
+      // the diagram kind factories (`flowchart()`, `sequenceDiagram()`) it
+      // takes as options, plus types and JSON Schemas. No parser, renderer
+      // or writer is reachable on its own.
       const source = readFileSync(join(root, `plugins/${name}/src/index.ts`), 'utf8')
       const named = [...source.matchAll(/^export \{ ([^}]+) \} from/gm)].flatMap((m) => (m[1] as string).split(',').map((s) => s.trim()))
       expect(named).toContain(FACTORY_NAME[name])

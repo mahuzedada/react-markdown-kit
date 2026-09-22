@@ -1,8 +1,8 @@
 /* Chrome for the Mermaid visual editor, laid out like mermaid.live: a
-   header, a column of rounded cards on the left and the drawing on the
-   right with floating controls. Colours come from the theme tokens; only
-   the geometry is this page's own. The canvas and the static SVG are styled
-   by the kit's own stylesheets and shared/kit.css. */
+   header, a column of rounded cards on the left and the diagram block on
+   the right with floating controls. Colours come from the theme tokens; only
+   the geometry is this page's own. The block, the canvas, the preview and
+   the static SVG are styled by the kit's own stylesheets and shared/kit.css. */
 
 .shell {
   --pane-radius: 16px;
@@ -215,12 +215,31 @@
   background: color-mix(in oklab, var(--warning) 8%, transparent);
 }
 
-/* Sample chips and action buttons: mermaid.live's 32px pills. */
+/* Sample chips and action buttons: mermaid.live's 32px pills, one group
+   per diagram kind under a small heading. */
+.chipGroup {
+  padding: 0.6rem 0.75rem 0.25rem;
+}
+
+.chipGroup + .chipGroup {
+  border-top: 1px solid var(--border);
+}
+
+.chipsHeading {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding: 0.75rem;
+  padding: 0 0 0.5rem;
 }
 
 .chip {
@@ -315,16 +334,20 @@
   transform-origin: 0 0;
 }
 
-/* The drawing surface is the pane. The editor, its content, the diagram
-   block and the canvas each stretch to the height they are given, so the
-   kit's toolbar sits along the top edge and the SVG takes the rest; the
-   canvas's own border, background and focus ring are the pane's now. */
+/* The block is the pane. The editor, its content, the diagram node, the
+   block and whichever editing component it holds (the canvas with its
+   stage, the source editor with its preview, or the source pre) each
+   stretch to the height they are given, so the block's header and the
+   kit's toolbar sit along the top edge and the drawing takes the rest; the
+   block's own border, background and focus ring are the pane's now. */
 .zoomInner :global(.rmk-editor),
 .zoomInner :global(.rmk-editor .rmk-content),
 .zoomInner :global(.rmk-editor .rmk-content > *),
 .zoomInner :global(.rmk-editor .rmk-diagram),
+.zoomInner :global(.rmk-editor .rmk-diagram-block),
 .zoomInner :global(.rmk-editor .rmk-diagram-canvas),
-.zoomInner :global(.rmk-editor .rmk-diagram-stage) {
+.zoomInner :global(.rmk-editor .rmk-diagram-stage),
+.zoomInner :global(.rmk-editor .rmk-diagram-source) {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
@@ -352,10 +375,15 @@
   padding: 0;
 }
 
+.zoomInner :global(.rmk-editor .rmk-diagram-block),
 .zoomInner :global(.rmk-editor .rmk-diagram-canvas) {
   border: 0;
   border-radius: 0;
   background: transparent;
+}
+
+.zoomInner :global(.rmk-editor .rmk-diagram-header) {
+  flex: none;
 }
 
 .zoomInner :global(.rmk-editor .rmk-diagram-canvas.is-editable:focus-within) {
@@ -364,6 +392,30 @@
 
 .zoomInner :global(.rmk-editor .rmk-diagram-surface) {
   flex: 1 0 auto;
+}
+
+/* Source mode (a sequence diagram, or a flowchart switched to text): the
+   preview takes the height and scrolls, the problems stay along the bottom.
+   A kind nothing renders shows its source the same way. */
+.zoomInner :global(.rmk-editor .rmk-diagram-preview),
+.zoomInner :global(.rmk-editor .rmk-diagram-source-pre) {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+}
+
+.zoomInner :global(.rmk-editor .rmk-diagram-preview) {
+  padding: 1.5rem;
+}
+
+.zoomInner :global(.rmk-editor .rmk-diagram-preview svg) {
+  max-width: none;
+}
+
+.zoomInner :global(.rmk-editor .rmk-diagram-notice),
+.zoomInner :global(.rmk-editor .rmk-diagram-problems) {
+  flex: none;
 }
 
 /* Everything that floats over the canvas sits along the bottom edge, on

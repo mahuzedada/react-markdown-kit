@@ -40,7 +40,7 @@ html[data-theme='dark'] .rmk-document {
   --rmk-diagram-surface: color-mix(in oklab, var(--background), black 30%);
 }
 
-html[data-theme='dark'] .rmk-document [data-rmk-diagram] svg {
+html[data-theme='dark'] .rmk-document [data-rmk-diagram-kind='flowchart'] svg {
   filter: invert(93%) hue-rotate(180deg);
 }
 
@@ -68,4 +68,83 @@ html[data-theme='dark'] .rmk-document {
   --rmk-deck-backdrop: color-mix(in oklab, var(--background), black 30%);
   --rmk-deck-chrome: var(--card);
   --rmk-deck-chrome-text: var(--foreground);
+}
+
+/*
+ * Diagram colour tokens. Kinds without payload colours (the sequence
+ * diagram) take fills, strokes and text from these; the plugin's own
+ * stylesheet declares no colour for them, only the Mermaid fallbacks
+ * inline in the SVG. Mapped here so the diagram reads in the Foundry
+ * palette in both modes. The dark-mode invert filter above is for the
+ * flowchart's white surface only, so these tokens are real dark colours,
+ * not light ones seen through a filter.
+ */
+html .rmk-document {
+  --rmk-diagram-actor-fill: var(--secondary);
+  --rmk-diagram-actor-stroke: var(--primary);
+  --rmk-diagram-actor-text: var(--foreground);
+  --rmk-diagram-line: var(--muted-foreground);
+  --rmk-diagram-signal: var(--foreground);
+  --rmk-diagram-signal-text: var(--foreground);
+  --rmk-diagram-label-fill: var(--accent);
+  --rmk-diagram-label-stroke: var(--primary-border);
+  --rmk-diagram-label-text: var(--foreground);
+  --rmk-diagram-note-fill: var(--input-unsaved);
+  --rmk-diagram-note-stroke: var(--warning-border);
+  --rmk-diagram-note-text: var(--foreground);
+  --rmk-diagram-activation-fill: var(--muted);
+  --rmk-diagram-activation-stroke: var(--muted-foreground);
+  --rmk-diagram-number-text: var(--background);
+}
+
+/*
+ * The editor's block previews a sequence diagram (and a flowchart switched
+ * to text) with the same SVG, so the editor takes the same tokens. The
+ * preview surface follows the document's in dark mode, with the flowchart
+ * preview inverted as the document's flowchart is, and the canvas keeps its
+ * white surface and filter untouched.
+ */
+html .rmk-editor {
+  --rmk-diagram-actor-fill: var(--secondary);
+  --rmk-diagram-actor-stroke: var(--primary);
+  --rmk-diagram-actor-text: var(--foreground);
+  --rmk-diagram-line: var(--muted-foreground);
+  --rmk-diagram-signal: var(--foreground);
+  --rmk-diagram-signal-text: var(--foreground);
+  --rmk-diagram-label-fill: var(--accent);
+  --rmk-diagram-label-stroke: var(--primary-border);
+  --rmk-diagram-label-text: var(--foreground);
+  --rmk-diagram-note-fill: var(--input-unsaved);
+  --rmk-diagram-note-stroke: var(--warning-border);
+  --rmk-diagram-note-text: var(--foreground);
+  --rmk-diagram-activation-fill: var(--muted);
+  --rmk-diagram-activation-stroke: var(--muted-foreground);
+  --rmk-diagram-number-text: var(--background);
+}
+
+html[data-theme='dark'] .rmk-editor .rmk-diagram-preview {
+  background-color: color-mix(in oklab, var(--background), black 30%);
+}
+
+html[data-theme='dark'] .rmk-editor [data-rmk-diagram-kind='flowchart'] .rmk-diagram-preview svg {
+  filter: invert(93%) hue-rotate(180deg);
+}
+
+html[data-theme='dark'] .rmk-document,
+html[data-theme='dark'] .rmk-editor {
+  --rmk-diagram-actor-fill: var(--card);
+  --rmk-diagram-actor-stroke: var(--primary-text);
+  --rmk-diagram-actor-text: var(--foreground);
+  --rmk-diagram-line: var(--muted-foreground);
+  --rmk-diagram-signal: var(--foreground);
+  --rmk-diagram-signal-text: var(--foreground);
+  --rmk-diagram-label-fill: var(--accent);
+  --rmk-diagram-label-stroke: var(--primary-border);
+  --rmk-diagram-label-text: var(--foreground);
+  --rmk-diagram-note-fill: var(--input-unsaved);
+  --rmk-diagram-note-stroke: var(--warning-border);
+  --rmk-diagram-note-text: var(--foreground);
+  --rmk-diagram-activation-fill: var(--secondary);
+  --rmk-diagram-activation-stroke: var(--muted-foreground);
+  --rmk-diagram-number-text: var(--background);
 }

@@ -15,6 +15,7 @@ export default defineConfig({
       '@react-markdown-kit/editor': src('./packages/editor/src/index.ts'),
       '@react-markdown-kit/template/editor': src('./plugins/template/src/editor.ts'),
       '@react-markdown-kit/template': src('./plugins/template/src/index.ts'),
+      '@react-markdown-kit/mermaid/client': src('./plugins/mermaid/src/client.ts'),
       '@react-markdown-kit/mermaid/editor': src('./plugins/mermaid/src/editor.ts'),
       '@react-markdown-kit/mermaid': src('./plugins/mermaid/src/index.ts'),
       '@react-markdown-kit/slides/present': src('./plugins/slides/src/present.ts'),

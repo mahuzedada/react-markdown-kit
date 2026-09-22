@@ -26,6 +26,9 @@
       "@react-markdown-kit/template/editor": [
         "plugins/template/src/editor.ts"
       ],
+      "@react-markdown-kit/mermaid/client": [
+        "plugins/mermaid/src/client.ts"
+      ],
       "@react-markdown-kit/mermaid": [
         "plugins/mermaid/src/index.ts"
       ],

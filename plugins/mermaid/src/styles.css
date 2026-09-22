@@ -47,7 +47,8 @@
 .rmk-document [data-rmk-diagram][data-rmk-diagram-error] pre { margin: 0; }
 
 /* ======================================================================== */
-/* The canvas (`@react-markdown-kit/mermaid/editor`).                       */
+/* The block (`@react-markdown-kit/mermaid/editor`): header row, canvas,    */
+/* source editor with preview and problems.                                 */
 /*                                                                            */
 /* Ported from @zuilib/text-editor (MIT). Every colour, radius and shadow of  */
 /* the canvas chrome is a `--rmk-diagram-*` custom property declared on       */
@@ -88,10 +89,224 @@
   --rmk-diagram-active: color-mix(in srgb, currentColor 12%, transparent);
   --rmk-diagram-swatch-border: rgba(0, 0, 0, 0.18);
   --rmk-diagram-resize-hover: rgba(0, 0, 0, 0.06);
+  --rmk-diagram-notice-surface: color-mix(in srgb, currentColor 5%, transparent);
 }
 
 .rmk-editor .rmk-diagram {
   margin-block: 1rem;
+}
+
+/*
+ * The block: a header row naming the kind and its support level, with the
+ * canvas/text toggle for a flowchart, above the canvas or the source editor.
+ */
+.rmk-editor .rmk-diagram-block {
+  border: 1px solid var(--rmk-diagram-border);
+  border-radius: var(--rmk-diagram-radius);
+  background: var(--rmk-diagram-chrome);
+  color: var(--rmk-diagram-foreground);
+  font-family: var(--rmk-diagram-font);
+  overflow: hidden;
+}
+
+.rmk-editor .rmk-diagram-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-block-end: 1px solid var(--rmk-diagram-border);
+  font-size: 0.75rem;
+  outline: none;
+}
+
+.rmk-editor .rmk-diagram-header:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--rmk-diagram-accent-ring);
+}
+
+.rmk-editor .rmk-diagram-kind {
+  font-weight: 600;
+}
+
+.rmk-editor .rmk-diagram-badge {
+  padding: 0.0625rem 0.375rem;
+  border: 1px solid var(--rmk-diagram-border);
+  border-radius: 999px;
+  color: var(--rmk-diagram-muted-foreground);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+}
+
+.rmk-editor .rmk-diagram-badge[data-rmk-diagram-support="static"] {
+  color: var(--rmk-diagram-success);
+  border-color: var(--rmk-diagram-success);
+}
+
+.rmk-editor .rmk-diagram-mode {
+  display: inline-flex;
+  gap: 0.125rem;
+  margin-inline-start: auto;
+}
+
+.rmk-editor .rmk-diagram-mode-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.625rem;
+  padding: 0 0.5rem;
+  border: none;
+  border-radius: var(--rmk-diagram-control-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: background-color 0.12s ease, opacity 0.12s ease;
+}
+
+.rmk-editor .rmk-diagram-mode-button:hover {
+  opacity: 1;
+  background: var(--rmk-diagram-hover);
+}
+
+.rmk-editor .rmk-diagram-mode-button:focus-visible {
+  outline: 2px solid var(--rmk-focus, currentColor);
+  outline-offset: 1px;
+}
+
+.rmk-editor .rmk-diagram-mode-button.is-active {
+  opacity: 1;
+  color: var(--rmk-diagram-accent);
+  background: var(--rmk-diagram-accent-soft);
+}
+
+.rmk-editor .rmk-diagram-mode-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* The block wraps the canvas: the canvas keeps its own frame only when it stands alone. */
+.rmk-editor .rmk-diagram-block .rmk-diagram-canvas {
+  border: none;
+  border-radius: 0;
+}
+
+.rmk-editor .rmk-diagram-block .rmk-diagram-canvas.is-editable:focus-within {
+  box-shadow: inset 0 0 0 2px var(--rmk-diagram-accent-ring);
+}
+
+/* A lossy source: the notice sits above a canvas that only shows. */
+.rmk-editor .rmk-diagram-lossy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-block-end: 1px solid var(--rmk-diagram-border);
+  background: var(--rmk-diagram-notice-surface);
+  font-size: 0.8125rem;
+}
+
+.rmk-editor .rmk-diagram-lossy-text {
+  flex: 1 1 12rem;
+}
+
+.rmk-editor .rmk-diagram-lossy-action {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--rmk-diagram-border);
+  border-radius: var(--rmk-diagram-control-radius);
+  background: var(--rmk-diagram-chrome);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.rmk-editor .rmk-diagram-lossy-action:hover {
+  background: var(--rmk-diagram-hover);
+}
+
+.rmk-editor .rmk-diagram-lossy-action:focus-visible {
+  outline: 2px solid var(--rmk-focus, currentColor);
+  outline-offset: 1px;
+}
+
+/* Source mode: preview, textarea, problems. */
+.rmk-editor .rmk-diagram-source {
+  display: flex;
+  flex-direction: column;
+}
+
+.rmk-editor .rmk-diagram-preview {
+  padding: calc(var(--rmk-space, 1rem) / 2);
+  background-color: var(--rmk-diagram-surface);
+  background-image: radial-gradient(circle, var(--rmk-diagram-grid) 1px, transparent 1px);
+  background-size: var(--rmk-diagram-grid-size) var(--rmk-diagram-grid-size);
+  overflow-x: auto;
+}
+
+.rmk-editor .rmk-diagram-preview svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  font-family: var(--rmk-font-body, var(--rmk-diagram-font));
+}
+
+.rmk-editor .rmk-diagram-notice {
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  background: var(--rmk-diagram-notice-surface);
+  color: var(--rmk-diagram-muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.rmk-editor .rmk-diagram-source-input {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border: none;
+  border-block-start: 1px solid var(--rmk-diagram-border);
+  border-radius: 0;
+  background: var(--rmk-diagram-chrome);
+  color: inherit;
+  font-family: var(--rmk-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  tab-size: 4;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.rmk-editor .rmk-diagram-source-input:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--rmk-diagram-accent-ring);
+}
+
+.rmk-editor .rmk-diagram-source-pre {
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  font-family: var(--rmk-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.rmk-editor .rmk-diagram-problems {
+  margin: 0;
+  padding: 0.375rem 0.625rem 0.375rem 1.5rem;
+  border-block-start: 1px solid var(--rmk-diagram-border);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--rmk-diagram-muted-foreground);
+}
+
+.rmk-editor .rmk-diagram-problems [data-rmk-diagram-severity="invalid"] {
+  color: var(--rmk-diagram-danger);
 }
 
 .rmk-editor .rmk-diagram-canvas {
@@ -502,7 +717,8 @@
 
 /* Phones: editable text renders at 16px or more, so iOS does not zoom on focus */
 @media (max-width: 40rem) {
-  .rmk-editor .rmk-diagram-popover-item {
+  .rmk-editor .rmk-diagram-popover-item,
+  .rmk-editor .rmk-diagram-source-input {
     font-size: max(16px, 1em);
   }
 }

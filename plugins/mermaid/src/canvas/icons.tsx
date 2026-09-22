@@ -73,6 +73,37 @@ export const UI_ICONS = {
       <path d="M8.5 6.5h3.5v7M10.5 12l1.5 1.5 1.5-1.5" />
     </g>
   ),
+  /** Header toggle: edit as text */
+  code: <path d="M7 6l-4 4 4 4M13 6l4 4-4 4" />,
+  /** Header toggle: edit on the canvas */
+  canvas: (
+    <g>
+      <rect x="3" y="3.5" width="14" height="11" rx="1.5" />
+      <path d="M6.5 8h3v3.5h-3zM12 6.5l2 2-2 2" />
+    </g>
+  ),
+  /** Lossy notice */
+  warning: <path d="M10 3.5l7 12.5H3zM10 8.5v3.5M10 14.2v.01" />,
+}
+
+/** A kind's own 24x24 icon path, drawn like the 20x20 glyphs. */
+export function KindIcon({ path, size = 16 }: { path: string; size?: number }): ReactElement {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={path} />
+    </svg>
+  )
 }
 
 export function Icon({ children, size = 16 }: { children: ReactElement; size?: number }): ReactElement {

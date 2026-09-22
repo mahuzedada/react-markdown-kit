@@ -10,13 +10,13 @@ import { Markdown, compileMarkdown, type MarkdownPreset } from '@react-markdown-
 
 const SVG = /<svg[\s\S]*?<\/svg>/
 
-/** The static SVG the renderer draws for `markdown`, or nothing when the fence is not a flowchart. */
+/** The static SVG the renderer draws for `markdown`, or nothing when no kind renders the fence (shown as source, or a parse error). */
 export function diagramSvg(markdown: string, preset: MarkdownPreset): string | undefined {
   const html = renderToStaticMarkup(createElement(Markdown, { preset, document: compileMarkdown(markdown, { preset }) }))
   const svg = SVG.exec(html)?.[0]
   if (svg === undefined) return undefined
-  // The label plates read a theme property with a fallback; a file has no
-  // theme, so the fallback is written in.
+  // Label plates and the sequence diagram's colours read a theme property
+  // with a Mermaid fallback; a file has no theme, so the fallback is written in.
   const plain = svg.replace(/var\(--[\w-]+,\s*([^)]+)\)/g, '$1')
   return plain.includes('xmlns=') ? plain : plain.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"')
 }

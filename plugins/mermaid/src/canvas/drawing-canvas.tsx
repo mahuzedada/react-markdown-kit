@@ -1,8 +1,16 @@
 /**
  * Ported from @zuilib/text-editor (MIT). The drawing canvas: the interactive
- * SVG surface of one diagram block, with its tool row, selection, inline
+ * SVG surface of one flowchart block, with its tool row, selection, inline
  * text editing and height grip. Local state during a gesture, committed to
  * the Lexical node on release.
+ *
+ * The node stores Mermaid source, so a commit goes through the flowchart
+ * kind's `write` with the lines the parser read through, and what comes
+ * back is the model of that source: the canvas remembers it as its last
+ * commit so its own echo never resets a gesture. Features the writer cannot
+ * keep (`lossy`) lock the canvas behind a notice until the author accepts
+ * the loss or switches to text; the first commit can only happen after
+ * that.
  */
 import {
   useCallback,
@@ -36,6 +44,8 @@ import {
   type Point,
 } from '../core/drawing-data.js'
 import { COLOR_PRESETS, type ColorName } from '../core/skeleton.js'
+import type { DiagramKind, RetainedLine } from '../core/kind.js'
+import { parseDiagramSource } from '../extension.js'
 import { $isDiagramNode } from '../node/diagram-node.js'
 import { DIAGRAM_FOCUS_COMMAND } from '../node/commands.js'
 import { Icon, UI_ICONS } from './icons.js'
@@ -49,7 +59,7 @@ import {
   type DragState,
 } from './interaction.js'
 import { useDiagramLabels } from './labels.js'
-import { useDiagramOptions } from './options.js'
+import { canvasKindOf, useDiagramOptions } from './options.js'
 import { PropertyBar } from './property-bar.js'
 import { GroupSelectionOverlay, MarqueeOverlay, SelectionOverlay } from './selection-overlay.js'
 import { HitArea, ShapeView, slotAt } from './shape-view.js'
@@ -58,7 +68,14 @@ import { DiagramToolbar, type Tool } from './toolbar.js'
 
 type Props = Readonly<{
   nodeKey: NodeKey
+  /** The model of the node's source. */
   data: DrawingData
+  /** Lines the parser read through; the writer re-emits them. */
+  retained: readonly RetainedLine[]
+  /** Features a canvas edit cannot keep; non-empty locks the canvas until acknowledged. */
+  lossy: readonly string[]
+  /** "Edit as text" in the lossy notice. */
+  onEditAsText: () => void
 }>
 
 const MIN_HEIGHT = 120
@@ -116,14 +133,22 @@ function computePaths(shapes: readonly DrawingShape[]): Map<string, Point[]> {
   return paths
 }
 
-export function DiagramCanvas({ nodeKey, data }: Props): ReactElement {
+export function DiagramCanvas({ nodeKey, data, retained, lossy, onEditAsText }: Props): ReactElement {
   const { editor, readOnly } = useLexicalEditor()
-  const isEditable = !readOnly
+  // A lossy source is shown, not edited, until the author accepts the loss.
+  const [acknowledged, setAcknowledged] = useState(false)
+  const locked = lossy.length > 0 && !acknowledged
+  const isEditable = !readOnly && !locked
 
   const [shapes, setShapes] = useState<readonly DrawingShape[]>(data.shapes)
   const [canvasHeight, setCanvasHeight] = useState(data.canvasHeight)
   const [width, setWidth] = useState<BlockWidth>(data.width ?? 'full')
-  const ink = useDiagramOptions(editor).style === 'ink'
+  const options = useDiagramOptions(editor)
+  const ink = options.style === 'ink'
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+  const retainedRef = useRef(retained)
+  retainedRef.current = retained
   const labels = useDiagramLabels()
   const [tool, setTool] = useState<Tool>('select')
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(EMPTY_SET)
@@ -226,10 +251,19 @@ export function DiagramCanvas({ nodeKey, data }: Props): ReactElement {
       }
       const json = serializeDrawingData(payload)
       if (json === lastCommittedRef.current) return
-      lastCommittedRef.current = json
+      const { kinds } = optionsRef.current
+      const kind = canvasKindOf(kinds)
+      if (kind?.write === undefined) return
+      // The node stores source: write it, and remember the model that
+      // source parses to, which is what comes back as `data`.
+      const written = (kind as DiagramKind<DrawingData>).write?.(payload, { retained: retainedRef.current })
+      if (written === undefined) return
+      const reparsed = parseDiagramSource(kinds, kind.name, written)
+      lastCommittedRef.current =
+        reparsed !== undefined && !('error' in reparsed) ? serializeDrawingData(reparsed.model as DrawingData) : json
       editor.update(() => {
         const node = $getNodeByKey(nodeKey)
-        if ($isDiagramNode(node)) node.setData(payload)
+        if ($isDiagramNode(node) && node.getSource() !== written) node.setSource(written, kinds)
       })
     },
     [editor, nodeKey, canvasWidth, data.width, data.title, data.description],
@@ -702,6 +736,20 @@ export function DiagramCanvas({ nodeKey, data }: Props): ReactElement {
         editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, null)
       }}
     >
+      {locked && !readOnly && (
+        <div className="rmk-diagram-lossy" role="status">
+          <Icon>{UI_ICONS.warning}</Icon>
+          <span className="rmk-diagram-lossy-text">
+            {labels.lossyNotice} {lossy.join(', ')}
+          </span>
+          <button type="button" className="rmk-diagram-lossy-action" onClick={() => setAcknowledged(true)}>
+            {labels.editOnCanvas}
+          </button>
+          <button type="button" className="rmk-diagram-lossy-action" onClick={onEditAsText}>
+            {labels.editAsText}
+          </button>
+        </div>
+      )}
       {isEditable && (
         <div className="rmk-diagram-toolbar" onPointerDown={(e) => e.stopPropagation()}>
           <DiagramToolbar

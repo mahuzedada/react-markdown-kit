@@ -88,14 +88,21 @@ console.log('ok')
     noLexical: true,
     file: 'check.mjs',
     code: `
+import { readFileSync } from 'node:fs'
 import { Markdown, defineMarkdownPreset } from '@react-markdown-kit/renderer'
 import { mermaid } from '@react-markdown-kit/mermaid'
+import { diagramFallback } from '@react-markdown-kit/mermaid/client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement as h } from 'react'
 const preset = defineMarkdownPreset({ extensions: [mermaid()] })
 const src = '\`\`\`diagram\\n{"boxes":[{"id":"a","text":"Hello"}]}\\n\`\`\`\\n'
 const out = renderToStaticMarkup(h(Markdown, { preset }, src))
-if (!out.includes('<figure data-rmk-diagram="diagram">') || !out.includes('<svg')) throw new Error('unexpected: ' + out)
+if (!/<figure data-rmk-diagram="diagram"[^>]*>/.test(out) || !out.includes('<svg')) throw new Error('unexpected: ' + out)
+if (diagramFallback({ render: async () => '' }).name !== 'mermaid-fallback') throw new Error('bad fallback extension')
+for (const entry of ['client', 'editor']) {
+  const built = readFileSync('node_modules/@react-markdown-kit/mermaid/dist/' + entry + '.js', 'utf8')
+  if (!built.startsWith("'use client'")) throw new Error(entry + ' entry lost its client directive: ' + built.slice(0, 40))
+}
 console.log('ok')
 `,
   },
