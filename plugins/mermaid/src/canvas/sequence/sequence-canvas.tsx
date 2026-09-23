@@ -21,6 +21,7 @@
  * with `readOnly` the canvas draws the picture and nothing else.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactElement, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime'
 import { UNDO_COMMAND } from 'lexical'
@@ -80,6 +81,7 @@ import { LabelOverlay } from './label-overlay.js'
 import { selectionRange, type SequenceEditing, type SequenceSelection } from './selection.js'
 import { SequencePropertyBar, type SequencePropertyActions } from './sequence-property-bar.js'
 import { SequenceToolbar } from './sequence-toolbar.js'
+import { useToolbarHost } from '../toolbar-slot.js'
 
 const M = SEQUENCE_METRICS
 const LINE_H = FONT_SIZE * LINE_HEIGHT
@@ -159,6 +161,9 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
   const dragRef = useRef<Drag | null>(null)
   const [gap, setGap] = useState<Gap | null>(null)
   const [scale, setScale] = useState(1)
+  /** Focus is in the canvas or in its tool row, wherever that row renders. */
+  const [active, setActive] = useState(false)
+  const slot = useToolbarHost(editor, nodeKey, editable, active)
   const lastCommittedRef = useRef(serialize(incoming))
   const kindRef = useRef(kind as DiagramKind<SequenceModel>)
   kindRef.current = kind as DiagramKind<SequenceModel>
@@ -168,10 +173,33 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
   optionsRef.current = options
 
   const rootRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const layerRef = useRef<SVGSVGElement>(null)
 
   const layout = useMemo(() => layoutSequence(model), [model])
+
+  // A centred canvas (`align: 'center'`) fits a picture taller than the
+  // room its viewport gives it: the stage takes the width at which the
+  // picture's own proportions meet the viewport's content height, measured
+  // untransformed. Where the picture sits in that room is the host's CSS.
+  const centered = options.align === 'center'
+  const [room, setRoom] = useState<{ readonly w: number; readonly h: number } | null>(null)
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!centered || !viewport || typeof ResizeObserver === 'undefined') {
+      setRoom(null)
+      return
+    }
+    const observer = new ResizeObserver((entries) => {
+      const box = entries[entries.length - 1]?.contentRect
+      if (box !== undefined && box.width > 0 && box.height > 0) setRoom({ w: box.width, h: box.height })
+    })
+    observer.observe(viewport)
+    return () => observer.disconnect()
+  }, [centered])
+  const stageWidth =
+    room !== null && layout.height > room.h ? Math.min(layout.width, Math.floor((layout.width * room.h) / layout.height)) : layout.width
   const layoutRef = useRef(layout)
   layoutRef.current = layout
 
@@ -615,36 +643,46 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
   const field = editing === null ? null : editField(layout, model, editing, labels)
   const range = selection !== null && selection.kind === 'item' ? siblingRange(model, selection.anchor ?? selection.index, selection.index) : []
 
+  // The tool row, along the top edge or in the host's <DiagramToolbar>; as
+  // on the flowchart canvas, a detached row keeps the canvas active and
+  // `is-active` shows the property bar where `:focus-within` cannot.
+  const toolbar = editable && (
+    <div className={classes('rmk-diagram-toolbar', active && 'is-active', slot.detached && 'is-detached')} onPointerDown={(e) => e.stopPropagation()}>
+      <SequenceToolbar
+        numbering={model.numbering !== undefined}
+        onAddParticipant={() => addNewParticipant('participant')}
+        onAddActor={() => addNewParticipant('actor')}
+        onNumbering={(on) => apply(setNumbering(modelRef.current, on))}
+        onCopyMermaid={copyMermaid}
+        properties={
+          <div className="rmk-diagram-props-host">
+            <SequencePropertyBar model={model} selection={selection} actions={actions} />
+          </div>
+        }
+      />
+    </div>
+  )
+
   return (
     <div
       ref={rootRef}
       className={classes('rmk-diagram-canvas', 'rmk-sequence-canvas', editable && 'is-editable')}
       tabIndex={editable ? 0 : undefined}
-      onFocus={() => editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, nodeKey)}
+      onFocus={() => {
+        setActive(true)
+        editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, nodeKey)
+      }}
       onBlur={(e) => {
-        if (rootRef.current?.contains(e.relatedTarget as Node | null)) return
+        const next = e.relatedTarget as Node | null
+        if (rootRef.current?.contains(next) || slot.host?.contains(next)) return
+        setActive(false)
         editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, null)
       }}
     >
-      {editable && (
-        <div className="rmk-diagram-toolbar" onPointerDown={(e) => e.stopPropagation()}>
-          <SequenceToolbar
-            numbering={model.numbering !== undefined}
-            onAddParticipant={() => addNewParticipant('participant')}
-            onAddActor={() => addNewParticipant('actor')}
-            onNumbering={(on) => apply(setNumbering(modelRef.current, on))}
-            onCopyMermaid={copyMermaid}
-            properties={
-              <div className="rmk-diagram-props-host">
-                <SequencePropertyBar model={model} selection={selection} actions={actions} />
-              </div>
-            }
-          />
-        </div>
-      )}
+      {!slot.detached ? toolbar : slot.host !== null && toolbar !== false ? createPortal(toolbar, slot.host) : null}
 
-      <div className="rmk-sequence-viewport">
-        <div ref={stageRef} className="rmk-diagram-stage rmk-sequence-stage" style={{ width: layout.width, maxWidth: '100%' }}>
+      <div ref={viewportRef} className="rmk-sequence-viewport">
+        <div ref={stageRef} className="rmk-diagram-stage rmk-sequence-stage" style={{ width: stageWidth, maxWidth: '100%' }}>
           <div className="rmk-sequence-picture" aria-label={model.title ?? labels.sequenceCanvas}>
             {picture}
           </div>

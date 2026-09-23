@@ -9,11 +9,13 @@
  * way carries the editor state mermaid.live reads, and the export helpers
  * produce a self-contained SVG for every static kind.
  */
+import type { ReactElement } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { inflateSync } from 'node:zlib'
 import { compileMarkdown } from '@react-markdown-kit/renderer'
-import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { MarkdownEditor, MarkdownEditorContent, MarkdownEditorProvider, useMarkdownEditor } from '@react-markdown-kit/editor'
 import { flowchart, sequenceDiagram, type DiagramKind } from '@react-markdown-kit/mermaid'
+import { DiagramToolbar } from '@react-markdown-kit/mermaid/editor'
 import { mount, type Mounted } from '../packages/editor/tests/helpers/mount.js'
 import { DEFAULT_CODE, SAMPLES, SAMPLE_GROUPS } from '../public-sites/mermaid-demo/src/samples'
 import { KINDS, preset } from '../public-sites/mermaid-demo/src/preset'
@@ -31,7 +33,7 @@ function sourceOnly(kind: DiagramKind): DiagramKind {
   return Object.fromEntries(Object.entries(kind).filter(([key]) => key !== 'write')) as unknown as DiagramKind
 }
 
-const sequenceSample = SAMPLES.find((sample) => sample.id === 'signin')?.code ?? ''
+const sequenceSample = SAMPLES.find((sample) => sample.id === 'sso')?.code ?? ''
 const CLASS_DIAGRAM = 'classDiagram\n    Animal <|-- Duck'
 
 describe('samples', () => {
@@ -44,8 +46,9 @@ describe('samples', () => {
   it('are grouped as flowcharts and sequence diagrams, each sample in the group its header names', () => {
     expect(SAMPLE_GROUPS.map((group) => group.label)).toEqual(['Flowcharts', 'Sequence diagrams'])
     expect(SAMPLE_GROUPS.flatMap((group) => group.samples)).toEqual(SAMPLES)
+    expect(SAMPLE_GROUPS[0].samples).toHaveLength(3)
     for (const sample of SAMPLE_GROUPS[0].samples) expect(status(sample.code).kind, sample.id).toBe('flowchart')
-    expect(SAMPLE_GROUPS[1].samples).toHaveLength(4)
+    expect(SAMPLE_GROUPS[1].samples).toHaveLength(3)
     for (const sample of SAMPLE_GROUPS[1].samples) expect(status(sample.code).kind, sample.id).toBe('sequenceDiagram')
   })
 
@@ -139,6 +142,38 @@ describe('the block', () => {
       expect(block(container).querySelector('.rmk-diagram-canvas .rmk-diagram-surface'), sample.id).not.toBeNull()
       expect(block(container).querySelector('.rmk-sequence-canvas'), sample.id).toBeNull()
     }
+  })
+
+  /** The demo's composition: the slot in the strip above the pane, the content surface in the pane. */
+  function Composed({ code }: { code: string }): ReactElement {
+    const editor = useMarkdownEditor({ preset, value: wrap(code) })
+    return (
+      <MarkdownEditorProvider editor={editor}>
+        <div data-strip>
+          <DiagramToolbar placeholder="shown as source" />
+        </div>
+        <div className="rmk-editor">
+          <MarkdownEditorContent aria-label="Diagram block" />
+        </div>
+      </MarkdownEditorProvider>
+    )
+  }
+
+  it('renders the tool row in the strip above the pane, not on the canvas, for both canvases, and the placeholder for source-only kinds', () => {
+    for (const [code, row] of [
+      [DEFAULT_CODE, 'Drawing tools'],
+      [sequenceSample, 'Sequence diagram tools'],
+    ] as const) {
+      const view = mount(<Composed code={code} />)
+      views.push(view)
+      const strip = view.container.querySelector('[data-strip]')
+      expect(strip?.querySelector(`.rmk-diagram-toolbar [role="toolbar"][aria-label="${row}"]`), row).not.toBeNull()
+      expect(block(view.container).querySelector('.rmk-diagram-toolbar'), row).toBeNull()
+    }
+    const view = mount(<Composed code={CLASS_DIAGRAM} />)
+    views.push(view)
+    expect(view.container.querySelector('[data-strip] .rmk-diagram-toolbar')).toBeNull()
+    expect(view.container.querySelector('[data-strip]')?.textContent).toBe('shown as source')
   })
 
   it('shows the source under the unsupported notice, with no textarea, for a Mermaid type nothing renders', () => {

@@ -12,7 +12,7 @@
 
 export { MarkdownEditor, default } from './react/editor.js'
 export { useMarkdownEditor } from './react/use-markdown-editor.js'
-export { MarkdownEditorProvider, useMarkdownEditorContext } from './react/context.js'
+export { MarkdownEditorProvider, useMarkdownEditorContext, useOptionalMarkdownEditorContext } from './react/context.js'
 export { MarkdownEditorContent } from './react/content.js'
 export type { MarkdownEditorProviderProps } from './react/context.js'
 export type { MarkdownEditorContentProps, EditorAriaProps } from './react/content.js'

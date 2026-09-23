@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { compileMarkdown } from '@react-markdown-kit/renderer'
-import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { MarkdownEditorContent, MarkdownEditorProvider, useMarkdownEditor } from '@react-markdown-kit/editor'
+import { DiagramToolbar } from '@react-markdown-kit/mermaid/editor'
 import mermaidPackage from '@react-markdown-kit/mermaid/package.json'
 import { docsUrl, sites, useTheme } from '../../shared/Shell'
 import { decodeShareHash, encodeShareHash, mermaidLiveUrl, shareUrl, sourceFromShared } from './share'
@@ -149,7 +150,7 @@ function useCopy(): { readonly copied: string | undefined; readonly copy: Copy; 
   return { copied, copy, done }
 }
 
-/** The view pane in the browser's fullscreen mode, with a fixed-position fallback where the API is missing. */
+/** The canvas column (tools and view) in the browser's fullscreen mode, with a fixed-position fallback where the API is missing. */
 function useFullscreen(target: React.RefObject<HTMLElement | null>): { readonly active: boolean; readonly toggle: () => void } {
   const [active, setActive] = useState(false)
   const [fallback, setFallback] = useState(false)
@@ -214,13 +215,19 @@ export interface MermaidDemoProps {
 /**
  * The Mermaid visual editor, laid out like mermaid.live: a column of cards
  * on the left (the code with line numbers and colours, sample diagrams,
- * actions) and the diagram block on the right with zoom and fullscreen
- * controls: the drawing canvas for a flowchart, the sequence canvas for a
- * sequence diagram, the source for every other Mermaid type. Typing
- * re-parses the diagram; a gesture on either canvas writes Mermaid back
- * (a flowchart's with one `%% rmk-layout v1` annotation), and the code
- * pane shows exactly what would be saved. The source also lives in the URL
- * hash (src/share.ts), so a link carries the diagram.
+ * actions) and the canvas filling the rest of the page as the page itself,
+ * a dotted grid with pills floating in its corners: the drawing canvas for
+ * a flowchart, the sequence canvas for a sequence diagram, the source for
+ * every other Mermaid type. The editor is assembled from its composable
+ * pieces so the page owns the chrome: the plugin's tool row renders into a
+ * `<DiagramToolbar>` in the top-left pill instead of along the block's top
+ * edge, the way a custom formatting toolbar sits outside the text surface;
+ * the view controls take the top-right pill and the version and theme the
+ * bottom-right one. Typing re-parses the diagram; a gesture on either canvas
+ * writes Mermaid back (a flowchart's with one `%% rmk-layout v1`
+ * annotation), and the code pane shows exactly what would be saved. The
+ * source also lives in the URL hash (src/share.ts), so a link carries the
+ * diagram.
  */
 export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactNode {
   const [code, setCode] = useState(DEFAULT_CODE)
@@ -234,12 +241,21 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
   const { hash, unreadable } = useShareHash(code, setCode)
   const { copied, copy, done } = useCopy()
   const { theme, toggle: toggleTheme } = useTheme()
-  const view = useRef<HTMLElement>(null)
+  const column = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
-  const fullscreen = useFullscreen(view)
+  const fullscreen = useFullscreen(column)
   const { paneWidth, paneHeight } = useZoomBox(scroller)
 
   const markdown = useMemo(() => wrap(code), [code])
+
+  // The block edited the fence: keep only the body, which is Mermaid syntax
+  // plus, after a canvas edit, the layout annotation the canvas wrote.
+  const onEditorChange = useCallback((next: string) => {
+    const body = FENCE.exec(next)?.[1]
+    if (body !== undefined) setCode(body)
+  }, [])
+
+  const instance = useMarkdownEditor({ preset, value: markdown, onChange: onEditorChange })
 
   // The share targets follow the debounced hash; before it exists the buttons wait.
   const link = hash === undefined ? undefined : shareUrl(hash, pageBase())
@@ -262,14 +278,7 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
   // renders, and the first statement Mermaid itself would reject.
   const status = useMemo(() => diagramStatus(compileMarkdown(markdown, { preset }), KINDS), [markdown])
 
-  // The block edited the fence: keep only the body, which is Mermaid syntax
-  // plus, after a canvas edit, the layout annotation the canvas wrote.
-  const onEditorChange = useCallback((next: string) => {
-    const body = FENCE.exec(next)?.[1]
-    if (body !== undefined) setCode(body)
-  }, [])
-
-  const svg = useCallback((): string | undefined => diagramSvg(markdown, preset), [markdown])
+  const svg =useCallback((): string | undefined => diagramSvg(markdown, preset), [markdown])
 
   const withExport = useCallback(
     async (key: string, work: (svg: string) => Promise<void>): Promise<void> => {
@@ -323,9 +332,6 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
               by <a href={sites.home}>React Markdown Kit</a>
             </span>
             <nav className={styles.navActions} aria-label="Editor">
-              <a className={styles.version} href={docsUrl('/docs/mermaid')} data-zui-tag="version">
-                v{mermaidPackage.version}
-              </a>
               <Button as="a" href={docsUrl('/docs/mermaid')} variant="ghost" size="sm" track="docs">
                 <BookIcon />
                 Docs
@@ -333,7 +339,6 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
               <Button as="a" href={sites.github} variant="ghost" size="icon" track="github" aria-label="GitHub repository">
                 <GitHubIcon />
               </Button>
-              {themeButton}
               <span className={styles.navDivider} aria-hidden="true" />
               <Button variant="outline" tone="primary" size="sm" className={cn(styles.navCopyLink)} track="copy-link" disabled={link === undefined} onClick={() => link !== undefined && copy('link', link)}>
                 {copyLabel('link', 'Copy link')}
@@ -460,44 +465,72 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
             </section>
           </aside>
 
-          <section ref={view} className={cn(styles.view, fullscreen.active && styles.viewFull)} aria-label="Visual editor">
-            <div ref={scroller} className={styles.viewScroll}>
-              <div className={styles.zoomBox} style={{ width: paneWidth * zoom || undefined, height: paneHeight * zoom || undefined }}>
-                <div className={styles.zoomInner} style={{ width: paneWidth || undefined, height: paneHeight || undefined, transform: `scale(${zoom})` }}>
-                  <MarkdownEditor preset={preset} value={markdown} onChange={onEditorChange} toolbar={false} aria-label="Diagram block" />
+          <MarkdownEditorProvider editor={instance}>
+            <section ref={column} className={cn(styles.view, fullscreen.active && styles.viewFull)} aria-label="Visual editor">
+              <div ref={scroller} className={styles.viewScroll}>
+                <div className={styles.zoomBox} style={{ width: paneWidth * zoom || undefined, height: paneHeight * zoom || undefined }}>
+                  <div className={styles.zoomInner} style={{ width: paneWidth || undefined, height: paneHeight || undefined, transform: `scale(${zoom})` }}>
+                    <div className="rmk-editor">
+                      <MarkdownEditorContent aria-label="Diagram block" />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className={styles.floats}>
-              <div className={styles.float} role="group" aria-label="View">
-                <Button variant="ghost" size="icon" track="fullscreen" aria-pressed={fullscreen.active} aria-label={fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'} onClick={fullscreen.toggle}>
-                  <FullscreenIcon />
-                </Button>
-                <Button variant="ghost" size="icon" track="zoom-out" aria-label="Zoom out" disabled={zoom <= ZOOM_MIN} onClick={() => zoomTo(zoom / ZOOM_STEP)}>
-                  <ZoomOutIcon />
-                </Button>
-                <span className={styles.floatText} aria-live="polite">
-                  {Math.round(zoom * 100)}%
-                </span>
-                <Button variant="ghost" size="icon" track="zoom-in" aria-label="Zoom in" disabled={zoom >= ZOOM_MAX} onClick={() => zoomTo(zoom * ZOOM_STEP)}>
-                  <ZoomInIcon />
-                </Button>
-                <Button variant="ghost" size="icon" track="zoom-reset" aria-label="Reset zoom" disabled={zoom === 1} onClick={() => setZoom(1)}>
-                  <FitIcon />
-                </Button>
+              {/* The four corners of the pane, as mermaid.live lays them out: the
+                  canvas tools top left where its "Edit visually" pill sits, the
+                  view controls top right, version and theme bottom right. */}
+              <div className={cn(styles.corner, styles.cornerTopLeft)}>
+                <DiagramToolbar
+                  className={cn(styles.float, styles.toolbarHost)}
+                  placeholder={
+                    status.kind === 'flowchart' || status.kind === 'sequenceDiagram'
+                      ? 'Fix the Mermaid to get the canvas tools back'
+                      : 'Shown as source: flowcharts and sequence diagrams are edited on the canvas'
+                  }
+                />
               </div>
-              {embed ? (
+
+              <div className={cn(styles.corner, styles.cornerTopRight)}>
+                <div className={styles.float} role="group" aria-label="View">
+                  <Button variant="ghost" size="icon" track="fullscreen" aria-pressed={fullscreen.active} aria-label={fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'} onClick={fullscreen.toggle}>
+                    <FullscreenIcon />
+                  </Button>
+                  <span className={styles.floatDivider} aria-hidden="true" />
+                  <Button variant="ghost" size="icon" track="zoom-out" aria-label="Zoom out" disabled={zoom <= ZOOM_MIN} onClick={() => zoomTo(zoom / ZOOM_STEP)}>
+                    <ZoomOutIcon />
+                  </Button>
+                  <span className={styles.floatText} aria-live="polite">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <Button variant="ghost" size="icon" track="zoom-in" aria-label="Zoom in" disabled={zoom >= ZOOM_MAX} onClick={() => zoomTo(zoom * ZOOM_STEP)}>
+                    <ZoomInIcon />
+                  </Button>
+                  <span className={styles.floatDivider} aria-hidden="true" />
+                  <Button variant="ghost" size="icon" track="zoom-reset" aria-label="Reset zoom" disabled={zoom === 1} onClick={() => setZoom(1)}>
+                    <FitIcon />
+                  </Button>
+                </div>
+              </div>
+
+              <div className={cn(styles.corner, styles.cornerBottomRight)}>
                 <div className={styles.float}>
-                  <a className={styles.floatLink} href={fullEditor} target="_blank" rel="noopener" data-zui-tag="open-full-editor">
-                    <ExternalIcon />
-                    Open in the full editor
-                  </a>
+                  {embed ? (
+                    <a className={styles.floatLink} href={fullEditor} target="_blank" rel="noopener" data-zui-tag="open-full-editor">
+                      <ExternalIcon />
+                      Open in the full editor
+                    </a>
+                  ) : (
+                    <a className={styles.floatLink} href={docsUrl('/docs/mermaid')} data-zui-tag="version">
+                      v{mermaidPackage.version}
+                    </a>
+                  )}
+                  <span className={styles.floatDivider} aria-hidden="true" />
                   {themeButton}
                 </div>
-              ) : null}
-            </div>
-          </section>
+              </div>
+            </section>
+          </MarkdownEditorProvider>
         </div>
       </div>
 

@@ -197,6 +197,7 @@ import { createMarkdownBridge, serializeDocument } from '@react-markdown-kit/edi
 | `MarkdownEditorProvider` | Context for composable layouts |
 | `MarkdownEditorContent` | The editable surface |
 | `useMarkdownEditorContext` | Read the instance from context |
+| `useOptionalMarkdownEditorContext` | The same, null outside a provider, for chrome that also takes an `editor` prop |
 | `createMarkdownBridge`, `serializeDocument` | Markdown in and out, no React |
 
 ## Extensions that bring their own block

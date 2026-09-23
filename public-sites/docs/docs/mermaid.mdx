@@ -532,6 +532,53 @@ group `diagram`, icon from the kind. Override a label through the editor's
 `labels` prop by that id; the `diagram.` prefix stays reserved for the
 canvas labels (`DIAGRAM_LABELS`).
 
+### A detached tool row
+
+Each canvas draws its tool row (the shape tools, the property bar, Copy as
+Mermaid, the width presets; the participant tools and autonumber on the
+sequence canvas) along its own top edge. A host that builds its own chrome
+around the editor, the way [headless editing](/docs/editor/headless) lets it
+build its own formatting toolbar, can take that row out of the block:
+mount `<DiagramToolbar>` from the editor entry wherever the tools should
+sit, inside `<MarkdownEditorProvider>` or with
+`editor={useMarkdownEditor(...)}`, and every canvas of that editor renders
+its tools into it instead.
+
+```tsx
+import { MarkdownEditorContent, MarkdownEditorProvider, useMarkdownEditor } from '@react-markdown-kit/editor'
+import { DiagramToolbar, mermaid } from '@react-markdown-kit/mermaid/editor'
+
+function Composer({ value, onChange }) {
+  const editor = useMarkdownEditor({ value, onChange, extensions: [mermaid()] })
+  return (
+    <MarkdownEditorProvider editor={editor}>
+      <header className="app-bar">
+        <DiagramToolbar placeholder="Open a flowchart or a sequence diagram to draw" />
+      </header>
+      <div className="rmk-editor">
+        <MarkdownEditorContent aria-label="Document" />
+      </div>
+    </MarkdownEditorProvider>
+  )
+}
+```
+
+The slot shows one canvas's tools at a time: the canvas that last had
+focus, or the first on the page before any has; when that block is
+deleted or switched to text, the oldest remaining canvas takes over, and
+the other canvases show no row of their own. Focus in the detached row
+keeps its canvas active, so the property bar and the keyboard shortcuts
+behave as they do inline. `placeholder` renders while no canvas is on
+screen (the document has none, or every diagram is a kind edited as
+text). The slot's root carries `rmk-editor`, so the `--rmk-diagram-*`
+tokens you map on that class reach it wherever it sits, plus
+`rmk-diagram-toolbar-host` and `data-rmk-diagram-toolbar="filled"` or
+`"empty"` to style it by; the row inside keeps its inline look
+(`.rmk-diagram-toolbar.is-detached`) until you restyle it. Without a
+mounted `<DiagramToolbar>` nothing changes. The
+<a href={sites.mermaidDemo}>live editor</a> puts its row in the pill floating
+over the top-left corner of the canvas this way.
+
 The <a href={sites.mermaidDemo}>live editor</a> shares a diagram by link: the
 source, annotation included, is deflated into the URL hash as
 `#pako:<base64url>` (the same zlib form mermaid.live uses, with a `#base64:`
@@ -569,8 +616,14 @@ an optional `write(model, options)` that re-emits the retained lines.
 
 On `/editor`, `mermaid()` also takes `style` (`clean` or hand-drawn `ink`),
 `newBlockWidth`, `sourceEditor` (`false` hides the textarea, so a block
-edited as text shows the preview and the problems only) and `editors` (the
-canvas component per kind name). The editor entry exports the types
+edited as text shows the preview and the problems only), `align` (`start`,
+the default, keeps a drawing at the top-left of its canvas, as a block sits
+in a document; `center` puts it in the middle of the room the canvas has,
+on both axes, and scales one taller than that room down to fit, the way a
+page-as-canvas editor shows a diagram, without moving its coordinates) and
+`editors` (the canvas component per kind name). The editor entry exports the types
 `DiagramKindEditor`, `DiagramKindEditorProps` and `DiagramKindEditors` for
-a canvas of your own. The JSON Schemas for the layout annotation and the
+a canvas of your own, and `<DiagramToolbar>` (`DiagramToolbarProps`:
+`editor`, `className`, `placeholder`), the slot that takes the canvases'
+tool rows out of the blocks. The JSON Schemas for the layout annotation and the
 legacy payloads are exported for validating generated text.

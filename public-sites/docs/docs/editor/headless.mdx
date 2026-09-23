@@ -44,7 +44,7 @@ It takes the same options as `<MarkdownEditor>` minus the chrome: `value`, `defa
 
 `MarkdownEditorContent` renders the surface for the active mode. It accepts `aria-label`, `aria-labelledby` and `aria-describedby`, and an `editor` prop if you would rather skip the provider.
 
-`useMarkdownEditorContext()` reads the instance from context. It throws a named error outside a provider, rather than returning null for you to check.
+`useMarkdownEditorContext()` reads the instance from context. It throws a named error outside a provider, rather than returning null for you to check. `useOptionalMarkdownEditorContext()` returns null there instead, for chrome that takes an `editor` prop as well, the way `<MarkdownEditorContent>` does.
 
 ## The editor instance
 

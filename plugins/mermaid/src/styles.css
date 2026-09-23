@@ -556,8 +556,28 @@
   align-items: center;
 }
 
-.rmk-editor .rmk-diagram-canvas:focus-within .rmk-diagram-props-host {
+.rmk-editor .rmk-diagram-canvas:focus-within .rmk-diagram-props-host,
+.rmk-editor .rmk-diagram-toolbar.is-active .rmk-diagram-props-host {
   display: flex;
+}
+
+/*
+ * The detached tool row (`<DiagramToolbar>`): the host carries `rmk-editor`
+ * so the tokens reach it, and none of the editor frame. The row keeps its
+ * inline look; a host restyles `.rmk-diagram-toolbar-host` and the row
+ * inside it to fit its own chrome.
+ */
+.rmk-editor.rmk-diagram-toolbar-host {
+  display: flex;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+}
+
+.rmk-editor .rmk-diagram-toolbar-placeholder {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  color: var(--rmk-diagram-muted-foreground);
 }
 
 .rmk-editor .rmk-diagram-props {

@@ -49,6 +49,8 @@ export type DiagramKindEditor = ComponentType<DiagramKindEditorProps>
 /** Canvas components by kind name. */
 export type DiagramKindEditors = Readonly<Record<string, DiagramKindEditor>>
 
+export type DiagramAlign = 'start' | 'center'
+
 export interface DiagramCanvasOptions {
   /** `clean` (default) or the hand-drawn `ink` renderer. */
   readonly style: DrawingStyle
@@ -60,6 +62,13 @@ export interface DiagramCanvasOptions {
   readonly editors: DiagramKindEditors
   /** `false` hides the textarea: the block shows preview and problems only. */
   readonly sourceEditor: boolean
+  /**
+   * Where the flowchart canvas shows a drawing smaller than its surface:
+   * `start` at the top-left, as a document lays out a block, or `center`
+   * on both axes, as a page-as-canvas editor shows a diagram. A view
+   * choice: the drawing's coordinates are not moved.
+   */
+  readonly align: DiagramAlign
   /** Accessible name of a preview whose model has no `title`. */
   readonly fallbackTitle: string
 }
@@ -67,6 +76,7 @@ export interface DiagramCanvasOptions {
 export const DEFAULT_CANVAS_OPTIONS: DiagramCanvasOptions = {
   style: 'clean',
   newBlockWidth: undefined,
+  align: 'start',
   kinds: defaultKinds(),
   // The built-in components are registered by the editor entry; without a
   // plugin, every block is edited as text.

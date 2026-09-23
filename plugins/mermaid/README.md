@@ -203,13 +203,39 @@ flowchart, `diagram-<kind>` for the others. Options: `style` (`clean`, or
 under-drawing, seeded from the shape id so it never changes between
 renders, and set in Recursive's casual hand when the host loads that font),
 `newBlockWidth`, `sourceEditor` (`false` shows preview
-and problems only) and `editors`, a map from kind name to the component that
+and problems only), `align` (`start`, the default, keeps a drawing at the
+top-left of its canvas as a block sits in a document; `center` puts it in
+the middle of the room the canvas has on both axes and scales one taller
+than that room down to fit, the way a page-as-canvas editor shows a
+diagram, without moving its coordinates) and `editors`, a map from kind name to the component that
 edits it, so a kind of your own gets a canvas and a built-in canvas can be
 replaced. A component takes `DiagramKindEditorProps` (`kind`, `source`,
 `parse`, `readOnly` and a `commit(source, { merge? })` the block turns into
 history entries); the types are exported from the editor entry. The
 flowchart canvas was ported from `@zuilib/text-editor` (MIT), so the kit
 keeps its no-design-system rule.
+
+The canvas tool row can leave the block. Mount `<DiagramToolbar>` (editor
+entry) anywhere in your own chrome, inside `<MarkdownEditorProvider>` or
+with `editor={useMarkdownEditor(...)}`, and every canvas of that editor
+renders its tools there instead of along its top edge, the way a custom
+formatting toolbar sits outside the text surface. The slot shows the tools
+of the canvas that last had focus (the first on the page before any has),
+takes a `placeholder` for the time no canvas is on screen, and carries the
+`rmk-editor` class so the diagram tokens reach it wherever it sits.
+
+```tsx
+const editor = useMarkdownEditor({ value, onChange, extensions: [mermaid()] })
+
+<MarkdownEditorProvider editor={editor}>
+  <header>
+    <DiagramToolbar placeholder="Open a flowchart or a sequence diagram" />
+  </header>
+  <div className="rmk-editor">
+    <MarkdownEditorContent aria-label="Document" />
+  </div>
+</MarkdownEditorProvider>
+```
 
 ## Styling and safety
 

@@ -33,6 +33,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactElement,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { useLexicalEditor } from '@react-markdown-kit/editor/lexical'
 import type { BlockWidth } from '../core/block-width.js'
 import { bindEndpoints, nodeShapeOutline, findNodeShapeAt, createBinding, resolveBindings } from '../core/bindings.js'
@@ -73,6 +74,7 @@ import { GroupSelectionOverlay, MarqueeOverlay, SelectionOverlay } from './selec
 import { HitArea, ShapeView, slotAt } from './shape-view.js'
 import { TextEditOverlay } from './text-edit-overlay.js'
 import { DiagramToolbar, type Tool } from './toolbar.js'
+import { useToolbarHost } from './toolbar-slot.js'
 
 const MIN_HEIGHT = 120
 const MAX_HEIGHT = 1200
@@ -121,6 +123,45 @@ function contentWidth(shapes: readonly DrawingShape[], paths: ReadonlyMap<string
   return Math.max(MIN_CONTENT_WIDTH, Math.ceil(right + CONTENT_WIDTH_PADDING))
 }
 
+const ZERO: Point = { x: 0, y: 0 }
+
+/**
+ * The offset that puts the drawing in the middle of a surface `w` by `h`
+ * (an `align: 'center'` canvas): on each axis the drawing is centred when
+ * it fits and left where it is otherwise, so a drawing too large for the
+ * surface starts at its own origin, the way an aligned-to-start canvas
+ * shows it.
+ */
+function centeredOffset(shapes: readonly DrawingShape[], paths: ReadonlyMap<string, readonly Point[]>, w: number, h: number): Point {
+  let left = Infinity
+  let top = Infinity
+  let right = -Infinity
+  let bottom = -Infinity
+  for (const shape of shapes) {
+    if (isConnectorType(shape.type)) {
+      for (const p of paths.get(shape.id) ?? []) {
+        left = Math.min(left, p.x)
+        top = Math.min(top, p.y)
+        right = Math.max(right, p.x)
+        bottom = Math.max(bottom, p.y)
+      }
+    } else {
+      const b = bbox(shape)
+      left = Math.min(left, b.x)
+      top = Math.min(top, b.y)
+      right = Math.max(right, b.x + b.w)
+      bottom = Math.max(bottom, b.y + b.h)
+    }
+  }
+  if (!Number.isFinite(left) || !Number.isFinite(top)) return ZERO
+  const width = right - left
+  const height = bottom - top
+  return {
+    x: width >= w ? 0 : Math.round((w - width) / 2 - left),
+    y: height >= h ? 0 : Math.round((h - height) / 2 - top),
+  }
+}
+
 function computePaths(shapes: readonly DrawingShape[]): Map<string, Point[]> {
   const paths = new Map<string, Point[]>()
   for (const shape of shapes) {
@@ -167,6 +208,13 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   const [hoverBoxId, setHoverBoxId] = useState<string | null>(null)
   const [marquee, setMarquee] = useState<{ origin: Point; current: Point } | null>(null)
   const [scale, setScale] = useState(1)
+  /** The shapes a centred canvas is centred on: the last model adopted from outside, so a gesture never re-centres the drawing under the pointer. */
+  const [anchorShapes, setAnchorShapes] = useState<readonly DrawingShape[]>(data.shapes)
+  /** The room the stage gives the surface, in CSS pixels (its content box, which a host that fixes the stage's height caps), measured for a centred canvas; null until measured or while the canvas aligns to start. */
+  const [surface, setSurface] = useState<{ readonly w: number; readonly h: number } | null>(null)
+  /** Focus is in the canvas or in its tool row, wherever that row renders. */
+  const [active, setActive] = useState(false)
+  const slot = useToolbarHost(editor, nodeKey, isEditable, active)
 
   const rootRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -204,12 +252,19 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   // Measured on the committed shapes, so the fit holds still during a drag
   const committedWidth = useMemo(() => contentWidth(data.shapes, computePaths(data.shapes)), [data.shapes])
   const fitWidth = stageWidth !== null && committedWidth > stageWidth ? committedWidth : null
+  // A centred canvas also fits a drawing taller than its surface: a logical
+  // width in the surface's own proportions scales the viewBox down to the
+  // surface's height, and the SVG's alignment centres it.
+  const centered = options.align === 'center'
+  const fitHeightWidth =
+    centered && surface !== null && canvasHeight > surface.h ? Math.ceil((canvasHeight * surface.w) / surface.h) : null
+  const fitBoxWidth = fitWidth === null ? fitHeightWidth : fitHeightWidth === null ? fitWidth : Math.max(fitWidth, fitHeightWidth)
 
   // Scaled canvases: an explicit logical width, a content-width canvas
   // that is wider than the editor, or any drawing wider than its pane. All
   // render through a viewBox so the drawing shrinks to fit instead of
   // being clipped.
-  const logicalWidth = canvasWidth ?? (width === 'content' ? contentWidth(shapes, paths) : fitWidth)
+  const logicalWidth = canvasWidth ?? (width === 'content' ? contentWidth(shapes, paths) : fitBoxWidth)
 
   // Adopt external changes (undo/redo, collaborative edits) without
   // clobbering in-progress local edits we just committed ourselves.
@@ -219,12 +274,52 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
       lastCommittedRef.current = incoming
       shapesRef.current = data.shapes
       setShapes(data.shapes)
+      setAnchorShapes(data.shapes)
       setCanvasHeight(data.canvasHeight)
       setWidth(data.width ?? 'full')
       setSelectedIds(EMPTY_SET)
       setEditingText(null)
     }
   }, [data])
+
+  // A centred canvas measures the stage's content box untransformed (the
+  // observer's rect, never a client rect, for the same reason the overlays
+  // are): the surface fills it when the drawing is smaller, and a host
+  // that fixes the stage's height, as a page-as-canvas editor does, caps
+  // it there. The drawing is offset to the middle of the viewBox: the box
+  // itself when unscaled, the logical canvas when scaled, where the SVG's
+  // own alignment then centres that canvas in the box, an offset the HTML
+  // overlay adds in pixels.
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!centered || !stage || typeof ResizeObserver === 'undefined') {
+      setSurface(null)
+      return
+    }
+    const observer = new ResizeObserver((entries) => {
+      const box = entries[entries.length - 1]?.contentRect
+      if (box !== undefined && box.width > 0 && box.height > 0) setSurface({ w: box.width, h: box.height })
+    })
+    observer.observe(stage)
+    return () => observer.disconnect()
+  }, [centered])
+  const offset = useMemo((): Point => {
+    if (!centered) return ZERO
+    if (logicalWidth !== null) return centeredOffset(anchorShapes, computePaths(anchorShapes), logicalWidth, canvasHeight)
+    return surface === null ? ZERO : centeredOffset(anchorShapes, computePaths(anchorShapes), surface.w, surface.h)
+  }, [centered, surface, logicalWidth, canvasHeight, anchorShapes])
+  const viewBox =
+    logicalWidth !== null
+      ? `${-offset.x} ${-offset.y} ${logicalWidth} ${canvasHeight}`
+      : centered && surface !== null
+        ? `${-offset.x} ${-offset.y} ${surface.w} ${surface.h}`
+        : undefined
+  const overlayOffset = useMemo((): Point => {
+    if (logicalWidth === null) return offset
+    const fit = Math.min(surface?.w ?? logicalWidth, logicalWidth) / logicalWidth
+    const box = centered && surface !== null ? { x: (surface.w - logicalWidth * fit) / 2, y: (surface.h - canvasHeight * fit) / 2 } : ZERO
+    return { x: Math.round(box.x + offset.x * fit), y: Math.round(box.y + offset.y * fit) }
+  }, [centered, surface, logicalWidth, canvasHeight, offset])
 
   // Scaled canvases need the HTML overlays and the height grip scaled too.
   // The width is measured untransformed (`offsetWidth`, never a client
@@ -313,14 +408,14 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
     const ctm = typeof svg.getScreenCTM === 'function' ? svg.getScreenCTM() : null
     if (!ctm) {
       const rect = svg.getBoundingClientRect()
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      return { x: e.clientX - rect.left - offset.x, y: e.clientY - rect.top - offset.y }
     }
     const inverse = ctm.inverse()
     return {
       x: inverse.a * e.clientX + inverse.c * e.clientY + inverse.e,
       y: inverse.b * e.clientX + inverse.d * e.clientY + inverse.f,
     }
-  }, [])
+  }, [offset])
 
   const selection = useMemo(() => shapes.filter((s) => selectedIds.has(s.id)), [shapes, selectedIds])
   const single = selection.length === 1 ? (selection[0] ?? null) : null
@@ -752,46 +847,58 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   const propFill = single?.fill ?? selection[0]?.fill ?? fill
   const canvasCursor: CSSProperties['cursor'] = tool === 'select' ? 'default' : tool === 'text' ? 'text' : 'crosshair'
 
+  // The tool row, along the top edge or in the host's <DiagramToolbar>. A
+  // detached row still belongs to the canvas: focus in it keeps the canvas
+  // active (React events cross the portal, so the root's handlers hear
+  // them) and `is-active` shows the property bar where `:focus-within`
+  // no longer can.
+  const toolbar = isEditable && (
+    <div className={classes('rmk-diagram-toolbar', active && 'is-active', slot.detached && 'is-detached')} onPointerDown={(e) => e.stopPropagation()}>
+      <DiagramToolbar
+        tool={tool}
+        onToolChange={(t) => {
+          setTool(t)
+          if (t !== 'select') setSelectedIds(EMPTY_SET)
+        }}
+        width={width}
+        onWidthChange={applyWidth}
+        onCopyMermaid={copyMermaid}
+        properties={
+          // Inline in the same row (so the stage never shifts); shown
+          // only while the canvas has focus (see .rmk-diagram-props-host)
+          <div className="rmk-diagram-props-host">
+            <PropertyBar
+              selection={selection}
+              stroke={propStroke}
+              fill={propFill}
+              onColor={applyColor}
+              onRouting={applyRouting}
+              onDirection={applyDirection}
+              onDelete={deleteSelection}
+            />
+          </div>
+        }
+      />
+    </div>
+  )
+
   return (
     <div
       ref={rootRef}
       className={classes('rmk-diagram-canvas', WIDTH_CLASS[width], isEditable && 'is-editable', ink && 'is-ink')}
       tabIndex={isEditable ? 0 : undefined}
-      onFocus={() => editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, nodeKey)}
+      onFocus={() => {
+        setActive(true)
+        editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, nodeKey)
+      }}
       onBlur={(e) => {
-        if (rootRef.current?.contains(e.relatedTarget as Node | null)) return
+        const next = e.relatedTarget as Node | null
+        if (rootRef.current?.contains(next) || slot.host?.contains(next)) return
+        setActive(false)
         editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, null)
       }}
     >
-      {isEditable && (
-        <div className="rmk-diagram-toolbar" onPointerDown={(e) => e.stopPropagation()}>
-          <DiagramToolbar
-            tool={tool}
-            onToolChange={(t) => {
-              setTool(t)
-              if (t !== 'select') setSelectedIds(EMPTY_SET)
-            }}
-            width={width}
-            onWidthChange={applyWidth}
-            onCopyMermaid={copyMermaid}
-            properties={
-              // Inline in the same row (so the stage never shifts); shown
-              // only while the canvas has focus (see .rmk-diagram-props-host)
-              <div className="rmk-diagram-props-host">
-                <PropertyBar
-                  selection={selection}
-                  stroke={propStroke}
-                  fill={propFill}
-                  onColor={applyColor}
-                  onRouting={applyRouting}
-                  onDirection={applyDirection}
-                  onDelete={deleteSelection}
-                />
-              </div>
-            }
-          />
-        </div>
-      )}
+      {!slot.detached ? toolbar : slot.host !== null && toolbar !== false ? createPortal(toolbar, slot.host) : null}
 
       <div ref={stageRef} className="rmk-diagram-stage">
         <svg
@@ -805,8 +912,8 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
             maxWidth: '100%',
             cursor: canvasCursor,
           }}
-          viewBox={logicalWidth ? `0 0 ${logicalWidth} ${canvasHeight}` : undefined}
-          preserveAspectRatio="xMinYMin meet"
+          viewBox={viewBox}
+          preserveAspectRatio={centered ? 'xMidYMid meet' : 'xMinYMin meet'}
           onPointerDown={handleBackgroundPointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -883,7 +990,10 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
           <div
             className="rmk-diagram-overlay"
             style={{
-              transform: `scale(${scale})`,
+              transform:
+                overlayOffset.x === 0 && overlayOffset.y === 0
+                  ? `scale(${scale})`
+                  : `translate(${overlayOffset.x}px, ${overlayOffset.y}px) scale(${scale})`,
               ...(logicalWidth ? { width: logicalWidth, height: canvasHeight } : {}),
             }}
           >

@@ -322,6 +322,53 @@ describe('the diagram canvas in <MarkdownEditor>', () => {
     view.unmount()
   })
 
+  // `align: 'center'`: the stage's content box comes from the observer
+  // (untransformed, like the scale), the drawing is offset to its middle
+  // through the viewBox, the inline field follows, and a pointer maps through
+  // the same offset, so a marquee drawn around the card on screen selects it.
+  it('centres the drawing on the surface with `align: "center"`, and maps pointers through the offset', () => {
+    withPointerCapture()
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private readonly callback: (entries: readonly { contentRect: { width: number; height: number } }[]) => void) {}
+        observe(target: Element): void {
+          if (target.classList.contains('rmk-diagram-stage')) this.callback([{ contentRect: { width: 800, height: 600 } }])
+        }
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
+    const view = mount(<MarkdownEditor extensions={[mermaid({ align: 'center' })]} defaultValue={DOCUMENT} />)
+    const surface = view.container.querySelector('.rmk-diagram-surface')
+    if (surface === null) throw new Error('No surface.')
+    // The card is 150 by 80 at (20, 40): centred on 800 by 600 it moves by (305, 220).
+    expect(surface.getAttribute('viewBox')).toBe('-305 -220 800 600')
+    fire(surface, 'pointerdown', { clientX: 315, clientY: 250 })
+    fire(surface, 'pointerup', { clientX: 485, clientY: 350 })
+    expect(view.container.querySelector('[data-shape-id="a"]')?.classList.contains('is-selected')).toBe(true)
+    fire(view.container.querySelector('[data-shape-id="a"]')!, 'dblclick', { clientX: 400, clientY: 300 })
+    expect(view.container.querySelector<HTMLElement>('.rmk-diagram-overlay')?.style.transform).toBe('translate(305px, 220px) scale(1)')
+    view.unmount()
+  })
+
+  it('leaves the drawing at the origin by default', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private readonly callback: (entries: readonly { contentRect: { width: number; height: number } }[]) => void) {}
+        observe(): void {
+          this.callback([{ contentRect: { width: 800, height: 600 } }])
+        }
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
+    const view = mount(<MarkdownEditor extensions={[mermaid()]} defaultValue={DOCUMENT} />)
+    expect(view.container.querySelector('.rmk-diagram-surface')?.getAttribute('viewBox')).toBeNull()
+    view.unmount()
+  })
+
   // Review S4: the overlay sits inside a host's zoom transform, so its scale
   // comes from the untransformed stage width, never from a client rect.
   it('scales the inline text field by the untransformed stage width under a host zoom', () => {

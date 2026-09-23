@@ -1,8 +1,11 @@
 /* Chrome for the Mermaid visual editor, laid out like mermaid.live: a
-   header, a column of rounded cards on the left and the diagram block on
-   the right with floating controls. Colours come from the theme tokens; only
-   the geometry is this page's own. The block, the canvas, the preview and
-   the static SVG are styled by the kit's own stylesheets and shared/kit.css. */
+   header, a column of rounded cards on the left, and the rest of the page
+   is the canvas: no pane frame, a dotted grid on the page background, the
+   same page gap on every side, and pills floating in the corners. The
+   plugin's tool row is the top-left pill (the `<DiagramToolbar>` slot),
+   not a strip on the canvas. Colours come from the theme tokens; only the
+   geometry is this page's own. The block, the canvas, the preview and the
+   static SVG are styled by the kit's own stylesheets and shared/kit.css. */
 
 .shell {
   --pane-radius: 16px;
@@ -291,23 +294,26 @@
 
 /* --------------------------------------------------------------- view */
 
+/* The pane is the page: no frame, the page background under a dotted grid
+   (mermaid.live's 2px dots every 30px), the canvas and the sequence picture
+   drawn over it with their own surfaces made transparent below. */
 .view {
+  --grid-dot: color-mix(in oklab, var(--foreground) 12%, transparent);
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  border: var(--pane-border);
-  border-radius: var(--pane-radius);
-  background: var(--card);
   overflow: hidden;
+  background-color: var(--background);
+  background-image: radial-gradient(circle, var(--grid-dot) 2px, transparent 2px);
+  background-size: 30px 30px;
 }
 
 /* Fullscreen through the API paints the element alone; the fallback pins it. */
 .view:fullscreen,
 .viewFull {
-  border: 0;
-  border-radius: 0;
+  padding: var(--page-gap);
 }
 
 .viewFull:not(:fullscreen) {
@@ -338,9 +344,11 @@
    block and whichever editing component it holds (the flowchart canvas
    with its stage, the sequence canvas with its viewport, the source editor
    with its preview, or the source pre) each stretch to the height they are
-   given, so the block's header and the kit's toolbar sit along the top
-   edge and the drawing takes the rest; the block's own border, background
-   and focus ring are the pane's now. */
+   given, so the drawing takes the whole pane: the kit's tool row renders in
+   the strip above, and the block's header (the kind, which the status chip
+   already names, and the canvas/text toggle, which the code pane makes
+   redundant) is hidden; the block's own border, background and focus ring
+   are the pane's now. */
 .zoomInner :global(.rmk-editor),
 .zoomInner :global(.rmk-editor .rmk-content),
 .zoomInner :global(.rmk-editor .rmk-content > *),
@@ -383,7 +391,10 @@
   background: transparent;
 }
 
-.zoomInner :global(.rmk-editor .rmk-diagram-header),
+.zoomInner :global(.rmk-editor .rmk-diagram-header) {
+  display: none;
+}
+
 .zoomInner :global(.rmk-editor .rmk-diagram-toolbar) {
   flex: none;
 }
@@ -392,24 +403,44 @@
   box-shadow: none;
 }
 
+/* The drawing starts under the band the corner pills occupy; the canvas
+   maps pointers through the SVG's own screen matrix, so the offset costs
+   nothing. The grid is the pane's, so the surface is transparent. */
+.zoomInner :global(.rmk-editor .rmk-diagram-stage:not(.rmk-sequence-stage)) {
+  padding-top: 4.5rem;
+}
+
 .zoomInner :global(.rmk-editor .rmk-diagram-surface) {
   flex: 1 0 auto;
+  background: transparent;
+}
+
+/* The pane governs the height, so the kit's height grip has nothing to do. */
+.zoomInner :global(.rmk-editor .rmk-diagram-resize) {
+  display: none;
 }
 
 /* The sequence canvas: the viewport takes the height and scrolls in both
-   directions, and the picture sits centred at its own width, the way
-   mermaid.live shows a diagram. The interaction layer reads the picture's
-   screen matrix, so where the stage sits does not matter to a gesture. */
+   directions, and the picture sits in the middle of it at its own width,
+   the way mermaid.live shows a diagram: a flex column with auto margins
+   on the stage centres a picture that fits and starts a taller one at the
+   top, where the scroll reaches it. The interaction layer reads the
+   picture's screen matrix, so where the stage sits does not matter to a
+   gesture. */
 .zoomInner :global(.rmk-editor .rmk-sequence-viewport) {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 1.5rem;
+  padding: 4.5rem 1.5rem 1.5rem;
   overflow: auto;
   scrollbar-width: thin;
+  background: transparent;
 }
 
 .zoomInner :global(.rmk-editor .rmk-sequence-stage) {
-  margin: 0 auto;
+  flex: none;
+  margin: auto;
 }
 
 /* Source mode (a flowchart or a sequence diagram switched to text): the
@@ -427,6 +458,12 @@
   padding: 1.5rem;
 }
 
+/* Under the pill band, like the canvases (a source-only kind shows its
+   notice and its source here). */
+.zoomInner :global(.rmk-editor .rmk-diagram-source) {
+  padding-top: 4.5rem;
+}
+
 .zoomInner :global(.rmk-editor .rmk-diagram-preview svg) {
   max-width: none;
 }
@@ -436,28 +473,84 @@
   flex: none;
 }
 
-/* Everything that floats over the canvas sits along the bottom edge, on
-   the left; the kit's own resize grip keeps the bottom right corner. */
-.floats {
+/* Pills in the corners of the pane, as mermaid.live places them: the
+   canvas tools top left, the view controls top right, version and theme
+   bottom right. Each corner is inset by the pill gap; the top-left corner
+   may grow wide (the property bar joins the tools) and wraps before it
+   reaches the top-right pill. */
+.corner {
   position: absolute;
-  left: 0.75rem;
-  bottom: 0.75rem;
   z-index: 2;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  max-width: calc(100% - 4rem);
+  pointer-events: none;
+}
+
+.corner > * {
+  pointer-events: auto;
+}
+
+.cornerTopLeft {
+  top: 0.75rem;
+  left: 0.75rem;
+  max-width: calc(100% - 17rem);
+}
+
+.cornerTopRight {
+  top: 0.75rem;
+  right: 0.75rem;
+}
+
+.cornerBottomRight {
+  right: 0.75rem;
+  bottom: 0.75rem;
 }
 
 .float {
   display: flex;
   align-items: center;
   gap: 0.15rem;
+  min-height: 2.75rem;
   padding: 0.25rem;
   border-radius: 12px;
-  background: color-mix(in oklab, var(--card) 88%, transparent);
+  background: color-mix(in oklab, var(--card) 92%, transparent);
   box-shadow: var(--shadow-2);
   backdrop-filter: blur(8px);
+}
+
+.floatDivider {
+  width: 1px;
+  height: 1.25rem;
+  margin: 0 0.25rem;
+  background: var(--border);
+}
+
+/* The plugin's row inside the top-left pill: none of its own chrome, and
+   its groups wrap inside the pill when the property bar makes it wide. */
+.toolbarHost {
+  min-width: 0;
+}
+
+/* Doubled to outrank the plugin's own `.rmk-editor .rmk-diagram-toolbar`
+   rule, which is loaded after this sheet. */
+.float.toolbarHost :global(.rmk-diagram-toolbar) {
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+}
+
+/* The row's end group is Copy as Mermaid and the block-width presets: the
+   Actions card copies the Mermaid, and the pane, not the block, sets the
+   width here, so the pill stays short enough not to wrap at 1024px. */
+.float.toolbarHost :global(.rmk-diagram-toolbar-group-end) {
+  display: none;
+}
+
+.float.toolbarHost :global(.rmk-diagram-toolbar-placeholder) {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  white-space: nowrap;
 }
 
 .floatText,
@@ -488,22 +581,6 @@
   background: var(--accent);
 }
 
-/* The plugin version, in the header next to the docs link. */
-.version {
-  padding: 0.2rem 0.5rem;
-  border-radius: 8px;
-  font-size: 0.72rem;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted-foreground);
-  background: var(--muted);
-  text-decoration: none;
-}
-
-.version:hover {
-  color: var(--foreground);
-}
-
 /* ------------------------------------------------------------ narrow */
 
 @media (max-width: 900px) {
@@ -524,11 +601,10 @@
     row-gap: 0.5rem;
   }
 
-  /* Narrow screens keep the brand, the docs, the repo, the theme and Share;
-     the version and Copy link are in the header for wide screens only, and
-     Copy link stays available in the Actions card. */
+  /* Narrow screens keep the brand, the docs, the repo and Share; Copy link
+     is in the header for wide screens only and stays available in the
+     Actions card. */
   .by,
-  .version,
   .navCopyLink {
     display: none;
   }
@@ -549,5 +625,17 @@
 
   .view {
     min-height: 70dvh;
+  }
+
+  /* The pills stack: tools along the top, the view controls under them. */
+  .cornerTopLeft {
+    max-width: calc(100% - 1.5rem);
+  }
+
+  .cornerTopRight {
+    top: auto;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    right: auto;
   }
 }

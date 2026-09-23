@@ -12,8 +12,10 @@ import { flowchart, mermaid, sequenceDiagram } from '@react-markdown-kit/mermaid
  * uses); the static SVG the exports, the preview and the renderer draw is
  * the clean style, and the sequence canvas draws that same picture. The
  * block's own textarea is off: the code pane on the left is the source
- * editor for every kind.
+ * editor for every kind. `align: 'center'` puts a flowchart in the middle
+ * of the pane, the way mermaid.live shows a diagram; the sequence picture
+ * is a sized element, so the page centres it with CSS.
  */
 export const KINDS = [flowchart(), sequenceDiagram()]
 
-export const preset = defineMarkdownPreset({ extensions: [mermaid({ style: 'ink', sourceEditor: false, kinds: KINDS })] })
+export const preset = defineMarkdownPreset({ extensions: [mermaid({ style: 'ink', sourceEditor: false, kinds: KINDS, align: 'center' })] })

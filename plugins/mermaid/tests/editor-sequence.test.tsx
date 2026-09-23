@@ -187,6 +187,32 @@ describe('the sequence canvas: mounting', () => {
     expect(editor().getMarkdown()).toBe(doc(body))
   })
 
+  it('fits a picture taller than its viewport with `align: "center"`, in the picture\'s own proportions, and leaves a shorter one at its width', () => {
+    const roomOf = (height: number): void => {
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          constructor(private readonly callback: (entries: readonly { contentRect: { width: number; height: number } }[]) => void) {}
+          observe(target: Element): void {
+            if (target.classList.contains('rmk-sequence-viewport')) this.callback([{ contentRect: { width: 1000, height } }])
+          }
+          unobserve(): void {}
+          disconnect(): void {}
+        },
+      )
+    }
+    const layout = layoutOf(SIMPLE)
+    roomOf(Math.round(layout.height / 2))
+    const tall = open(SIMPLE, { align: 'center' })
+    expect(query<HTMLElement>(tall.view, '.rmk-sequence-stage').style.width).toBe(`${Math.floor((layout.width * Math.round(layout.height / 2)) / layout.height)}px`)
+    roomOf(layout.height * 2)
+    const fits = open(SIMPLE, { align: 'center' })
+    expect(query<HTMLElement>(fits.view, '.rmk-sequence-stage').style.width).toBe(`${layout.width}px`)
+    roomOf(Math.round(layout.height / 2))
+    const start = open(SIMPLE)
+    expect(query<HTMLElement>(start.view, '.rmk-sequence-stage').style.width).toBe(`${layout.width}px`)
+  })
+
   it('never mounts the canvas in a read-only editor: the block renders the kind output instead', () => {
     const { view } = open(SIMPLE, {}, true)
     expect(view.container.querySelector('.rmk-sequence-canvas')).toBeNull()
