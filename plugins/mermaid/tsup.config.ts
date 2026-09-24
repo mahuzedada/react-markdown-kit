@@ -21,6 +21,7 @@ const shared: Options = {
     'react',
     'react/jsx-runtime',
     'react-dom',
+    'react-dom/client',
     'lexical',
     '@lexical/utils',
     '@react-markdown-kit/editor',
@@ -41,7 +42,7 @@ export default defineConfig([
   },
   {
     ...shared,
-    entry: { client: 'src/client.ts', editor: 'src/editor.ts' },
+    entry: { client: 'src/client.ts', editor: 'src/editor.ts', canvas: 'src/canvas.ts' },
     splitting: true,
     banner: { js: "'use client';" },
     // tsup's treeshake pass runs rollup over esbuild's output and drops a

@@ -159,6 +159,9 @@ importers:
       react:
         specifier: '>=18'
         version: 19.3.0
+      react-dom:
+        specifier: '>=18'
+        version: 19.3.0(react@19.3.0)
     devDependencies:
       '@lexical/utils':
         specifier: ^0.35.0

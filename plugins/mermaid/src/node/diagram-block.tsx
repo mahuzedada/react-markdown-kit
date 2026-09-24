@@ -24,14 +24,17 @@
  * the node from outside the block ends the burst, so a keystroke never
  * folds into the entry an undo restored.
  */
-import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
-import { $addUpdateTag, $getNodeByKey, type NodeKey } from 'lexical'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react'
+import { $addUpdateTag, $getNodeByKey, UNDO_COMMAND, type NodeKey } from 'lexical'
 import { useLexicalEditor } from '@react-markdown-kit/editor/lexical'
 import type { DiagramKind } from '../core/kind.js'
 import { parseDiagramSource, type DiagramFormat, type DiagramSourceParse, type DiagramSupport } from '../extension.js'
 import { Icon, UI_ICONS } from '../canvas/icons.js'
-import { useDiagramLabels } from '../canvas/labels.js'
-import { takeDiagramFocus, useDiagramOptions, type DiagramKindEditor } from '../canvas/options.js'
+import { DiagramCanvasHostProvider, useDiagramLabels, type DiagramCanvasHost } from '../canvas/host.js'
+import { resolveDiagramLabels } from '../canvas/labels.js'
+import { DIAGRAM_FOCUS_COMMAND } from './commands.js'
+import type { DiagramKindEditor } from '../canvas/options.js'
+import { takeDiagramFocus, useDiagramOptions } from './options-store.js'
 import { $isDiagramNode } from './diagram-node.js'
 import { DiagramPreview, DiagramSourceEditor, DiagramSourcePre } from './source-editor.js'
 
@@ -50,7 +53,44 @@ const HISTORY_MERGE_WINDOW = 300
 /** The selector of whatever takes focus after an insert: the canvas root or the textarea. */
 const FOCUS_TARGET = '.rmk-diagram-canvas, .rmk-diagram-source-input, [data-rmk-diagram-focus]'
 
-export function DiagramBlock({ nodeKey, source, kind, format }: DiagramBlockProps): ReactElement {
+/**
+ * The canvas host of a document (host.tsx): the editor's options and
+ * labels, the tool row slot keyed on the `LexicalEditor`, focus reported
+ * through `DIAGRAM_FOCUS_COMMAND` and undo through the editor's history.
+ */
+function EditorCanvasHost({ children }: { children: ReactNode }): ReactElement {
+  const { editor, labels } = useLexicalEditor()
+  const options = useDiagramOptions(editor)
+  const host = useMemo(
+    (): DiagramCanvasHost => ({
+      scope: editor,
+      options,
+      labels: resolveDiagramLabels(labels),
+      chrome: 'block',
+      toolbarOrientation: 'horizontal',
+      onFocusChange: (id) => editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, id),
+      undo: () =>
+        editor.update(
+          () => {
+            editor.dispatchCommand(UNDO_COMMAND, undefined)
+          },
+          { discrete: true },
+        ),
+    }),
+    [editor, options, labels],
+  )
+  return <DiagramCanvasHostProvider host={host}>{children}</DiagramCanvasHostProvider>
+}
+
+export function DiagramBlock(props: DiagramBlockProps): ReactElement {
+  return (
+    <EditorCanvasHost>
+      <DiagramBlockBody {...props} />
+    </EditorCanvasHost>
+  )
+}
+
+function DiagramBlockBody({ nodeKey, source, kind, format }: DiagramBlockProps): ReactElement {
   const { editor, readOnly } = useLexicalEditor()
   const options = useDiagramOptions(editor)
   const { kinds } = options

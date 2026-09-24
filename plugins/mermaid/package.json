@@ -1,7 +1,7 @@
 {
   "name": "@react-markdown-kit/mermaid",
-  "version": "0.2.0",
-  "description": "Mermaid flowcharts for React Markdown Kit, as a plugin: mermaid() turns ```mermaid fences into static SVG in the renderer and a drawing canvas in the editor, writing edits back as Mermaid syntax. No standalone API.",
+  "version": "0.3.0",
+  "description": "Mermaid diagrams for React Markdown Kit: mermaid() turns ```mermaid fences into static SVG in the renderer and a drawing canvas in the editor, and the /canvas entry is the same canvas as a standalone component. Edits are written back as Mermaid syntax.",
   "homepage": "https://docs.reactmarkdownkit.com/docs/mermaid",
   "repository": {
     "type": "git",
@@ -32,6 +32,10 @@
     "./client": {
       "types": "./dist/client.d.ts",
       "default": "./dist/client.js"
+    },
+    "./canvas": {
+      "types": "./dist/canvas.d.ts",
+      "default": "./dist/canvas.js"
     },
     "./editor": {
       "types": "./dist/editor.d.ts",

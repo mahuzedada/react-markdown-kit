@@ -10,3 +10,6 @@ fixtures/vendor/
 # Site build output
 public-sites/*/build/
 .docusaurus/
+
+# Reference clones (read-only, not part of the kit)
+references/

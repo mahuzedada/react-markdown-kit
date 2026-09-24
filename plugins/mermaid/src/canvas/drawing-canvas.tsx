@@ -34,11 +34,10 @@ import {
   type ReactElement,
 } from 'react'
 import { createPortal } from 'react-dom'
-import { useLexicalEditor } from '@react-markdown-kit/editor/lexical'
 import type { BlockWidth } from '../core/block-width.js'
 import { bindEndpoints, nodeShapeOutline, findNodeShapeAt, createBinding, resolveBindings } from '../core/bindings.js'
 import { connectorPoints } from '../core/connectors.js'
-import { bbox, normalize, textBoxSize } from '../core/geometry.js'
+import { bbox, normalize, textBoxSize, type Rect } from '../core/geometry.js'
 import { NODE_SHAPE_DEFINITIONS, type TextField } from '../core/shapes/definitions.js'
 import {
   createShapeId,
@@ -56,7 +55,6 @@ import {
 import { COLOR_PRESETS, type ColorName } from '../core/skeleton.js'
 import type { DiagramKind } from '../core/kind.js'
 import { parseDiagramSource } from '../extension.js'
-import { DIAGRAM_FOCUS_COMMAND } from '../node/commands.js'
 import { Icon, UI_ICONS } from './icons.js'
 import {
   applyDrag,
@@ -64,11 +62,15 @@ import {
   marqueeRect,
   moveGroup,
   omitFields,
+  pointInRect,
+  selectionBounds,
   shapesWithin,
+  translateShapes,
   type DragState,
+  type GroupHandle,
 } from './interaction.js'
-import { useDiagramLabels } from './labels.js'
-import { useDiagramOptions, type DiagramKindEditorProps } from './options.js'
+import { useCanvasHost, useDiagramLabels } from './host.js'
+import type { DiagramKindEditorProps } from './options.js'
 import { PropertyBar } from './property-bar.js'
 import { GroupSelectionOverlay, MarqueeOverlay, SelectionOverlay } from './selection-overlay.js'
 import { HitArea, ShapeView, slotAt } from './shape-view.js'
@@ -91,6 +93,14 @@ const MIN_CONTENT_WIDTH = 240
 const CONTENT_WIDTH_PADDING = 40
 
 const EMPTY_SET: ReadonlySet<string> = new Set()
+
+/** Arrow keys as the unit step they nudge the selection by */
+const NUDGE_KEYS: Readonly<Record<string, readonly [number, number]>> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+}
 
 function classes(...names: readonly (string | false | null | undefined)[]): string {
   return names.filter((name): name is string => typeof name === 'string' && name !== '').join(' ')
@@ -183,7 +193,7 @@ export function isControlKey(e: KeyboardEvent, root: HTMLElement): boolean {
 }
 
 export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSource }: DiagramKindEditorProps): ReactElement {
-  const { editor } = useLexicalEditor()
+  const host = useCanvasHost()
   const isEditable = !readOnly
   const data = parse.model as DrawingData
   const { retained } = parse
@@ -191,7 +201,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   const [shapes, setShapes] = useState<readonly DrawingShape[]>(data.shapes)
   const [canvasHeight, setCanvasHeight] = useState(data.canvasHeight)
   const [width, setWidth] = useState<BlockWidth>(data.width ?? 'full')
-  const options = useDiagramOptions(editor)
+  const options = host.options
   const ink = options.style === 'ink'
   const optionsRef = useRef(options)
   optionsRef.current = options
@@ -214,7 +224,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   const [surface, setSurface] = useState<{ readonly w: number; readonly h: number } | null>(null)
   /** Focus is in the canvas or in its tool row, wherever that row renders. */
   const [active, setActive] = useState(false)
-  const slot = useToolbarHost(editor, nodeKey, isEditable, active)
+  const slot = useToolbarHost(host.scope, nodeKey, isEditable, active)
 
   const rootRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -234,6 +244,8 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   selectedRef.current = selectedIds
 
   const paths = useMemo(() => computePaths(shapes), [shapes])
+  const pathsRef = useRef(paths)
+  pathsRef.current = paths
   const canvasWidth = data.canvasWidth
 
   // Width of the stage the surface sits in: a drawing wider than its pane
@@ -371,7 +383,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   }, [])
 
   const commit = useCallback(
-    (nextShapes: readonly DrawingShape[], options?: { height?: number; width?: BlockWidth }) => {
+    (nextShapes: readonly DrawingShape[], options?: { height?: number; width?: BlockWidth; merge?: boolean }) => {
       const payload = payloadOf(nextShapes, options)
       const json = serializeDrawingData(payload)
       if (json === lastCommittedRef.current) return
@@ -382,7 +394,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
       const reparsed = parseDiagramSource(optionsRef.current.kinds, kindRef.current.name, written)
       lastCommittedRef.current =
         reparsed !== undefined && !('error' in reparsed) ? serializeDrawingData(reparsed.model as DrawingData) : json
-      commitSource(written)
+      commitSource(written, options?.merge ? { merge: true } : undefined)
     },
     [commitSource, payloadOf, writeSource],
   )
@@ -391,13 +403,13 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   // compose the way functional updaters would, and a commit runs in the
   // handler, never inside React's render.
   const updateShapes = useCallback(
-    (updater: (prev: readonly DrawingShape[]) => readonly DrawingShape[], options?: { commit?: boolean }) => {
+    (updater: (prev: readonly DrawingShape[]) => readonly DrawingShape[], options?: { commit?: boolean; merge?: boolean }) => {
       // Re-resolve bindings after every change so bound connectors track
       // the boxes they're attached to (resolveBindings is idempotent)
       const next = resolveBindings(updater(shapesRef.current))
       shapesRef.current = next
       setShapes(next)
-      if (options?.commit) commit(next)
+      if (options?.commit) commit(next, options.merge ? { merge: true } : undefined)
     },
     [commit],
   )
@@ -436,6 +448,23 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
       capture(e)
 
       if (tool === 'select') {
+        // A drag anywhere inside a multi-selection's frame moves it, as in
+        // Excalidraw: the gaps between the shapes belong to the group
+        const selected = selectedRef.current
+        if (!e.shiftKey && selected.size > 1) {
+          const group = shapesRef.current.filter((s) => selected.has(s.id))
+          if (pointInRect(point, selectionBounds(group, pathsRef.current), 8)) {
+            const [first] = selected
+            dragRef.current = {
+              mode: 'move',
+              clickedId: first ?? '',
+              origin: point,
+              origs: moveGroup(shapesRef.current, selected, first ?? ''),
+              wasSelected: false,
+            }
+            return
+          }
+        }
         if (!e.shiftKey) setSelectedIds(EMPTY_SET)
         dragRef.current = { mode: 'marquee', origin: point, current: point, additive: e.shiftKey }
         return
@@ -515,6 +544,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
         origin: point,
         origs: moveGroup(shapesRef.current, group, shape.id),
         wasSelected,
+        collapseOnClick: selected.size > 1 && selected.has(shape.id),
       }
     },
     [isEditable, tool, editingText, getPoint],
@@ -534,6 +564,23 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
       }
     },
     [isEditable, updateShapes],
+  )
+
+  const handleGroupHandlePointerDown = useCallback(
+    (e: ReactPointerEvent, handle: GroupHandle, bounds: Rect) => {
+      if (!isEditable || e.button !== 0) return
+      e.stopPropagation()
+      capture(e)
+      const selected = selectedRef.current
+      dragRef.current = {
+        mode: 'group-resize',
+        handle,
+        bounds,
+        origs: new Map(shapesRef.current.filter((s) => selected.has(s.id)).map((s) => [s.id, s])),
+        fromCenter: e.altKey,
+      }
+    },
+    [isEditable],
   )
 
   const flushPointer = useCallback(() => {
@@ -587,6 +634,10 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
       }
       if (!drag) return
       const point = getPoint(e)
+      // The release point is the gesture's last word: a move still waiting
+      // for its animation frame (a quick flick, a throttled window) would
+      // otherwise be lost
+      if (drag.mode !== 'marquee') updateShapes((prev) => applyDrag(prev, drag, point))
 
       if (drag.mode === 'marquee') {
         setMarquee(null)
@@ -595,6 +646,16 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
         const ids = shapesWithin(shapesRef.current, rect, paths)
         setSelectedIds((prev) => (drag.additive ? new Set([...prev, ...ids]) : new Set(ids)))
         return
+      }
+
+      if (drag.mode === 'move' && drag.collapseOnClick) {
+        const moved =
+          Math.abs(point.x - drag.origin.x) > CLICK_TOLERANCE || Math.abs(point.y - drag.origin.y) > CLICK_TOLERANCE
+        if (!moved) {
+          updateShapes((prev) => applyDrag(prev, drag, drag.origin))
+          setSelectedIds(new Set([drag.clickedId]))
+          return
+        }
       }
 
       // Clicking an already-selected shape without dragging opens the text
@@ -610,6 +671,17 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
           } else {
             startTextEditing(current.id, slotAt(current, drag.origin.y))
           }
+          return
+        }
+      }
+
+      // A click that did not move anything changes nothing, so it writes
+      // nothing: the author's source stays as they typed it
+      if (drag.mode === 'move') {
+        const moved =
+          Math.abs(point.x - drag.origin.x) > CLICK_TOLERANCE || Math.abs(point.y - drag.origin.y) > CLICK_TOLERANCE
+        if (!moved) {
+          updateShapes((prev) => applyDrag(prev, drag, drag.origin))
           return
         }
       }
@@ -715,11 +787,18 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
         e.stopPropagation()
         setSelectedIds(EMPTY_SET)
         setTool('select')
+      } else if (NUDGE_KEYS[e.key] !== undefined && ids.size && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // Arrow keys move the selection together: 1px, or 10px with Shift
+        e.preventDefault()
+        e.stopPropagation()
+        const [ux, uy] = NUDGE_KEYS[e.key] ?? [0, 0]
+        const step = e.shiftKey ? 10 : 1
+        updateShapes((prev) => translateShapes(prev, ids, ux * step, uy * step), { commit: true, merge: true })
       }
     }
     root.addEventListener('keydown', onKeyDown)
     return () => root.removeEventListener('keydown', onKeyDown)
-  }, [isEditable, deleteSelection, startTextEditing])
+  }, [isEditable, deleteSelection, startTextEditing, updateShapes])
 
   const applyToSelection = useCallback(
     (patch: (shape: DrawingShape) => DrawingShape) => {
@@ -889,13 +968,13 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
       tabIndex={isEditable ? 0 : undefined}
       onFocus={() => {
         setActive(true)
-        editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, nodeKey)
+        host.onFocusChange(nodeKey)
       }}
       onBlur={(e) => {
         const next = e.relatedTarget as Node | null
         if (rootRef.current?.contains(next) || slot.host?.contains(next)) return
         setActive(false)
-        editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, null)
+        host.onFocusChange(null)
       }}
     >
       {!slot.detached ? toolbar : slot.host !== null && toolbar !== false ? createPortal(toolbar, slot.host) : null}
@@ -976,7 +1055,9 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
               onWaypointRemove={removeWaypoint}
             />
           )}
-          {selection.length > 1 && isEditable && <GroupSelectionOverlay shapes={selection} paths={paths} />}
+          {selection.length > 1 && isEditable && !editingText && (
+            <GroupSelectionOverlay shapes={selection} paths={paths} onHandlePointerDown={handleGroupHandlePointerDown} />
+          )}
           {marquee && <MarqueeOverlay rect={marqueeRect(marquee.origin, marquee.current)} />}
         </svg>
 
@@ -1007,7 +1088,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
           </div>
         )}
 
-        {isEditable && (
+        {isEditable && host.chrome === 'block' && (
           <HeightHandle
             height={canvasHeight}
             scale={scale}

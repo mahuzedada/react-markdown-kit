@@ -6,7 +6,7 @@
  */
 import { useState, type ReactElement, type ReactNode } from 'react'
 import { Icon, SHAPE_ICONS, UI_ICONS } from '../icons.js'
-import { useDiagramLabels } from '../labels.js'
+import { useCanvasHost, useDiagramLabels } from '../host.js'
 import { TOOLBAR_ITEM_ATTRIBUTE, useToolbarKeyboard } from '../toolbar-keyboard.js'
 
 const ITEM = { [TOOLBAR_ITEM_ATTRIBUTE]: '' }
@@ -59,7 +59,7 @@ export function SequenceToolbar({
   properties?: ReactNode
 }): ReactElement {
   const [copied, setCopied] = useState(false)
-  const keyboard = useToolbarKeyboard()
+  const keyboard = useToolbarKeyboard(useCanvasHost().toolbarOrientation)
   const text = useDiagramLabels()
   return (
     <>

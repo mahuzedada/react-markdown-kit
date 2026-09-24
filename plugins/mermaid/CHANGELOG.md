@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 (unreleased)
+
+- `@react-markdown-kit/mermaid/canvas`: the flowchart and sequence canvases without a Markdown editor. `<MermaidCanvas value onChange />` fills its container, floats the tools over the drawing as an island down the left edge (`toolbar="left"`, default) or along the top (`"top"`), keeps its own undo history (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z, Ctrl+Y), takes `zoom`, `drawingStyle`, `align` (default `center`), `readOnly`, `labels`, `kinds` and `editors`, and shows other kinds through their static render or as source. `createMermaidCanvas(container, options)` mounts it into any element and returns `{ getValue, setValue, update, destroy }`. The entry loads React and ReactDOM but neither Lexical nor the editor package.
+- Multi-selection on the flowchart canvas, modelled on Excalidraw: every selected shape gets a thin outline and the selection a dashed frame with handles. A corner handle scales the whole selection evenly from the opposite corner, a side handle along one axis, Alt from the centre; bound connectors follow. A drag anywhere inside the frame moves the selection, a click on one member narrows the selection to it, and the arrow keys nudge it by 1px (10px with Shift) in one merged undo step.
+- The flowchart canvas no longer writes on a click that moves nothing, so selecting a shape leaves hand-written source as it is, and a release always lands at the release point even when the last pointer move had not been drawn yet.
+- The canvases read their options, labels, focus reporting and undo from a canvas host (`canvas/host.tsx`) instead of Lexical; the editor's block provides one. `DiagramKindEditorProps.nodeKey` is typed `string`. The tool row slot is keyed on any scope object, so `<DiagramToolbar>` behaves as before.
+
 ## 0.2.0 (2026-09-22)
 
 - Ink style redrawn: one marker stroke of uniform width per shape, sides bowed gently, corners meeting exactly, a closing overlap tail, and a faint pencil under-drawing. Fills follow the stroke, connectors are bowed lines with open chevron heads, and the Recursive face is a little bolder.

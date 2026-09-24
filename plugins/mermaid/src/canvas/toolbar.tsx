@@ -6,7 +6,8 @@ import { useEffect, useRef, useState, type ReactElement, type ReactNode } from '
 import type { BlockWidth } from '../core/block-width.js'
 import type { NodeShapeType, DrawingShapeType } from '../core/drawing-data.js'
 import { Icon, SHAPE_ICONS, UI_ICONS } from './icons.js'
-import { useDiagramLabels, type DiagramLabelKey } from './labels.js'
+import { useCanvasHost, useDiagramLabels } from './host.js'
+import { type DiagramLabelKey } from './labels.js'
 import { LAYOUT_OPTIONS, layoutPreset } from './layout-options.js'
 import { TOOLBAR_ITEM_ATTRIBUTE, useToolbarKeyboard } from './toolbar-keyboard.js'
 
@@ -77,8 +78,11 @@ export function DiagramToolbar({
   const [lastMore, setLastMore] = useState<NodeShapeType>('note')
   const [copied, setCopied] = useState(false)
   const moreRef = useRef<HTMLDivElement>(null)
-  const keyboard = useToolbarKeyboard()
+  const host = useCanvasHost()
+  const keyboard = useToolbarKeyboard(host.toolbarOrientation)
   const text = useDiagramLabels()
+  // A block's width means nothing where the canvas is the page
+  const showWidth = host.chrome === 'block'
 
   useEffect(() => {
     if (!moreOpen) return
@@ -159,17 +163,18 @@ export function DiagramToolbar({
         >
           {copied ? UI_ICONS.check : UI_ICONS.mermaid}
         </ToolButton>
-        <span className="rmk-diagram-toolbar-divider" />
-        {LAYOUT_OPTIONS.map(({ preset, label, icon, width: presetWidth }) => (
-          <ToolButton
-            key={preset}
-            label={text[label]}
-            active={layoutPreset(width) === preset}
-            onClick={() => onWidthChange(presetWidth)}
-          >
-            {icon}
-          </ToolButton>
-        ))}
+        {showWidth && <span className="rmk-diagram-toolbar-divider" />}
+        {showWidth &&
+          LAYOUT_OPTIONS.map(({ preset, label, icon, width: presetWidth }) => (
+            <ToolButton
+              key={preset}
+              label={text[label]}
+              active={layoutPreset(width) === preset}
+              onClick={() => onWidthChange(presetWidth)}
+            >
+              {icon}
+            </ToolButton>
+          ))}
       </div>
     </>
   )

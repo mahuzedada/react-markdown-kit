@@ -1,46 +1,137 @@
-/* Chrome for the Mermaid visual editor, laid out like mermaid.live: a
-   header, a column of rounded cards on the left, and the rest of the page
-   is the canvas: no pane frame, a dotted grid on the page background, the
-   same page gap on every side, and pills floating in the corners. The
-   plugin's tool row is the top-left pill (the `<DiagramToolbar>` slot),
-   not a strip on the canvas. Colours come from the theme tokens; only the
-   geometry is this page's own. The block, the canvas, the preview and the
-   static SVG are styled by the kit's own stylesheets and shared/kit.css. */
+/* Chrome for the Mermaid visual editor, laid out like Excalidraw: the
+   canvas is the whole window and everything else floats over it as an
+   island (a card with a soft shadow and no frame). The plugin's
+   `<MermaidCanvas>` fills the stage and floats its tools down the left
+   edge; this sheet places the page's islands around it and tells the
+   canvas where the free room is, so a diagram centres in the space the
+   islands leave. The stage is one window tall and the landing copy
+   follows it, so the page scrolls past the editor to the docs. Colours
+   come from the theme tokens; only the geometry is this page's own. */
 
-.shell {
-  --pane-radius: 16px;
-  --pane-border: 2px solid var(--border);
-  --page-gap: 1.5rem;
-  --side-width: 27.375rem;
+.stage {
+  --gap: 1rem;
+  --island-radius: 12px;
+  --island-shadow: 0 0 0 1px color-mix(in oklab, var(--border) 70%, transparent), var(--shadow-2);
+  --top-band: 4.25rem;
+  --panel-width: 24rem;
+  position: relative;
   height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  min-height: 32rem;
+  color: var(--foreground);
   background: var(--background);
+}
+
+.stageEmbed {
+  --gap: 0.625rem;
+  --top-band: 3.75rem;
+  --panel-width: 20rem;
+  min-height: 0;
+}
+
+/* Fullscreen through the API paints the element alone; the fallback pins it. */
+.stageFull:not(:fullscreen) {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+/* The canvas: the page background under a dotted grid, the plugin's tool
+   island under the top band, and the free room it centres a diagram in
+   (the stage padding) clear of every island. */
+.canvas {
+  --rmk-mermaid-island-gap: var(--gap);
+  --rmk-mermaid-island-radius: var(--island-radius);
+  --rmk-mermaid-island-shadow: var(--island-shadow);
+  --rmk-mermaid-tools-top: var(--top-band);
+  --rmk-mermaid-canvas-background: var(--background);
+  --rmk-diagram-grid: color-mix(in oklab, var(--foreground) 13%, transparent);
+  --room-left: 7rem;
+  --room-right: 2rem;
+  min-height: 0;
+}
+
+.panelOpen .canvas {
+  --room-right: calc(var(--panel-width) + 2 * var(--gap));
+}
+
+/* Doubled class and the toolbar attribute: outranks the plugin's own
+   padding rules for the same elements, which load after this sheet. */
+.canvas.canvas :global(.rmk-diagram-stage:not(.rmk-sequence-stage)) {
+  padding: var(--top-band) var(--room-right) 4rem var(--room-left);
+}
+
+.canvas.canvas[data-rmk-mermaid-toolbar] :global(.rmk-sequence-viewport),
+.canvas.canvas :global(.rmk-mermaid-canvas-static),
+.canvas.canvas :global(.rmk-diagram-source-pre) {
+  padding: var(--top-band) var(--room-right) 4rem var(--room-left);
+}
+
+/* ------------------------------------------------------------ islands */
+
+.island {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 2.75rem;
+  padding: 0.25rem;
+  box-sizing: border-box;
+  border-radius: var(--island-radius);
+  background: var(--card);
+  box-shadow: var(--island-shadow);
+}
+
+.topLeft {
+  top: var(--gap);
+  left: var(--gap);
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+  max-width: calc(100% - 2 * var(--gap));
+}
+
+.topRight {
+  top: var(--gap);
+  right: var(--gap);
+}
+
+.bottomLeft {
+  bottom: var(--gap);
+  left: var(--gap);
+}
+
+.bottomCenter {
+  bottom: var(--gap);
+  left: 50%;
+  gap: 0.4rem;
+  padding: 0 0.9rem;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.bottomCenter:hover {
   color: var(--foreground);
 }
 
-.shellEmbed {
-  --page-gap: 0.75rem;
-  --side-width: 22rem;
+.bottomRight {
+  bottom: var(--gap);
+  right: var(--gap);
+  padding: 0 0.75rem;
 }
 
-/* ------------------------------------------------------------ header */
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: none;
-  min-height: 4rem;
-  padding: 0 var(--page-gap);
+.panelOpen .bottomRight {
+  right: calc(var(--panel-width) + 2 * var(--gap));
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 1.05rem;
+  gap: 0.5rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--primary-text);
   text-decoration: none;
@@ -48,114 +139,143 @@
 }
 
 .brand img {
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
-.by {
-  font-size: 0.8rem;
-  color: var(--muted-foreground);
+.status {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.by a {
-  color: inherit;
+.statusOk {
+  color: var(--success-text);
 }
 
-.navActions {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-left: auto;
+.statusWarn {
+  color: var(--warning-text);
 }
 
-.navDivider {
+.divider {
   width: 1px;
-  height: 1.4rem;
-  margin: 0 0.35rem;
+  height: 1.25rem;
+  margin: 0 0.25rem;
   background: var(--border);
 }
 
-/* -------------------------------------------------------------- body */
-
-.body {
-  display: grid;
-  grid-template-columns: var(--side-width) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  gap: var(--page-gap);
-  flex: 1;
-  min-height: 0;
-  padding: 0 var(--page-gap) var(--page-gap);
+.zoomText {
+  min-width: 3.25rem;
+  height: 2rem;
+  padding: 0 0.25rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
 
-.shellEmbed .body {
-  padding-top: var(--page-gap);
+.zoomText:hover {
+  background: var(--accent);
 }
 
-.side {
+.version {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+.version:hover {
+  color: var(--foreground);
+}
+
+/* -------------------------------------------------------- code panel */
+
+.panel {
+  position: absolute;
+  z-index: 4;
+  top: var(--top-band);
+  right: var(--gap);
+  bottom: var(--gap);
   display: flex;
   flex-direction: column;
-  gap: var(--page-gap);
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
+  width: var(--panel-width);
+  max-width: calc(100% - 2 * var(--gap));
+  overflow: hidden;
+  border-radius: var(--island-radius);
+  background: var(--card);
+  box-shadow: var(--island-shadow);
 }
 
-/* -------------------------------------------------------------- cards */
+.panel[hidden] {
+  display: none;
+}
 
-.card {
+.section {
   display: flex;
   flex-direction: column;
   flex: none;
-  border: var(--pane-border);
-  border-radius: var(--pane-radius);
-  background: var(--card);
-  overflow: hidden;
+  min-height: 0;
+  border-top: 1px solid var(--border);
 }
 
-.codeCard {
+.section:first-child {
+  border-top: 0;
+}
+
+.codeSection {
   flex: 1 1 auto;
-  min-height: 16rem;
+  min-height: 12rem;
 }
 
-.cardHead {
+.sectionHead {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-height: 2.75rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
+  min-height: 2.5rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+  box-sizing: border-box;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--foreground);
-  background: var(--muted);
-  border-bottom: 1px solid var(--border);
 }
 
-.cardToggle {
+.sectionToggle {
   width: 100%;
   margin: 0;
   border: 0;
-  border-bottom: 1px solid transparent;
+  background: transparent;
   font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
 
-.cardToggle[aria-expanded='true'] {
-  border-bottom-color: var(--border);
-}
-
-.cardToggle:hover {
+.sectionToggle:hover {
   background: var(--accent);
 }
 
-.cardToggle:focus-visible {
+.sectionToggle:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: -2px;
 }
 
-.cardTitle {
+.sectionTitle {
   flex: 1;
+}
+
+.headButton {
+  height: 1.75rem;
 }
 
 .chevron {
@@ -164,49 +284,6 @@
 
 .chevronOpen {
   transform: rotate(180deg);
-}
-
-/* The code card's head is a tab strip: "Code" is the active tab, the
-   status sits in the middle and the docs link at the end. */
-.tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem 0.7rem;
-  border-radius: 10px;
-  background: var(--card);
-  box-shadow: var(--shadow-1);
-}
-
-.status {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
-
-.statusOk { color: var(--success-text); }
-.statusWarn { color: var(--warning-text); }
-
-.headLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--foreground);
-  text-decoration: none;
-}
-
-.headLink:hover {
-  background: var(--accent);
 }
 
 .problem {
@@ -218,20 +295,14 @@
   background: color-mix(in oklab, var(--warning) 8%, transparent);
 }
 
-/* Sample chips and action buttons: mermaid.live's 32px pills, one group
-   per diagram kind under a small heading. */
 .chipGroup {
-  padding: 0.6rem 0.75rem 0.25rem;
-}
-
-.chipGroup + .chipGroup {
-  border-top: 1px solid var(--border);
+  padding: 0.25rem 0.75rem 0.25rem;
 }
 
 .chipsHeading {
   display: block;
-  margin-bottom: 0.45rem;
-  font-size: 0.7rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -241,23 +312,23 @@
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.4rem;
   padding: 0 0 0.5rem;
 }
 
 .chip {
-  height: 2rem;
-  padding: 0 0.75rem;
-  border-radius: 10px;
-  font-size: 0.78rem;
+  height: 1.875rem;
+  padding: 0 0.7rem;
+  border-radius: 9px;
+  font-size: 0.76rem;
   font-weight: 500;
 }
 
 .actions {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem 0.75rem;
 }
 
 .actionRow {
@@ -267,7 +338,7 @@
 }
 
 .actionLabel {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
@@ -278,8 +349,8 @@
 
 .actionGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
 }
 
 .actionGrid > * {
@@ -292,350 +363,28 @@
   color: var(--warning-text);
 }
 
-/* --------------------------------------------------------------- view */
-
-/* The pane is the page: no frame, the page background under a dotted grid
-   (mermaid.live's 2px dots every 30px), the canvas and the sequence picture
-   drawn over it with their own surfaces made transparent below. */
-.view {
-  --grid-dot: color-mix(in oklab, var(--foreground) 12%, transparent);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  background-color: var(--background);
-  background-image: radial-gradient(circle, var(--grid-dot) 2px, transparent 2px);
-  background-size: 30px 30px;
-}
-
-/* Fullscreen through the API paints the element alone; the fallback pins it. */
-.view:fullscreen,
-.viewFull {
-  padding: var(--page-gap);
-}
-
-.viewFull:not(:fullscreen) {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-}
-
-.viewScroll {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  scrollbar-width: thin;
-}
-
-.zoomBox {
-  position: relative;
-}
-
-.zoomInner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: 0 0;
-}
-
-/* The block is the pane. The editor, its content, the diagram node, the
-   block and whichever editing component it holds (the flowchart canvas
-   with its stage, the sequence canvas with its viewport, the source editor
-   with its preview, or the source pre) each stretch to the height they are
-   given, so the drawing takes the whole pane: the kit's tool row renders in
-   the strip above, and the block's header (the kind, which the status chip
-   already names, and the canvas/text toggle, which the code pane makes
-   redundant) is hidden; the block's own border, background and focus ring
-   are the pane's now. */
-.zoomInner :global(.rmk-editor),
-.zoomInner :global(.rmk-editor .rmk-content),
-.zoomInner :global(.rmk-editor .rmk-content > *),
-.zoomInner :global(.rmk-editor .rmk-diagram),
-.zoomInner :global(.rmk-editor .rmk-diagram-block),
-.zoomInner :global(.rmk-editor .rmk-diagram-canvas),
-.zoomInner :global(.rmk-editor .rmk-diagram-stage:not(.rmk-sequence-stage)),
-.zoomInner :global(.rmk-editor .rmk-diagram-source) {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  box-sizing: border-box;
-}
-
-.zoomInner :global(.rmk-editor) {
-  --rmk-diagram-radius: 0;
-  height: 100%;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.zoomInner :global(.rmk-editor .rmk-content) {
-  padding: 0;
-  overflow: auto;
-}
-
-.zoomInner :global(.rmk-editor .rmk-content > *),
-.zoomInner :global(.rmk-editor .rmk-content > [contenteditable]),
-.zoomInner :global(.rmk-editor .rmk-diagram) {
-  margin: 0;
-  padding: 0;
-}
-
-.zoomInner :global(.rmk-editor .rmk-diagram-block),
-.zoomInner :global(.rmk-editor .rmk-diagram-canvas) {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.zoomInner :global(.rmk-editor .rmk-diagram-header) {
-  display: none;
-}
-
-.zoomInner :global(.rmk-editor .rmk-diagram-toolbar) {
-  flex: none;
-}
-
-.zoomInner :global(.rmk-editor .rmk-diagram-canvas.is-editable:focus-within) {
-  box-shadow: none;
-}
-
-/* The drawing starts under the band the corner pills occupy; the canvas
-   maps pointers through the SVG's own screen matrix, so the offset costs
-   nothing. The grid is the pane's, so the surface is transparent. */
-.zoomInner :global(.rmk-editor .rmk-diagram-stage:not(.rmk-sequence-stage)) {
-  padding-top: 4.5rem;
-}
-
-.zoomInner :global(.rmk-editor .rmk-diagram-surface) {
-  flex: 1 0 auto;
-  background: transparent;
-}
-
-/* The pane governs the height, so the kit's height grip has nothing to do. */
-.zoomInner :global(.rmk-editor .rmk-diagram-resize) {
-  display: none;
-}
-
-/* The sequence canvas: the viewport takes the height and scrolls in both
-   directions, and the picture sits in the middle of it at its own width,
-   the way mermaid.live shows a diagram: a flex column with auto margins
-   on the stage centres a picture that fits and starts a taller one at the
-   top, where the scroll reaches it. The interaction layer reads the
-   picture's screen matrix, so where the stage sits does not matter to a
-   gesture. */
-.zoomInner :global(.rmk-editor .rmk-sequence-viewport) {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 4.5rem 1.5rem 1.5rem;
-  overflow: auto;
-  scrollbar-width: thin;
-  background: transparent;
-}
-
-.zoomInner :global(.rmk-editor .rmk-sequence-stage) {
-  flex: none;
-  margin: auto;
-}
-
-/* Source mode (a flowchart or a sequence diagram switched to text): the
-   preview takes the height and scrolls, the problems stay along the bottom.
-   A kind nothing renders shows its source the same way. */
-.zoomInner :global(.rmk-editor .rmk-diagram-preview),
-.zoomInner :global(.rmk-editor .rmk-diagram-source-pre) {
-  flex: 1 1 auto;
-  min-height: 0;
-  margin: 0;
-  overflow: auto;
-}
-
-.zoomInner :global(.rmk-editor .rmk-diagram-preview) {
-  padding: 1.5rem;
-}
-
-/* Under the pill band, like the canvases (a source-only kind shows its
-   notice and its source here). */
-.zoomInner :global(.rmk-editor .rmk-diagram-source) {
-  padding-top: 4.5rem;
-}
-
-.zoomInner :global(.rmk-editor .rmk-diagram-preview svg) {
-  max-width: none;
-}
-
-.zoomInner :global(.rmk-editor .rmk-diagram-notice),
-.zoomInner :global(.rmk-editor .rmk-diagram-problems) {
-  flex: none;
-}
-
-/* Pills in the corners of the pane, as mermaid.live places them: the
-   canvas tools top left, the view controls top right, version and theme
-   bottom right. Each corner is inset by the pill gap; the top-left corner
-   may grow wide (the property bar joins the tools) and wraps before it
-   reaches the top-right pill. */
-.corner {
-  position: absolute;
-  z-index: 2;
-  display: flex;
-  pointer-events: none;
-}
-
-.corner > * {
-  pointer-events: auto;
-}
-
-.cornerTopLeft {
-  top: 0.75rem;
-  left: 0.75rem;
-  max-width: calc(100% - 17rem);
-}
-
-.cornerTopRight {
-  top: 0.75rem;
-  right: 0.75rem;
-}
-
-.cornerBottomRight {
-  right: 0.75rem;
-  bottom: 0.75rem;
-}
-
-.float {
-  display: flex;
-  align-items: center;
-  gap: 0.15rem;
-  min-height: 2.75rem;
-  padding: 0.25rem;
-  border-radius: 12px;
-  background: color-mix(in oklab, var(--card) 92%, transparent);
-  box-shadow: var(--shadow-2);
-  backdrop-filter: blur(8px);
-}
-
-.floatDivider {
-  width: 1px;
-  height: 1.25rem;
-  margin: 0 0.25rem;
-  background: var(--border);
-}
-
-/* The plugin's row inside the top-left pill: none of its own chrome, and
-   its groups wrap inside the pill when the property bar makes it wide. */
-.toolbarHost {
-  min-width: 0;
-}
-
-/* Doubled to outrank the plugin's own `.rmk-editor .rmk-diagram-toolbar`
-   rule, which is loaded after this sheet. */
-.float.toolbarHost :global(.rmk-diagram-toolbar) {
-  padding: 0 0.25rem;
-  border: 0;
-  background: transparent;
-}
-
-/* The row's end group is Copy as Mermaid and the block-width presets: the
-   Actions card copies the Mermaid, and the pane, not the block, sets the
-   width here, so the pill stays short enough not to wrap at 1024px. */
-.float.toolbarHost :global(.rmk-diagram-toolbar-group-end) {
-  display: none;
-}
-
-.float.toolbarHost :global(.rmk-diagram-toolbar-placeholder) {
-  padding: 0.3rem 0.5rem;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
-  white-space: nowrap;
-}
-
-.floatText,
-.floatLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.5rem;
-  font-size: 0.78rem;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted-foreground);
-  white-space: nowrap;
-}
-
-.floatText {
-  min-width: 3.2rem;
-  justify-content: center;
-}
-
-.floatLink {
-  border-radius: 8px;
-  color: var(--foreground);
-  text-decoration: none;
-}
-
-.floatLink:hover {
-  background: var(--accent);
-}
-
 /* ------------------------------------------------------------ narrow */
 
 @media (max-width: 900px) {
-  .shell {
-    height: auto;
-    min-height: 100dvh;
-    overflow: visible;
+  .stage {
+    --panel-width: calc(100% - 2 * var(--gap));
   }
 
-  .nav {
-    flex-wrap: wrap;
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
+  .canvas {
+    --room-left: 6.5rem;
   }
 
-  .navActions {
-    flex-wrap: wrap;
-    row-gap: 0.5rem;
+  .panelOpen .canvas {
+    --room-right: 1rem;
   }
 
-  /* Narrow screens keep the brand, the docs, the repo and Share; Copy link
-     is in the header for wide screens only and stays available in the
-     Actions card. */
-  .by,
-  .navCopyLink {
+  .panelOpen .bottomRight,
+  .hideNarrow,
+  .bottomCenter {
     display: none;
   }
 
-  .body {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto;
-  }
-
-  .side {
-    overflow: visible;
-  }
-
-  .codeCard {
-    min-height: 18rem;
-    max-height: 50dvh;
-  }
-
-  .view {
-    min-height: 70dvh;
-  }
-
-  /* The pills stack: tools along the top, the view controls under them. */
-  .cornerTopLeft {
-    max-width: calc(100% - 1.5rem);
-  }
-
-  .cornerTopRight {
-    top: auto;
-    bottom: 0.75rem;
-    left: 0.75rem;
-    right: auto;
+  .status {
+    display: none;
   }
 }

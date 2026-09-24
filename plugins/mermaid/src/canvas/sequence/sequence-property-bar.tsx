@@ -12,7 +12,8 @@ import type { ReactElement, ReactNode } from 'react'
 import { flattenItems, type Message, type SequenceModel } from '../../core/sequence/model.js'
 import { canDeactivate, SECTIONED_FRAME_KINDS, type FrameKind, type NotePlacement } from '../../core/sequence/operations.js'
 import { Icon, SHAPE_ICONS, UI_ICONS } from '../icons.js'
-import { useDiagramLabels, type DiagramLabelKey, type DiagramLabels } from '../labels.js'
+import { useDiagramLabels } from '../host.js'
+import { type DiagramLabelKey, type DiagramLabels } from '../labels.js'
 import type { SequenceSelection } from './selection.js'
 
 export interface SequencePropertyActions {

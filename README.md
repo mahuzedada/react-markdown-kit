@@ -24,11 +24,13 @@ slides    = plugin: slides from Markdown   (a deck of <section>s in the renderer
 | [`@react-markdown-kit/slides`](plugins/slides) | `npm i @react-markdown-kit/slides` | A deck from one Markdown file: `---` splits slides, `???` starts the notes, `--` is a pause; presented, printed and edited |
 
 The renderer never requires the editor, and neither carries template,
-diagram or slide code. The three plugin packages have no standalone API: each
-exports extensions (`template()`, `templateVariables()`, `mermaid()`,
-`slides()`) that go into a preset or an `extensions` prop, and its `/editor`
-entry adds the editing half (`slides` also has a `/present` entry for the
-show). Their root entries call no React, so `template()` resolves in a worker,
+diagram or slide code. The three plugin packages export extensions
+(`template()`, `templateVariables()`, `mermaid()`, `slides()`) that go into a
+preset or an `extensions` prop, and each `/editor` entry adds the editing half
+(`slides` also has a `/present` entry for the show). The one standalone piece
+is `@react-markdown-kit/mermaid/canvas`: the same Mermaid canvas as a
+component (or `createMermaidCanvas(container)`) that fills any container,
+with no Markdown editor. Their root entries call no React, so `template()` resolves in a worker,
 a CLI or an email job through `compileMarkdown`, and `slides()` renders a
 static deck in a server component.
 

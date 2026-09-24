@@ -7,7 +7,7 @@ import type { ReactElement } from 'react'
 import { COLOR_PRESETS, type ColorName } from '../core/skeleton.js'
 import { isConnectorType, type DrawingShape } from '../core/drawing-data.js'
 import { Icon, UI_ICONS } from './icons.js'
-import { useDiagramLabels } from './labels.js'
+import { useDiagramLabels } from './host.js'
 
 export const COLOR_NAMES = Object.keys(COLOR_PRESETS) as ColorName[]
 

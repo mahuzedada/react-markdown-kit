@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { compileMarkdown } from '@react-markdown-kit/renderer'
-import { MarkdownEditorContent, MarkdownEditorProvider, useMarkdownEditor } from '@react-markdown-kit/editor'
-import { DiagramToolbar } from '@react-markdown-kit/mermaid/editor'
+import { MermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
 import mermaidPackage from '@react-markdown-kit/mermaid/package.json'
 import { docsUrl, sites, useTheme } from '../../shared/Shell'
 import { decodeShareHash, encodeShareHash, mermaidLiveUrl, shareUrl, sourceFromShared } from './share'
@@ -13,6 +12,7 @@ import ShareDialog from './ShareDialog'
 import { copyImage, diagramFileName, diagramSvg, download, svgToPng } from './export'
 import {
   ActionsIcon,
+  ArrowDownIcon,
   BookIcon,
   CheckIcon,
   ChevronIcon,
@@ -20,11 +20,11 @@ import {
   CopyIcon,
   DownloadIcon,
   ExternalIcon,
-  FitIcon,
   FullscreenIcon,
   GitHubIcon,
   ImageIcon,
   LinkIcon,
+  PanelIcon,
   MoonIcon,
   ResetIcon,
   SamplesIcon,
@@ -35,14 +35,10 @@ import {
 } from './icons'
 import styles from './MermaidDemo.module.css'
 
-import '@react-markdown-kit/renderer/styles.css'
-import '@react-markdown-kit/editor/styles.css'
 import '@react-markdown-kit/mermaid/styles.css'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
 import { cn } from '@zuilib/primitives/lib/cn'
-
-const FENCE = /```mermaid\n([\s\S]*?)\n```/
 
 /** How long after the last keystroke the URL hash follows the source. */
 const HASH_DEBOUNCE_MS = 300
@@ -150,7 +146,7 @@ function useCopy(): { readonly copied: string | undefined; readonly copy: Copy; 
   return { copied, copy, done }
 }
 
-/** The canvas column (tools and view) in the browser's fullscreen mode, with a fixed-position fallback where the API is missing. */
+/** The editor in the browser's fullscreen mode, with a fixed-position fallback where the API is missing. */
 function useFullscreen(target: React.RefObject<HTMLElement | null>): { readonly active: boolean; readonly toggle: () => void } {
   const [active, setActive] = useState(false)
   const [fallback, setFallback] = useState(false)
@@ -184,56 +180,38 @@ function useFullscreen(target: React.RefObject<HTMLElement | null>): { readonly 
   return { active: active || fallback, toggle }
 }
 
-/**
- * The canvas at `zoom`. The editor fills the pane (its width and height are
- * set from the pane's, so the drawing surface is the pane) and is scaled
- * with a transform; the canvas reads pointer positions through the SVG's
- * screen matrix, so dragging stays exact at any zoom. A spacer takes the
- * scaled size so the pane scrolls to the whole drawing.
- */
-function useZoomBox(pane: React.RefObject<HTMLDivElement | null>): { readonly paneWidth: number; readonly paneHeight: number } {
-  const [size, setSize] = useState({ paneWidth: 0, paneHeight: 0 })
-
-  useEffect(() => {
-    const scroller = pane.current
-    if (scroller === null) return
-    const measure = (): void => setSize({ paneWidth: scroller.clientWidth, paneHeight: scroller.clientHeight })
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(scroller)
-    return () => observer.disconnect()
-  }, [pane])
-
-  return size
-}
-
 export interface MermaidDemoProps {
   /** `?embed=1`: no site chrome, and a link back to the full editor. */
   readonly embed?: boolean
 }
 
+/** Below this width the code panel starts closed, so the canvas has the screen. */
+const NARROW = 900
+
+function startsNarrow(): boolean {
+  return typeof matchMedia === 'function' && matchMedia(`(max-width: ${NARROW}px)`).matches
+}
+
 /**
- * The Mermaid visual editor, laid out like mermaid.live: a column of cards
- * on the left (the code with line numbers and colours, sample diagrams,
- * actions) and the canvas filling the rest of the page as the page itself,
- * a dotted grid with pills floating in its corners: the drawing canvas for
- * a flowchart, the sequence canvas for a sequence diagram, the source for
- * every other Mermaid type. The editor is assembled from its composable
- * pieces so the page owns the chrome: the plugin's tool row renders into a
- * `<DiagramToolbar>` in the top-left pill instead of along the block's top
- * edge, the way a custom formatting toolbar sits outside the text surface;
- * the view controls take the top-right pill and the version and theme the
- * bottom-right one. Typing re-parses the diagram; a gesture on either canvas
- * writes Mermaid back (a flowchart's with one `%% rmk-layout v1`
- * annotation), and the code pane shows exactly what would be saved. The
- * source also lives in the URL hash (src/share.ts), so a link carries the
- * diagram.
+ * The Mermaid visual editor, laid out like Excalidraw: the canvas is the
+ * whole window and everything else floats over it as islands. The plugin's
+ * standalone `<MermaidCanvas>` fills the stage and floats its own tools
+ * down the left edge (the properties of the selection join them); the page
+ * adds the brand top left, the links and Share top right, the Mermaid code
+ * with samples and export in a panel on the right, zoom bottom left and
+ * the version bottom right. The stage is exactly one window tall, so the
+ * documentation below it is a scroll away. Typing re-parses the diagram; a
+ * gesture on either canvas writes Mermaid back (a flowchart's with one
+ * `%% rmk-layout v1` annotation), and the code panel shows exactly what
+ * would be saved. The source also lives in the URL hash (src/share.ts), so
+ * a link carries the diagram.
  */
 export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactNode {
   const [code, setCode] = useState(DEFAULT_CODE)
   const [shareOpen, setShareOpen] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(() => !startsNarrow())
   const [samplesOpen, setSamplesOpen] = useState(!embed)
-  const [actionsOpen, setActionsOpen] = useState(!embed)
+  const [actionsOpen, setActionsOpen] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [pngScale, setPngScale] = useState(2)
   const [exportProblem, setExportProblem] = useState<string | undefined>(undefined)
@@ -241,21 +219,10 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
   const { hash, unreadable } = useShareHash(code, setCode)
   const { copied, copy, done } = useCopy()
   const { theme, toggle: toggleTheme } = useTheme()
-  const column = useRef<HTMLDivElement>(null)
-  const scroller = useRef<HTMLDivElement>(null)
-  const fullscreen = useFullscreen(column)
-  const { paneWidth, paneHeight } = useZoomBox(scroller)
+  const stage = useRef<HTMLElement>(null)
+  const fullscreen = useFullscreen(stage)
 
   const markdown = useMemo(() => wrap(code), [code])
-
-  // The block edited the fence: keep only the body, which is Mermaid syntax
-  // plus, after a canvas edit, the layout annotation the canvas wrote.
-  const onEditorChange = useCallback((next: string) => {
-    const body = FENCE.exec(next)?.[1]
-    if (body !== undefined) setCode(body)
-  }, [])
-
-  const instance = useMarkdownEditor({ preset, value: markdown, onChange: onEditorChange })
 
   // The share targets follow the debounced hash; before it exists the buttons wait.
   const link = hash === undefined ? undefined : shareUrl(hash, pageBase())
@@ -278,7 +245,7 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
   // renders, and the first statement Mermaid itself would reject.
   const status = useMemo(() => diagramStatus(compileMarkdown(markdown, { preset }), KINDS), [markdown])
 
-  const svg =useCallback((): string | undefined => diagramSvg(markdown, preset), [markdown])
+  const svg = useCallback((): string | undefined => diagramSvg(markdown, preset), [markdown])
 
   const withExport = useCallback(
     async (key: string, work: (svg: string) => Promise<void>): Promise<void> => {
@@ -313,79 +280,113 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
     </>
   )
 
-  const themeButton = (
-    <Button variant="ghost" size="icon" track="theme" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
-      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-    </Button>
-  )
-
   return (
     <ActivityScope feature="mermaid-editor">
-      <div className={cn(styles.shell, embed && styles.shellEmbed)}>
-        {embed ? null : (
-          <header className={styles.nav}>
-            <a className={styles.brand} href="/" data-zui-tag="brand">
-              <img src="/logo.svg" alt="" />
-              <span>Mermaid Visual Editor</span>
-            </a>
-            <span className={styles.by}>
-              by <a href={sites.home}>React Markdown Kit</a>
+      <section
+        ref={stage}
+        className={cn(styles.stage, embed && styles.stageEmbed, fullscreen.active && styles.stageFull, panelOpen && styles.panelOpen)}
+        aria-label="Mermaid visual editor"
+      >
+        <MermaidCanvas
+          className={cn(styles.canvas)}
+          value={code}
+          onChange={setCode}
+          kinds={KINDS}
+          drawingStyle="ink"
+          align="center"
+          toolbar="left"
+          zoom={zoom}
+        >
+          <div className={cn(styles.island, styles.topLeft)}>
+            {embed ? (
+              <span className={cn(styles.brand)}>
+                <img src="/logo.svg" alt="" />
+                <span>Mermaid Visual Editor</span>
+              </span>
+            ) : (
+              <a className={cn(styles.brand)} href="/" data-zui-tag="brand">
+                <img src="/logo.svg" alt="" />
+                <span>Mermaid Visual Editor</span>
+              </a>
+            )}
+            <span className={cn(styles.status, status.tone === 'ok' ? styles.statusOk : styles.statusWarn)} title={status.message}>
+              {status.label}
             </span>
-            <nav className={styles.navActions} aria-label="Editor">
-              <Button as="a" href={docsUrl('/docs/mermaid')} variant="ghost" size="sm" track="docs">
-                <BookIcon />
-                Docs
-              </Button>
-              <Button as="a" href={sites.github} variant="ghost" size="icon" track="github" aria-label="GitHub repository">
-                <GitHubIcon />
-              </Button>
-              <span className={styles.navDivider} aria-hidden="true" />
-              <Button variant="outline" tone="primary" size="sm" className={cn(styles.navCopyLink)} track="copy-link" disabled={link === undefined} onClick={() => link !== undefined && copy('link', link)}>
-                {copyLabel('link', 'Copy link')}
-              </Button>
-              <Button variant="solid" tone="primary" size="sm" track="share" onClick={() => setShareOpen(true)}>
-                <ShareIcon />
-                Share
-              </Button>
-            </nav>
-          </header>
-        )}
+          </div>
 
-        <div className={styles.body}>
-          <aside className={styles.side}>
-            <section className={cn(styles.card, styles.codeCard)} aria-label="Mermaid code">
-              <div className={styles.cardHead}>
-                <span className={styles.tab} aria-current="true">
-                  <CodeIcon />
-                  Code
-                </span>
-                <span className={cn(styles.status, status.tone === 'ok' ? styles.statusOk : styles.statusWarn)}>{status.label}</span>
-                <a className={styles.headLink} href={docsUrl('/docs/mermaid')} data-zui-tag="docs-syntax">
+          <nav className={cn(styles.island, styles.topRight)} aria-label="Editor">
+            {embed ? (
+              <Button as="a" href={fullEditor} target="_blank" rel="noopener" variant="ghost" size="sm" track="open-full-editor">
+                <ExternalIcon />
+                Full editor
+              </Button>
+            ) : (
+              <>
+                <Button as="a" href={docsUrl('/docs/mermaid')} variant="ghost" size="sm" track="docs">
                   <BookIcon />
                   Docs
-                </a>
+                </Button>
+                <Button as="a" href={sites.github} variant="ghost" size="icon" track="github" aria-label="GitHub repository">
+                  <GitHubIcon />
+                </Button>
+                <span className={cn(styles.divider)} aria-hidden="true" />
+                <Button variant="ghost" size="sm" className={cn(styles.hideNarrow)} track="copy-link" disabled={link === undefined} onClick={() => link !== undefined && copy('link', link)}>
+                  {copyLabel('link', 'Copy link')}
+                </Button>
+                <Button variant="solid" tone="primary" size="sm" track="share" onClick={() => setShareOpen(true)}>
+                  <ShareIcon />
+                  Share
+                </Button>
+              </>
+            )}
+            <span className={cn(styles.divider)} aria-hidden="true" />
+            <Button variant="ghost" size="icon" track="theme" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+            </Button>
+            <Button
+              variant={panelOpen ? 'outline' : 'ghost'}
+              tone="primary"
+              size="icon"
+              track="code-panel"
+              aria-pressed={panelOpen}
+              aria-controls="mermaid-code-panel"
+              aria-label={panelOpen ? 'Hide the code panel' : 'Show the code panel'}
+              onClick={() => setPanelOpen((open) => !open)}
+            >
+              <PanelIcon />
+            </Button>
+          </nav>
+
+          <aside id="mermaid-code-panel" className={cn(styles.panel)} hidden={!panelOpen} aria-label="Mermaid code">
+            <section className={cn(styles.section, styles.codeSection)} aria-label="Code">
+              <div className={cn(styles.sectionHead)}>
+                <CodeIcon />
+                <span className={cn(styles.sectionTitle)}>Mermaid</span>
+                <Button variant="ghost" size="sm" className={cn(styles.headButton)} track="copy-mermaid" onClick={() => copy('mermaid', code)}>
+                  {copyLabel('mermaid', 'Copy')}
+                </Button>
               </div>
               <CodePane value={code} onChange={setCode} label="Mermaid source" kind={status.kind} />
               {unreadable ? (
-                <p className={styles.problem}>
+                <p className={cn(styles.problem)}>
                   This link could not be read in this browser, so the default diagram is shown. The address bar still holds the shared link; editing
                   replaces it.
                 </p>
               ) : null}
-              {status.message === undefined ? null : <p className={styles.problem}>{status.message}</p>}
+              {status.message === undefined ? null : <p className={cn(styles.problem)}>{status.message}</p>}
             </section>
 
-            <section className={styles.card} aria-label="Sample diagrams">
-              <button type="button" className={cn(styles.cardHead, styles.cardToggle)} aria-expanded={samplesOpen} onClick={() => setSamplesOpen((open) => !open)} data-zui-tag="samples-toggle">
+            <section className={cn(styles.section)} aria-label="Sample diagrams">
+              <button type="button" className={cn(styles.sectionHead, styles.sectionToggle)} aria-expanded={samplesOpen} onClick={() => setSamplesOpen((open) => !open)} data-zui-tag="samples-toggle">
                 <SamplesIcon />
-                <span className={styles.cardTitle}>Sample diagrams</span>
+                <span className={cn(styles.sectionTitle)}>Samples</span>
                 <ChevronIcon className={cn(styles.chevron, samplesOpen && styles.chevronOpen)} />
               </button>
               {samplesOpen
                 ? SAMPLE_GROUPS.map((group) => (
-                    <div key={group.label} className={styles.chipGroup} role="group" aria-label={group.label}>
-                      <span className={styles.chipsHeading}>{group.label}</span>
-                      <div className={styles.chips}>
+                    <div key={group.label} className={cn(styles.chipGroup)} role="group" aria-label={group.label}>
+                      <span className={cn(styles.chipsHeading)}>{group.label}</span>
+                      <div className={cn(styles.chips)}>
                         {group.samples.map((sample) => (
                           <Button
                             key={sample.id}
@@ -406,17 +407,17 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                 : null}
             </section>
 
-            <section className={styles.card} aria-label="Actions">
-              <button type="button" className={cn(styles.cardHead, styles.cardToggle)} aria-expanded={actionsOpen} onClick={() => setActionsOpen((open) => !open)} data-zui-tag="actions-toggle">
+            <section className={cn(styles.section)} aria-label="Export">
+              <button type="button" className={cn(styles.sectionHead, styles.sectionToggle)} aria-expanded={actionsOpen} onClick={() => setActionsOpen((open) => !open)} data-zui-tag="actions-toggle">
                 <ActionsIcon />
-                <span className={styles.cardTitle}>Actions</span>
+                <span className={cn(styles.sectionTitle)}>Export</span>
                 <ChevronIcon className={cn(styles.chevron, actionsOpen && styles.chevronOpen)} />
               </button>
               {actionsOpen ? (
-                <div className={styles.actions}>
-                  <div className={styles.actionRow}>
-                    <span className={styles.actionLabel}>PNG scale</span>
-                    <span className={styles.segment} role="group" aria-label="PNG scale">
+                <div className={cn(styles.actions)}>
+                  <div className={cn(styles.actionRow)}>
+                    <span className={cn(styles.actionLabel)}>PNG scale</span>
+                    <span className={cn(styles.segment)} role="group" aria-label="PNG scale">
                       {[1, 2, 3].map((scale) => (
                         <Button key={scale} variant={pngScale === scale ? 'solid' : 'outline'} tone="primary" size="sm" className={cn(styles.chip)} track={`png-scale-${scale}`} aria-pressed={pngScale === scale} onClick={() => setPngScale(scale)}>
                           {scale}×
@@ -424,7 +425,7 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                       ))}
                     </span>
                   </div>
-                  <div className={styles.actionGrid}>
+                  <div className={cn(styles.actionGrid)}>
                     <Button variant="outline" tone="primary" size="sm" className={cn(styles.chip)} track="download-png" onClick={() => void downloadPng()}>
                       {copied === 'png' ? <CheckIcon /> : <DownloadIcon />}
                       PNG
@@ -435,21 +436,13 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                     </Button>
                     <Button variant="outline" tone="primary" size="sm" className={cn(styles.chip)} track="copy-image" onClick={() => void copyPng()}>
                       {copied === 'image' ? <CheckIcon /> : <ImageIcon />}
-                      {copied === 'image' ? 'Copied' : 'Copy image'}
+                      {copied === 'image' ? 'Copied' : 'Image'}
                     </Button>
                   </div>
-                  <div className={styles.actionGrid}>
-                    <Button variant="outline" tone="primary" size="sm" className={cn(styles.chip)} track="copy-mermaid" onClick={() => copy('mermaid', code)}>
-                      {copyLabel('mermaid', 'Copy Mermaid')}
-                    </Button>
+                  <div className={cn(styles.actionGrid)}>
                     <Button variant="outline" tone="primary" size="sm" className={cn(styles.chip)} track="copy-markdown" onClick={() => copy('markdown', markdown)}>
-                      {copyLabel('markdown', 'Copy Markdown')}
+                      {copyLabel('markdown', 'Markdown')}
                     </Button>
-                    <Button variant="outline" tone="primary" size="sm" className={cn(styles.chip)} track="copy-link-actions" disabled={link === undefined} onClick={() => link !== undefined && copy('link', link)}>
-                      {copyLabel('link', 'Copy link')}
-                    </Button>
-                  </div>
-                  <div className={styles.actionGrid}>
                     <Button as="a" href={liveUrl ?? '#'} target="_blank" rel="noopener" variant="outline" size="sm" className={cn(styles.chip)} track="open-mermaid-live" disabled={liveUrl === undefined}>
                       <ExternalIcon />
                       mermaid.live
@@ -459,80 +452,42 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                       Reset
                     </Button>
                   </div>
-                  {exportProblem === undefined ? null : <p className={styles.actionProblem}>{exportProblem}</p>}
+                  {exportProblem === undefined ? null : <p className={cn(styles.actionProblem)}>{exportProblem}</p>}
                 </div>
               ) : null}
             </section>
           </aside>
 
-          <MarkdownEditorProvider editor={instance}>
-            <section ref={column} className={cn(styles.view, fullscreen.active && styles.viewFull)} aria-label="Visual editor">
-              <div ref={scroller} className={styles.viewScroll}>
-                <div className={styles.zoomBox} style={{ width: paneWidth * zoom || undefined, height: paneHeight * zoom || undefined }}>
-                  <div className={styles.zoomInner} style={{ width: paneWidth || undefined, height: paneHeight || undefined, transform: `scale(${zoom})` }}>
-                    <div className="rmk-editor">
-                      <MarkdownEditorContent aria-label="Diagram block" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className={cn(styles.island, styles.bottomLeft)} role="group" aria-label="Zoom">
+            <Button variant="ghost" size="icon" track="zoom-out" aria-label="Zoom out" disabled={zoom <= ZOOM_MIN} onClick={() => zoomTo(zoom / ZOOM_STEP)}>
+              <ZoomOutIcon />
+            </Button>
+            <button type="button" className={cn(styles.zoomText)} aria-label="Reset zoom" title="Reset zoom" onClick={() => setZoom(1)} data-zui-tag="zoom-reset">
+              {Math.round(zoom * 100)}%
+            </button>
+            <Button variant="ghost" size="icon" track="zoom-in" aria-label="Zoom in" disabled={zoom >= ZOOM_MAX} onClick={() => zoomTo(zoom * ZOOM_STEP)}>
+              <ZoomInIcon />
+            </Button>
+            <span className={cn(styles.divider)} aria-hidden="true" />
+            <Button variant="ghost" size="icon" track="fullscreen" aria-pressed={fullscreen.active} aria-label={fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'} onClick={fullscreen.toggle}>
+              <FullscreenIcon />
+            </Button>
+          </div>
 
-              {/* The four corners of the pane, as mermaid.live lays them out: the
-                  canvas tools top left where its "Edit visually" pill sits, the
-                  view controls top right, version and theme bottom right. */}
-              <div className={cn(styles.corner, styles.cornerTopLeft)}>
-                <DiagramToolbar
-                  className={cn(styles.float, styles.toolbarHost)}
-                  placeholder={
-                    status.kind === 'flowchart' || status.kind === 'sequenceDiagram'
-                      ? 'Fix the Mermaid to get the canvas tools back'
-                      : 'Shown as source: flowcharts and sequence diagrams are edited on the canvas'
-                  }
-                />
-              </div>
+          {embed || fullscreen.active ? null : (
+            <a className={cn(styles.island, styles.bottomCenter)} href="#docs" data-zui-tag="scroll-to-docs">
+              <ArrowDownIcon />
+              Docs and FAQ below
+            </a>
+          )}
 
-              <div className={cn(styles.corner, styles.cornerTopRight)}>
-                <div className={styles.float} role="group" aria-label="View">
-                  <Button variant="ghost" size="icon" track="fullscreen" aria-pressed={fullscreen.active} aria-label={fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'} onClick={fullscreen.toggle}>
-                    <FullscreenIcon />
-                  </Button>
-                  <span className={styles.floatDivider} aria-hidden="true" />
-                  <Button variant="ghost" size="icon" track="zoom-out" aria-label="Zoom out" disabled={zoom <= ZOOM_MIN} onClick={() => zoomTo(zoom / ZOOM_STEP)}>
-                    <ZoomOutIcon />
-                  </Button>
-                  <span className={styles.floatText} aria-live="polite">
-                    {Math.round(zoom * 100)}%
-                  </span>
-                  <Button variant="ghost" size="icon" track="zoom-in" aria-label="Zoom in" disabled={zoom >= ZOOM_MAX} onClick={() => zoomTo(zoom * ZOOM_STEP)}>
-                    <ZoomInIcon />
-                  </Button>
-                  <span className={styles.floatDivider} aria-hidden="true" />
-                  <Button variant="ghost" size="icon" track="zoom-reset" aria-label="Reset zoom" disabled={zoom === 1} onClick={() => setZoom(1)}>
-                    <FitIcon />
-                  </Button>
-                </div>
-              </div>
-
-              <div className={cn(styles.corner, styles.cornerBottomRight)}>
-                <div className={styles.float}>
-                  {embed ? (
-                    <a className={styles.floatLink} href={fullEditor} target="_blank" rel="noopener" data-zui-tag="open-full-editor">
-                      <ExternalIcon />
-                      Open in the full editor
-                    </a>
-                  ) : (
-                    <a className={styles.floatLink} href={docsUrl('/docs/mermaid')} data-zui-tag="version">
-                      v{mermaidPackage.version}
-                    </a>
-                  )}
-                  <span className={styles.floatDivider} aria-hidden="true" />
-                  {themeButton}
-                </div>
-              </div>
-            </section>
-          </MarkdownEditorProvider>
-        </div>
-      </div>
+          <div className={cn(styles.island, styles.bottomRight)}>
+            <a className={cn(styles.version)} href={docsUrl('/docs/mermaid')} data-zui-tag="version">
+              v{mermaidPackage.version}
+            </a>
+          </div>
+        </MermaidCanvas>
+      </section>
 
       <ShareDialog open={shareOpen} onOpenChange={setShareOpen} link={link} liveUrl={liveUrl} copied={copied} copy={copy} />
     </ActivityScope>

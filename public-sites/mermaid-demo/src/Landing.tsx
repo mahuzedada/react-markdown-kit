@@ -38,6 +38,20 @@ const preset = defineMarkdownPreset({ extensions: [mermaid()] })
 
 <MarkdownEditor preset={preset} value={source} onChange={setSource} />`
 
+const STANDALONE = `import { MermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
+import '@react-markdown-kit/mermaid/styles.css'
+
+<div style={{ height: 600 }}>
+  <MermaidCanvas value={source} onChange={setSource} />
+</div>`
+
+const VANILLA = `import { createMermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
+
+const canvas = createMermaidCanvas(document.getElementById('diagram'), {
+  value: 'flowchart LR\n  a[Web] --> b[API]',
+  onChange: (source) => save(source),
+})`
+
 /** The badge snippet for the three-node example, with its diagram in the hash. */
 const BADGE = badgeMarkdown(shareUrl(EXAMPLE_HASH))
 
@@ -59,7 +73,7 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'How do I turn a flowchart into Mermaid syntax?',
     answer:
-      'Draw it here: add boxes and connectors on the canvas, then copy the Mermaid from the left pane. The editor converts a drawing into text. It does not read an image of a flowchart.',
+      'Draw it here: add boxes and connectors on the canvas, then copy the Mermaid from the code panel. The editor converts a drawing into text. It does not read an image of a flowchart.',
   },
   {
     question: 'Does the Mermaid it writes render on GitHub?',
@@ -85,7 +99,7 @@ const FAQ: readonly FaqItem[] = [
 
 export default function Landing(): ReactNode {
   return (
-    <article className="site-landing">
+    <article id="docs" className="site-landing">
       <header className="site-hero">
         <span className="site-eyebrow">Free, open source, no account</span>
         <h1>{TITLE}</h1>
@@ -105,8 +119,8 @@ export default function Landing(): ReactNode {
       <ul className="site-features">
         <li>
           <strong>Two-way sync</strong>
-          Type Mermaid on the left and the diagram re-parses. Drag a flowchart node or a sequence
-          message on the right and the code pane shows exactly what would be saved.
+          Type Mermaid in the code panel and the diagram re-parses. Drag a flowchart node or a
+          sequence message on the canvas and the code panel shows exactly what would be saved.
         </li>
         <li>
           <strong>Plain Mermaid out</strong>
@@ -135,6 +149,28 @@ export default function Landing(): ReactNode {
           canvas or a source editor with a preview. Nothing here loads the Mermaid library: the
           plugin parses the flowchart and sequence diagram subsets itself and draws static SVG,
           so it renders in a server component or a static build.
+        </p>
+
+        <span className="site-eyebrow">Standalone</span>
+        <h2>The canvas on its own, in any container</h2>
+        <p>
+          The editor on this page is the plugin's standalone canvas: no Markdown editor, just
+          Mermaid in and Mermaid out. It fills whatever element you give it and floats its tools
+          over the drawing, the same canvas the Markdown editor opens on a fence.
+        </p>
+        <pre className="site-code">
+          <code>{STANDALONE}</code>
+        </pre>
+        <pre className="site-code">
+          <code>{VANILLA}</code>
+        </pre>
+        <p>
+          Select several boxes and connectors with Shift+click or by dragging a box around them,
+          then drag any of them, or the empty space inside the selection frame, to move them
+          together. The handles on the frame resize the whole selection: a corner scales it
+          evenly from the opposite corner, a side stretches it along one axis, and Alt scales
+          from the centre. Arrow keys nudge the selection by one pixel, ten with Shift, and
+          Cmd+Z or Ctrl+Z undoes.
         </p>
 
         <span className="site-eyebrow">How to</span>

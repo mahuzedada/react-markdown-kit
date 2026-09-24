@@ -24,8 +24,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import { createPortal } from 'react-dom'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime'
-import { UNDO_COMMAND } from 'lexical'
-import { useLexicalEditor } from '@react-markdown-kit/editor/lexical'
 import { FONT_SIZE, LINE_HEIGHT, SMALL_FONT_SIZE, type Point } from '../../core/drawing-data.js'
 import { textBoxSize, type Rect } from '../../core/geometry.js'
 import type { DiagramKind } from '../../core/kind.js'
@@ -71,11 +69,10 @@ import {
   type RenameParticipantOptions,
 } from '../../core/sequence/operations.js'
 import { parseDiagramSource } from '../../extension.js'
-import { DIAGRAM_FOCUS_COMMAND } from '../../node/commands.js'
 import { isControlKey } from '../drawing-canvas.js'
 import { CLICK_TOLERANCE } from '../interaction.js'
-import { useDiagramLabels } from '../labels.js'
-import { useDiagramOptions, type DiagramKindEditorProps } from '../options.js'
+import { useCanvasHost, useDiagramLabels } from '../host.js'
+import type { DiagramKindEditorProps } from '../options.js'
 import { gapAt, hitAt, insertionPointY, insertionY, itemRect, rowAtY, sameInsertion } from './hit.js'
 import { LabelOverlay } from './label-overlay.js'
 import { selectionRange, type SequenceEditing, type SequenceSelection } from './selection.js'
@@ -138,8 +135,8 @@ function extendDelta(model: SequenceModel, layout: SequenceLayout, index: number
 }
 
 export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitSource }: DiagramKindEditorProps): ReactElement {
-  const { editor } = useLexicalEditor()
-  const options = useDiagramOptions(editor)
+  const host = useCanvasHost()
+  const options = host.options
   const labels = useDiagramLabels()
   const editable = !readOnly
   const incoming = parse.model as SequenceModel
@@ -163,7 +160,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
   const [scale, setScale] = useState(1)
   /** Focus is in the canvas or in its tool row, wherever that row renders. */
   const [active, setActive] = useState(false)
-  const slot = useToolbarHost(editor, nodeKey, editable, active)
+  const slot = useToolbarHost(host.scope, nodeKey, editable, active)
   const lastCommittedRef = useRef(serialize(incoming))
   const kindRef = useRef(kind as DiagramKind<SequenceModel>)
   kindRef.current = kind as DiagramKind<SequenceModel>
@@ -622,14 +619,7 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
     modelRef.current = burst.start
     lastCommittedRef.current = serialize(burst.start)
     setModel(burst.start)
-    for (let i = 0; i < burst.entries; i += 1) {
-      editor.update(
-        () => {
-          editor.dispatchCommand(UNDO_COMMAND, undefined)
-        },
-        { discrete: true },
-      )
-    }
+    for (let i = 0; i < burst.entries; i += 1) host.undo()
   }
 
   const onEditFinish = (cancelled: boolean): void => {
@@ -670,13 +660,13 @@ export function SequenceCanvas({ nodeKey, kind, parse, readOnly, commit: commitS
       tabIndex={editable ? 0 : undefined}
       onFocus={() => {
         setActive(true)
-        editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, nodeKey)
+        host.onFocusChange(nodeKey)
       }}
       onBlur={(e) => {
         const next = e.relatedTarget as Node | null
         if (rootRef.current?.contains(next) || slot.host?.contains(next)) return
         setActive(false)
-        editor.dispatchCommand(DIAGRAM_FOCUS_COMMAND, null)
+        host.onFocusChange(null)
       }}
     >
       {!slot.detached ? toolbar : slot.host !== null && toolbar !== false ? createPortal(toolbar, slot.host) : null}

@@ -149,6 +149,8 @@ understand.
 | `template` | The fence is literal. `{{placeholders}}` inside it are never resolved |
 | `editor` | On `@react-markdown-kit/mermaid/editor` only: a Lexical node, the flowchart canvas, the sequence canvas, the source editor, one insert button per kind |
 
+The same canvases also stand alone: `@react-markdown-kit/mermaid/canvas` (below) mounts them in any container with no Markdown editor.
+
 The root entry also exports the kind factories `flowchart()` and
 `sequenceDiagram()`, `MERMAID_KEYWORDS` and the `DiagramKind` types, so a
 kind of your own is typed. No parser, renderer or writer is exported on its
@@ -236,6 +238,48 @@ const editor = useMarkdownEditor({ value, onChange, extensions: [mermaid()] })
   </div>
 </MarkdownEditorProvider>
 ```
+
+## Standalone canvas
+
+`@react-markdown-kit/mermaid/canvas` is the same canvas without a Markdown
+editor: Mermaid in, Mermaid out. It fills whatever container you give it
+and floats its tools over the drawing, down the left edge or along the top,
+the way Excalidraw lays out its canvas.
+
+```tsx
+import { MermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
+import '@react-markdown-kit/mermaid/styles.css'
+
+<div style={{ height: 600 }}>
+  <MermaidCanvas value={source} onChange={setSource} />
+</div>
+```
+
+```ts
+import { createMermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
+
+const canvas = createMermaidCanvas(document.getElementById('diagram')!, {
+  value: 'flowchart LR\n  a[Web] --> b[API]',
+  onChange: (source) => save(source),
+})
+canvas.update({ zoom: 1.5 })
+canvas.destroy()
+```
+
+Props: `value` / `defaultValue` / `onChange` (the Mermaid source, a
+flowchart's with its layout line), `toolbar` (`left`, the default, `top` or
+`none`), `zoom`, `drawingStyle` (`clean` or `ink`), `align` (`center`, the
+default, or `start`), `readOnly`, `labels` (UI strings by key), `kinds`,
+`editors`, `fallbackTitle`, `onFocusChange`, `className`, `style`, and
+`children`, which render over the surface for chrome of your own. The
+component keeps its own undo history (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z,
+Ctrl+Y); a `value` changed from outside is one more entry in it. A kind
+without a canvas shows its static render or its source, and a flowchart
+with lossy features is locked behind the same notice the block shows.
+`createMermaidCanvas` returns `{ getValue, setValue, update, destroy }`.
+The entry loads React and ReactDOM, never Lexical or the editor package.
+`--rmk-mermaid-canvas-background` sets the page colour behind the grid and
+`--rmk-mermaid-tools-top` moves the tool island under chrome of your own.
 
 ## Styling and safety
 

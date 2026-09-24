@@ -453,6 +453,19 @@ the positions and every other renderer ignores the comment. A flowchart with
 `lossy` features mounts read-only behind a notice that names them, with
 "Edit on canvas" and "Edit as text" as the two ways on.
 
+Several shapes are selected with Shift+click, by dragging a box around them
+on the background, or with Cmd/Ctrl+A. The selection works the way it does
+in Excalidraw: every member gets a thin outline and the selection a dashed
+frame with handles. A corner handle scales the whole selection evenly from
+the opposite corner, a side handle stretches it along one axis, and Alt
+scales from the centre; positions, sizes and waypoints scale, text and
+stroke widths keep their size, and bound connectors follow their boxes.
+Dragging any member, or the empty space inside the frame, moves the
+selection; clicking one member without dragging narrows the selection to
+it; the arrow keys nudge it by 1px, 10px with Shift, as one undo step. The
+colour and connector settings apply to every selected shape, and a click
+that moves nothing writes nothing.
+
 ### The sequence canvas
 
 A sequence diagram is edited on its rendered picture. Every gesture is one
@@ -587,9 +600,51 @@ fallback), so nothing is uploaded. Its **Share** panel gives the link, an
 that hides the site chrome. The format is tested in
 [`tests/mermaid-share.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/mermaid-share.test.ts).
 
-Only the `/editor` and `/client` entries load React. A Node service that
+Only the `/editor`, `/canvas` and `/client` entries load React. A Node service that
 renders or templates diagrams imports the root entry and installs neither
 React nor Lexical.
+
+## Standalone canvas
+
+`@react-markdown-kit/mermaid/canvas` is the same canvas without a Markdown
+editor: Mermaid in, Mermaid out. It fills whatever container you give it
+and floats its tools over the drawing, down the left edge or along the top,
+the way Excalidraw lays out its canvas.
+
+```tsx
+import { MermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
+import '@react-markdown-kit/mermaid/styles.css'
+
+<div style={{ height: 600 }}>
+  <MermaidCanvas value={source} onChange={setSource} />
+</div>
+```
+
+```ts
+import { createMermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
+
+const canvas = createMermaidCanvas(document.getElementById('diagram')!, {
+  value: 'flowchart LR\n  a[Web] --> b[API]',
+  onChange: (source) => save(source),
+})
+canvas.update({ zoom: 1.5 })
+canvas.destroy()
+```
+
+Props: `value` / `defaultValue` / `onChange` (the Mermaid source, a
+flowchart's with its layout line), `toolbar` (`left`, the default, `top` or
+`none`), `zoom`, `drawingStyle` (`clean` or `ink`), `align` (`center`, the
+default, or `start`), `readOnly`, `labels` (UI strings by key), `kinds`,
+`editors`, `fallbackTitle`, `onFocusChange`, `className`, `style`, and
+`children`, which render over the surface for chrome of your own. The
+component keeps its own undo history (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z,
+Ctrl+Y); a `value` changed from outside is one more entry in it. A kind
+without a canvas shows its static render or its source, and a flowchart
+with lossy features is locked behind the same notice the block shows.
+`createMermaidCanvas` returns `{ getValue, setValue, update, destroy }`.
+The entry loads React and ReactDOM, never Lexical or the editor package.
+`--rmk-mermaid-canvas-background` sets the page colour behind the grid and
+`--rmk-mermaid-tools-top` moves the tool island under chrome of your own.
 
 ## Legacy JSON fences
 

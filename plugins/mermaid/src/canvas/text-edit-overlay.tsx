@@ -17,7 +17,7 @@ import {
   type DrawingShape,
   type Point,
 } from '../core/drawing-data.js'
-import { useDiagramLabels } from './labels.js'
+import { useDiagramLabels } from './host.js'
 import { CONNECTOR_FONT_SIZE, CONNECTOR_LABEL_MAX_WIDTH, slotLayout, textColorFor } from './shape-view.js'
 
 /**

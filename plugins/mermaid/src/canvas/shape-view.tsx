@@ -17,7 +17,7 @@ import {
 } from '../core/drawing-data.js'
 import { BoxGeometry } from './shapes/render.js'
 import { InkBoxGeometry, InkConnector } from './shapes/ink-render.js'
-import { useDiagramLabels } from './labels.js'
+import { useDiagramLabels } from './host.js'
 
 export const CONNECTOR_FONT_SIZE = 12
 export const CONNECTOR_LABEL_MAX_WIDTH = 160

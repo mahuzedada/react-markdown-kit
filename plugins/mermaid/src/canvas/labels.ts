@@ -2,10 +2,8 @@
  * Ported from @zuilib/text-editor (MIT). The diagram block's UI strings
  * (canvas, header row, source editor, notices), with defaults, overridable
  * through the editor's flat `labels` map under `diagram.<key>` (functions
- * keep their defaults).
+ * keep their defaults). A canvas reads them from its host (host.tsx).
  */
-import { useMemo } from 'react'
-import { useLexicalEditor } from '@react-markdown-kit/editor/lexical'
 
 export interface DiagramLabels {
   /** `aria-label` of a canvas without a title */
@@ -38,6 +36,8 @@ export interface DiagramLabels {
   readonly deleteShape: string
   readonly deleteShapes: (count: number) => string
   readonly resize: string
+  /** Title of a handle on the multi-selection frame */
+  readonly resizeSelection: string
   readonly waypoint: string
   readonly addWaypoint: string
   readonly elbowHandle: string
@@ -162,6 +162,7 @@ export const DIAGRAM_LABELS: DiagramLabels = {
   deleteShape: 'Delete shape',
   deleteShapes: (count) => `Delete ${count} shapes`,
   resize: 'Drag to resize the canvas',
+  resizeSelection: 'Drag to resize the selection (Alt: from the centre)',
   waypoint: 'Drag to move, double-click to remove',
   addWaypoint: 'Drag to add a bend',
   elbowHandle: 'Slide the middle segment',
@@ -252,7 +253,3 @@ export function resolveDiagramLabels(
   return out as unknown as DiagramLabels
 }
 
-export function useDiagramLabels(): DiagramLabels {
-  const { labels } = useLexicalEditor()
-  return useMemo(() => resolveDiagramLabels(labels), [labels])
-}

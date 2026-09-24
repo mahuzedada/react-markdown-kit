@@ -100,7 +100,7 @@ export { DIAGRAM_FOCUS_COMMAND, INSERT_DIAGRAM_COMMAND } from './node/commands.j
 export type { InsertDiagramPayload } from './node/commands.js'
 export type { DiagramAlign, DiagramKindEditor, DiagramKindEditorProps, DiagramKindEditors } from './canvas/options.js'
 /** The slot a host mounts to take the canvases' tool rows out of the blocks (spec 9.6). */
-export { DiagramToolbar } from './canvas/toolbar-slot.js'
-export type { DiagramToolbarProps } from './canvas/toolbar-slot.js'
+export { DiagramToolbar } from './node/diagram-toolbar.js'
+export type { DiagramToolbarProps } from './node/diagram-toolbar.js'
 export { DIAGRAM_LABELS, DIAGRAM_LABEL_PREFIX } from './canvas/labels.js'
 export type { DiagramLabels, DiagramLabelKey } from './canvas/labels.js'

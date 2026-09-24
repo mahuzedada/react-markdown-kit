@@ -4,12 +4,12 @@
  * multi-selection frame and the marquee.
  */
 import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
-import { bbox, unionRects, type Rect } from '../core/geometry.js'
+import { bbox, type Rect } from '../core/geometry.js'
 import { isConnectorType, type DrawingShape, type Point } from '../core/drawing-data.js'
-import type { Corner, DragState } from './interaction.js'
-import { useDiagramLabels } from './labels.js'
+import { selectionBounds, type Corner, type DragState, type GroupHandle } from './interaction.js'
+import { useDiagramLabels } from './host.js'
 
-const HANDLE = 7
+const HANDLE = 8
 
 function Handle({
   x,
@@ -195,41 +195,94 @@ export function SelectionFrame({ rect, pad }: { rect: Rect; pad: number }): Reac
   )
 }
 
-/** Bounds of a multi-selection: a frame around the union of the shapes */
+/** Group handles sit on the frame this far outside the shapes */
+const GROUP_PAD = 8
+/** A side handle shows only on a frame side at least this long */
+const SIDE_HANDLE_MIN = 64
+
+const HANDLE_CURSORS: Record<GroupHandle, string> = {
+  nw: 'nwse-resize',
+  se: 'nwse-resize',
+  ne: 'nesw-resize',
+  sw: 'nesw-resize',
+  n: 'ns-resize',
+  s: 'ns-resize',
+  e: 'ew-resize',
+  w: 'ew-resize',
+}
+
+/**
+ * A multi-selection, as Excalidraw draws one: a thin outline around every
+ * selected shape, a dashed frame around their union, and handles on that
+ * frame that scale the whole selection (corners uniformly, sides along
+ * one axis).
+ */
 export function GroupSelectionOverlay({
   shapes,
   paths,
+  onHandlePointerDown,
 }: {
   shapes: readonly DrawingShape[]
   paths: ReadonlyMap<string, readonly Point[]>
+  onHandlePointerDown?: ((e: ReactPointerEvent, handle: GroupHandle, bounds: Rect) => void) | undefined
 }): ReactElement | null {
+  const text = useDiagramLabels()
   if (!shapes.length) return null
-  const rects = shapes.map((s): { id: string; rect: Rect } => {
-    if (!isConnectorType(s.type)) return { id: s.id, rect: bbox(s) }
-    const pts = paths.get(s.id) ?? []
-    const xs = pts.map((p) => p.x)
-    const ys = pts.map((p) => p.y)
-    const x = Math.min(...xs)
-    const y = Math.min(...ys)
-    return { id: s.id, rect: { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y } }
-  })
+  const outlines = shapes.map((s) => ({ id: s.id, rect: selectionBounds([s], paths) }))
+  const bounds = selectionBounds(shapes, paths)
+  const x0 = bounds.x - GROUP_PAD
+  const y0 = bounds.y - GROUP_PAD
+  const x1 = bounds.x + bounds.w + GROUP_PAD
+  const y1 = bounds.y + bounds.h + GROUP_PAD
+  const xm = (x0 + x1) / 2
+  const ym = (y0 + y1) / 2
+  const handles: Array<{ handle: GroupHandle; x: number; y: number }> = [
+    { handle: 'nw', x: x0, y: y0 },
+    { handle: 'ne', x: x1, y: y0 },
+    { handle: 'sw', x: x0, y: y1 },
+    { handle: 'se', x: x1, y: y1 },
+    ...(x1 - x0 >= SIDE_HANDLE_MIN
+      ? [
+          { handle: 'n' as const, x: xm, y: y0 },
+          { handle: 's' as const, x: xm, y: y1 },
+        ]
+      : []),
+    ...(y1 - y0 >= SIDE_HANDLE_MIN
+      ? [
+          { handle: 'w' as const, x: x0, y: ym },
+          { handle: 'e' as const, x: x1, y: ym },
+        ]
+      : []),
+  ]
   return (
-    <g className="rmk-diagram-selection" pointerEvents="none">
-      {rects.map(({ id, rect: r }) => (
+    <g className="rmk-diagram-selection rmk-diagram-group-selection">
+      {outlines.map(({ id, rect: r }) => (
         <rect
           key={id}
           x={r.x - 3}
           y={r.y - 3}
           width={r.w + 6}
           height={r.h + 6}
-          rx={4}
+          rx={3}
           fill="none"
           stroke="currentColor"
           strokeWidth={1}
-          opacity={0.45}
+          pointerEvents="none"
         />
       ))}
-      <SelectionFrame rect={unionRects(rects.map((r) => r.rect))} pad={8} />
+      <SelectionFrame rect={bounds} pad={GROUP_PAD} />
+      {onHandlePointerDown &&
+        handles.map(({ handle, x, y }) => (
+          <Handle
+            key={handle}
+            x={x}
+            y={y}
+            square
+            cursor={HANDLE_CURSORS[handle]}
+            title={text.resizeSelection}
+            onPointerDown={(e) => onHandlePointerDown(e, handle, bounds)}
+          />
+        ))}
     </g>
   )
 }
