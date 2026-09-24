@@ -8,7 +8,7 @@
  * Each one stays inside the subset the plugin parses
  * (docs.reactmarkdownkit.com/docs/mermaid) and compiles with no
  * diagnostic, and none uses a feature the canvas flattens (subgraphs,
- * dotted or thick edges, the hexagon, circle and rounded brackets), so
+ * invisible or extra-long links, the hexagon and circle brackets), so
  * every sample opens editable at once. No
  * sample carries a raw `;` in text, since Mermaid ends a statement there,
  * and no flowchart has a cycle, whose back edge the auto layout would

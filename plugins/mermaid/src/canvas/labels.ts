@@ -35,6 +35,27 @@ export interface DiagramLabels {
   readonly twoWay: string
   readonly deleteShape: string
   readonly deleteShapes: (count: number) => string
+  /** `aria-label` of the custom colour pickers */
+  readonly customColors: string
+  readonly customFill: string
+  readonly customText: string
+  readonly strokeWidth: string
+  readonly strokeThin: string
+  readonly strokeMedium: string
+  readonly strokeBold: string
+  readonly strokeStyle: string
+  readonly strokeSolid: string
+  readonly strokeDashed: string
+  readonly strokeDotted: string
+  readonly corners: string
+  readonly cornersSharp: string
+  readonly cornersRound: string
+  readonly arrowheads: string
+  readonly arrowheadArrow: string
+  readonly arrowheadCircle: string
+  readonly arrowheadCross: string
+  readonly arrowheadNone: string
+  readonly duplicate: string
   readonly resize: string
   /** Title of a handle on the multi-selection frame */
   readonly resizeSelection: string
@@ -161,6 +182,26 @@ export const DIAGRAM_LABELS: DiagramLabels = {
   twoWay: 'Two-way arrow',
   deleteShape: 'Delete shape',
   deleteShapes: (count) => `Delete ${count} shapes`,
+  customColors: 'Custom colors',
+  customFill: 'Custom background color',
+  customText: 'Custom text color',
+  strokeWidth: 'Stroke width',
+  strokeThin: 'Thin',
+  strokeMedium: 'Medium',
+  strokeBold: 'Bold',
+  strokeStyle: 'Stroke style',
+  strokeSolid: 'Solid',
+  strokeDashed: 'Dashed',
+  strokeDotted: 'Dotted',
+  corners: 'Corners',
+  cornersSharp: 'Sharp corners',
+  cornersRound: 'Round corners',
+  arrowheads: 'Arrowheads',
+  arrowheadArrow: 'Arrow',
+  arrowheadCircle: 'Circle',
+  arrowheadCross: 'Cross',
+  arrowheadNone: 'None',
+  duplicate: 'Duplicate',
   resize: 'Drag to resize the canvas',
   resizeSelection: 'Drag to resize the selection (Alt: from the centre)',
   waypoint: 'Drag to move, double-click to remove',

@@ -1,6 +1,6 @@
 {
   "name": "@react-markdown-kit/mermaid",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Mermaid diagrams for React Markdown Kit: mermaid() turns ```mermaid fences into static SVG in the renderer and a drawing canvas in the editor, and the /canvas entry is the same canvas as a standalone component. Edits are written back as Mermaid syntax.",
   "homepage": "https://docs.reactmarkdownkit.com/docs/mermaid",
   "repository": {

@@ -7,7 +7,10 @@ import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
 import { bbox, type Rect } from '../core/geometry.js'
 import { isConnectorType, type DrawingShape, type Point } from '../core/drawing-data.js'
 import { selectionBounds, type Corner, type DragState, type GroupHandle } from './interaction.js'
+import { connectorMidpoint } from '../core/connectors.js'
 import { useDiagramLabels } from './host.js'
+import { CONNECTOR_FONT_SIZE, CONNECTOR_LABEL_MAX_WIDTH } from './shape-view.js'
+import { linesSize, useTextMeasure, wrapLines, type TextMeasure } from './text-measure.js'
 
 const HANDLE = 8
 
@@ -58,6 +61,7 @@ export function SelectionOverlay({
   onWaypointRemove: (shapeId: string, index: number) => void
 }): ReactElement {
   const text = useDiagramLabels()
+  const measure = useTextMeasure()
   if (isConnectorType(shape.type)) {
     const waypoints = shape.waypoints ?? []
     const [p0, p1, p2, p3] = points
@@ -71,10 +75,14 @@ export function SelectionOverlay({
     const elbowVertical = z !== null && Math.abs(z.b.x - z.c.x) < 0.01
     // Ghost "+" handles at each segment midpoint (skip tiny segments and the
     // elbow's middle segment where the slide handle already sits)
+    // and under the label, where a double-click edits the label instead
+    const label = labelBox(shape, points, measure)
     const ghosts = points.slice(0, -1).flatMap((p, i) => {
       const q = points[i + 1]
       if (q === undefined || Math.hypot(q.x - p.x, q.y - p.y) < 28) return []
       if (z && i === 1) return []
+      const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }
+      if (label && Math.abs(mid.x - label.x) <= label.w / 2 && Math.abs(mid.y - label.y) <= label.h / 2) return []
       return [{ index: i, x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }]
     })
     const start = points[0]
@@ -303,4 +311,18 @@ export function MarqueeOverlay({ rect }: { rect: Rect }): ReactElement {
       pointerEvents="none"
     />
   )
+}
+
+/** Centre and size of a connector's label plate, null without a label */
+function labelBox(
+  shape: DrawingShape,
+  points: readonly Point[],
+  measure: TextMeasure | null,
+): { x: number; y: number; w: number; h: number } | null {
+  if (!shape.text) return null
+  const lines = wrapLines(shape.text, CONNECTOR_LABEL_MAX_WIDTH, CONNECTOR_FONT_SIZE, measure)
+  const size = linesSize(lines, CONNECTOR_FONT_SIZE, measure)
+  const mid = connectorMidpoint(points)
+  // The plate's padding (ConnectorLabel) plus the handle's radius
+  return { x: mid.x, y: mid.y, w: size.w + 20, h: size.h + 16 }
 }

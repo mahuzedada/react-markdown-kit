@@ -222,8 +222,8 @@ textarea with `invalid` first.
 
 ## What the editor writes
 
-Mermaid has no syntax for where a box sits, how big it is, how thick its
-stroke is, how an edge bends, or free text on the canvas. So when a flowchart
+Mermaid has no syntax for where a box sits, how big it is, how an edge
+bends, or free text on the canvas. So when a flowchart
 is edited, the canvas writes the graph as ordinary Mermaid and the geometry
 as one layout annotation, a `%% rmk-layout v1 {…}` comment on the last
 line. Every other renderer ignores the comment; this plugin reads it back,
@@ -235,9 +235,14 @@ The writer emits, in order: one `---` block holding `title:` and the retained
 front-matter lines, the header, node lines, edge lines, `style` lines, the
 retained body lines in their original order, and the annotation last. Ids the
 parser accepted are written unchanged, `my-box` included; only an id that is
-not a valid Mermaid id is rewritten. A canvas edit can lose what the canvas
-cannot draw: `subgraph`, edge styles such as dotted or thick lines, some
-bracket shapes, `linkStyle` and `style` properties other than fill or stroke.
+not a valid Mermaid id is rewritten. What the property bar sets is written
+as Mermaid: a rounded rectangle as `(text)` and a square one as `[text]`,
+a node's stroke width, dashes and text colour as `stroke-width`,
+`stroke-dasharray` and `color` on its `style` line, and an edge's style in
+its link token (`-.->` dotted, `==>` thick, `--o` and `--x` heads, `o--o`
+both ways). A canvas edit can lose what the canvas cannot draw: `subgraph`,
+invisible (`~~~`) and extra-long links, a link whose two heads differ, some
+bracket shapes, `linkStyle` and `style` properties other than those.
 The parse names these under `lossy`, and the editor shows them before the
 first edit.
 
@@ -445,9 +450,14 @@ never rewrites the text. Undo goes through the editor's history.
 ### The flowchart canvas
 
 Boxes, connectors and text are drawn by picking a tool and
-dragging; connectors bind to the boxes they touch and follow them; a
-selected connector toggles elbow routing and arrow direction; colours are
-one setting per shape. **Copy as Mermaid** copies the same text the fence
+dragging; connectors bind to the boxes they touch and follow them. The
+property bar works like Excalidraw's: a colour swatch sets the fill, stroke
+and text colour in one click, and two custom pickers set any background or
+text colour; stroke width (thin, medium, bold) and style (solid, dashed,
+dotted) apply to boxes and connectors; a rectangle has sharp or round
+corners; a connector takes an arrow, circle or cross head or none, elbow
+routing and one or two directions. Cmd/Ctrl+D or **Duplicate** copies the
+selection. New rectangles are square, Mermaid's `[text]`. **Copy as Mermaid** copies the same text the fence
 saves, layout annotation included, so pasting it into another canvas keeps
 the positions and every other renderer ignores the comment. A flowchart with
 `lossy` features mounts read-only behind a notice that names them, with

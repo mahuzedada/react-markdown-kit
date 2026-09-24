@@ -2,7 +2,7 @@
  * Ported from @zuilib/text-editor (MIT). Connector path helpers: vertices, SVG path strings, arrowheads and label midpoint.
  */
 import { routeElbow } from './routing.js'
-import type { DrawingShape, Point } from './drawing-data.js'
+import type { ArrowHead, DrawingShape, Point } from './drawing-data.js'
 
 /** Vertices of a connector's path, start to end */
 export function connectorPoints(
@@ -84,18 +84,51 @@ export function pathLength(points: readonly Point[]): number {
   return total
 }
 
-/** Arrowhead paths for the end (and start when bidirectional) */
+/** Arrowhead paths for the end (and start when bidirectional), in the arrow's head shape */
 export function arrowHeads(shape: DrawingShape, points: readonly Point[]): string[] {
   if (shape.type !== 'arrow' || points.length < 2) return []
   const length = pathLength(points)
   if (length < 1) return []
   const headLength = Math.min(14, 4 + length / 4)
   const last = points.length - 1
-  const heads = [arrowHeadPath(points[last]!, segmentAngleAt(points, last, false), headLength)]
-  if (shape.bidirectional) {
-    heads.push(arrowHeadPath(points[0]!, segmentAngleAt(points, 0, true), headLength))
-  }
+  const head = (tip: Point, angle: number): string => headPath(shape.head, tip, angle, headLength)
+  const heads = [head(points[last]!, segmentAngleAt(points, last, false))]
+  if (shape.bidirectional) heads.push(head(points[0]!, segmentAngleAt(points, 0, true)))
   return heads
+}
+
+/** Radius of a circle head, and half the span of a cross, for a chevron of `length` */
+export function headRadius(length: number): number {
+  return Math.max(3, length * 0.36)
+}
+
+/**
+ * One head at `tip`, pointing along `angle`: a chevron, a circle that
+ * touches the tip (Mermaid `--o`), or a cross just short of it (`--x`)
+ */
+export function headPath(kind: ArrowHead | undefined, tip: Point, angle: number, length: number): string {
+  if (kind === undefined) return arrowHeadPath(tip, angle, length)
+  const r = headRadius(length)
+  const back = kind === 'circle' ? r : r * 1.2
+  const c = { x: tip.x - back * Math.cos(angle), y: tip.y - back * Math.sin(angle) }
+  if (kind === 'circle') {
+    return `M ${fmt(c.x - r)} ${fmt(c.y)} A ${fmt(r)} ${fmt(r)} 0 1 0 ${fmt(c.x + r)} ${fmt(c.y)} A ${fmt(r)} ${fmt(r)} 0 1 0 ${fmt(c.x - r)} ${fmt(c.y)} Z`
+  }
+  const [a, b] = crossArms(c, angle, r)
+  return `M ${fmt(a[0].x)} ${fmt(a[0].y)} L ${fmt(a[1].x)} ${fmt(a[1].y)} M ${fmt(b[0].x)} ${fmt(b[0].y)} L ${fmt(b[1].x)} ${fmt(b[1].y)}`
+}
+
+/** The two strokes of a cross centred on `c`, turned 45° off the path */
+export function crossArms(c: Point, angle: number, r: number): [readonly [Point, Point], readonly [Point, Point]] {
+  const arm = (turn: number): readonly [Point, Point] => {
+    const dx = r * Math.cos(angle + turn)
+    const dy = r * Math.sin(angle + turn)
+    return [
+      { x: c.x - dx, y: c.y - dy },
+      { x: c.x + dx, y: c.y + dy },
+    ]
+  }
+  return [arm(Math.PI / 4), arm(-Math.PI / 4)]
 }
 
 /** Anchor for the connector label: center of the middle (or only) segment */

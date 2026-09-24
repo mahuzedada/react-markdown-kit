@@ -86,7 +86,15 @@ All shapes share these required fields:
 | `width`, `height` | `number` | Boxes/text: size (non-negative). Connectors: delta to the end point (`end = (x+width, y+height)`; may be negative). |
 | `stroke`      | `string` | CSS color of the outline and of all text on the shape              |
 | `fill`        | `string` | CSS color of the interior; `"transparent"` for none                |
-| `strokeWidth` | `number` | Use `2`                                                            |
+| `strokeWidth` | `number` | `1` thin, `2` medium (use `2`), `4` bold                           |
+
+Optional on every shape but free text:
+
+| Field         | Type     | Meaning                                                            |
+|---------------|----------|--------------------------------------------------------------------|
+| `strokeStyle` | `"dashed"` \| `"dotted"` | Outline pattern; omit for solid                    |
+| `color`       | `string` | Boxes and text only: text colour; omit to derive it from `stroke`  |
+| `corners`     | `"sharp"` | `rect` only: square corners; omit for rounded                     |
 
 ### Shape types
 
@@ -138,6 +146,7 @@ Geometry: from `(x, y)` to `(x+width, y+height)`. `arrow` has a head at the end;
 |-----------------|------------|-------------------------------------------------------------------------|
 | `text`          | `string`   | Label rendered at the path midpoint on a small backing plate            |
 | `bidirectional` | `boolean`  | Arrows only: heads on both ends                                         |
+| `head`          | `"circle"` \| `"cross"` | Arrows only: head shape on every head; omit for a chevron   |
 | `startBinding`  | `Binding`  | Box the start attaches to (see below)                                   |
 | `endBinding`    | `Binding`  | Box the end attaches to                                                 |
 | `routing`       | `"elbow"`  | Right-angled auto-routed path                                           |
@@ -355,11 +364,13 @@ otherwise `TD`.
 The plugin reads the flowchart subset of Mermaid: a `flowchart` or `graph`
 header with an optional direction (`TB`, `TD`, `BT`, `LR`, `RL`), optional
 `---\ntitle: …\n---` front matter, node declarations with the bracket shapes
-`[ ]` rect, `( )` rect, `([ ])` ellipse, `(( ))` ellipse, `{ }` diamond,
+`[ ]` rect with square corners, `( )` rect with round corners, `([ ])` ellipse, `(( ))` ellipse, `{ }` diamond,
 `{{ }}` diamond, `[( )]` cylinder, `[[ ]]` queue and `> ]` note, edges
-`-->`, `---`, `-.->`, `==>` and `<-->` with labels as `-->|text|` or
-`-- text -->`, chains, `&` groups, `subgraph … end` (grouping ignored),
-`style id fill:…,stroke:…` and `%%` comments. `classDef`, `class`, `click`
+`-->`, `---`, `-.->` (dotted), `==>` (bold), `--o` and `--x` (circle and
+cross heads) and `<-->`, `o--o`, `x--x` (both ways) with labels as
+`-->|text|` or `-- text -->`, chains, `&` groups, `subgraph … end`
+(grouping ignored), `style id fill:…,stroke:…,stroke-width:…,stroke-dasharray:…,color:…`
+and `%%` comments. `classDef`, `class`, `click`
 and `linkStyle` are ignored. Quoted text may use `#quot;`, `#lt;`, `#gt;`,
 `#124;` and `<br/>`.
 

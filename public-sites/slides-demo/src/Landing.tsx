@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CopyCode } from '../../shared/CopyCode'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../shared/Seo'
 
@@ -47,13 +48,15 @@ So are costs.
 
 Pause before the second line.`
 
-const PRESENT = `import { slides } from '@react-markdown-kit/slides/present'
+const PRESENT = `import { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { slides } from '@react-markdown-kit/slides/present'
 
 const preset = defineMarkdownPreset({
   extensions: [slides({ hashRouting: true, sync: 'talk' })],
 })`
 
-const EDIT = `import { MarkdownEditor } from '@react-markdown-kit/editor'
+const EDIT = `import { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { MarkdownEditor } from '@react-markdown-kit/editor'
 import { slides } from '@react-markdown-kit/slides/editor'
 
 const preset = defineMarkdownPreset({ extensions: [slides()] })
@@ -148,12 +151,8 @@ export default function Landing(): ReactNode {
       <div className="site-prose">
         <span className="site-eyebrow">Install</span>
         <h2>The plugin, plus the editor for authoring</h2>
-        <pre className="site-code">
-          <code>npm install @react-markdown-kit/renderer @react-markdown-kit/slides</code>
-        </pre>
-        <pre className="site-code">
-          <code>npm install @react-markdown-kit/editor</code>
-        </pre>
+        <CopyCode code="npm install @react-markdown-kit/renderer @react-markdown-kit/slides" />
+        <CopyCode code="npm install @react-markdown-kit/editor" />
         <p>
           Rendering a deck needs only the first line, and the root entry loads no React: a server
           component or a static build gets the same <code>&lt;article&gt;</code> of{' '}
@@ -170,18 +169,14 @@ export default function Landing(): ReactNode {
             <code>&lt;!-- class | background | name: … --&gt;</code> comments set a slide&rsquo;s
             properties. The output is static: no script, no classes, no inline style, and the notes
             carry the HTML <code>hidden</code> attribute.
-            <pre className="site-code">
-              <code>{RENDER}</code>
-            </pre>
+            <CopyCode code={RENDER} />
           </li>
           <li>
             <strong>Write plain Markdown.</strong> The same file is a document with rules on GitHub,
             in a diff and in any editor. A <code>---</code> inside a fence, a quote or a list never
             splits, and front matter at the top sets the title, the aspect ratio, and defaults for
             every slide.
-            <pre className="site-code">
-              <code>{DECK}</code>
-            </pre>
+            <CopyCode code={DECK} />
           </li>
           <li>
             <strong>Present, then edit.</strong> The <code>/present</code> entry&rsquo;s{' '}
@@ -190,12 +185,8 @@ export default function Landing(): ReactNode {
             <code>BroadcastChannel</code> that keeps two windows on the same slide. The{' '}
             <code>/editor</code> entry adds the slide break, the markers and the directive chips to the
             editor, with four toolbar buttons.
-            <pre className="site-code">
-              <code>{PRESENT}</code>
-            </pre>
-            <pre className="site-code">
-              <code>{EDIT}</code>
-            </pre>
+            <CopyCode code={PRESENT} />
+            <CopyCode code={EDIT} />
           </li>
         </ol>
 
@@ -218,9 +209,7 @@ export default function Landing(): ReactNode {
           slides once the frame has the focus. A small <em>Open in React Markdown Kit</em> link sits
           in the corner and opens the full editor in a new tab with the same deck.
         </p>
-        <pre className="site-code">
-          <code>{EMBED}</code>
-        </pre>
+        <CopyCode code={EMBED} />
         <p>
           The <code>d</code> value is the whole deck, so the frame loads nothing from you. Press
           Share on this page to copy a link with your deck in it, then add <code>&amp;embed=1</code>.

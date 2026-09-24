@@ -149,7 +149,19 @@ export const DRAWING_DATA_JSON_SCHEMA = {
           description:
             'CSS color of the interior; "transparent" for none. Palette: #ffc9c9 red, #b2f2bb green, #a5d8ff blue, #ffec99 yellow, #d0bfff purple.',
         },
-        strokeWidth: { type: 'number', description: 'Outline width; use 2' },
+        strokeWidth: { type: 'number', description: 'Outline width: 1 thin, 2 medium (default), 4 bold' },
+        strokeStyle: {
+          enum: ['dashed', 'dotted'],
+          description: 'Boxes and connectors: dashed or dotted outline. Omit for solid.',
+        },
+        corners: {
+          const: 'sharp',
+          description: 'Rect only: square corners (Mermaid [text]). Omit for rounded corners (Mermaid (text)).',
+        },
+        color: {
+          type: 'string',
+          description: 'Boxes and text: text colour. Omit to derive it from the stroke (light text on dark fills).',
+        },
         text: {
           type: 'string',
           description:
@@ -175,6 +187,10 @@ export const DRAWING_DATA_JSON_SCHEMA = {
         bidirectional: {
           type: 'boolean',
           description: 'Arrows only: arrowheads on both ends',
+        },
+        head: {
+          enum: ['circle', 'cross'],
+          description: 'Arrows only: head shape, on both ends when bidirectional (Mermaid --o, --x). Omit for a chevron.',
         },
         routing: {
           const: 'elbow',

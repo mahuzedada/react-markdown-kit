@@ -15,7 +15,7 @@
  * not know are ignored, so a later minor revision can add fields without a
  * version bump.
  */
-import { isNodeShapeType, type Binding, type DrawingShape, type NodeShapeType, type Point } from './drawing-data.js'
+import { isNodeShapeType, isStrokeStyle, type Binding, type DrawingShape, type NodeShapeType, type Point, type StrokeStyle } from './drawing-data.js'
 import { isBlockWidth, type BlockWidth } from './block-width.js'
 
 /** The word after `%%` that identifies the annotation. */
@@ -55,6 +55,8 @@ export interface LayoutEdge {
   readonly stroke?: string
   readonly fill?: string
   readonly strokeWidth?: number
+  /** Which pattern a dotted link token (`-.->`) draws; a solid token ignores it */
+  readonly strokeStyle?: StrokeStyle
   readonly routing?: 'elbow'
   readonly elbow?: number
   readonly waypoints?: readonly Point[]
@@ -192,6 +194,7 @@ function validateEdge(value: unknown, path: string): Checked<LayoutEdge> {
     optionalString(value, 'stroke', path, (s) => (out.stroke = s)) ??
     optionalString(value, 'fill', path, (s) => (out.fill = s)) ??
     optionalNumber(value, 'strokeWidth', path, (n) => (out.strokeWidth = n)) ??
+    optionalEnum(value, 'strokeStyle', path, isStrokeStyle, 'one of "dashed", "dotted"', (st) => (out.strokeStyle = st)) ??
     optionalEnum(value, 'routing', path, (r): r is 'elbow' => r === 'elbow', '"elbow"', (r) => (out.routing = r)) ??
     optionalNumber(value, 'elbow', path, (n) => (out.elbow = n)) ??
     optionalPoints(value, path, (points) => (out.waypoints = points)) ??

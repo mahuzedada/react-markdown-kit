@@ -28,7 +28,9 @@ const DOCUMENT = `Before.
 After.
 `
 
-const LOSSY = 'Before.\n\n```mermaid\nflowchart LR\n    a --> b\n    a ==> c\n    subgraph one\n    d\n    end\n```\n'
+const STYLED = 'Before.\n\n```mermaid\nflowchart LR\n    a["A"] --> b["B"]\n```\n'
+
+const LOSSY = 'Before.\n\n```mermaid\nflowchart LR\n    a --> b\n    a ===> c\n    subgraph one\n    d\n    end\n```\n'
 
 function Capture({ onReady }: { onReady: (editor: MarkdownEditorInstance) => void }): null {
   onReady(useMarkdownEditorContext())
@@ -264,7 +266,7 @@ describe('the diagram canvas in <MarkdownEditor>', () => {
     expect(view.container.querySelector('.rmk-diagram-canvas')).toBeNull()
     expect(view.container.querySelector('.rmk-diagram-block')?.getAttribute('data-rmk-diagram-mode')).toBe('source')
     expect(view.container.querySelector<HTMLTextAreaElement>('.rmk-diagram-source-input')?.value).toBe(
-      'flowchart LR\n    a --> b\n    a ==> c\n    subgraph one\n    d\n    end',
+      'flowchart LR\n    a --> b\n    a ===> c\n    subgraph one\n    d\n    end',
     )
     // The toggle brings the canvas back, still behind its notice.
     const canvasButton = view.container.querySelector<HTMLButtonElement>('.rmk-diagram-mode-button[aria-label="Canvas"]')
@@ -295,6 +297,89 @@ describe('the diagram canvas in <MarkdownEditor>', () => {
     if (root === null) throw new Error('No canvas.')
     keyOn(root, 'Enter')
     expect(view.container.querySelector('.rmk-diagram-text-input')).not.toBeNull()
+    view.unmount()
+  })
+
+  it('the property bar writes stroke width, stroke style, corners and arrowheads as Mermaid', () => {
+    withPointerCapture()
+    let editor!: MarkdownEditorInstance
+    const view = mount(
+      <MarkdownEditor extensions={[mermaid()]} defaultValue={STYLED}>
+        <Capture onReady={(value) => (editor = value)} />
+      </MarkdownEditor>,
+    )
+    const option = (label: string): Element | null => view.container.querySelector(`.rmk-diagram-props [aria-label="${label}"]`)
+    selectShape(view.container, 'a')
+    click(option('Bold'))
+    click(option('Dashed'))
+    click(option('Round corners'))
+    expect(option('Bold')?.getAttribute('aria-pressed')).toBe('true')
+    const connector = view.container.querySelector('.rmk-diagram-surface [data-shape-id]:not([data-shape-id="a"]):not([data-shape-id="b"])')
+    selectShape(view.container, connector?.getAttribute('data-shape-id') ?? '')
+    click(option('Dotted'))
+    click(option('Circle'))
+    const fence = editor.getMarkdown()
+    expect(fence).toContain('    a("A")\n    b["B"]\n    a -.-o b\n')
+    expect(fence).toContain('    style a fill:transparent,stroke-width:4px,stroke-dasharray:8 6\n')
+    click(option('None'))
+    expect(editor.getMarkdown()).toContain('    a -.- b\n')
+    view.unmount()
+  })
+
+  it('a custom text color writes `color:`, and a preset swatch sets fill, stroke and text again in one click', () => {
+    withPointerCapture()
+    let editor!: MarkdownEditorInstance
+    const view = mount(
+      <MarkdownEditor extensions={[mermaid()]} defaultValue={STYLED}>
+        <Capture onReady={(value) => (editor = value)} />
+      </MarkdownEditor>,
+    )
+    selectShape(view.container, 'a')
+    const pick = (label: string, value: string): void => {
+      const input = view.container.querySelector<HTMLInputElement>(`input[type="color"][aria-label="${label}"]`)
+      if (input === null) throw new Error(`No ${label}.`)
+      run(() => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value)
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    }
+    // A drag through the picker is live, and one undo step
+    pick('Custom background color', '#ff0000')
+    pick('Custom background color', '#fff3bf')
+    expect(editor.getMarkdown()).toContain('    style a fill:#fff3bf\n')
+    run(() => editor.undo())
+    expect(editor.getMarkdown()).toBe(STYLED)
+    run(() => editor.redo())
+    // An undo or redo is an outside change: the canvas drops its selection
+    selectShape(view.container, 'a')
+    pick('Custom text color', '#c2255c')
+    expect(editor.getMarkdown()).toContain('    style a fill:#fff3bf,color:#c2255c\n')
+    click(view.container.querySelector('.rmk-diagram-props [aria-label="Color blue"]'))
+    expect(editor.getMarkdown()).toContain('    style a fill:#a5d8ff,stroke:#1971c2\n')
+    expect(editor.getMarkdown()).not.toContain('color:')
+    view.unmount()
+  })
+
+  it('Cmd+D and the Duplicate button copy the selection with a fresh id and select the copy', () => {
+    withPointerCapture()
+    let editor!: MarkdownEditorInstance
+    const view = mount(
+      <MarkdownEditor extensions={[mermaid()]} defaultValue={STYLED}>
+        <Capture onReady={(value) => (editor = value)} />
+      </MarkdownEditor>,
+    )
+    selectShape(view.container, 'b')
+    const root = view.container.querySelector('.rmk-diagram-canvas')
+    if (root === null) throw new Error('No canvas.')
+    run(() => {
+      root.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', metaKey: true, bubbles: true, cancelable: true }))
+    })
+    const nodes = (): string[] => [...editor.getMarkdown().matchAll(/^ {4}(\S+)\["B"\]$/gm)].map((m) => m[1] as string)
+    expect(nodes()).toHaveLength(2)
+    const copy = view.container.querySelector('.rmk-diagram-surface .is-selected')?.getAttribute('data-shape-id')
+    expect(copy).toBe(nodes()[1])
+    click(view.container.querySelector('.rmk-diagram-props [aria-label="Duplicate"]'))
+    expect(nodes()).toHaveLength(3)
     view.unmount()
   })
 

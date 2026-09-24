@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
+import { CopyCode } from '../../shared/CopyCode'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, softwareSourceCode, type FaqItem } from '../../shared/Seo'
 import size from '../../../docs/data/mermaid-size.json'
@@ -293,12 +294,8 @@ export default function Landing(): ReactNode {
 
       <section className="home-section" aria-labelledby="home-install">
         <h2 id="home-install">Install</h2>
-        <pre className="site-code">
-          <code>npm install @react-markdown-kit/renderer</code>
-        </pre>
-        <pre className="site-code">
-          <code>{USE}</code>
-        </pre>
+        <CopyCode code="npm install @react-markdown-kit/renderer" />
+        <CopyCode code={USE} />
         <p>
           Raw HTML is shown as text and unsafe URLs are dropped, with nothing to configure. Style
           it with your own CSS, the shipped typography, utility classes or your own components.

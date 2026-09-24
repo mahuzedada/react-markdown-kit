@@ -145,14 +145,14 @@ describe('parseMermaidFlowchart: every arrow spelling', () => {
     ['-->', 'arrow', false, false],
     ['---', 'line', false, false],
     ['<-->', 'arrow', true, false],
-    ['-.->', 'arrow', false, true],
-    ['-.-', 'line', false, true],
-    ['==>', 'arrow', false, true],
-    ['===', 'line', false, true],
-    ['--o', 'arrow', false, true],
-    ['--x', 'arrow', false, true],
-    ['<==>', 'arrow', true, true],
-    ['<-.->', 'arrow', true, true],
+    ['-.->', 'arrow', false, false],
+    ['-.-', 'line', false, false],
+    ['==>', 'arrow', false, false],
+    ['===', 'line', false, false],
+    ['--o', 'arrow', false, false],
+    ['--x', 'arrow', false, false],
+    ['<==>', 'arrow', true, false],
+    ['<-.->', 'arrow', true, false],
     ['--->', 'arrow', false, true],
     ['---->', 'arrow', false, true],
     ['----', 'line', false, true],
@@ -177,10 +177,10 @@ describe('parseMermaidFlowchart: every arrow spelling', () => {
     ['---|text|', 'line', false],
     ['-- text -->', 'arrow', false],
     ['-- text ---', 'line', false],
-    ['-. text .->', 'arrow', true],
-    ['== text ==>', 'arrow', true],
-    ['-.->|text|', 'arrow', true],
-    ['==>|text|', 'arrow', true],
+    ['-. text .->', 'arrow', false],
+    ['== text ==>', 'arrow', false],
+    ['-.->|text|', 'arrow', false],
+    ['==>|text|', 'arrow', false],
     ['-- text --->', 'arrow', true],
     ['-- text ----', 'line', true],
   ] as const)('%s carries its label with and without spaces', (token, type, lossy) => {
@@ -192,13 +192,14 @@ describe('parseMermaidFlowchart: every arrow spelling', () => {
   })
 
   it.each([
-    ['o--o', 'arrow', true],
-    ['x--x', 'arrow', true],
-    ['o--x', 'arrow', true],
-  ] as const)('%s needs the space Mermaid needs, so the start marker is not read as part of the id', (token, type, bidirectional) => {
+    ['o--o', 'arrow', true, false],
+    ['x--x', 'arrow', true, false],
+    // Mermaid has no link with different heads at its two ends
+    ['o--x', 'arrow', true, true],
+  ] as const)('%s needs the space Mermaid needs, so the start marker is not read as part of the id', (token, type, bidirectional, lossy) => {
     const spaced = parsed(`flowchart LR\n    A ${token} B`)
     expect(edgeSummary(spaced.data)).toEqual([['A', 'B', type, '', bidirectional]])
-    expect(spaced.lossy).toEqual(['edge-style'])
+    expect(spaced.lossy).toEqual(lossy ? ['edge-style'] : [])
     // `Ao--oB` is the node `Ao` with a circle-headed link to `B`, as in Mermaid.
     const tight = parsed(`flowchart LR\n    A${token}B`)
     expect(boxes(tight.data).map((b) => b.id)).toEqual([`A${token[0]}`, 'B'])
@@ -329,8 +330,8 @@ flowchart LR
       subgraph one
         a[/Lean/] --> b{{Hex}}
       end
-      b -.-> c(((Double)))
-      style a fill:#f9f,stroke-width:4px
+      b ---> c(((Double)))
+      style a fill:#f9f,font-size:20px
       linkStyle 0 stroke:#f00
       c --o d`)
     expect(result.lossy).toEqual(['subgraph', 'edge-style', 'shape', 'linkStyle', 'style-property'])
@@ -340,7 +341,7 @@ flowchart LR
 
   it('does not call a bracket lossy when the writer emits the same one', () => {
     expect(parsed('flowchart LR\n    a[R] --> b([S]) --> c[[Q]] --> d[(C)] --> e{D} --> f>N]').lossy).toEqual([])
-    expect(parsed('flowchart LR\n    a(Rounded)').lossy).toEqual(['shape'])
+    expect(parsed('flowchart LR\n    a(Rounded)').lossy).toEqual([])
     expect(parsed('flowchart LR\n    a((Circle))').lossy).toEqual(['shape'])
   })
 
@@ -721,5 +722,112 @@ describe('the flowchart corpus (Mermaid docs examples, verbatim)', () => {
     expect(second.problems.filter((p) => p.severity === 'invalid')).toEqual([])
     expect(drawingToMermaid(second.data, { retained: second.retained })).toBe(written)
     expect(written.split('\n').filter((line) => line.includes('%% rmk-layout'))).toHaveLength(1)
+  })
+})
+
+describe('parseMermaidFlowchart: stroke styles, heads, corners and text colour', () => {
+  const style = (s: DrawingShape) => ({
+    strokeWidth: s.strokeWidth,
+    strokeStyle: s.strokeStyle,
+    head: s.head,
+    bidirectional: s.bidirectional,
+  })
+
+  it.each([
+    ['-->', { strokeWidth: 2, strokeStyle: undefined, head: undefined, bidirectional: undefined }],
+    ['-.->', { strokeWidth: 2, strokeStyle: 'dotted', head: undefined, bidirectional: undefined }],
+    ['==>', { strokeWidth: 4, strokeStyle: undefined, head: undefined, bidirectional: undefined }],
+    ['--o', { strokeWidth: 2, strokeStyle: undefined, head: 'circle', bidirectional: undefined }],
+    ['--x', { strokeWidth: 2, strokeStyle: undefined, head: 'cross', bidirectional: undefined }],
+    ['o--o', { strokeWidth: 2, strokeStyle: undefined, head: 'circle', bidirectional: true }],
+    ['<-.->', { strokeWidth: 2, strokeStyle: 'dotted', head: undefined, bidirectional: true }],
+    ['-. text .->', { strokeWidth: 2, strokeStyle: 'dotted', head: undefined, bidirectional: undefined }],
+    ['== text ==>', { strokeWidth: 4, strokeStyle: undefined, head: undefined, bidirectional: undefined }],
+  ] as const)('reads %s as its stroke and head', (token, expected) => {
+    const [edge] = edges(data(`flowchart LR\n    A ${token} B`))
+    expect(style(edge as DrawingShape)).toEqual(expected)
+  })
+
+  it('reads a line link token as a styled line without a head', () => {
+    expect(edges(data('flowchart LR\n    A -.- B')).map(style)).toEqual([{ strokeWidth: 2, strokeStyle: 'dotted', head: undefined, bidirectional: undefined }])
+    expect(edges(data('flowchart LR\n    A === B')).map(style)).toEqual([{ strokeWidth: 4, strokeStyle: undefined, head: undefined, bidirectional: undefined }])
+  })
+
+  it('reads stroke-width, stroke-dasharray and color from a style line', () => {
+    const d = data(`flowchart LR
+      a[A] --> b[B] --> c[C] --> e[E]
+      style a stroke-width:4px,stroke-dasharray: 5 5,color:#ff0000
+      style b stroke-width:1,stroke-dasharray:2 4
+      style c stroke-dasharray:none`)
+    expect(boxes(d).map((b) => [b.id, b.strokeWidth, b.strokeStyle, b.color])).toEqual([
+      ['a', 4, 'dashed', '#ff0000'],
+      ['b', 1, 'dotted', undefined],
+      ['c', 2, undefined, undefined],
+      ['e', 2, undefined, undefined],
+    ])
+    expect(parsed('flowchart LR\n    a --> b\n    style a stroke-width:4px,stroke-dasharray:5 5,color:#fff').lossy).toEqual([])
+  })
+
+  it('reads [text] as a square rectangle and (text) as a rounded one', () => {
+    const d = data('flowchart LR\n    a[Square] --> b(Round) --> c')
+    expect(boxes(d).map((b) => [b.id, b.type, b.corners])).toEqual([
+      ['a', 'rect', 'sharp'],
+      ['b', 'rect', undefined],
+      ['c', 'rect', 'sharp'],
+    ])
+  })
+
+  it('writes every option back as Mermaid and reads the same drawing', () => {
+    const shape = (id: string, extra: Partial<DrawingShape>): DrawingShape => ({
+      id, type: 'rect', x: 0, y: 0, width: 160, height: 90, stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2, ...extra,
+    })
+    const link = (id: string, from: string, to: string, extra: Partial<DrawingShape>): DrawingShape => ({
+      id, type: 'arrow', x: 0, y: 0, width: 100, height: 0, stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2,
+      startBinding: { id: from }, endBinding: { id: to }, ...extra,
+    })
+    const original: DrawingData = {
+      version: 3,
+      canvasHeight: 400,
+      shapes: [
+        shape('a', { corners: 'sharp', strokeWidth: 4, strokeStyle: 'dashed', color: '#c2255c', fill: '#fff0f6' }),
+        shape('b', { strokeWidth: 1, strokeStyle: 'dotted' }),
+        shape('c', { type: 'ellipse', color: '#0b7285' }),
+        link('e1', 'a', 'b', { strokeStyle: 'dashed' }),
+        link('e2', 'b', 'c', { strokeWidth: 4, head: 'circle', bidirectional: true }),
+        link('e3', 'a', 'c', { strokeWidth: 1, head: 'cross' }),
+        link('e4', 'c', 'a', { type: 'line', strokeWidth: 4, strokeStyle: 'dotted' }),
+      ],
+    }
+    const source = drawingToMermaid(original)
+    expect(source.split('\n').slice(1, 12)).toEqual([
+      '    a["a"]',
+      '    b("b")',
+      '    c(["c"])',
+      '    a -.-> b',
+      '    b o==o c',
+      '    a --x c',
+      '    c -.- a',
+      '    style a fill:#fff0f6,stroke-width:4px,stroke-dasharray:8 6,color:#c2255c',
+      '    style b fill:transparent,stroke-width:1px,stroke-dasharray:2 4',
+      '    style c fill:transparent,color:#0b7285',
+      expect.stringMatching(/^ {4}%% rmk-layout v1 /),
+    ])
+    const read = data(source)
+    const pick = (s: DrawingShape) => [s.id, s.corners, s.strokeWidth, s.strokeStyle, s.color, s.head, s.bidirectional, s.type]
+    expect(read.shapes.map(pick)).toEqual(original.shapes.map(pick))
+  })
+
+  it('lets an edited link token win the class and keeps the annotation refinement within it', () => {
+    const annotated = (token: string, edge: object) =>
+      edges(data(`flowchart LR\n    a --> b\n    a ${token} b\n    %% rmk-layout v1 {"edges":{"a->b#2":${JSON.stringify(edge)}}}`))[1] as DrawingShape
+    // A dashed pattern survives only while the token is still dotted
+    expect(annotated('-.->', { strokeStyle: 'dashed' }).strokeStyle).toBe('dashed')
+    expect(annotated('-->', { strokeStyle: 'dashed' }).strokeStyle).toBeUndefined()
+    // Thin stays thin on a normal token; a thick token makes it bold
+    expect(annotated('-->', { strokeWidth: 1 }).strokeWidth).toBe(1)
+    expect(annotated('==>', { strokeWidth: 1 }).strokeWidth).toBe(4)
+    expect(annotated('-->', { strokeWidth: 4 }).strokeWidth).toBe(2)
+    // A dotted token has no thick form: the annotated width stands
+    expect(annotated('-.->', { strokeWidth: 4 }).strokeWidth).toBe(4)
   })
 })

@@ -47,6 +47,20 @@ export function isConnectorType(type: string): type is ConnectorType {
 
 export type Point = Readonly<{ x: number; y: number }>
 
+/** Outline pattern; omitted = solid */
+export type StrokeStyle = 'dashed' | 'dotted'
+export const STROKE_STYLES: readonly StrokeStyle[] = ['dashed', 'dotted']
+
+/** Arrowhead on an arrow's end (both ends when bidirectional); omitted = a chevron */
+export type ArrowHead = 'circle' | 'cross'
+export const ARROW_HEADS: readonly ArrowHead[] = ['circle', 'cross']
+
+/** The stroke widths the canvas offers (Excalidraw's thin, medium, bold) */
+export const STROKE_WIDTHS = { thin: 1, medium: 2, bold: 4 } as const
+export type StrokeWidthName = keyof typeof STROKE_WIDTHS
+/** Widths from here up are bold: Mermaid's thick link (`==>`) */
+export const THICK_WIDTH = 3
+
 export type BindingSide = 'top' | 'right' | 'bottom' | 'left'
 
 /**
@@ -76,6 +90,12 @@ export type DrawingShape = Readonly<{
   stroke: string
   fill: string
   strokeWidth: number
+  /** Boxes and connectors: dashed or dotted outline; omitted = solid */
+  strokeStyle?: StrokeStyle
+  /** Rect: square corners (Mermaid `[text]`); omitted = rounded (`(text)`) */
+  corners?: 'sharp'
+  /** Boxes and free text: text colour; omitted = derived from the stroke */
+  color?: string
   /** Standalone text, main (center) content of a box, or connector label */
   text?: string
   /** Small heading rendered at the top of a box */
@@ -88,6 +108,8 @@ export type DrawingShape = Readonly<{
   endBinding?: Binding
   /** Arrow: arrowheads on both ends */
   bidirectional?: boolean
+  /** Arrow: head shape (Mermaid `--o`, `--x`); omitted = a chevron (`-->`) */
+  head?: ArrowHead
   /** Connector routing: right-angled auto-routed path instead of a straight line */
   routing?: 'elbow'
   /**
@@ -310,6 +332,24 @@ function validBinding(
   return target && isNodeShapeType(target.type) ? binding : undefined
 }
 
+export function isStrokeStyle(value: unknown): value is StrokeStyle {
+  return typeof value === 'string' && (STROKE_STYLES as readonly string[]).includes(value)
+}
+
+export function isArrowHead(value: unknown): value is ArrowHead {
+  return typeof value === 'string' && (ARROW_HEADS as readonly string[]).includes(value)
+}
+
+/**
+ * SVG `stroke-dasharray` for a shape's stroke style, scaled by its width
+ * the way Excalidraw's are (round caps turn the short dashes into dots)
+ */
+export function strokeDashArray(shape: Pick<DrawingShape, 'strokeStyle' | 'strokeWidth'>): string | undefined {
+  if (shape.strokeStyle === 'dashed') return `8 ${8 + shape.strokeWidth}`
+  if (shape.strokeStyle === 'dotted') return `1.5 ${6 + shape.strokeWidth}`
+  return undefined
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -386,6 +426,9 @@ function normalizeShape(value: unknown): DrawingShape | null {
   }
   const text = optionalString(value.text)
   if (text !== undefined) shape.text = text
+  if (shape.type !== 'text' && isStrokeStyle(value.strokeStyle)) shape.strokeStyle = value.strokeStyle
+  if (!isConnectorType(shape.type) && isSafeColor(value.color)) shape.color = value.color
+  if (shape.type === 'rect' && value.corners === 'sharp') shape.corners = 'sharp'
   if (isNodeShapeType(shape.type)) {
     const label = optionalString(value.label)
     const footer = optionalString(value.footer)
@@ -409,6 +452,7 @@ function normalizeShape(value: unknown): DrawingShape | null {
     if (shape.type === 'arrow' && value.bidirectional === true) {
       shape.bidirectional = true
     }
+    if (shape.type === 'arrow' && isArrowHead(value.head)) shape.head = value.head
     if (value.routing === 'elbow') shape.routing = 'elbow'
     if (typeof value.elbow === 'number' && Number.isFinite(value.elbow)) {
       shape.elbow = clamp01(value.elbow)

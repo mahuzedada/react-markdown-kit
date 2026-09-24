@@ -14,6 +14,7 @@ import {
   LINE_HEIGHT,
   SMALL_FONT_SIZE,
   isConnectorType,
+  strokeDashArray,
   isNodeShapeType,
   type DrawingData,
   type DrawingShape,
@@ -71,12 +72,14 @@ function fluidWidth(data: DrawingData): number {
 
 /* ----------------------------------------------------------------- shapes */
 
-function strokeProps(shape: DrawingShape): Record<string, string> {
+function strokeProps(shape: DrawingShape, dashed = true): Record<string, string> {
+  const dashes = dashed ? strokeDashArray(shape) : undefined
   return {
     stroke: shape.stroke,
     strokeWidth: n(shape.strokeWidth),
     strokeLinecap: 'round',
     strokeLinejoin: 'round',
+    ...(dashes === undefined ? {} : { strokeDasharray: dashes }),
   }
 }
 
@@ -88,7 +91,8 @@ function shapeElement(shape: DrawingShape, shapes: readonly DrawingShape[]): Ele
     const points = connectorPoints(shape, shapes)
     const stroke = strokeProps(shape)
     const parts: ElementContent[] = [h('path', { ...stroke, d: polylinePath(points), fill: 'none' })]
-    for (const d of arrowHeads(shape, points)) parts.push(h('path', { ...stroke, d, fill: 'none' }))
+    // Heads stay solid on a dashed line
+    for (const d of arrowHeads(shape, points)) parts.push(h('path', { ...strokeProps(shape, false), d, fill: 'none' }))
     if (shape.text) parts.push(connectorLabel(shape, points))
     return h('g', { dataShape: shape.type }, parts)
   }
@@ -103,7 +107,7 @@ function boxGeometry(shape: DrawingShape): Element[] {
   switch (shape.type) {
     case 'rect':
       return [
-        h('rect', { ...stroke, x: n(b.x), y: n(b.y), width: n(b.w), height: n(b.h), rx: n(Math.min(8, b.w / 4, b.h / 4)), fill }),
+        h('rect', { ...stroke, x: n(b.x), y: n(b.y), width: n(b.w), height: n(b.h), rx: n(shape.corners === 'sharp' ? 0 : Math.min(8, b.w / 4, b.h / 4)), fill }),
       ]
     case 'ellipse':
       return [h('ellipse', { ...stroke, cx: n(b.x + b.w / 2), cy: n(b.y + b.h / 2), rx: n(b.w / 2), ry: n(b.h / 2), fill })]
@@ -198,8 +202,9 @@ function luminance(color: string): number {
   return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0)
 }
 
-/** Text colour: the stroke, except on borderless (dark text) and dark-filled (light text) shapes. */
+/** Text colour: its own when set, else the stroke, except on borderless (dark text) and dark-filled (light text) shapes. */
 function textColorFor(shape: DrawingShape): string {
+  if (shape.color !== undefined) return shape.color
   if (shape.stroke === 'transparent' || shape.stroke === 'none') return '#1e1e1e'
   if (luminance(shape.fill) < 0.35) return '#ffffff'
   return shape.stroke
@@ -274,7 +279,7 @@ function freeText(shape: DrawingShape): Element {
   const lines = (shape.text ?? '').split('\n')
   return h(
     'text',
-    { x: n(shape.x), y: n(shape.y + FONT_SIZE), fill: shape.stroke, fontSize: n(FONT_SIZE), style: 'white-space: pre' },
+    { x: n(shape.x), y: n(shape.y + FONT_SIZE), fill: shape.color ?? shape.stroke, fontSize: n(FONT_SIZE), style: 'white-space: pre' },
     lines.map((value, i) => h('tspan', { x: n(shape.x), dy: i === 0 ? '0' : n(FONT_SIZE * LINE_HEIGHT) }, [text(value)])),
   )
 }

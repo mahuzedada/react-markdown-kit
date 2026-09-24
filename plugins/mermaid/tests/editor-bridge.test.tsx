@@ -107,7 +107,7 @@ describe('mermaid() on the editor bridge', () => {
     const [drawing, skeleton] = diagramNodes(editor)
     if (drawing === undefined || skeleton === undefined) throw new Error('expected diagram nodes')
     expect(read(editor, () => drawing.getSource())).toBe(
-      'flowchart LR\n    a["A"]\n    style a fill:#a5d8ff,stroke:#1971c2\n    %% rmk-layout v1 {"canvasHeight":200,"nodes":{"a":{"x":20,"y":40,"width":150,"height":80,"strokeWidth":2}},"edges":{}}',
+      'flowchart LR\n    a("A")\n    style a fill:#a5d8ff,stroke:#1971c2\n    %% rmk-layout v1 {"canvasHeight":200,"nodes":{"a":{"x":20,"y":40,"width":150,"height":80,"strokeWidth":2}},"edges":{}}',
     )
     expect(read(editor, () => drawing.getRaw())).toBe('```drawing\n' + DRAWING_PAYLOAD + '\n```')
     // The skeleton is expanded on import: two boxes and one bound arrow.
@@ -122,7 +122,7 @@ describe('mermaid() on the editor bridge', () => {
     const source = read(editor, () => first.getSource())
     edit(editor, first, source.replace('"canvasHeight":200', '"canvasHeight":260'))
     const out = bridge.getMarkdown()
-    expect(out).toContain('```mermaid\nflowchart LR\n    a["A"]\n')
+    expect(out).toContain('```mermaid\nflowchart LR\n    a("A")\n')
     expect(out).toContain('%% rmk-layout v1 {"canvasHeight":260,')
     expect(out).not.toContain(DRAWING_PAYLOAD)
     expect(out).toContain('# Title\n\nBefore the drawing.\n\n')
@@ -221,7 +221,7 @@ describe('mermaid() on the editor bridge', () => {
       () => {
         const v1 = DiagramNode.importJSON({ type: 'rmk-diagram', version: 1, data: DRAWING_PAYLOAD, format: 'drawing' })
         expect(v1.getKind()).toBe('flowchart')
-        expect(v1.getSource()).toContain('flowchart LR\n    a["A"]\n')
+        expect(v1.getSource()).toContain('flowchart LR\n    a("A")\n')
         expect(v1.getSource()).toContain('%% rmk-layout v1 {"canvasHeight":200,')
         expect([v1.getRaw(), v1.getOrigin(), v1.getFormat()]).toEqual([null, null, 'mermaid'])
         const v2 = DiagramNode.importJSON({ type: 'rmk-diagram', version: 2, source: SEQUENCE, kind: 'sequenceDiagram', format: 'mermaid' })

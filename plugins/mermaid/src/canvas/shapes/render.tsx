@@ -10,7 +10,7 @@ import { ACTOR_FIGURE_RATIO, CYLINDER_RY, NOTE_FOLD, QUEUE_RX } from '../../core
 
 export type StrokeProps = Pick<
   SVGProps<SVGElement>,
-  'stroke' | 'strokeWidth' | 'strokeLinecap' | 'strokeLinejoin'
+  'stroke' | 'strokeWidth' | 'strokeLinecap' | 'strokeLinejoin' | 'strokeDasharray'
 >
 
 const n = (v: number): string => (Number.isInteger(v) ? String(v) : v.toFixed(2))
@@ -34,7 +34,7 @@ export function BoxGeometry({
           y={b.y}
           width={b.w}
           height={b.h}
-          rx={Math.min(8, b.w / 4, b.h / 4)}
+          rx={shape.corners === 'sharp' ? 0 : Math.min(8, b.w / 4, b.h / 4)}
           fill={fill}
         />
       )

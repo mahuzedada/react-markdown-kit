@@ -4,7 +4,7 @@
  */
 import type { ReactElement } from 'react'
 import { arrowHeads, connectorMidpoint, polylinePath } from '../core/connectors.js'
-import { bbox, textBoxSize, wrapText, type Rect } from '../core/geometry.js'
+import { bbox, type Rect } from '../core/geometry.js'
 import { nodeShapeDefinition, type TextField } from '../core/shapes/definitions.js'
 import {
   FONT_SIZE,
@@ -12,12 +12,14 @@ import {
   isConnectorType,
   LINE_HEIGHT,
   SMALL_FONT_SIZE,
+  strokeDashArray,
   type DrawingShape,
   type Point,
 } from '../core/drawing-data.js'
 import { BoxGeometry } from './shapes/render.js'
 import { InkBoxGeometry, InkConnector } from './shapes/ink-render.js'
 import { useDiagramLabels } from './host.js'
+import { linesSize, useTextMeasure, wrapLines } from './text-measure.js'
 
 export const CONNECTOR_FONT_SIZE = 12
 export const CONNECTOR_LABEL_MAX_WIDTH = 160
@@ -53,10 +55,11 @@ function luminance(color: string): number {
 }
 
 /**
- * Color of a shape's text: its stroke, except on borderless shapes (dark
- * text) and dark-filled ones (light text).
+ * Color of a shape's text: its own colour when set, else its stroke,
+ * except on borderless shapes (dark text) and dark-filled ones (light text).
  */
 export function textColorFor(shape: DrawingShape): string {
+  if (shape.color !== undefined) return shape.color
   if (shape.stroke === 'transparent' || shape.stroke === 'none') return '#1e1e1e'
   if (luminance(shape.fill) < 0.35) return '#ffffff'
   return shape.stroke
@@ -83,9 +86,10 @@ export function BoxTexts({
   const wrapW = Math.max(area.w, 20)
   // Placeholder hints need room, otherwise they pile up on small shapes
   const hints = showHints === true && area.h >= 56 && area.w >= 44
-  const mainLines = wrapText(shape.text ?? '', wrapW, FONT_SIZE)
-  const labelLines = wrapText(shape.label ?? '', wrapW, SMALL_FONT_SIZE)
-  const footerLines = wrapText(shape.footer ?? '', wrapW, SMALL_FONT_SIZE)
+  const measure = useTextMeasure()
+  const mainLines = wrapLines(shape.text ?? '', wrapW, FONT_SIZE, measure)
+  const labelLines = wrapLines(shape.label ?? '', wrapW, SMALL_FONT_SIZE, measure, 600)
+  const footerLines = wrapLines(shape.footer ?? '', wrapW, SMALL_FONT_SIZE, measure)
   const mainLineH = FONT_SIZE * LINE_HEIGHT
   const smallLineH = SMALL_FONT_SIZE * LINE_HEIGHT
   const mainStart = area.y + area.h / 2 - ((mainLines.length - 1) * mainLineH) / 2 + FONT_SIZE * 0.35
@@ -186,8 +190,9 @@ export function ConnectorLabel({
   points: readonly Point[]
 }): ReactElement {
   const text = shape.text ?? ''
-  const lines = wrapText(text, CONNECTOR_LABEL_MAX_WIDTH, CONNECTOR_FONT_SIZE)
-  const size = textBoxSize(lines.join('\n'), CONNECTOR_FONT_SIZE)
+  const measure = useTextMeasure()
+  const lines = wrapLines(text, CONNECTOR_LABEL_MAX_WIDTH, CONNECTOR_FONT_SIZE, measure)
+  const size = linesSize(lines, CONNECTOR_FONT_SIZE, measure)
   const { x: midX, y: midY } = connectorMidpoint(points)
   const lineH = CONNECTOR_FONT_SIZE * LINE_HEIGHT
   const startY = midY - ((lines.length - 1) * lineH) / 2 + CONNECTOR_FONT_SIZE * 0.35
@@ -234,12 +239,16 @@ export function ShapeView({
   /** Render with the ink style (see core/ink.ts) */
   ink?: boolean
 }): ReactElement | null {
+  const dashes = strokeDashArray(shape)
   const stroke = {
     stroke: shape.stroke,
     strokeWidth: shape.strokeWidth,
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
+    ...(dashes === undefined ? {} : { strokeDasharray: dashes }),
   }
+  // Heads stay solid on a dashed line
+  const { strokeDasharray: _dashes, ...headStroke } = stroke
   if (isNodeShapeType(shape.type)) {
     return (
       <g>
@@ -261,7 +270,7 @@ export function ShapeView({
           <>
             <path {...stroke} d={polylinePath(pts)} fill="none" />
             {arrowHeads(shape, pts).map((d, i) => (
-              <path key={i} {...stroke} d={d} fill="none" />
+              <path key={i} {...headStroke} d={d} fill="none" />
             ))}
           </>
         )}
@@ -273,7 +282,7 @@ export function ShapeView({
     <text
       x={shape.x}
       y={shape.y + FONT_SIZE}
-      fill={shape.stroke}
+      fill={shape.color ?? shape.stroke}
       fontSize={FONT_SIZE}
       style={{ userSelect: 'none', whiteSpace: 'pre' }}
     >

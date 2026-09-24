@@ -38,10 +38,14 @@ import {
   isConnectorType,
   isNodeShapeType,
   normalizeDrawingData,
+  STROKE_WIDTHS,
+  THICK_WIDTH,
+  type ArrowHead,
   type ConnectorType,
   type DrawingData,
   type DrawingShape,
   type NodeShapeType,
+  type StrokeStyle,
 } from './drawing-data.js'
 import { expandDrawingSkeleton, type SkeletonBox, type SkeletonConnector } from './skeleton.js'
 import { isBlockWidth } from './block-width.js'
@@ -49,6 +53,7 @@ import {
   edgeKeys,
   readLayoutAnnotation,
   type LayoutAnnotation,
+  type LayoutEdge,
   type LayoutProblem,
   type LayoutRead,
   type LayoutSlot,
@@ -99,8 +104,13 @@ interface ParsedNode {
   id: string
   text: string | undefined
   type: NodeShapeType
+  /** `(text)` or `@{ shape: rounded }`: a rectangle with rounded corners */
+  rounded?: boolean
   stroke?: string
   fill?: string
+  strokeWidth?: number
+  strokeStyle?: StrokeStyle
+  color?: string
 }
 
 interface ParsedEdge {
@@ -109,6 +119,9 @@ interface ParsedEdge {
   type: ConnectorType
   text?: string
   bidirectional?: boolean
+  head?: ArrowHead
+  dotted?: boolean
+  thick?: boolean
 }
 
 /** Keywords first, `flowchart-elk` before `flowchart` so the suffix is not left over; any Mermaid direction. */
@@ -151,7 +164,7 @@ export function sanitizeMermaidId(id: string): string {
   return RESERVED_IDS.has(cleaned) ? `${cleaned}_` : cleaned
 }
 
-/** Shape openers, longest first, with their closer, our shape type, and whether the writer emits the same bracket. */
+/** Shape openers, longest first, with their closer, our shape type, and whether the writer emits the same bracket (`(text)` as a rounded rectangle). */
 const SHAPES: readonly [open: string, close: string, type: NodeShapeType, exact: boolean][] = [
   ['(((', ')))', 'ellipse', false],
   ['([', '])', 'ellipse', true],
@@ -164,7 +177,7 @@ const SHAPES: readonly [open: string, close: string, type: NodeShapeType, exact:
   ['[/', '\\]', 'rect', false],
   ['[\\', '/]', 'rect', false],
   ['[', ']', 'rect', true],
-  ['(', ')', 'rect', false],
+  ['(', ')', 'rect', true],
   ['{', '}', 'diamond', true],
   ['>', ']', 'note', true],
 ]
@@ -215,6 +228,10 @@ interface StyleLine {
   readonly ids: readonly string[]
   readonly fill?: string
   readonly stroke?: string
+  readonly strokeWidth?: number
+  /** `null`: a dash array that draws a solid line (`0`, `none`) */
+  readonly strokeStyle?: StrokeStyle | null
+  readonly color?: string
   /** A property the drawing has no field for. */
   readonly extra: boolean
   readonly logical: LogicalLine
@@ -410,6 +427,10 @@ class FlowchartParser {
         if (node === undefined) continue
         if (style.fill !== undefined) node.fill = style.fill
         if (style.stroke !== undefined) node.stroke = style.stroke
+        if (style.strokeWidth !== undefined) node.strokeWidth = style.strokeWidth
+        if (style.strokeStyle === null) delete node.strokeStyle
+        else if (style.strokeStyle !== undefined) node.strokeStyle = style.strokeStyle
+        if (style.color !== undefined) node.color = style.color
       }
       if (missing.length > 0) {
         this.retain(style.logical)
@@ -651,22 +672,64 @@ function splitStatements(line: string): string[] {
   return out.map((s) => s.trim()).filter((s) => s !== '')
 }
 
-/** `style id[,id…] prop:value[,prop:value…]`, as Mermaid reads it; undefined when it is not one. */
+/**
+ * `style id[,id…] prop:value[,prop:value…]`, as Mermaid reads it; undefined
+ * when it is not one. The drawing keeps the colours (`fill`, `stroke`,
+ * `color`), `stroke-width` in px and `stroke-dasharray` as dashed or dotted.
+ */
 function readStyle(line: string): Omit<StyleLine, 'logical'> | undefined {
   const match = /^style\s+(\S+)\s+(.+?)\s*;?$/.exec(line)
   if (match === null) return undefined
   const ids = (match[1] as string).split(',')
   if (!ids.every((id) => WHOLE_ID.test(id))) return undefined
-  let fill: string | undefined
-  let stroke: string | undefined
+  const out: { -readonly [K in keyof Omit<StyleLine, 'logical' | 'ids' | 'extra'>]?: StyleLine[K] } = {}
   let extra = false
   for (const declaration of (match[2] as string).split(',')) {
-    const [key, value] = declaration.split(':').map((part) => part.trim())
-    if (key === 'fill' && value !== undefined) fill = value
-    else if (key === 'stroke' && value !== undefined) stroke = value
-    else if (key !== undefined && key !== '') extra = true
+    const colon = declaration.indexOf(':')
+    const key = (colon === -1 ? declaration : declaration.slice(0, colon)).trim()
+    const value = colon === -1 ? undefined : declaration.slice(colon + 1).trim()
+    if (key === '') continue
+    const known = value !== undefined && readStyleProperty(key, value, out)
+    if (!known) extra = true
   }
-  return { ids, ...(fill === undefined ? {} : { fill }), ...(stroke === undefined ? {} : { stroke }), extra }
+  return { ids, ...out, extra }
+}
+
+/** One declaration onto `out`; false when the drawing has no field for it (or the value is not one it can use). */
+function readStyleProperty(
+  key: string,
+  value: string,
+  out: { fill?: string; stroke?: string; strokeWidth?: number; strokeStyle?: StrokeStyle | null; color?: string },
+): boolean {
+  switch (key) {
+    case 'fill':
+      out.fill = value
+      return true
+    case 'stroke':
+      out.stroke = value
+      return true
+    case 'color':
+      out.color = value
+      return true
+    case 'stroke-width': {
+      const width = /^(\d+(?:\.\d+)?)(px)?$/.exec(value)
+      if (width === null) return false
+      out.strokeWidth = Number(width[1])
+      return true
+    }
+    case 'stroke-dasharray': {
+      if (value === 'none' || /^0(px)?$/.test(value)) {
+        out.strokeStyle = null
+        return true
+      }
+      const first = /^(\d+(?:\.\d+)?)(px)?(\s|$)/.exec(value)
+      if (first === null) return false
+      out.strokeStyle = Number(first[1]) <= 2 ? 'dotted' : 'dashed'
+      return true
+    }
+    default:
+      return false
+  }
 }
 
 /* --------------------------------------------------------------- graph */
@@ -723,6 +786,9 @@ function parseStatement(statement: string, graph: Graph, flags: StatementFlags):
           type: edge.type,
           ...(edge.text === undefined ? {} : { text: edge.text }),
           ...(edge.bidirectional ? { bidirectional: true } : {}),
+          ...(edge.head === undefined ? {} : { head: edge.head }),
+          ...(edge.dotted ? { dotted: true } : {}),
+          ...(edge.thick ? { thick: true } : {}),
         })
       }
     }
@@ -746,6 +812,7 @@ function readNode(
   let rest = input.slice(id.length)
   let text: string | undefined
   let type: NodeShapeType | undefined
+  let rounded: boolean | undefined
   let declare = true
   if (rest.startsWith('@{')) {
     const config = readConfig(rest)
@@ -756,7 +823,10 @@ function readNode(
     const shape = configValue(config.body, 'shape')
     declare = label !== undefined || shape !== undefined || /\b(icon|img)\s*:/.test(config.body)
     if (label !== undefined) text = decodeText(label)
-    if (shape !== undefined) type = CONFIG_SHAPES[shape] ?? 'rect'
+    if (shape !== undefined) {
+      type = CONFIG_SHAPES[shape] ?? 'rect'
+      rounded = shape === 'rounded'
+    }
   } else {
     // Openers are shared between bracket pairs (`[/ /]` and `[/ \]`), so
     // every pair with this opener is tried before the node is given up on.
@@ -771,6 +841,7 @@ function readNode(
       if (issue !== undefined) flags.labelProblems.push(nodeLabelProblem(issue, id))
       text = labelText(body.raw, body.quoted, flags)
       type = shapeType
+      rounded = open === '('
       rest = body.rest
       if (!exact) flags.lossy.add('shape')
       closed = true
@@ -786,10 +857,11 @@ function readNode(
   if (!declare) return { rest }
   const existing = nodes.get(id)
   if (existing === undefined) {
-    nodes.set(id, { id, text, type: type ?? 'rect' })
+    nodes.set(id, { id, text, type: type ?? 'rect', ...(rounded ? { rounded } : {}) })
   } else if (type !== undefined || text !== undefined) {
     if (text !== undefined) existing.text = text
     if (type !== undefined) existing.type = type
+    if (rounded !== undefined) existing.rounded = rounded
   }
   return { id, rest }
 }
@@ -912,7 +984,7 @@ const LABELLED_EDGE = /^([<ox])?(--|-\.|==)\s*("[^"]*"|.+?)\s*(-{2,}[>ox]|-{2,}|
 function readEdge(
   input: string,
   flags: StatementFlags,
-): { type: ConnectorType; text?: string; bidirectional: boolean; rest: string; label?: LabelIssue } | undefined {
+): (EdgeStyle & { text?: string; rest: string; label?: LabelIssue }) | undefined {
   const edgeId = EDGE_ID.exec(input)
   if (edgeId !== null) {
     flags.edgeIds.push(edgeId[1] as string)
@@ -941,19 +1013,24 @@ function readEdge(
   return undefined
 }
 
+/** What a link token says about the connector. */
+interface EdgeStyle {
+  type: ConnectorType
+  bidirectional: boolean
+  head?: ArrowHead
+  dotted?: boolean
+  thick?: boolean
+}
+
 /**
- * Arrow or line, one way or both, and which styles the drawing flattens:
- * dotted, thick, invisible, circle and cross heads, and links longer than
- * the minimum (`--->`, `-..->`, `====`).
+ * Arrow or line, one way or both, its head (chevron, `o` circle, `x`
+ * cross), dotted (`-.->`) or thick (`==>`), and which styles the drawing
+ * flattens: invisible links, a start that does not match the end (`<--o`),
+ * and links longer than the minimum (`--->`, `-..->`, `====`).
  */
-function edgeType(
-  start: string | undefined,
-  token: string,
-  labelled: boolean,
-  flags: StatementFlags,
-): { type: ConnectorType; bidirectional: boolean } {
-  const head = /[>ox]$/.exec(token)?.[0]
-  const arrow = head !== undefined
+function edgeType(start: string | undefined, token: string, labelled: boolean, flags: StatementFlags): EdgeStyle {
+  const end = /[>ox]$/.exec(token)?.[0]
+  const arrow = end !== undefined
   if (token.includes('~')) {
     flags.invisible = true
     flags.lossy.add('edge-style')
@@ -961,13 +1038,19 @@ function edgeType(
   }
   const dotted = token.includes('.')
   const thick = token.includes('=')
-  const rounded = head === 'o' || head === 'x' || start === 'o' || start === 'x'
+  const mismatched = start !== undefined && start !== (end === '>' ? '<' : end)
   // A labelled link is the opening `--` plus the closer, so both halves count.
   const strokes = token.replace(/[<>ox.]/g, '').length
   const dots = token.replace(/[^.]/g, '').length
   const long = dotted ? dots > (labelled ? 2 : 1) : strokes > (labelled ? 2 : 0) + (arrow ? 2 : 3)
-  if (dotted || thick || rounded || long) flags.lossy.add('edge-style')
-  return { type: arrow ? 'arrow' : 'line', bidirectional: arrow && start !== undefined }
+  if (mismatched || long) flags.lossy.add('edge-style')
+  return {
+    type: arrow ? 'arrow' : 'line',
+    bidirectional: arrow && start !== undefined,
+    ...(end === 'o' ? { head: 'circle' as const } : end === 'x' ? { head: 'cross' as const } : {}),
+    ...(dotted ? { dotted } : {}),
+    ...(thick ? { thick } : {}),
+  }
 }
 
 /* --------------------------------------------------------------- building */
@@ -1016,22 +1099,20 @@ function build(
   // geometry and anchors, then the shapes Mermaid has no syntax for.
   let edgeIndex = 0
   const shapes: DrawingShape[] = expanded.shapes.map((shape) => {
-    if (isNodeShapeType(shape.type)) {
-      const layout = layoutNodes[shape.id]
-      return layout?.strokeWidth === undefined ? shape : { ...shape, strokeWidth: layout.strokeWidth }
-    }
+    if (isNodeShapeType(shape.type)) return nodeStyle(shape, nodes.get(shape.id), layoutNodes[shape.id]?.strokeWidth)
     if (!isConnectorType(shape.type)) return shape
+    const edge = edges[edgeIndex]
     const layout = layoutEdges[keys[edgeIndex] as string]
     edgeIndex += 1
-    if (layout === undefined) return shape
+    const styled = edge === undefined ? shape : edgeStyle(shape, edge, layout)
+    if (layout === undefined) return styled
     return {
-      ...shape,
+      ...styled,
       ...(layout.x === undefined ? {} : { x: layout.x }),
       ...(layout.y === undefined ? {} : { y: layout.y }),
       ...(layout.width === undefined ? {} : { width: layout.width }),
       ...(layout.height === undefined ? {} : { height: layout.height }),
       ...(layout.fill === undefined ? {} : { fill: layout.fill }),
-      ...(layout.strokeWidth === undefined ? {} : { strokeWidth: layout.strokeWidth }),
       ...(layout.elbow === undefined ? {} : { elbow: layout.elbow }),
       ...(layout.waypoints === undefined ? {} : { waypoints: layout.waypoints }),
       ...(layout.start === undefined || shape.startBinding === undefined ? {} : { startBinding: { id: shape.startBinding.id, ...layout.start } }),
@@ -1053,6 +1134,47 @@ function build(
     }),
   )
 }
+
+/**
+ * What the syntax says about a box beyond its colours: square corners on a
+ * `[text]` rectangle, and the `style` line's width, dashes and text colour.
+ * A `stroke-width` in the style line wins over the annotation's.
+ */
+function nodeStyle(shape: DrawingShape, node: ParsedNode | undefined, layoutWidth: number | undefined): DrawingShape {
+  const strokeWidth = node?.strokeWidth ?? layoutWidth
+  return {
+    ...shape,
+    ...(strokeWidth === undefined ? {} : { strokeWidth }),
+    ...(shape.type === 'rect' && node?.rounded !== true ? { corners: 'sharp' as const } : {}),
+    ...(node?.strokeStyle === undefined ? {} : { strokeStyle: node.strokeStyle }),
+    ...(node?.color === undefined ? {} : { color: node.color }),
+  }
+}
+
+/**
+ * What the link token says about a connector, refined by the annotation:
+ * the head, a dotted token's pattern (dotted unless the annotation says
+ * dashed), and the width, whose class the token decides: a thick token
+ * keeps an annotated width of 3 or more (else 4), a normal one a width
+ * under 3 (else 2). A dotted token has no thick form, so its width is the
+ * annotation's.
+ */
+function edgeStyle(shape: DrawingShape, edge: ParsedEdge, layout: LayoutEdge | undefined): DrawingShape {
+  const annotated = layout?.strokeWidth
+  const strokeWidth = edge.dotted
+    ? (annotated ?? shape.strokeWidth)
+    : edge.thick
+      ? annotated !== undefined && annotated >= THICK_WIDTH ? annotated : BOLD_WIDTH
+      : annotated !== undefined && annotated < THICK_WIDTH ? annotated : shape.strokeWidth
+  return {
+    ...shape,
+    strokeWidth,
+    ...(edge.dotted ? { strokeStyle: layout?.strokeStyle ?? 'dotted' } : {}),
+    ...(edge.head === undefined || shape.type !== 'arrow' ? {} : { head: edge.head }),
+  }
+}
+
+const BOLD_WIDTH = STROKE_WIDTHS.bold
 
 /**
  * The annotation writes numbers with two decimals, so a model with longer

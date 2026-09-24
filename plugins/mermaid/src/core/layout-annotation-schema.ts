@@ -65,7 +65,7 @@ export const LAYOUT_ANNOTATION_JSON_SCHEMA = {
         y: { type: 'number', description: 'Top edge of the bounding box' },
         width: { type: 'number', minimum: 0 },
         height: { type: 'number', minimum: 0 },
-        strokeWidth: { type: 'number', minimum: 0, description: 'Outline width; the editor uses 2' },
+        strokeWidth: { type: 'number', minimum: 0, description: 'Outline width; a stroke-width in the node\'s style line wins' },
         slots: {
           type: 'array',
           items: { enum: ['label', 'text', 'footer'] },
@@ -90,7 +90,8 @@ export const LAYOUT_ANNOTATION_JSON_SCHEMA = {
         height: { type: 'number', description: 'Delta y to the end point; may be negative' },
         stroke: { type: 'string', description: 'CSS colour of the connector and its label' },
         fill: { type: 'string', description: 'CSS colour of the arrowhead interior; "transparent" for none' },
-        strokeWidth: { type: 'number', minimum: 0 },
+        strokeWidth: { type: 'number', minimum: 0, description: 'Stroke width. The link token wins its class: a thick link (==>) reads a width under 3 as 4, a normal one a width of 3 or more as 2' },
+        strokeStyle: { enum: ['dashed', 'dotted'], description: 'Pattern of a dotted link token (-.->); a solid token ignores it' },
         routing: { const: 'elbow', description: 'Right-angled auto-routed path. Omit for a straight connector.' },
         elbow: { type: 'number', minimum: 0, maximum: 1, description: 'Middle segment position for a three-segment elbow' },
         waypoints: { type: 'array', items: { $ref: '#/definitions/point' }, description: 'Explicit path; takes precedence over routing' },

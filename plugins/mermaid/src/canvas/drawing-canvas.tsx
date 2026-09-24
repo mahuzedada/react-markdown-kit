@@ -26,6 +26,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -45,12 +46,15 @@ import {
   FONT_SIZE,
   isNodeShapeType,
   isConnectorType,
+  LINE_HEIGHT,
   serializeDrawingData,
+  SMALL_FONT_SIZE,
   STROKE_COLORS,
   withBindings,
   type DrawingData,
   type DrawingShape,
   type Point,
+  type StrokeStyle,
 } from '../core/drawing-data.js'
 import { COLOR_PRESETS, type ColorName } from '../core/skeleton.js'
 import type { DiagramKind } from '../core/kind.js'
@@ -71,10 +75,11 @@ import {
 } from './interaction.js'
 import { useCanvasHost, useDiagramLabels } from './host.js'
 import type { DiagramKindEditorProps } from './options.js'
-import { PropertyBar } from './property-bar.js'
+import { PropertyBar, type HeadChoice } from './property-bar.js'
 import { GroupSelectionOverlay, MarqueeOverlay, SelectionOverlay } from './selection-overlay.js'
-import { HitArea, ShapeView, slotAt } from './shape-view.js'
+import { HitArea, ShapeView, slotAt, slotLayout } from './shape-view.js'
 import { TextEditOverlay } from './text-edit-overlay.js'
+import { createTextMeasure, linesSize, TextMeasureContext, wrapLines, type TextMeasure } from './text-measure.js'
 import { DiagramToolbar, type Tool } from './toolbar.js'
 import { useToolbarHost } from './toolbar-slot.js'
 
@@ -116,6 +121,82 @@ function withText(shape: DrawingShape, field: TextField, value: string): Drawing
       return { ...shape, footer: value }
     case 'text':
       return { ...shape, text: value }
+  }
+}
+
+/**
+ * A box grown downwards until its text slots fit its text area, as
+ * Excalidraw grows a container while its text gains lines. It never
+ * shrinks: a box drawn roomy stays roomy.
+ */
+function grownToFitText(shape: DrawingShape, measure: TextMeasure | null): DrawingShape {
+  if (isConnectorType(shape.type) || shape.type === 'text') return shape
+  const { area, slots } = slotLayout(shape)
+  const heights = slots.flatMap((slot) => {
+    const value = shape[slot]
+    if (!value) return []
+    const fontSize = slot === 'text' ? FONT_SIZE : SMALL_FONT_SIZE
+    const lines = wrapLines(value, Math.max(area.w, 20), fontSize, measure, slot === 'label' ? 600 : undefined)
+    return [lines.length * fontSize * LINE_HEIGHT]
+  })
+  const needed = heights.reduce((sum, h) => sum + h, 0) + Math.max(0, heights.length - 1) * TEXT_SLOT_GAP
+  if (needed <= area.h || area.h <= 0) return shape
+  // The text area scales with the box on every shape type
+  return { ...shape, height: Math.ceil((shape.height * needed) / area.h) }
+}
+
+const TEXT_SLOT_GAP = 6
+
+/** The ink style's letter spacing (styles.css, `.is-ink`) */
+const INK_LETTER_SPACING_EM = 0.015
+
+/** How far a duplicate lands from its original, down and right (Excalidraw's offset) */
+const DUPLICATE_OFFSET = 10
+
+/**
+ * Copies of the shapes in `ids` with fresh ids, moved by `offset`.
+ * Bindings follow a copied box to its copy and are dropped when the box
+ * stays behind.
+ */
+function duplicateShapes(shapes: readonly DrawingShape[], ids: ReadonlySet<string>, offset: number): DrawingShape[] {
+  const copyIds = new Map<string, string>()
+  for (const shape of shapes) if (ids.has(shape.id)) copyIds.set(shape.id, createShapeId())
+  const rebind = (binding: DrawingShape['startBinding']): DrawingShape['startBinding'] => {
+    const id = binding === undefined ? undefined : copyIds.get(binding.id)
+    return binding === undefined || id === undefined ? undefined : { ...binding, id }
+  }
+  return shapes.flatMap((shape) => {
+    const id = copyIds.get(shape.id)
+    if (id === undefined) return []
+    const moved: DrawingShape = {
+      ...shape,
+      id,
+      x: shape.x + offset,
+      y: shape.y + offset,
+      ...(shape.waypoints === undefined ? {} : { waypoints: shape.waypoints.map((p) => ({ x: p.x + offset, y: p.y + offset })) }),
+    }
+    return [isConnectorType(shape.type) ? withBindings(moved, rebind(shape.startBinding), rebind(shape.endBinding)) : moved]
+  })
+}
+
+type OverlayMapping = Readonly<{ x: number; y: number; scale: number }>
+
+/**
+ * Where the SVG's user space sits in the stage's own pixels: its screen
+ * matrix relative to the stage's padding box, divided by any zoom a host
+ * puts around the editor (the overlay sits inside that zoom). Null without
+ * layout.
+ */
+function svgToStage(svg: SVGSVGElement, stage: HTMLElement): OverlayMapping | null {
+  const ctm = typeof svg.getScreenCTM === 'function' ? svg.getScreenCTM() : null
+  if (!ctm || stage.offsetWidth === 0) return null
+  const rect = stage.getBoundingClientRect()
+  const zoom = rect.width / stage.offsetWidth
+  if (!(zoom > 0)) return null
+  return {
+    x: Math.round((ctm.e - rect.left) / zoom - stage.clientLeft),
+    y: Math.round((ctm.f - rect.top) / zoom - stage.clientTop),
+    scale: ctm.a / zoom,
   }
 }
 
@@ -213,6 +294,8 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   const [tool, setTool] = useState<Tool>('select')
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(EMPTY_SET)
   const [editingText, setEditingText] = useState<{ id: string; field: TextField } | null>(null)
+  // The open text field's value as typed, before it commits
+  const [draftText, setDraftText] = useState<string | null>(null)
   const [stroke, setStroke] = useState<string>(STROKE_COLORS[0])
   const [fill, setFill] = useState<string>(FILL_COLORS[0])
   const [hoverBoxId, setHoverBoxId] = useState<string | null>(null)
@@ -433,6 +516,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   const single = selection.length === 1 ? (selection[0] ?? null) : null
 
   const startTextEditing = useCallback((id: string, field: TextField) => {
+    setDraftText(null)
     setEditingText({ id, field })
     setSelectedIds(new Set([id]))
   }, [])
@@ -503,7 +587,19 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
       setSelectedIds(EMPTY_SET)
       updateShapes((prev) => [
         ...prev,
-        { id, type: tool, x: point.x, y: point.y, width: 0, height: 0, stroke, fill: shapeFill, strokeWidth: 2 },
+        {
+          id,
+          type: tool,
+          x: point.x,
+          y: point.y,
+          width: 0,
+          height: 0,
+          stroke,
+          fill: shapeFill,
+          strokeWidth: 2,
+          // Square like Mermaid's default `[text]`; Round in the property bar writes `(text)`
+          ...(tool === 'rect' ? { corners: 'sharp' as const } : {}),
+        },
       ])
     },
     [isEditable, editingText, getPoint, tool, stroke, fill, updateShapes],
@@ -757,6 +853,17 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
     )
   }, [updateShapes])
 
+  // Copies of the selection a little down and right, selected in its
+  // place. A copied connector keeps a binding only when its box was copied
+  // too; otherwise it would sit on top of the original.
+  const duplicateSelection = useCallback(() => {
+    const ids = selectedRef.current
+    if (!ids.size) return
+    const copies = duplicateShapes(shapesRef.current, ids, DUPLICATE_OFFSET)
+    setSelectedIds(new Set(copies.map((s) => s.id)))
+    updateShapes((prev) => [...prev, ...copies], { commit: true })
+  }, [updateShapes])
+
   // Native listener: shortcuts must be handled (and stopped) before they
   // bubble to Lexical's root, which owns the same keys for the document
   const editingRef = useRef(editingText)
@@ -779,6 +886,10 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
           e.stopPropagation()
           startTextEditing(shape.id, 'text')
         }
+      } else if (e.key === 'd' && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && ids.size) {
+        e.preventDefault()
+        e.stopPropagation()
+        duplicateSelection()
       } else if (e.key === 'a' && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         e.preventDefault()
         e.stopPropagation()
@@ -798,13 +909,13 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
     }
     root.addEventListener('keydown', onKeyDown)
     return () => root.removeEventListener('keydown', onKeyDown)
-  }, [isEditable, deleteSelection, startTextEditing, updateShapes])
+  }, [isEditable, deleteSelection, duplicateSelection, startTextEditing, updateShapes])
 
   const applyToSelection = useCallback(
-    (patch: (shape: DrawingShape) => DrawingShape) => {
+    (patch: (shape: DrawingShape) => DrawingShape, options?: { merge?: boolean }) => {
       const ids = selectedRef.current
       if (!ids.size) return
-      updateShapes((prev) => prev.map((s) => (ids.has(s.id) ? patch(s) : s)), { commit: true })
+      updateShapes((prev) => prev.map((s) => (ids.has(s.id) ? patch(s) : s)), { commit: true, merge: options?.merge === true })
     },
     [updateShapes],
   )
@@ -815,13 +926,63 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
       const preset = COLOR_PRESETS[name]
       setStroke(preset.stroke)
       setFill(preset.fill)
+      // A preset sets the text colour too: it drops any custom one
       applyToSelection((s) =>
         isNodeShapeType(s.type)
-          ? { ...s, stroke: preset.stroke, fill: preset.fill }
+          ? { ...omitFields(s, ['color']), stroke: preset.stroke, fill: preset.fill }
           : // Connectors and text have nothing but their stroke to show
-            { ...s, stroke: preset.stroke === 'transparent' ? STROKE_COLORS[0] : preset.stroke },
+            { ...omitFields(s, ['color']), stroke: preset.stroke === 'transparent' ? STROKE_COLORS[0] : preset.stroke },
       )
     },
+    [applyToSelection],
+  )
+
+  // A pick in the native colour picker updates live; `continued` folds
+  // the updates after the first into one undo step
+  const applyCustomFill = useCallback(
+    (color: string, continued: boolean) =>
+      applyToSelection((s) => (isNodeShapeType(s.type) ? { ...s, fill: color } : s), { merge: continued }),
+    [applyToSelection],
+  )
+
+  const applyCustomText = useCallback(
+    (color: string, continued: boolean) =>
+      applyToSelection((s) => (isNodeShapeType(s.type) || s.type === 'text' ? { ...s, color } : s), { merge: continued }),
+    [applyToSelection],
+  )
+
+  const applyStrokeWidth = useCallback(
+    (strokeWidth: number) => applyToSelection((s) => (s.type === 'text' ? s : { ...s, strokeWidth })),
+    [applyToSelection],
+  )
+
+  const applyStrokeStyle = useCallback(
+    (strokeStyle: StrokeStyle | undefined) =>
+      applyToSelection((s) => {
+        if (s.type === 'text') return s
+        return strokeStyle === undefined ? omitFields(s, ['strokeStyle']) : { ...s, strokeStyle }
+      }),
+    [applyToSelection],
+  )
+
+  const applyCorners = useCallback(
+    (sharp: boolean) =>
+      applyToSelection((s) => {
+        if (s.type !== 'rect') return s
+        return sharp ? { ...s, corners: 'sharp' } : omitFields(s, ['corners'])
+      }),
+    [applyToSelection],
+  )
+
+  // `none` makes the connector a line; any head makes it an arrow
+  const applyHead = useCallback(
+    (head: HeadChoice) =>
+      applyToSelection((s) => {
+        if (!isConnectorType(s.type)) return s
+        if (head === 'none') return { ...omitFields(s, ['head', 'bidirectional']), type: 'line' }
+        const arrow: DrawingShape = { ...omitFields(s, ['head']), type: 'arrow' }
+        return head === 'arrow' ? arrow : { ...arrow, head }
+      }),
     [applyToSelection],
   )
 
@@ -890,6 +1051,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   const commitText = useCallback(
     (id: string, field: TextField, value: string) => {
       setEditingText(null)
+      setDraftText(null)
       // Keep keyboard shortcuts working once the textarea is gone
       rootRef.current?.focus({ preventScroll: true })
       updateShapes(
@@ -898,9 +1060,11 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
             if (s.id !== id) return [s]
             // Standalone text shapes ARE their text: empty deletes them
             if (s.type === 'text') {
-              return value.trim() === '' ? [] : [{ ...s, text: value, ...textBoxSize(value) }]
+              if (value.trim() === '') return []
+              const size = linesSize(value.split('\n'), FONT_SIZE, textMeasureRef.current)
+              return [{ ...s, text: value, width: size.w, height: size.h }]
             }
-            return [withText(s, field, value)]
+            return [grownToFitText(withText(s, field, value), textMeasureRef.current)]
           }),
         { commit: true },
       )
@@ -920,7 +1084,73 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
     }
   }, [payloadOf, writeSource])
 
-  const editingShape = shapes.find((s) => s.id === editingText?.id) ?? null
+
+  // Real font widths for text wrapping once the surface has its font, and
+  // again when web fonts finish loading (the fallback measures differently)
+  const [textMeasure, setTextMeasure] = useState<TextMeasure | null>(null)
+  const textMeasureRef = useRef(textMeasure)
+  textMeasureRef.current = textMeasure
+  useLayoutEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const update = (): void => setTextMeasure(() => createTextMeasure(svg, ink ? INK_LETTER_SPACING_EM : 0))
+    update()
+    // A surface mounted hidden has no font to measure until it is shown
+    const observer =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(() => {
+            if (textMeasureRef.current === null) update()
+          })
+    observer?.observe(svg)
+    const fonts = typeof document === 'undefined' ? undefined : document.fonts
+    let live = true
+    void fonts?.ready.then(() => live && update())
+    fonts?.addEventListener?.('loadingdone', update)
+    return () => {
+      live = false
+      observer?.disconnect()
+      fonts?.removeEventListener?.('loadingdone', update)
+    }
+  }, [ink])
+
+  // The text field's overlay, placed from the SVG's own user-space mapping
+  // while one is open: the stage's padding and the surface's CSS placement
+  // (a host that centres it) are then part of the offset, which the
+  // computed one cannot see. Without layout (no size) it keeps that one.
+  const [measuredOverlay, setMeasuredOverlay] = useState<OverlayMapping | null>(null)
+  const isEditingText = editingText !== null
+  useLayoutEffect(() => {
+    const svg = svgRef.current
+    const stage = stageRef.current
+    if (!isEditingText || !svg || !stage) return
+    const measure = (): void => {
+      const next = svgToStage(svg, stage)
+      setMeasuredOverlay((prev) =>
+        prev !== null && next !== null && prev.x === next.x && prev.y === next.y && prev.scale === next.scale ? prev : next,
+      )
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(stage)
+    observer.observe(svg)
+    return () => observer.disconnect()
+  }, [isEditingText, viewBox])
+  const overlay = measuredOverlay ?? { ...overlayOffset, scale }
+
+  // What the surface shows: while a box's text is being typed, the box
+  // grows to fit it as it will on commit (and its connectors follow)
+  const shownShapes = useMemo(() => {
+    if (editingText === null || draftText === null) return shapes
+    return resolveBindings(
+      shapes.map((s) =>
+        s.id === editingText.id ? grownToFitText(withText(s, editingText.field, draftText), textMeasure) : s,
+      ),
+    )
+  }, [shapes, editingText, draftText, textMeasure])
+  const shownPaths = useMemo(() => (shownShapes === shapes ? paths : computePaths(shownShapes)), [shownShapes, shapes, paths])
+  const editingShape = shownShapes.find((s) => s.id === editingText?.id) ?? null
   const hoverBox = hoverBoxId ? shapes.find((s) => s.id === hoverBoxId) : null
   const propStroke = single?.stroke ?? selection[0]?.stroke ?? stroke
   const propFill = single?.fill ?? selection[0]?.fill ?? fill
@@ -951,8 +1181,15 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
               stroke={propStroke}
               fill={propFill}
               onColor={applyColor}
+              onCustomFill={applyCustomFill}
+              onCustomText={applyCustomText}
+              onStrokeWidth={applyStrokeWidth}
+              onStrokeStyle={applyStrokeStyle}
+              onCorners={applyCorners}
+              onHead={applyHead}
               onRouting={applyRouting}
               onDirection={applyDirection}
+              onDuplicate={duplicateSelection}
               onDelete={deleteSelection}
             />
           </div>
@@ -962,6 +1199,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
   )
 
   return (
+    <TextMeasureContext.Provider value={textMeasure}>
     <div
       ref={rootRef}
       className={classes('rmk-diagram-canvas', WIDTH_CLASS[width], isEditable && 'is-editable', ink && 'is-ink')}
@@ -1010,7 +1248,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
             }
           }}
         >
-          {shapes.map((shape) => (
+          {shownShapes.map((shape) => (
             <g
               key={shape.id}
               data-shape-id={shape.id}
@@ -1018,12 +1256,12 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
               style={isEditable && tool === 'select' ? { cursor: 'move' } : undefined}
               onPointerDown={(e) => handleShapePointerDown(e, shape)}
             >
-              <HitArea shape={shape} points={paths.get(shape.id)} />
+              <HitArea shape={shape} points={shownPaths.get(shape.id)} />
               {shape.id === editingText?.id && shape.type === 'text' ? null : (
                 <ShapeView
                   shape={shape}
                   ink={ink}
-                  points={paths.get(shape.id)}
+                  points={shownPaths.get(shape.id)}
                   hideField={shape.id === editingText?.id ? editingText.field : null}
                   showHints={isEditable && tool === 'select' && single?.id === shape.id && shape.id !== editingText?.id}
                 />
@@ -1072,9 +1310,9 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
             className="rmk-diagram-overlay"
             style={{
               transform:
-                overlayOffset.x === 0 && overlayOffset.y === 0
-                  ? `scale(${scale})`
-                  : `translate(${overlayOffset.x}px, ${overlayOffset.y}px) scale(${scale})`,
+                overlay.x === 0 && overlay.y === 0
+                  ? `scale(${overlay.scale})`
+                  : `translate(${overlay.x}px, ${overlay.y}px) scale(${overlay.scale})`,
               ...(logicalWidth ? { width: logicalWidth, height: canvasHeight } : {}),
             }}
           >
@@ -1082,7 +1320,8 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
               key={`${editingShape.id}:${editingText.field}`}
               shape={editingShape}
               field={editingText.field}
-              points={paths.get(editingShape.id)}
+              points={shownPaths.get(editingShape.id)}
+              onChange={setDraftText}
               onCommit={commitText}
             />
           </div>
@@ -1098,6 +1337,7 @@ export function DiagramCanvas({ nodeKey, kind, parse, readOnly, commit: commitSo
         )}
       </div>
     </div>
+    </TextMeasureContext.Provider>
   )
 }
 

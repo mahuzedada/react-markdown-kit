@@ -88,8 +88,14 @@ function classes(...names: readonly (string | false | null | undefined)[]): stri
 }
 
 /** True for a key typed into a field, whose own undo must win. */
+/** Inputs that take no typing (a colour swatch keeps focus after a pick), so undo stays the canvas's there */
+const NON_TEXT_INPUTS = ['color', 'checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'file', 'image']
+
 function isTextTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select') !== null)
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable || target.closest('textarea, select') !== null) return true
+  const input = target.closest('input')
+  return input !== null && !NON_TEXT_INPUTS.includes(input.type)
 }
 
 interface History {

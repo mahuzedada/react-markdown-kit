@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import Link from '@docusaurus/Link'
 import Layout from '@theme/Layout'
 import { ActivityScope } from '@zuilib/primitives/activity'
@@ -9,6 +9,32 @@ import TemplateExample from '@site/src/components/TemplateExample'
 import sites from '@site/src/sites'
 import { BreadcrumbJsonLd, JsonLd, ORGANIZATION } from '@site/src/components/JsonLd'
 import styles from './index.module.css'
+
+/** The hero's install command: the whole chip copies it, and says so. */
+function InstallCommand({ command }: { readonly command: string }): ReactNode {
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 1600)
+    return () => clearTimeout(timer)
+  }, [copied])
+  return (
+    <button
+      type="button"
+      className={styles.install}
+      data-zui-tag="copy-install"
+      aria-label={copied ? 'Copied' : `Copy ${command}`}
+      onClick={() => {
+        navigator.clipboard?.writeText(command).then(() => setCopied(true), () => {})
+      }}
+    >
+      <code>{command}</code>
+      <span className={styles.installAction} aria-hidden="true">
+        {copied ? 'Copied' : 'Copy'}
+      </span>
+    </button>
+  )
+}
 
 const RENDERER_SAMPLE = `## Release 1.4
 
@@ -151,7 +177,7 @@ export default function Home(): ReactNode {
               Try the renderer demo
             </Button>
           </ActivityScope>
-          <code className={styles.install}>npm i @react-markdown-kit/renderer</code>
+          <InstallCommand command="npm install @react-markdown-kit/renderer" />
         </div>
       </header>
 

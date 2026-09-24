@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.3.0 (unreleased)
+## 0.4.0 (2026-09-24)
+
+- Flowchart property bar options from Excalidraw, each written as Mermaid: stroke width (thin, medium, bold) as `stroke-width` and the thick link `==>`; stroke style (solid, dashed, dotted) as `stroke-dasharray` and the dotted link `-.->`; sharp or round corners on a rectangle as `[text]` and `(text)`; arrow, circle, cross or no head as `-->`, `--o`, `--x` and `---`, both ways as `<-->`, `o--o`, `x--x`. The parser models all of them, so dotted, thick, circle and cross links, `(text)` nodes and those `style` properties are no longer lossy. New shape fields `strokeStyle`, `corners`, `head` and `color`; new annotation edge member `strokeStyle`.
+- Custom background and text colours beside the colour presets: the presets still set fill, stroke and text colour in one click (and clear a custom text colour); a custom text colour is written as `color:` on the node's `style` line. A drag through the colour picker is one undo step, and Cmd/Ctrl+Z works while the colour input has focus.
+- Duplicate: Cmd/Ctrl+D or the property bar button copies the selection 10px down and right with fresh ids; a copied connector keeps a binding only to a box copied with it.
+- Rectangles drawn on the canvas are square, Mermaid's `[text]`; a `[text]` node renders square and a `(text)` node rounded, as Mermaid draws them. A legacy ```drawing rectangle keeps its rounded corners and converts to `(text)`.
+- Inline text editing works like Excalidraw's: the field sits exactly on the shape (it no longer drifts when a host pads or centres the surface), has no frame, grows with its text, and wraps where the drawing wraps. Enter starts a new line (written as `<br/>`); Escape, Cmd/Ctrl+Enter or a click away keeps the text. A box grows taller while its text needs the room, and a double click on a connector's label edits it.
+
+## 0.3.0 (2026-09-23)
 
 - `@react-markdown-kit/mermaid/canvas`: the flowchart and sequence canvases without a Markdown editor. `<MermaidCanvas value onChange />` fills its container, floats the tools over the drawing as an island down the left edge (`toolbar="left"`, default) or along the top (`"top"`), keeps its own undo history (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z, Ctrl+Y), takes `zoom`, `drawingStyle`, `align` (default `center`), `readOnly`, `labels`, `kinds` and `editors`, and shows other kinds through their static render or as source. `createMermaidCanvas(container, options)` mounts it into any element and returns `{ getValue, setValue, update, destroy }`. The entry loads React and ReactDOM but neither Lexical nor the editor package.
 - Multi-selection on the flowchart canvas, modelled on Excalidraw: every selected shape gets a thin outline and the selection a dashed frame with handles. A corner handle scales the whole selection evenly from the opposite corner, a side handle along one axis, Alt from the centre; bound connectors follow. A drag anywhere inside the frame moves the selection, a click on one member narrows the selection to it, and the arrow keys nudge it by 1px (10px with Shift) in one merged undo step.

@@ -75,6 +75,23 @@ describe('<MermaidCanvas>', () => {
     view.unmount()
   })
 
+  it('undoes a custom colour from the colour input that keeps focus after the pick', () => {
+    const onChange = vi.fn<(source: string) => void>()
+    const view = mount(<MermaidCanvas defaultValue={SOURCE} onChange={onChange} />)
+    const canvas = view.container.querySelector('.rmk-diagram-canvas')!
+    key(canvas, { key: 'a', ctrlKey: true })
+    const input = view.container.querySelector<HTMLInputElement>('input[type="color"][aria-label="Custom background color"]')!
+    run(() => {
+      input.focus()
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, '#fff3bf')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(onChange.mock.lastCall?.[0]).toContain('style a fill:#fff3bf')
+    key(input, { key: 'z', metaKey: true })
+    expect(onChange.mock.lastCall?.[0]).not.toContain('fill:#fff3bf')
+    view.unmount()
+  })
+
   it('scales a multi-selection together from a corner of its frame', async () => {
     const onChange = vi.fn<(source: string) => void>()
     const view = mount(<MermaidCanvas defaultValue={SOURCE} onChange={onChange} />)

@@ -5,7 +5,7 @@
  * composition events from Lexical's root, which owns the same events for
  * the document (a `cut` there removes the document selection).
  */
-import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react'
 import { connectorMidpoint } from '../core/connectors.js'
 import { textBoxSize, wrapText } from '../core/geometry.js'
 import type { TextField } from '../core/shapes/definitions.js'
@@ -18,6 +18,7 @@ import {
   type Point,
 } from '../core/drawing-data.js'
 import { useDiagramLabels } from './host.js'
+import { linesSize, useTextMeasure } from './text-measure.js'
 import { CONNECTOR_FONT_SIZE, CONNECTOR_LABEL_MAX_WIDTH, slotLayout, textColorFor } from './shape-view.js'
 
 /**
@@ -43,11 +44,14 @@ export function TextEditOverlay({
   shape,
   field,
   points,
+  onChange,
   onCommit,
 }: {
   shape: DrawingShape
   field: TextField
   points?: readonly Point[] | undefined
+  /** The value as typed, before it commits */
+  onChange?: ((text: string) => void) | undefined
   onCommit: (id: string, field: TextField, text: string) => void
 }): ReactElement {
   const original = shape[field] ?? ''
@@ -62,10 +66,12 @@ export function TextEditOverlay({
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    el.focus()
+    el.focus({ preventScroll: true })
     el.select()
     // Native listener so the keystrokes never reach Lexical's root handlers
     // (which would otherwise hijack Home/End/arrows and Enter)
+    // Excalidraw's keys: Enter is a new line; Escape, Cmd/Ctrl+Enter and a
+    // click away (blur) all keep the text
     const onKeyDown = (e: KeyboardEvent): void => {
       e.stopPropagation()
       if ((e.key === 'Home' || e.key === 'End') && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
@@ -79,12 +85,9 @@ export function TextEditOverlay({
         el.setSelectionRange(pos, pos)
         return
       }
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
         e.preventDefault()
         onCommit(shape.id, field, valueRef.current)
-      } else if (e.key === 'Escape') {
-        e.preventDefault()
-        onCommit(shape.id, field, original)
       }
     }
     const stop = (e: Event): void => e.stopPropagation()
@@ -97,29 +100,57 @@ export function TextEditOverlay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const text = useDiagramLabels()
+  const placeholder =
+    field === 'label' ? text.labelPlaceholder : field === 'footer' ? text.footerPlaceholder : text.textPlaceholder
+
+  // The field grows with its text like Excalidraw's: free text and
+  // connector labels widen to their longest line, every field is as tall
+  // as its lines, measured from the rendered font rather than estimated
+  const [fit, setFit] = useState<{ w: number; h: number } | null>(null)
+  const measure = useTextMeasure()
+  const isFreeText = shape.type === 'text'
+  const isConnector = isConnectorType(shape.type)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let w = el.offsetWidth
+    if (isFreeText || isConnector) {
+      const fontSize = isConnector ? CONNECTOR_FONT_SIZE : FONT_SIZE
+      const widest = linesSize((value || placeholder).split('\n'), fontSize, measure).w
+      w = Math.ceil(isConnector ? Math.min(widest, CONNECTOR_LABEL_MAX_WIDTH) : widest) + CARET_ROOM
+      el.style.width = `${w}px`
+    }
+    const height = el.style.height
+    el.style.height = '0px'
+    const h = el.scrollHeight
+    el.style.height = height
+    setFit((prev) => (prev?.w === w && prev.h === h ? prev : { w, h }))
+  }, [value, placeholder, isFreeText, isConnector, measure])
+
   const style: CSSProperties = {
     color: textColorFor(shape),
     fontFamily: 'var(--rmk-diagram-font)',
     lineHeight: LINE_HEIGHT,
+    // `pre` would keep the lines, but Chrome ignores Home/End in a
+    // `white-space: pre` textarea; the width tracks the content anyway
+    whiteSpace: 'pre-wrap',
   }
 
-  if (shape.type === 'text') {
-    const size = textBoxSize(value || ' ')
+  if (isFreeText) {
+    const size = textBoxSize(value || placeholder)
     Object.assign(style, {
       left: shape.x,
       top: shape.y,
       fontSize: FONT_SIZE,
-      width: Math.max(80, size.w + 20),
-      height: size.h + 2,
-      // `pre` would keep the lines, but Chrome ignores Home/End in a
-      // `white-space: pre` textarea; the width tracks the content anyway
-      whiteSpace: 'pre-wrap' as const,
+      width: fit?.w ?? size.w + CARET_ROOM,
+      height: fit?.h ?? size.h,
     })
-  } else if (isConnectorType(shape.type)) {
-    const lines = wrapText(value, CONNECTOR_LABEL_MAX_WIDTH, CONNECTOR_FONT_SIZE)
-    const size = textBoxSize(lines.join('\n') || ' ', CONNECTOR_FONT_SIZE)
-    const width = Math.max(70, size.w + 16)
-    const height = size.h + 4
+  } else if (isConnector) {
+    const lines = wrapText(value || placeholder, CONNECTOR_LABEL_MAX_WIDTH, CONNECTOR_FONT_SIZE)
+    const size = textBoxSize(lines.join('\n'), CONNECTOR_FONT_SIZE)
+    const width = fit?.w ?? size.w + CARET_ROOM
+    const height = fit?.h ?? size.h
     const mid = connectorMidpoint(
       points ?? [
         { x: shape.x, y: shape.y },
@@ -133,22 +164,20 @@ export function TextEditOverlay({
       height,
       fontSize: CONNECTOR_FONT_SIZE,
       textAlign: 'center' as const,
-      whiteSpace: 'pre-wrap' as const,
     })
   } else {
     const { area } = slotLayout(shape)
     const fontSize = field === 'text' ? FONT_SIZE : SMALL_FONT_SIZE
     const width = Math.max(area.w, 40)
-    const lines = wrapText(value, width, fontSize).length
-    const boxH = lines * fontSize * LINE_HEIGHT + 2
+    const boxH = fit?.h ?? wrapText(value, width, fontSize).length * fontSize * LINE_HEIGHT
     const top =
       field === 'label'
-        ? area.y - 1
+        ? area.y
         : field === 'footer'
-          ? area.y + area.h - boxH + 1
+          ? area.y + area.h - boxH
           : area.y + area.h / 2 - boxH / 2
     Object.assign(style, {
-      left: area.x,
+      left: area.x + area.w / 2 - width / 2,
       top,
       width,
       height: boxH,
@@ -156,25 +185,26 @@ export function TextEditOverlay({
       ...(field === 'label' ? { fontWeight: 600, letterSpacing: 0.3 } : {}),
       opacity: field === 'text' ? 1 : field === 'label' ? 0.85 : 0.65,
       textAlign: 'center' as const,
-      whiteSpace: 'pre-wrap' as const,
     })
   }
-
-  const text = useDiagramLabels()
-  const placeholder =
-    field === 'label' ? text.labelPlaceholder : field === 'footer' ? text.footerPlaceholder : text.textPlaceholder
 
   return (
     <textarea
       ref={ref}
-      className="rmk-diagram-text-input"
+      className={isConnector ? 'rmk-diagram-text-input is-connector' : 'rmk-diagram-text-input'}
       style={style}
       value={value}
       placeholder={placeholder}
       spellCheck={false}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => {
+        setValue(e.target.value)
+        onChange?.(e.target.value)
+      }}
       onBlur={() => onCommit(shape.id, field, value)}
       onPointerDown={(e) => e.stopPropagation()}
     />
   )
 }
+
+/** Room for the caret past the longest line, so typing never wraps early */
+const CARET_ROOM = 6

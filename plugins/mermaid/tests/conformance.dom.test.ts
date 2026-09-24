@@ -30,6 +30,7 @@ import mermaid from 'mermaid'
 import { describe, expect, it } from 'vitest'
 import { defaultKinds } from '../src/core/kinds.js'
 import type { DiagramKind, DiagramParse } from '../src/core/kind.js'
+import type { DrawingData, DrawingShape } from '../src/core/drawing-data.js'
 import { sequenceDiagram } from '../src/core/sequence/index.js'
 import type { Message, SequenceModel } from '../src/core/sequence/model.js'
 
@@ -407,5 +408,54 @@ describe('sequenceDiagram second review against Mermaid.js', () => {
     const written = kind.write!({ participants: [participant('alice@example.com'), participant('B')], boxes: [], items: [message('alice@example.com', 'B', 'hi')], activations: [] }, { retained: [] })
     expect(written).toBe('sequenceDiagram\n    alice@example.com->>B: hi')
     await expect(accepts(written)).resolves.toBeTruthy()
+  })
+})
+
+describe('flowchart writer against Mermaid.js: canvas styles', () => {
+  const box = (id: string, extra: Partial<DrawingShape> = {}): DrawingShape => ({
+    id, type: 'rect', x: 0, y: 0, width: 160, height: 90, stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2, ...extra,
+  })
+  const link = (id: string, extra: Partial<DrawingShape>): DrawingShape => ({
+    id, type: 'arrow', x: 0, y: 0, width: 100, height: 0, stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2,
+    startBinding: { id: 'a' }, endBinding: { id: 'b' }, ...extra,
+  })
+  // Every head, direction, stroke style and width the property bar can combine
+  const links: DrawingShape[] = []
+  for (const type of ['arrow', 'line'] as const)
+    for (const head of [undefined, 'circle', 'cross'] as const)
+      for (const bidirectional of [false, true])
+        for (const strokeStyle of [undefined, 'dashed', 'dotted'] as const)
+          for (const strokeWidth of [1, 2, 4]) {
+            if (type === 'line' && (head !== undefined || bidirectional)) continue
+            links.push(
+              link(`e${links.length}`, {
+                type,
+                strokeWidth,
+                ...(head === undefined ? {} : { head }),
+                ...(bidirectional ? { bidirectional } : {}),
+                ...(strokeStyle === undefined ? {} : { strokeStyle }),
+                ...(links.length % 2 === 0 ? { text: 'label' } : {}),
+              }),
+            )
+          }
+  const data: DrawingData = {
+    version: 3,
+    canvasHeight: 400,
+    shapes: [
+      box('a', { strokeWidth: 4, strokeStyle: 'dashed', color: '#c2255c', fill: '#fff0f6' }),
+      box('b', { corners: 'sharp', strokeWidth: 1, strokeStyle: 'dotted', color: '#0b7285' }),
+      ...links,
+    ],
+  }
+
+  it('accepts every combination the property bar writes, and reads it back unchanged', async () => {
+    const flowchart = defaultKinds().find((k) => k.name === 'flowchart')!
+    const written = flowchart.write!(data, { retained: [] })
+    await expect(accepts(written)).resolves.toBeTruthy()
+    const first = parsed(flowchart, written)
+    expect(first.problems).toEqual([])
+    expect(first.lossy).toEqual([])
+    const pick = (s: DrawingShape) => [s.id, s.type, s.strokeWidth, s.strokeStyle, s.head, s.bidirectional, s.corners, s.color]
+    expect((first.model as DrawingData).shapes.map(pick)).toEqual(data.shapes.map(pick))
   })
 })

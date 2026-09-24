@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CopyCode } from '../../shared/CopyCode'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../shared/Seo'
 
@@ -30,6 +31,7 @@ export function Notes() {
 }`
 
 const PRESET = `import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import { MarkdownEditor } from '@react-markdown-kit/editor'
 import { mermaid } from '@react-markdown-kit/mermaid/editor'
 
 export const preset = defineMarkdownPreset({ extensions: [gfm(), mermaid()] })
@@ -37,6 +39,7 @@ export const preset = defineMarkdownPreset({ extensions: [gfm(), mermaid()] })
 <MarkdownEditor preset={preset} value={value} onChange={setValue} />`
 
 const TEMPLATE = `import Markdown from '@react-markdown-kit/renderer'
+import { MarkdownEditor } from '@react-markdown-kit/editor'
 import { template } from '@react-markdown-kit/template'
 import { templateVariables } from '@react-markdown-kit/template/editor'
 
@@ -146,12 +149,8 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
       <div className="site-prose">
         <span className="site-eyebrow">Install</span>
         <h2>The editor, and the two plugins this demo uses</h2>
-        <pre className="site-code">
-          <code>npm install @react-markdown-kit/editor @react-markdown-kit/renderer</code>
-        </pre>
-        <pre className="site-code">
-          <code>npm install @react-markdown-kit/template @react-markdown-kit/mermaid</code>
-        </pre>
+        <CopyCode code="npm install @react-markdown-kit/editor @react-markdown-kit/renderer" />
+        <CopyCode code="npm install @react-markdown-kit/template @react-markdown-kit/mermaid" />
         <p>
           The editor needs the renderer for its preview mode and its parser. The template and Mermaid
           packages are optional plugins: install them only when you want variables or diagrams.
@@ -164,25 +163,19 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
             <strong>Mount the editor.</strong> Markdown in, Markdown out: your application keeps
             storing plain strings, and opening a document and closing it changes nothing. The
             stylesheet is optional; the editor works without it.
-            <pre className="site-code">
-              <code>{EDITOR}</code>
-            </pre>
+            <CopyCode code={EDITOR} />
           </li>
           <li>
             <strong>Share a dialect.</strong> Define what Markdown means once, then pass the same
             preset to the editor and the renderer. A <code>```mermaid</code> fence becomes a canvas here and
             static SVG there.
-            <pre className="site-code">
-              <code>{PRESET}</code>
-            </pre>
+            <CopyCode code={PRESET} />
           </li>
           <li>
             <strong>Add variables.</strong> The template plugin shows placeholders as chips while
             authoring and resolves them while rendering. Values are placed into the parsed tree, so
             data can never inject Markdown.
-            <pre className="site-code">
-              <code>{TEMPLATE}</code>
-            </pre>
+            <CopyCode code={TEMPLATE} />
           </li>
         </ol>
 

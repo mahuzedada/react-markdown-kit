@@ -98,6 +98,25 @@ export const UI_ICONS = {
       <path d="M8.5 8.5l1.5-1v5" />
     </g>
   ),
+  strokeThin: <path d="M3 10h14" strokeWidth="1" />,
+  strokeMedium: <path d="M3 10h14" strokeWidth="2" />,
+  strokeBold: <path d="M3 10h14" strokeWidth="3.5" />,
+  dashedLine: <path d="M2.5 10h5.5M12 10h5.5" />,
+  dotsLine: <path d="M3.5 10h.01M8 10h.01M12.5 10h.01M17 10h.01" strokeWidth="2.4" />,
+  cornersSharp: <path d="M4 16V4h12" />,
+  cornersRound: <path d="M4 16V10a6 6 0 0 1 6-6h6" />,
+  headCircle: (
+    <g>
+      <path d="M3 10h9" />
+      <circle cx="14" cy="10" r="2.5" />
+    </g>
+  ),
+  duplicate: (
+    <g>
+      <rect x="3" y="3" width="10" height="10" rx="1.5" />
+      <path d="M7 16.5h8a1.5 1.5 0 0 0 1.5-1.5V7" />
+    </g>
+  ),
   solidLine: <path d="M3 10h14" />,
   dottedLine: <path d="M3 10h2.5M8.5 10h3M14.5 10h2.5" />,
   headArrow: <path d="M3 10h9M11 6l5 4-5 4z" fill="currentColor" />,

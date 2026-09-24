@@ -9,9 +9,10 @@ import {
   type MermaidOptions,
 } from '../src/core/index.js'
 
+// Rectangles as the canvas draws them: square, Mermaid's `[text]`
 const box = (id: string, type: DrawingShapeType, extra: Partial<DrawingShape> = {}): DrawingShape => ({
   id, type, x: 0, y: 0, width: 100, height: 60,
-  stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2, ...extra,
+  stroke: '#1e1e1e', fill: 'transparent', strokeWidth: 2, ...(type === 'rect' ? { corners: 'sharp' as const } : {}), ...extra,
 })
 const connector = (
   id: string,

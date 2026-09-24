@@ -159,6 +159,46 @@ a[data-slot='button'] {
   background: none;
 }
 
+/* A code block with its Copy button (shared/CopyCode.tsx). The block
+   carries the spacing; the button sits in the top right corner, always
+   visible so it works on touch screens too. */
+.site-code-block {
+  position: relative;
+  margin: 0 0 1.5rem;
+}
+
+.site-code-block > .site-code {
+  margin: 0;
+  padding-right: 5rem;
+}
+
+.site-code-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.site-code-copy:hover {
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+
+.site-code-copy:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* Keep the kit's typography from fighting the demo chrome. */
 .rmk-document {
   --rmk-measure: none;
@@ -177,7 +217,7 @@ a[data-slot='button'] {
   margin-bottom: 1.25rem;
 }
 
-.site-steps .site-code {
+.site-steps .site-code-block {
   margin: 0.5rem 0 0;
 }
 

@@ -30,6 +30,7 @@ import {
   isNodeShapeType,
   isConnectorType,
   STROKE_COLORS,
+  THICK_WIDTH,
   type NodeShapeType,
   type DrawingData,
   type DrawingShape,
@@ -142,6 +143,8 @@ function layoutAnnotation(
       stroke: edge.stroke,
       fill: edge.fill,
       strokeWidth: edge.strokeWidth,
+      // The link token says dotted; the annotation says which pattern
+      ...(edge.strokeStyle === undefined ? {} : { strokeStyle: edge.strokeStyle }),
       ...(edge.routing === undefined ? {} : { routing: edge.routing }),
       ...(edge.elbow === undefined ? {} : { elbow: edge.elbow }),
       ...(edge.waypoints === undefined ? {} : { waypoints: edge.waypoints }),
@@ -203,10 +206,12 @@ const NODE_SYNTAX: Record<NodeShapeType, readonly [string, string]> = {
   queue: ['[[', ']]'],
   actor: ['((', '))'],
 }
+const ROUNDED_SYNTAX: readonly [string, string] = ['(', ')']
 const NODE_SYNTAX_LOSSY: ReadonlySet<NodeShapeType> = new Set<NodeShapeType>(['cloud', 'actor'])
 
 function nodeLine(box: DrawingShape, id: string): string {
-  const [open, close] = NODE_SYNTAX[box.type as NodeShapeType]
+  // Mermaid's `[text]` is square; our rectangle is rounded unless marked sharp
+  const [open, close] = box.type === 'rect' && box.corners !== 'sharp' ? ROUNDED_SYNTAX : NODE_SYNTAX[box.type as NodeShapeType]
   const parts = [box.label, box.text, box.footer].filter((part): part is string => part !== undefined)
   const text = parts.length ? parts.map(escapeText).join('<br/>') : box.id
   return `${id}${open}"${text}"${close}`
@@ -215,9 +220,24 @@ function nodeLine(box: DrawingShape, id: string): string {
 function edgeLine(edge: DrawingShape, mermaidId: (shapeId: string) => string): string {
   const from = mermaidId(edge.startBinding?.id ?? '')
   const to = mermaidId(edge.endBinding?.id ?? '')
-  const connector = edge.type === 'line' ? '---' : edge.bidirectional ? '<-->' : '-->'
   const label = edge.text ? `|${pipeLabel(edge.text)}|` : ''
-  return `${from} ${connector}${label} ${to}`
+  return `${from} ${linkToken(edge)}${label} ${to}`
+}
+
+/**
+ * The link token: dotted (`-.->`) for a dashed or dotted stroke, thick
+ * (`==>`) for a bold solid one, else normal (`-->`); `o` and `x` heads,
+ * mirrored at the start when the arrow points both ways (`o--o`, `<-->`).
+ * Mermaid has no dotted thick link: the dots win, and the width stays in
+ * the layout annotation.
+ */
+export function linkToken(edge: Pick<DrawingShape, 'type' | 'strokeStyle' | 'strokeWidth' | 'head' | 'bidirectional'>): string {
+  const dotted = edge.strokeStyle !== undefined
+  const thick = !dotted && edge.strokeWidth >= THICK_WIDTH
+  if (edge.type === 'line') return dotted ? '-.-' : thick ? '===' : '---'
+  const end = edge.head === 'circle' ? 'o' : edge.head === 'cross' ? 'x' : '>'
+  const start = edge.bidirectional ? (end === '>' ? '<' : end) : ''
+  return `${start}${dotted ? '-.-' : thick ? '==' : '--'}${end}`
 }
 
 /** Brackets, braces and parentheses Mermaid takes only inside quotes; the escaped text never holds a quote or a pipe. */
@@ -232,9 +252,21 @@ function styleLine(box: DrawingShape, id: string): string | null {
   const props: string[] = []
   if (box.fill !== DEFAULT_FILL) props.push(`fill:${box.fill}`)
   if (box.stroke !== DEFAULT_STROKE) props.push(`stroke:${box.stroke}`)
+  if (box.strokeWidth !== DEFAULT_STROKE_WIDTH) props.push(`stroke-width:${cssNumber(box.strokeWidth)}px`)
+  if (box.strokeStyle !== undefined) props.push(`stroke-dasharray:${STYLE_DASHES[box.strokeStyle]}`)
+  if (box.color !== undefined) props.push(`color:${box.color}`)
   if (props.length === 0) return null
   // Keep the explicit transparent fill alongside a custom stroke so the
   // node isn't repainted by Mermaid's theme
   if (box.fill === DEFAULT_FILL) props.unshift(`fill:${DEFAULT_FILL}`)
   return `style ${id} ${props.join(',')}`
+}
+
+const DEFAULT_STROKE_WIDTH = 2
+
+/** The `stroke-dasharray` each style writes; the parser reads a first dash of 2 or less as dotted. */
+export const STYLE_DASHES = { dashed: '8 6', dotted: '2 4' } as const
+
+function cssNumber(n: number): string {
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100)
 }

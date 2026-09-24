@@ -58,11 +58,11 @@
   color: var(--muted-foreground);
 }
 
-.home-section .site-code {
+.home-section .site-code-block {
   margin: 0 0 0.75rem;
 }
 
-.home-section .site-code + p {
+.home-section .site-code-block + p {
   margin-top: 1rem;
 }
 

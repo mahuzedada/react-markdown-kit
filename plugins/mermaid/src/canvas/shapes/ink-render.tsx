@@ -7,7 +7,7 @@
  * read as a sketch without making it messy.
  */
 import type { ReactElement } from 'react'
-import { arrowHeadPoints, pathLength, segmentAngleAt } from '../../core/connectors.js'
+import { arrowHeadPoints, crossArms, headRadius, pathLength, segmentAngleAt } from '../../core/connectors.js'
 import { bbox } from '../../core/geometry.js'
 import {
   arcPolygon,
@@ -22,7 +22,7 @@ import {
   seedFrom,
   type InkSide,
 } from '../../core/ink.js'
-import type { DrawingShape, Point } from '../../core/drawing-data.js'
+import { strokeDashArray, type ArrowHead, type DrawingShape, type Point } from '../../core/drawing-data.js'
 import { ACTOR_FIGURE_RATIO, CYLINDER_RY, NOTE_FOLD, QUEUE_RX } from '../../core/shapes/definitions.js'
 
 /** Width and opacity of the under-drawing pass, relative to the main stroke */
@@ -33,7 +33,7 @@ const UNDER_SALT = 0x5a5a5a5a
 /** Salt per sub-stroke of one shape (cylinder lid, note fold, limbs …) */
 const PART_SALT = 0x1000
 
-type Pen = Readonly<{ seed: number; stroke: string; width: number }>
+type Pen = Readonly<{ seed: number; stroke: string; width: number; dashes?: string | undefined }>
 
 function sideExtent(sides: readonly InkSide[]): number {
   let minX = Infinity
@@ -99,8 +99,8 @@ function Stroke({
   return (
     <g stroke={pen.stroke} strokeLinecap="round" strokeLinejoin="round" fill="none">
       {(closed || closer !== undefined) && fill !== undefined && <path d={fillPath} fill={fill} stroke="none" />}
-      <path d={under.stroke} strokeWidth={pen.width * UNDER_WIDTH} opacity={UNDER_OPACITY} />
-      <path d={main.stroke} strokeWidth={pen.width} />
+      <path d={under.stroke} strokeWidth={pen.width * UNDER_WIDTH} opacity={UNDER_OPACITY} strokeDasharray={pen.dashes} />
+      <path d={main.stroke} strokeWidth={pen.width} strokeDasharray={pen.dashes} />
     </g>
   )
 }
@@ -108,14 +108,22 @@ function Stroke({
 /** Ink-style box: its outline as sides, with sub-strokes on their own seeds */
 export function InkBoxGeometry({ shape }: { shape: DrawingShape }): ReactElement | null {
   const b = bbox(shape)
-  const pen: Pen = { seed: seedFrom(shape.id), stroke: shape.stroke, width: shape.strokeWidth }
+  const pen: Pen = { seed: seedFrom(shape.id), stroke: shape.stroke, width: shape.strokeWidth, dashes: strokeDashArray(shape) }
   const fill = shape.fill
   const cx = b.x + b.w / 2
   const cy = b.y + b.h / 2
 
   switch (shape.type) {
     case 'rect':
-      return <Stroke pen={pen} part={0} closed fill={fill} sides={roundedRectSides(b, Math.min(6, b.w / 5, b.h / 5))} />
+      return (
+        <Stroke
+          pen={pen}
+          part={0}
+          closed
+          fill={fill}
+          sides={roundedRectSides(b, shape.corners === 'sharp' ? 0 : Math.min(6, b.w / 5, b.h / 5))}
+        />
+      )
     case 'ellipse':
       return <Stroke pen={pen} part={0} closed fill={fill} sides={ellipseSides(cx, cy, b.w / 2, b.h / 2, 12)} />
     case 'diamond':
@@ -290,6 +298,7 @@ export function InkConnector({
   if (shape.type === 'arrow' && length >= 1) {
     const headLength = Math.min(15, 5 + length / 4)
     const head = (tip: Point, angle: number, part: number): string => {
+      if (shape.head !== undefined) return inkHead(shape.head, tip, angle, headLength, seed + part * PART_SALT)
       const [a, t, c] = arrowHeadPoints(tip, angle, headLength) as [Point, Point, Point]
       // One barb a touch longer than the other
       const long = part % 2 === 0 ? a : c
@@ -300,13 +309,24 @@ export function InkConnector({
     heads.push(head(last, segmentAngleAt(points, points.length - 1, false), 1))
     if (shape.bidirectional) heads.push(head(first, segmentAngleAt(points, 0, true), 2))
   }
+  const dashes = strokeDashArray(shape)
   return (
     <g stroke={shape.stroke} strokeLinecap="round" strokeLinejoin="round" fill="none">
-      <path d={under.stroke} strokeWidth={width * UNDER_WIDTH} opacity={UNDER_OPACITY} />
-      <path d={line.stroke} strokeWidth={width} />
+      <path d={under.stroke} strokeWidth={width * UNDER_WIDTH} opacity={UNDER_OPACITY} strokeDasharray={dashes} />
+      <path d={line.stroke} strokeWidth={width} strokeDasharray={dashes} />
       {heads.map((d, i) => (
         <path key={i} d={d} strokeWidth={width * 1.1} />
       ))}
     </g>
   )
+}
+
+/** A circle or cross head drawn with the pen: a loose loop, or two quick strokes */
+function inkHead(kind: ArrowHead, tip: Point, angle: number, length: number, seed: number): string {
+  const r = headRadius(length)
+  const back = kind === 'circle' ? r : r * 1.2
+  const c = { x: tip.x - back * Math.cos(angle), y: tip.y - back * Math.sin(angle) }
+  if (kind === 'circle') return inkOutline(ellipseSides(c.x, c.y, r, r, 6), { closed: true, seed, amplitude: 0.5 }).stroke
+  const [a, b] = crossArms(c, angle, r)
+  return [a, b].map((arm, i) => inkOutline(polylineSides(arm), { closed: false, seed: seed + i, amplitude: 0.5 }).stroke).join(' ')
 }

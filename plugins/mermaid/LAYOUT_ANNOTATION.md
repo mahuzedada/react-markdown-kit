@@ -13,8 +13,8 @@ described in RFC 2119.
 
 ## 1. Scope
 
-A Mermaid flowchart states nodes, edges, text, direction and colours. It has
-no syntax for positions, sizes, stroke widths, connector routing, waypoints,
+A Mermaid flowchart states nodes, edges, text, direction, colours and
+stroke styles. It has no syntax for positions, sizes, connector routing, waypoints,
 attach points, free text or connectors that are not bound at both ends. The
 annotation carries exactly that remainder, in one comment line, so that:
 
@@ -83,12 +83,13 @@ node ids.
 |---|---|---|
 | `x`, `y` | number | Top-left of the bounding box. |
 | `width`, `height` | number ≥ 0 | Size of the bounding box. |
-| `strokeWidth` | number ≥ 0 | Outline width. The editor writes `2`. |
+| `strokeWidth` | number ≥ 0 | Outline width. A `stroke-width` on the node's `style` line wins. |
 | `slots` | array of `"label"` \| `"text"` \| `"footer"`, distinct | Which card slots the node text fills. See 5. |
 | `type` | `"cloud"` \| `"actor"` | The shape, when Mermaid has no bracket for it. Every other shape is stated by the bracket in the syntax. |
 
-Node colours are never in the annotation. They are `style <id> fill:…,stroke:…`
-lines in the syntax.
+Node colours, dashes and text colour are never in the annotation. They are
+`style <id> fill:…,stroke:…,stroke-width:…,stroke-dasharray:…,color:…` lines
+in the syntax; the writer spells a width other than 2 there too.
 
 ### 3.3 Edge entry
 
@@ -98,7 +99,8 @@ lines in the syntax.
 | `x`, `y` | number | Start point. Approximate: a bound endpoint is re-anchored to its node. |
 | `width`, `height` | number | Delta to the end point. May be negative. |
 | `stroke`, `fill` | string | CSS colours of the connector and of the arrowhead interior. |
-| `strokeWidth` | number ≥ 0 | Line width. |
+| `strokeWidth` | number ≥ 0 | Line width. The link token decides its class: a thick token (`==>`) keeps a width of 3 or more and reads a smaller one as 4; a normal token keeps a width under 3 and reads a larger one as 2; a dotted token keeps any width, since Mermaid has no dotted thick link. |
+| `strokeStyle` | `"dashed"` \| `"dotted"` | Which pattern a dotted token (`-.->`) draws; omitted, dotted. A solid token ignores it. |
 | `routing` | `"elbow"` | Right-angled auto-routed path. Omit for straight. |
 | `elbow` | number in [0, 1] | Middle segment position of a three-segment elbow. |
 | `waypoints` | array of `{x, y}` | Explicit path. Takes precedence over `routing`. |

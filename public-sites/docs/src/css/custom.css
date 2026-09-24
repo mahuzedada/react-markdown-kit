@@ -304,6 +304,18 @@ code {
   box-shadow: var(--shadow-1);
 }
 
+/* Docusaurus reveals a code block's Copy button only on hover, which a
+   touch screen never has. Keep it in view so every install command and
+   snippet is one click from the clipboard, as on the demo sites. */
+.theme-code-block [class*='buttonGroup'] > button {
+  opacity: 0.6;
+}
+
+.theme-code-block [class*='buttonGroup'] > button:hover,
+.theme-code-block [class*='buttonGroup'] > button:focus-visible {
+  opacity: 1;
+}
+
 .markdown table thead {
   background: var(--muted);
 }

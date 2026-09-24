@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CopyCode } from '../../shared/CopyCode'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../shared/Seo'
 
@@ -27,7 +28,8 @@ const preset = defineMarkdownPreset({ extensions: [gfm()] })
 
 <Markdown preset={preset}>{content}</Markdown>`
 
-const STYLE = `import '@react-markdown-kit/renderer/styles.css'
+const STYLE = `import Markdown from '@react-markdown-kit/renderer'
+import '@react-markdown-kit/renderer/styles.css'
 
 <div className="rmk-document">
   <Markdown preset={preset} components={{ a: AppLink, img: AppImage }}>
@@ -119,9 +121,7 @@ export default function Landing(): ReactNode {
       <div className="site-prose">
         <span className="site-eyebrow">Install</span>
         <h2>One package, one component</h2>
-        <pre className="site-code">
-          <code>npm install @react-markdown-kit/renderer</code>
-        </pre>
+        <CopyCode code="npm install @react-markdown-kit/renderer" />
         <p>
           React 18 or newer. No provider, no stylesheet, no configuration, and no design system.
           The package has no <code>use client</code> directive, so it works in server components,
@@ -134,25 +134,19 @@ export default function Landing(): ReactNode {
           <li>
             <strong>Render a string.</strong> Raw HTML is shown as text, never run, and unsafe URL
             schemes are emptied, with nothing to configure.
-            <pre className="site-code">
-              <code>{RENDER}</code>
-            </pre>
+            <CopyCode code={RENDER} />
           </li>
           <li>
             <strong>Turn on GitHub Flavored Markdown</strong> for tables, task lists,
             strikethrough, autolinks and footnotes. A preset is your application&rsquo;s answer to
             &ldquo;what does Markdown mean here?&rdquo;, defined once and reused everywhere.
-            <pre className="site-code">
-              <code>{GFM}</code>
-            </pre>
+            <CopyCode code={GFM} />
           </li>
           <li>
             <strong>Style it your way.</strong> Opt into the shipped typography, pass your own
             components per element, or leave the plain semantic HTML and bring your own CSS. The
             playground above uses a component for every element; its Code tab has the source.
-            <pre className="site-code">
-              <code>{STYLE}</code>
-            </pre>
+            <CopyCode code={STYLE} />
           </li>
         </ol>
 
