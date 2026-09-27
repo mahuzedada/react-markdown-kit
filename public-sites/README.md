@@ -40,7 +40,9 @@ route is a file (a demo has only `/`; slides switches views with `?view=`),
 so `nginx.container.conf` answers any other path with a real 404 and that
 page, never the site root with a 200. `public/robots.txt` and the head tags
 (title, description, canonical, Open Graph, Twitter) are hand-written in each
-`index.html`; `public/social-card.png` comes from `scripts/social-cards.mjs`.
+`index.html`; `public/social-card.png` comes from `scripts/social-cards.mjs`,
+and the logo, favicons and `site.webmanifest` from `scripts/brand-icons.mjs`
+(source: `shared/brand/logo.svg`).
 
 `tests/seo-surface.test.ts` reads the six build folders and fails on a
 missing h1, a wrong title or description length, a missing canonical, an

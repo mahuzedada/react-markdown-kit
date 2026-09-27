@@ -47,6 +47,11 @@ const config: Config = {
     // asserts it on every host.
     { tagName: 'meta', attributes: { name: 'google-site-verification', content: 'OeinVf8DkV6qubXo57xz7nxQyV2n5RQWJ7xaf7E0JUY' } },
     { tagName: 'meta', attributes: { name: 'msvalidate.01', content: '2B64E1F8A84336B6ADCDC7C6804331D5' } },
+    // `favicon` above emits the SVG icon; these match the Vite sites' head.
+    // scripts/brand-icons.mjs writes the files.
+    { tagName: 'link', attributes: { rel: 'icon', href: '/favicon.ico', sizes: '32x32' } },
+    { tagName: 'link', attributes: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' } },
+    { tagName: 'link', attributes: { rel: 'manifest', href: '/site.webmanifest' } },
   ],
   markdown: { hooks: { onBrokenMarkdownLinks: 'throw' } },
 

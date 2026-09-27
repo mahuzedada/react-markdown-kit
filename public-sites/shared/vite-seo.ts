@@ -96,7 +96,9 @@ function notFound(url: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
   <title>Page not found | React Markdown Kit</title>
+  <link rel="icon" href="/favicon.ico" sizes="32x32" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <style>
     :root { --background: #ffffff; --foreground: #1c2127; --muted-foreground: #5f6b7c; --primary-text: #215db0; color-scheme: light dark; }
     @media (prefers-color-scheme: dark) {

@@ -2,14 +2,20 @@
 /**
  * Renders the 1200x630 PNG social card of each public site. Social crawlers
  * do not render SVG, so the PNGs are committed and referenced as `og:image`.
- * Run again after changing a title here: `node scripts/social-cards.mjs`.
+ * Run again after changing a title here or the logo: `node scripts/social-cards.mjs`.
  */
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Resvg } from '@resvg/resvg-js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+// The master logo from scripts/brand-icons.mjs, nested at the card's top left.
+const logo = readFileSync(join(root, 'public-sites/shared/brand/logo.svg'), 'utf8')
+const LOGO = logo
+  .replace(/<svg [^>]*viewBox="([^"]+)"[^>]*>/, '<svg x="60" y="56" width="96" height="96" viewBox="$1">')
+  .trim()
 
 const CARDS = [
   {
@@ -61,8 +67,7 @@ function svg({ title, lines, host }) {
   const [first = '', second = ''] = lines
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
   <rect width="1200" height="630" fill="#1c2127"/>
-  <rect x="64" y="64" width="72" height="72" rx="16" fill="#2d72d2"/>
-  <path d="M78 118V82h9l9.6 13.2L106.2 82h9v36h-9V96.4l-6.6 9h-2.7l-6.6-9V118z" fill="#fff"/>
+  ${LOGO}
   <text x="64" y="290" font-family="${SANS}" font-size="64" font-weight="700" fill="#ffffff">${escape(title)}</text>
   <text x="64" y="366" font-family="${SANS}" font-size="38" fill="#abb3bf">${escape(first)}</text>
   <text x="64" y="418" font-family="${SANS}" font-size="38" fill="#abb3bf">${escape(second)}</text>
