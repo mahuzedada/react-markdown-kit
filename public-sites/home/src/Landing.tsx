@@ -11,9 +11,8 @@ import size from '../../../docs/data/mermaid-size.json'
 
 export const TITLE = 'React Markdown Kit'
 
-/** Also the meta description in index.html; tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
-  'React Markdown Kit renders Markdown in React, adds a rich editor that saves plain Markdown, and ships plugins for templates, Mermaid flowcharts and slides.'
+  'Packages for rendering, streaming and editing markdown in react. Plus plugins for mermaid diagrams, slides and variables.'
 
 /** The same formula as docs/src/pages/react-mermaid.mdx, from the same file. */
 const kb = (bytes: number): string => `${(bytes / 1024).toFixed(1)} KB`
@@ -291,7 +290,7 @@ export default function Landing(): ReactNode {
         </div>
         <Text size="lg" weight="medium" className="m-0 mb-8 text-xl max-sm:text-lg">
           Packages for rendering, streaming and editing markdown in react.{' '}
-          <span className="mt-1 block text-base font-semibold">Plus plugins for diagrams, slides and variables.</span>
+          <span className="mt-1 block text-base font-semibold">Plus plugins for mermaid diagrams, slides and variables.</span>
         </Text>
         <ActivityScope feature="hero" as="div" className="flex flex-wrap gap-2">
           <Button as="a" href={docsUrl('/docs/getting-started')} track="get-started">

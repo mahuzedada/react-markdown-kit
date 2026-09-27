@@ -128,19 +128,15 @@ export default function Home(): ReactNode {
           isPartOf: { '@type': 'WebSite', name: 'React Markdown Kit', url: sites.home },
         }}
       />
-      {/* The root of every breadcrumb trail on this site. */}
       <BreadcrumbJsonLd trail={[{ name: 'React Markdown Kit' }]} />
-      {/* Spec 13.1: open with the renderer, not with architecture. */}
       <header>
         <div className="container">
           {/* Infima's unlayered `h1` and `p` rules set size and margins, so those utilities carry `!`. */}
           <Heading as="h1" className="mb-2! text-[clamp(2rem,5vw,3rem)]! text-balance">
-            React Markdown renderer, editor and template engine
+            React Markdown Kit
           </Heading>
           <Text className="mx-auto! mt-0! mb-7! max-w-[34rem] text-[clamp(1rem,2.4vw,1.25rem)] text-balance">
-            React packages for rendering, editing and personalizing Markdown. They share
-            one Markdown model, so an app can go from displaying Markdown to authoring and
-            personalizing it without changing how anything is stored.
+            Packages for rendering, streaming and editing markdown in react. Plus plugins for mermaid diagrams, slides and variables.
           </Text>
           <ActivityScope feature="hero" as="div" className="mb-10 flex flex-wrap justify-center gap-3">
             <Button as={Link} size="lg" track="get-started" to="/docs/getting-started">
