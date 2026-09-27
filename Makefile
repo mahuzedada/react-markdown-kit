@@ -1,8 +1,13 @@
 # --- shipiru ---------------------------------------------------------------
 SHIPIRU ?= $(HOME)/projects/shipiru-diy/bin/shipiru
-.PHONY: deploy logs restart rollback
+.PHONY: deploy indexnow logs restart rollback
+# A successful deploy then tells the IndexNow engines (Bing and others) which
+# pages are new or changed; see scripts/indexnow.mjs.
 deploy:
 	$(SHIPIRU) deploy reactmarkdownkit
+	node scripts/indexnow.mjs
+indexnow:
+	node scripts/indexnow.mjs
 logs:
 	$(SHIPIRU) logs reactmarkdownkit
 restart:

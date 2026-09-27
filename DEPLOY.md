@@ -51,10 +51,17 @@ the new subdomain fails and the deploy is held back, which is the point.
 ## Commands
 
 ```sh
-make deploy      # build, ship, compose up, wait for health, swap nginx, check routes
+make deploy      # build, ship, compose up, wait for health, swap nginx, check routes, then IndexNow
+make indexnow    # submit new or changed sitemap URLs to IndexNow again
 make logs        # live container logs
 make restart
 make rollback TAG=<image tag>   # tags: shipiru images reactmarkdownkit
 ```
+
+After a deploy, `scripts/indexnow.mjs` reads the live sitemap and submits the
+URLs that are new or whose lastmod moved since its last run (kept in the
+gitignored `.indexnow.json`) to IndexNow, which Bing and the other IndexNow
+engines read. The key is `site/static/<key>.txt`, served at the site root;
+keep exactly one key file there. Google ignores IndexNow and reads the sitemap.
 
 Environment values are edited on the server only, from the Shipiru Apps page or `shipiru env reactmarkdownkit set KEY=value`; they are never copied to this machine.

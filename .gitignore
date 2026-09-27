@@ -13,3 +13,6 @@ site/build/
 
 # Reference clones (read-only, not part of the kit)
 references/
+
+# IndexNow: what scripts/indexnow.mjs last submitted
+.indexnow.json
