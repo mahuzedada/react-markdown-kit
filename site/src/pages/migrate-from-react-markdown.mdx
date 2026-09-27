@@ -3,7 +3,7 @@ title: "Migrate from react-markdown to the kit"
 description: "Migrating from react-markdown 10 to React Markdown Kit: the three things that differ, and a codemod that skips anything it cannot safely convert."
 ---
 
-import Link from '@docusaurus/Link'
+import Link from '@site/src/components/Link'
 import { ArticleJsonLd } from '@site/src/components/JsonLd'
 
 <ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path="/migrate-from-react-markdown" />
@@ -114,5 +114,5 @@ It exits non-zero on a difference, so you can gate a pull request on it.
 ## Next
 
 <Link to="/docs/compatibility">Compatibility matrix</Link> ·{' '}
-<Link to="/react-markdown-renderer">Renderer overview</Link> ·{' '}
+<Link to="/markdown-renderer">Renderer overview</Link> ·{' '}
 <Link to="/docs/security">Security model</Link>

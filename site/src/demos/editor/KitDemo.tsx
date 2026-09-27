@@ -11,7 +11,6 @@ import { mermaid } from '@react-markdown-kit/mermaid/editor'
 import { templateVariables } from '@react-markdown-kit/template/editor'
 import { useShareHash } from './use-share-hash'
 
-import '@react-markdown-kit/renderer/styles.css'
 import '@react-markdown-kit/editor/styles.css'
 import '@react-markdown-kit/mermaid/styles.css'
 import '@react-markdown-kit/template/styles.css'

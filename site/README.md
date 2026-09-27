@@ -1,32 +1,51 @@
 # reactmarkdownkit.com
 
-The one public site, in Docusaurus, with every live example rendered by the kit's
-own packages: the docs, the funnel and comparison pages, and the four demos. It
+The one public site: a Vite app with MDX, zui and Tailwind, built to static HTML,
+with every live example rendered by the kit's own packages: the docs, the funnel and comparison pages, and the four demos. It
 isn't a published package. Before writing or editing any copy here, read
 [docs/writing-rules.md](../docs/writing-rules.md).
 
 ```bash
-pnpm --filter react-markdown-kit-site start    # dev server
-pnpm --filter react-markdown-kit-site build    # static build, into build/
-pnpm --filter react-markdown-kit-site serve    # serve the build
+pnpm --filter react-markdown-kit-site start    # dev server, renders in the browser
+pnpm --filter react-markdown-kit-site build    # static build, every route to build/<route>/index.html
+pnpm --filter react-markdown-kit-site serve    # serve the build the way nginx does
 pnpm --filter react-markdown-kit-site check-theme   # WCAG pairs of src/css/theme.css
 ```
 
 The site depends on the workspace packages and plugins, so run `pnpm build` in the repo
 root first if you have not built them.
 
+## How it builds
+
+A page is a file. `docs/**/*.mdx` is served at `/docs/<path>`, `src/pages/**/*.mdx`
+and `src/pages/**/*.tsx` at `/<path>` (`index.tsx` is `/`). `vite/pages.ts` finds
+them, reads their front matter and last commit date, and gives the app the list
+as `virtual:pages`; its remark plugin gives every MDX page heading ids, `toc`
+and `frontMatter` exports, and turns relative `.mdx` links into routes.
+
+`scripts/build.mjs` builds the client, then a server bundle, renders every route
+with React to `build/<route>/index.html` (head from `src/app/head.ts`), and
+writes `404.html` and `sitemap.xml`. Every link is a plain page load: the
+browser runs `src/app/entry-client.tsx`, which imports the one page module and
+hydrates. A React page exports `meta` (title, description, keywords, social
+card); an MDX page takes its title and description from front matter.
+
 ## Layouts
 
-Every route uses one of three layouts:
+One `Shell` (`src/layouts/Shell.tsx`: navbar, mobile menu, footer) frames every
+page, and every page's copy is one `Prose` (`src/components/Prose.tsx`). The
+layouts only arrange them:
 
 | Layout | Routes | Where |
 | --- | --- | --- |
-| Doc | `/docs/*` | the docs plugin, with its sidebar |
-| Article | the Markdown pages in `src/pages` (`/react-mermaid`, `/compare/*`, …) | `src/layouts/ArticleLayout.tsx`, applied to every one of them by the swizzled `src/theme/MDXPage` |
-| Demo | `/markdown-renderer`, `/markdown-editor`, `/mermaid-editor`, `/markdown-slides` | `src/layouts/DemoLayout.tsx`: the navbar, the demo filling the rest of the first viewport, the landing copy, the footer |
+| Doc | `/docs/*` | `src/layouts/DocLayout.tsx`: the docs sidebar (`DOCS_SIDEBAR` in `src/app/navigation.ts`), the reading column with its table of contents, previous and next |
+| Article | the MDX pages in `src/pages` (`/react-mermaid`, `/compare/*`, …) | `src/layouts/ArticleLayout.tsx`: the reading column with its table of contents |
+| Demo | `/markdown-renderer`, `/markdown-editor`, `/mermaid-editor`, `/markdown-slides` | `src/layouts/DemoLayout.tsx`: the demo filling the first viewport under the navbar, the copy below in the reading column |
+
+The home page is the reading column on its own (`Page` in `src/components/landing/Page.tsx`).
 
 A demo's code lives in `src/demos/<name>/`. `Demo.tsx` loads it in the browser
-only (`BrowserOnly` and a lazy chunk), behind a placeholder the height the demo
+only (`ClientOnly` and a lazy chunk), behind a placeholder the height the demo
 will take; `Landing.tsx` holds the title, description, copy, FAQ and structured
 data, which render on the server into the built page. The demo root sizes
 itself with `h-[var(--rmk-demo-height,100dvh)]`: DemoLayout sets the variable to
@@ -37,11 +56,12 @@ render the demo alone, so the variable is unset and the demo takes the frame.
 
 | Path | What it is |
 | --- | --- |
-| `src/css/theme.css` | The one stylesheet. It imports zui (`@zuilib/primitives/tailwind.css`) and Tailwind's theme and utilities (no preflight), then only overrides variables: the zui tokens in the Foundry palette (light on `:root`, dark on `[data-theme='dark']`), the kit's `--rmk-*` properties, and Docusaurus' `--ifm-*` variables. Colours live only here. `check-theme` checks its contrast pairs. |
+| `src/css/theme.css` | The one stylesheet. It imports zui (`@zuilib/primitives/tailwind.css`), Tailwind's theme and utilities (no preflight) and the renderer's typography in the `components` layer, then sets the zui tokens in the Foundry palette (light on `:root`, dark on `[data-theme='dark']`), the kit's `--rmk-*` properties, the two page widths, the prose rhythm and the code colours. Colours live only here. `check-theme` checks its contrast pairs. |
+| `src/app/` | The build's app: the page list and loaders (`routes.ts`), the head (`head.ts`), the navbar, footer and docs sidebar as data (`navigation.ts`), the client and server entries. |
 | `src/sites.json`, `src/sites.ts` | The public URLs (the site, each demo page, GitHub) and `docsUrl()`. Absolute links in structured data, share links and the demos read them. |
-| `src/components/landing/` | The demo pages' landing blocks: `Page.tsx` (`Page`, `Hero`, `LinkRow`, `Features`, `Prose`, `Steps`, `Callout`), `Seo.tsx` (`Faq` with its `FAQPage` data, `JsonLd`, the `WebApplication` and `SoftwareSourceCode` shapes) and `CopyCode.tsx` (a code block with a Copy button). |
+| `src/components/` | `Prose`, `CodeBlock` (Prism, colours from `--code-*`, a Copy button), `Toc`, `JsonLd` (every structured-data shape), the live examples, and `landing/` for the copy blocks of the home and demo pages (`Page`, `Hero`, `LinkRow`, `Features`, `Steps`, `Callout`, `Faq`). |
 | `src/lib/share.ts` | The share-link format: the whole document in the URL hash, `#pako:` or `#base64:`, as on mermaid.live. Every demo that shares a document uses it. |
-| `src/lib/Activity.tsx`, `src/lib/umami.ts` | `SiteActivity`, mounted at the root by `src/theme/Root.tsx`: the `@zuilib/primitives` `ActivityProvider`, reporting to the console in development and to the self-hosted Umami at stats.reactmarkdownkit.com in production. Controls name themselves with `track` (primitives) or `data-zui-tag` (plain elements), inside an `ActivityScope` feature. |
+| `src/lib/Activity.tsx`, `src/lib/umami.ts` | `SiteActivity`, mounted around every page by `src/app/App.tsx`: the `@zuilib/primitives` `ActivityProvider`, reporting to the console in development and to the self-hosted Umami at stats.reactmarkdownkit.com in production. Controls name themselves with `track` (primitives) or `data-zui-tag` (plain elements), inside an `ActivityScope` feature. |
 | `src/lib/useTheme.ts` | The colour mode a demo's own header toggles, in step with the navbar's toggle. |
 | `static/llms.txt`, `static/llms-full.txt` | The model-facing summaries, served at the site root. |
 | `brand/logo.svg` | The master logo. `node scripts/brand-icons.mjs` copies it to `static/img/` as `logo.svg` and `favicon.svg` and renders the favicons and `site.webmanifest`; run `node scripts/social-cards.mjs` after it, because the social cards (`static/img/social-card*.png`, one per demo) draw the same logo. Edit the master only. |
@@ -88,31 +108,33 @@ convenience, it is the proof: if the renderer or the template plugin needed a br
 the build would fail. You can check it after a build:
 
 ```bash
-grep -o "<table>" build/index.html          # a GFM table rendered at build time
-grep -o "Acme Industrial" build/index.html  # a template resolved at build time
+grep -o "<table>" build/markdown-template-engine/index.html          # a GFM table rendered at build time
+grep -o "Acme Industrial" build/markdown-template-engine/index.html  # a template resolved at build time
 ```
 
-The editor mounts client-side behind `BrowserOnly` and a lazy import, because it needs a
+The editor mounts client-side behind `ClientOnly` and a lazy import, because it needs a
 DOM. That split mirrors how an application should use the packages.
 
 ## Styling
 
-The site chrome is Docusaurus with Infima's defaults, themed through `@zuilib/tokens`:
-`src/css/theme.css` sets the token values and maps
-Infima's variables onto them. Pages and components use zui primitives and Tailwind
-classes, with no CSS files of their own. The rendered Markdown inside
-every example is styled only by `@react-markdown-kit/renderer/styles.css`, scoped to
-`.rmk-document`, which is the same opt-in stylesheet a consumer would import. The site
-does not restyle the kit's output, so what you see is what you get.
+One system: zui primitives and Tailwind token classes for every component,
+and the renderer's `.rmk-document` stylesheet for every page's prose, with its
+`--rmk-*` variables set to the site's tokens under `[data-prose]`. The
+stylesheet sits in the `components` layer, so a utility class in the markup
+wins over it without `!`. The Markdown inside each live example is a nested
+`.rmk-document` outside `[data-prose]`, so it shows the kit's defaults, which
+is what a consumer gets from the same opt-in stylesheet.
 
 ## Page structure
 
-Three discovery funnels, each a substantive page rather than a redirect (spec 13.2):
+Discovery pages, each a substantive page rather than a redirect (spec 13.2). The
+renderer and editor have no overview page of their own: their demos
+(`/markdown-renderer`, `/markdown-editor`) are the entry points, and the old
+`/react-markdown-renderer` and `/react-markdown-editor` URLs 301 to them
+(`nginx.container.conf`).
 
 | Route | Intent |
 | --- | --- |
-| `/react-markdown-renderer` | React markdown renderer |
-| `/react-markdown-editor` | React markdown editor |
 | `/markdown-template-engine` | Markdown template engine, variables |
 | `/migrate-from-react-markdown` | migration, with the differences first |
 | `/nextjs-markdown` | server rendering |

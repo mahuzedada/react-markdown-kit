@@ -1,14 +1,15 @@
 import type { ReactNode } from 'react'
 import sites from '../../sites.json'
+import { JsonLd, ORGANIZATION, faqPage } from '../JsonLd'
 
 /*
- * Structured data and the FAQ block for the home page and the demo sites
+ * Structured data and the FAQ block for the home page and the demo pages
  * (docs/SEO_WORKPLAN.md, milestone A). The JSON-LD is rendered from the same
- * data as the visible markup, so the two cannot drift, and the prerender step
- * in vite-seo.ts puts both into the built index.html.
+ * data as the visible markup, so the two cannot drift.
  */
 
-const ORGANIZATION = { '@type': 'Organization', name: 'ZUI', url: sites.home }
+export { JsonLd }
+
 const MIT = 'https://opensource.org/license/mit'
 
 export interface FaqItem {
@@ -19,18 +20,13 @@ export interface FaqItem {
   readonly more?: { readonly href: string; readonly label: string }
 }
 
-export function JsonLd({ data }: { readonly data: object }): ReactNode {
-  const json = JSON.stringify(data).replace(/</g, '\\u003c')
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json }} />
-}
-
 export interface WebApplicationInput {
   readonly name: string
   readonly url: string
   readonly description: string
 }
 
-/** A free, browser-based developer tool: the shape each demo root declares. */
+/** A free, browser-based developer tool: the shape each demo page declares. */
 export function webApplication({ name, url, description }: WebApplicationInput): object {
   return {
     '@context': 'https://schema.org',
@@ -49,58 +45,22 @@ export function webApplication({ name, url, description }: WebApplicationInput):
   }
 }
 
-export interface SoftwareSourceCodeInput {
-  readonly name: string
-  readonly url: string
-  readonly description: string
-}
-
-/** The kit as a code base: the shape the home page declares. */
-export function softwareSourceCode({ name, url, description }: SoftwareSourceCodeInput): object {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareSourceCode',
-    name,
-    url,
-    description,
-    codeRepository: sites.github,
-    programmingLanguage: 'TypeScript',
-    runtimePlatform: 'React 18 or newer',
-    license: MIT,
-    author: ORGANIZATION,
-  }
-}
-
-function faqPage(items: readonly FaqItem[]): object {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: items.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: { '@type': 'Answer', text: item.answer },
-    })),
-  }
-}
-
 export interface FaqProps {
   readonly id: string
   readonly title?: string
   readonly items: readonly FaqItem[]
 }
 
-/** The questions people type into a search box, answered in one sentence each. */
+/** The questions people type into a search box, answered in one sentence each. Sits inside `Prose`. */
 export function Faq({ id, title = 'Questions', items }: FaqProps): ReactNode {
   return (
-    <section data-faq className="mt-12" aria-labelledby={id}>
-      <h2 id={id} className="mt-0 mb-3 text-2xl font-semibold leading-tight">
-        {title}
-      </h2>
-      <dl className="m-0">
+    <section data-faq aria-labelledby={id}>
+      <h2 id={id}>{title}</h2>
+      <dl>
         {items.map((item) => (
           <div key={item.question} className="mt-5">
             <dt className="mb-1 font-semibold">{item.question}</dt>
-            <dd className="m-0 [&_a]:text-primary-text">
+            <dd className="m-0">
               {item.answer}
               {item.more ? (
                 <>

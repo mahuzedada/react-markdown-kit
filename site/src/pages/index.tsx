@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react'
-import Link from '@docusaurus/Link'
-import Layout from '@theme/Layout'
-import CodeBlock from '@theme/CodeBlock'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
-import Heading from '@zuilib/primitives/heading'
-import Text from '@zuilib/primitives/text'
 import sites from '@site/src/sites'
+import type { PageMeta } from '@site/src/app/routes'
+import CodeBlock from '@site/src/components/CodeBlock'
 import { BreadcrumbJsonLd, JsonLd, ORGANIZATION } from '@site/src/components/JsonLd'
+import { Feature, Features, Hero, Page } from '@site/src/components/landing/Page'
+import Shell from '@site/src/layouts/Shell'
 
 interface PageLink {
   readonly to: string
@@ -16,11 +15,11 @@ interface PageLink {
 }
 
 const GUIDES: readonly PageLink[] = [
-  { to: '/react-markdown-renderer', label: 'React Markdown renderer', what: 'The one component and its defaults, with the tests behind each.' },
+  { to: '/markdown-renderer', label: 'Renderer demo', what: 'The whole syntax on one page you can edit, rendered by the component you would ship.' },
   { to: '/docs/guides/render-markdown-in-react', label: 'How to render Markdown in React', what: 'GFM, custom components, links, code blocks, security, server rendering.' },
   { to: '/streaming-markdown', label: 'Streaming Markdown in React', what: 'Every partial prefix renders, plus the two constructs that rewrite themselves.' },
   { to: '/nextjs-markdown', label: 'Markdown in Next.js', what: 'Server components with no client JavaScript, and precompiled documents.' },
-  { to: '/react-markdown-editor', label: 'React Markdown editor', what: 'Rich, source and preview modes that store plain Markdown.' },
+  { to: '/markdown-editor', label: 'Editor demo', what: 'Rich, source and preview modes that store plain Markdown.' },
   { to: '/markdown-round-trip', label: 'Lossless Markdown editing', what: '22 of 22 audited documents open and save byte for byte.' },
   { to: '/docs/guides/lexical-markdown-editor', label: 'Lexical Markdown editor', what: 'Why Lexical, how the package wraps it, when to use the headless API.' },
   { to: '/markdown-template-engine', label: 'Markdown template engine', what: 'Typed variables, schemas, formatters and locales, resolved in the parser.' },
@@ -43,34 +42,26 @@ const COMPARISONS: readonly PageLink[] = [
   { to: '/migrate-from-react-markdown', label: 'Migrate from react-markdown', what: 'The three differences, and a codemod that skips anything it can\'t safely convert.' },
 ]
 
-const SECTION = 'border-t border-border py-10'
-const SECTION_HEAD = 'mx-auto mb-6 max-w-[42rem] text-center'
-const SECTION_TITLE = 'mb-[0.4rem]! text-balance'
-
-function PageLinks({ items }: { readonly items: readonly PageLink[] }): ReactNode {
-  return (
-    <ul className="m-0! grid list-none grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-6 gap-y-[0.6rem] p-0!">
-      {items.map((item) => (
-        <li key={item.to} className="border-t border-border pt-[0.6rem]">
-          <Link to={item.to}>{item.label}</Link>
-          <Text as="span" className="block">
-            {item.what}
-          </Text>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 const DESCRIPTION =
   'Render Markdown as React, add rich editing and personalize the same document with typed variables. The packages all share one Markdown model.'
 
+export const meta: PageMeta = { title: 'React Markdown renderer and editor docs', description: DESCRIPTION }
+
+function PageLinks({ items }: { readonly items: readonly PageLink[] }): ReactNode {
+  return (
+    <Features>
+      {items.map((item) => (
+        <Feature key={item.to} title={<a href={item.to}>{item.label}</a>}>
+          {item.what}
+        </Feature>
+      ))}
+    </Features>
+  )
+}
+
 export default function Home(): ReactNode {
   return (
-    <Layout
-      title="React Markdown renderer and editor docs"
-      description={DESCRIPTION}
-    >
+    <Shell>
       <JsonLd
         data={{
           '@context': 'https://schema.org',
@@ -97,49 +88,27 @@ export default function Home(): ReactNode {
         }}
       />
       <BreadcrumbJsonLd trail={[{ name: 'React Markdown Kit' }]} />
-      <header>
-        <div className="container">
-          {/* Infima's unlayered `h1` and `p` rules set size and margins, so those utilities carry `!`. */}
-          <Heading as="h1" className="mb-2! text-[clamp(2rem,5vw,3rem)]! text-balance">
-            React Markdown Kit
-          </Heading>
-          <Text className="mx-auto! mt-0! mb-7! max-w-[34rem] text-[clamp(1rem,2.4vw,1.25rem)] text-balance">
-            Markdown rendering, streaming and editing in react. Plus plugins for mermaid diagrams, slides and variables.
-          </Text>
-          <ActivityScope feature="hero" as="div" className="mb-10 flex flex-wrap justify-center gap-3">
-            <Button as={Link} size="lg" track="get-started" to="/docs/getting-started">
-              Get started
-            </Button>
-            <Button as={Link} size="lg" variant="outline" track="renderer-demo" href="/markdown-renderer">
-              Try the renderer demo
-            </Button>
-          </ActivityScope>
-          <div className="mx-auto max-w-md text-left">
-            <CodeBlock language="bash">
-              npm install @react-markdown-kit/renderer
-            </CodeBlock>
-          </div>
-        </div>
-      </header>
+      <Page as="main">
+        <Hero
+          title="React Markdown Kit"
+          lede="Markdown rendering, streaming and editing in react. Plus plugins for mermaid diagrams, slides and variables."
+        />
+        <ActivityScope feature="hero" as="div" className="flex flex-wrap gap-3">
+          <Button as="a" size="lg" track="get-started" href="/docs/getting-started">
+            Get started
+          </Button>
+          <Button as="a" size="lg" variant="outline" track="renderer-demo" href="/markdown-renderer">
+            Try the renderer demo
+          </Button>
+        </ActivityScope>
+        <CodeBlock language="bash">npm install @react-markdown-kit/renderer</CodeBlock>
 
-      <section className={SECTION}>
-        <div className="container">
-          <div className={SECTION_HEAD}>
-            <Heading className={SECTION_TITLE}>Guides</Heading>
-          </div>
-          <PageLinks items={GUIDES} />
-        </div>
-      </section>
+        <h2>Guides</h2>
+        <PageLinks items={GUIDES} />
 
-      <section className={SECTION}>
-        <div className="container">
-          <div className={SECTION_HEAD}>
-            <Heading className={SECTION_TITLE}>Comparisons</Heading>
-          </div>
-          <PageLinks items={COMPARISONS} />
-        </div>
-      </section>
-
-    </Layout>
+        <h2>Comparisons</h2>
+        <PageLinks items={COMPARISONS} />
+      </Page>
+    </Shell>
   )
 }

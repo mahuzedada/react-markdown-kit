@@ -1,5 +1,5 @@
-import { lazy, Suspense, type ReactNode } from 'react'
-import BrowserOnly from '@docusaurus/BrowserOnly'
+import { lazy, type ReactNode } from 'react'
+import ClientOnly from '@site/src/components/ClientOnly'
 import { DemoPlaceholder } from '@site/src/layouts/DemoLayout'
 
 // The workbench pulls in Lexical and needs a browser, so the demo is its own
@@ -15,8 +15,6 @@ const Embed = lazy(() => import('./Embed'))
  */
 export default function Demo({ embed = false }: { readonly embed?: boolean }): ReactNode {
   return (
-    <BrowserOnly fallback={<DemoPlaceholder />}>
-      {() => <Suspense fallback={<DemoPlaceholder />}>{embed ? <Embed /> : <SlidesDemo />}</Suspense>}
-    </BrowserOnly>
+    <ClientOnly fallback={<DemoPlaceholder />}>{embed ? <Embed /> : <SlidesDemo />}</ClientOnly>
   )
 }

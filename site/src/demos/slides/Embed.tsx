@@ -4,7 +4,6 @@ import { slides } from '@react-markdown-kit/slides/present'
 import { SAMPLE_DECK } from './sample-deck'
 import { decodeSource, fullDemoLink, readSourceParam } from './url-state'
 
-import '@react-markdown-kit/renderer/styles.css'
 import '@react-markdown-kit/slides/styles.css'
 
 /**

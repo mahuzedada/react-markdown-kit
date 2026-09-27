@@ -2,7 +2,7 @@
   "name": "@react-markdown-kit/editor",
   "version": "0.1.0",
   "description": "Rich, source and preview Markdown editing for React. Markdown in, Markdown out.",
-  "homepage": "https://reactmarkdownkit.com/react-markdown-editor",
+  "homepage": "https://reactmarkdownkit.com/markdown-editor",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mahuzedada/react-markdown-kit.git",

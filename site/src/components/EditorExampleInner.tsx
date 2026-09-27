@@ -11,7 +11,6 @@ import { cn } from '@zuilib/primitives/lib/cn'
 import { CAPTION, EXAMPLE, PANE_LABEL, SOURCE } from './exampleStyles'
 
 import '@react-markdown-kit/editor/styles.css'
-import '@react-markdown-kit/renderer/styles.css'
 
 const gfmPreset = defineMarkdownPreset({ extensions: [gfm()] })
 

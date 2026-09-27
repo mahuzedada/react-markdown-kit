@@ -23,10 +23,10 @@ export interface ThemeState {
 }
 
 /**
- * The colour mode, read from `<html data-theme>` after mount (Docusaurus
- * sets it before paint) and written back with the choice remembered. Any control
- * on a page can toggle it, such as a demo's own header; the navbar toggle
- * writes the same attribute and storage key.
+ * The colour mode, read from `<html data-theme>` after mount (the head
+ * script in src/app/theme-script.ts sets it before paint) and written back
+ * with the choice remembered. Any control on a page can toggle it, such as a
+ * demo's own header; the navbar toggle writes the same attribute and key.
  */
 export function useTheme(): ThemeState {
   const [theme, setTheme] = useState<Theme>('light')

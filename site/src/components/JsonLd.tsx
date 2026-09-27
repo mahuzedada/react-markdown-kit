@@ -1,24 +1,21 @@
 import type { ReactNode } from 'react'
-import Head from '@docusaurus/Head'
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext'
 import sites from '@site/src/sites'
 
 /*
- * Structured data for the docs site (docs/SEO_WORKPLAN.md, milestone A item 6):
- * SoftwareSourceCode on the package funnels and TechArticle on the guides in
- * src/pages. Docs under /docs get theirs from src/theme/DocItem/Content.
+ * Structured data (docs/SEO_WORKPLAN.md, milestone A item 6): SoftwareSourceCode
+ * on the package funnels, TechArticle on the guides and docs, breadcrumbs,
+ * FAQPage. Rendered inline where the page renders it; crawlers read JSON-LD
+ * anywhere in the document.
  */
 
 const MIT = 'https://opensource.org/license/mit'
+const SITE_NAME = 'React Markdown Kit'
 
 export const ORGANIZATION = { '@type': 'Organization', name: 'ZUI', url: sites.home }
 
 export function JsonLd({ data }: { readonly data: object }): ReactNode {
-  return (
-    <Head>
-      <script type="application/ld+json">{JSON.stringify(data)}</script>
-    </Head>
-  )
+  const json = JSON.stringify(data).replace(/</g, '\\u003c')
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json }} />
 }
 
 export interface PackageJsonLdProps {
@@ -29,7 +26,6 @@ export interface PackageJsonLdProps {
 
 /** A package funnel: the package as source code, with its npm page. */
 export function PackageJsonLd({ name, description, path }: PackageJsonLdProps): ReactNode {
-  const { siteConfig } = useDocusaurusContext()
   return (
     <JsonLd
       data={{
@@ -37,7 +33,7 @@ export function PackageJsonLd({ name, description, path }: PackageJsonLdProps): 
         '@type': 'SoftwareSourceCode',
         name: `@react-markdown-kit/${name}`,
         description,
-        url: `${siteConfig.url}${path}`,
+        url: `${sites.home}${path}`,
         codeRepository: sites.github,
         programmingLanguage: 'TypeScript',
         runtimePlatform: 'React 18 or newer',
@@ -55,9 +51,8 @@ export interface ArticleJsonLdProps {
   readonly path: string
 }
 
-/** A guide or a comparison page. */
+/** A guide, a doc or a comparison page. */
 export function ArticleJsonLd({ headline, description, path }: ArticleJsonLdProps): ReactNode {
-  const { siteConfig } = useDocusaurusContext()
   return (
     <JsonLd
       data={{
@@ -65,11 +60,11 @@ export function ArticleJsonLd({ headline, description, path }: ArticleJsonLdProp
         '@type': 'TechArticle',
         headline,
         description,
-        url: `${siteConfig.url}${path}`,
+        url: `${sites.home}${path}`,
         inLanguage: 'en',
         author: ORGANIZATION,
         publisher: ORGANIZATION,
-        isPartOf: { '@type': 'WebSite', name: siteConfig.title, url: siteConfig.url },
+        isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: sites.home },
       }}
     />
   )
@@ -81,9 +76,7 @@ export interface Crumb {
   readonly path?: string
 }
 
-/** A breadcrumb trail for a page under src/pages (docs under /docs get one from Docusaurus). */
 export function BreadcrumbJsonLd({ trail }: { readonly trail: readonly Crumb[] }): ReactNode {
-  const { siteConfig } = useDocusaurusContext()
   return (
     <JsonLd
       data={{
@@ -93,7 +86,7 @@ export function BreadcrumbJsonLd({ trail }: { readonly trail: readonly Crumb[] }
           '@type': 'ListItem',
           position: index + 1,
           name: crumb.name,
-          ...(crumb.path === undefined ? {} : { item: `${siteConfig.url}${crumb.path}` }),
+          ...(crumb.path === undefined ? {} : { item: `${sites.home}${crumb.path}` }),
         })),
       }}
     />
@@ -106,18 +99,18 @@ export interface FaqEntry {
 }
 
 /** The FAQ section of a page as FAQPage structured data; the visible answers must say the same. */
+export function faqPage(items: readonly FaqEntry[]): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  }
+}
+
 export function FaqJsonLd({ items }: { readonly items: readonly FaqEntry[] }): ReactNode {
-  return (
-    <JsonLd
-      data={{
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: items.map((item) => ({
-          '@type': 'Question',
-          name: item.question,
-          acceptedAnswer: { '@type': 'Answer', text: item.answer },
-        })),
-      }}
-    />
-  )
+  return <JsonLd data={faqPage(items)} />
 }

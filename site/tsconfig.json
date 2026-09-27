@@ -1,5 +1,17 @@
 {
-  "extends": "@docusaurus/tsconfig",
-  "compilerOptions": { "baseUrl": "." },
-  "exclude": [".docusaurus", "build"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["vite/client", "node"],
+    "paths": { "@site/*": ["./*"] }
+  },
+  "include": ["src", "vite", "vite.config.ts"]
 }

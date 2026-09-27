@@ -6,14 +6,10 @@
  * Note what is NOT here: any style for the rendered Markdown itself. That
  * comes from `@react-markdown-kit/renderer/styles.css` scoped to
  * `.rmk-document`, which is the same opt-in stylesheet a consumer would use.
- *
- * Infima styles bare `pre`, `p` and `ul` unlayered, which beats Tailwind's
- * layered utilities whatever the specificity, so the properties Infima sets
- * on those elements carry the `!` modifier here.
  */
 
 /** The figure: a bordered card, flush sections inside. */
-export const EXAMPLE = 'm-0 mb-7 overflow-hidden rounded-lg border border-border bg-card'
+export const EXAMPLE = 'mx-0 mb-0 overflow-hidden rounded-(--radius) border border-border bg-card'
 
 export const CAPTION = 'border-b border-border bg-muted px-3.5 py-2.5 text-base font-semibold text-foreground'
 
@@ -25,7 +21,7 @@ export const PANE_LABEL = 'flex items-center gap-2 border-b border-border px-3 p
 
 /** A source pane, as a `pre` or a `textarea`. */
 export const SOURCE =
-  'm-0! block w-full border-0 bg-transparent! p-3.5! font-mono! text-sm! leading-[1.55]! text-foreground! whitespace-pre-wrap wrap-anywhere'
+  'm-0 block w-full rounded-none border-0 bg-transparent p-3.5 font-mono text-sm leading-[1.55] text-foreground whitespace-pre-wrap wrap-anywhere'
 
 /** The rendered pane; it also carries `rmk-document`, and its first block sits flush with the padding. */
 export const OUTPUT = 'p-3.5 text-base [&>*:first-child]:mt-0'

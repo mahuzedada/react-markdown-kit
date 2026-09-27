@@ -3,7 +3,7 @@ title: "Lossless Markdown editing: round trip"
 description: "The Markdown round trip explained: what a lossless Markdown editor must preserve, the 22-document corpus behind the claim, and how to run it on your files."
 ---
 
-import Link from '@docusaurus/Link'
+import Link from '@site/src/components/Link'
 import EditorExample from '@site/src/components/EditorExample'
 import sites from '@site/src/sites'
 import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
@@ -13,7 +13,7 @@ export const PATH = '/markdown-round-trip'
 
 export const crumbs = [
   { name: 'React Markdown Kit', path: '/' },
-  { name: 'Editor', path: '/react-markdown-editor' },
+  { name: 'Editor', path: '/markdown-editor' },
   { name: 'Markdown round trip' },
 ]
 
@@ -275,7 +275,7 @@ If you do want the whole document in canonical form, use the serializer path,
 <Link href={blob('docs/AUDIT.md')}>The audit</Link> ·{' '}
 <Link href={sites.github}>Source on GitHub</Link>
 
-<Link to="/react-markdown-editor">React Markdown editor</Link> ·{' '}
+<Link to="/markdown-editor">React Markdown editor</Link> ·{' '}
 <Link to="/docs/editor/round-trip">Round-trip reference</Link> ·{' '}
 <Link to="/compare/mdxeditor">Compared with MDXEditor</Link> ·{' '}
 <Link to="/compare/milkdown">Compared with Milkdown</Link>

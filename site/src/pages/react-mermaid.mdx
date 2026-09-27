@@ -3,7 +3,7 @@ title: "React Mermaid: diagrams, no Mermaid.js"
 description: "React Mermaid without Mermaid.js: one plugin renders flowcharts and sequence diagrams in React Markdown as static SVG, on the server or in the browser."
 ---
 
-import Link from '@docusaurus/Link'
+import Link from '@site/src/components/Link'
 import RenderExample from '@site/src/components/RenderExample'
 import EditorExample from '@site/src/components/EditorExample'
 import sites from '@site/src/sites'
@@ -247,7 +247,7 @@ export default async function Page({ params }) {
 
 The plugin's own tests render through
 <Link href={blob('plugins/mermaid/tests/extension.test.tsx#L32')}>`renderToStaticMarkup`</Link>,
-and the diagram on this page was server-rendered by Docusaurus the same way. If you want
+and the diagram on this page was server-rendered the same way when the site was built. If you want
 to precompile a document once per process, the Next.js guide goes through that
 (<Link to="/nextjs-markdown">Markdown in Next.js</Link>).
 

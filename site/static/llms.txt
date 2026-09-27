@@ -13,8 +13,8 @@ Node without rendering.
 
 ## Packages
 
-- [@react-markdown-kit/renderer](https://reactmarkdownkit.com/react-markdown-renderer): renders Markdown to React with one component. It's safe and unstyled by default, renders on the server, and its props match react-markdown 10.
-- [@react-markdown-kit/editor](https://reactmarkdownkit.com/react-markdown-editor): rich, source and preview authoring that reads and writes plain Markdown. Opening and closing a document doesn't change any of its bytes.
+- [@react-markdown-kit/renderer](https://reactmarkdownkit.com/markdown-renderer): renders Markdown to React with one component. It's safe and unstyled by default, renders on the server, and its props match react-markdown 10.
+- [@react-markdown-kit/editor](https://reactmarkdownkit.com/markdown-editor): rich, source and preview authoring that reads and writes plain Markdown. Opening and closing a document doesn't change any of its bytes.
 - [@react-markdown-kit/template](https://reactmarkdownkit.com/markdown-template-engine): plugin package. `template({ data })` resolves typed placeholders while the renderer parses (Standard Schema validation, formatting, localization); `templateVariables()` on `/editor` edits them as chips. No standalone API.
 - [@react-markdown-kit/mermaid](https://reactmarkdownkit.com/docs/mermaid): plugin package. `mermaid()` turns ```mermaid flowcharts and sequence diagrams into static SVG and shows every other Mermaid type as source; `/client` adds `diagramFallback({ render })` so a host can draw those with its own Mermaid.js; `/editor` adds a drawing canvas for flowcharts, which writes edits back as Mermaid syntax plus one `%% rmk-layout v1 {…}` annotation (a versioned, validated format specified in the package's LAYOUT_ANNOTATION.md), a canvas for sequence diagrams that writes plain Mermaid, and a source editor with a live preview for the other kinds. `/canvas` is the same canvas without a Markdown editor: `<MermaidCanvas value onChange />` or `createMermaidCanvas(container, options)` fills any container, floats its tools over the drawing, and supports multi-selection (Shift+click, marquee) with group move, group resize from the selection frame, and arrow-key nudging.
 - [@react-markdown-kit/slides](https://reactmarkdownkit.com/docs/slides): plugin package. `slides()` reads a Markdown file whose slides are separated by `---` (speaker notes after `???`, fragments after `--`, `<!-- class | background | name: … -->` directives, optional `---` front matter) and renders it as one `<article data-rmk-deck>` of `<section>`s, server-renderable; `/present` adds keyboard-driven present mode, a presenter view, deep links and cross-window sync; `/editor` adds the authoring commands. The dialect is specified in the package's DIALECT.md. No standalone API.
@@ -45,7 +45,7 @@ You don't need a provider, a stylesheet or any configuration.
 - [Server rendering and Next.js](https://reactmarkdownkit.com/nextjs-markdown)
 - [Compatibility matrix](https://reactmarkdownkit.com/docs/compatibility)
 - [Migrating from react-markdown](https://reactmarkdownkit.com/migrate-from-react-markdown)
-- [React Markdown renderer](https://reactmarkdownkit.com/react-markdown-renderer): one component, its defaults and the test behind each of them
+- [Renderer demo](https://reactmarkdownkit.com/markdown-renderer): the whole CommonMark and GFM syntax on one editable page, rendered by the component you would ship
 - [How to render Markdown in React](https://reactmarkdownkit.com/docs/guides/render-markdown-in-react): GFM, custom components, links, code blocks, security defaults and server rendering, each shown live
 - [Streaming Markdown in React](https://reactmarkdownkit.com/streaming-markdown): every partial prefix renders and finished blocks stay byte-identical; the page names the two constructs that do rewrite themselves
 - [React Markdown library comparisons](https://reactmarkdownkit.com/compare): every comparison page grouped by package, with one install-size table for every import
@@ -60,7 +60,7 @@ You don't need a provider, a stylesheet or any configuration.
 - [Flowchart to Mermaid](https://reactmarkdownkit.com/flowchart-to-mermaid): draw a flowchart on the free canvas and copy the Mermaid it writes (it converts what you draw on the canvas and can't read an image)
 - [Fix AI-generated Mermaid](https://reactmarkdownkit.com/edit-ai-generated-mermaid): paste the model's output, drag nodes to fix the layout, and copy the Mermaid back with positions kept in one %% rmk-layout v1 comment
 - [Mermaid live editor demo: syntax on the left, a visual canvas on the right, plain Mermaid saved](https://reactmarkdownkit.com/mermaid-editor)
-- [React Markdown editor](https://reactmarkdownkit.com/react-markdown-editor): rich, source and preview modes, with the round-trip evidence
+- [Editor demo](https://reactmarkdownkit.com/markdown-editor): rich, source and preview modes, and a round-trip check you can run on your own Markdown
 - [Lossless Markdown editing](https://reactmarkdownkit.com/markdown-round-trip): what a Markdown round trip needs to preserve, the 22-document corpus the claim is tested against, and how to run it on your own files
 - [Lexical Markdown editor](https://reactmarkdownkit.com/docs/guides/lexical-markdown-editor): why we went with Lexical, how @react-markdown-kit/editor wraps it, and when you'd want the headless API instead
 - [React Markdown Kit Editor vs MDXEditor](https://reactmarkdownkit.com/compare/mdxeditor): editing model, output format, round trip, bundle size, server rendering, Lexical and migration

@@ -3,7 +3,7 @@ title: "Streaming Markdown in React for AI"
 description: "Render streaming Markdown in React for AI chat UIs: every partial prefix renders, finished blocks stay byte-identical, and the two exceptions are named."
 ---
 
-import Link from '@docusaurus/Link'
+import Link from '@site/src/components/Link'
 import RenderExample from '@site/src/components/RenderExample'
 import StreamExample from '@site/src/components/StreamExample'
 import sites from '@site/src/sites'
@@ -14,7 +14,7 @@ export const PATH = '/streaming-markdown'
 
 export const crumbs = [
   { name: 'React Markdown Kit', path: '/' },
-  { name: 'React Markdown renderer', path: '/react-markdown-renderer' },
+  { name: 'React Markdown renderer', path: '/markdown-renderer' },
   { name: 'Streaming Markdown in React' },
 ]
 
@@ -406,7 +406,7 @@ while streaming.
 <Link href={npm}>@react-markdown-kit/renderer on npm</Link> ·{' '}
 <Link href={blob('packages/renderer/tests/streaming.test.tsx')}>The streaming tests</Link>
 
-<Link to="/react-markdown-renderer">React Markdown renderer</Link> ·{' '}
+<Link to="/markdown-renderer">React Markdown renderer</Link> ·{' '}
 <Link to="/docs/guides/render-markdown-in-react">How to render Markdown in React</Link> ·{' '}
 <Link to="/nextjs-markdown">Markdown in Next.js</Link> ·{' '}
 <Link to="/docs/renderer/compiling">Compiling documents</Link> ·{' '}

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import CodeBlock from '@theme/CodeBlock'
-import { Callout, Feature, Features, Hero, LinkRow, Page, Prose, Steps } from '../../components/landing/Page'
+import CodeBlock from '../../components/CodeBlock'
+import { Callout, Feature, Features, Hero, LinkRow, Page, Steps } from '../../components/landing/Page'
 import { docsUrl, sites } from '../../sites'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../components/landing/Seo'
 
@@ -150,103 +150,101 @@ export default function Landing(): ReactNode {
         </Feature>
       </Features>
 
-      <Prose>
-        <h2>Install the plugin, and the editor if you want to author decks</h2>
-        <CodeBlock language="bash">npm install @react-markdown-kit/renderer @react-markdown-kit/slides</CodeBlock>
-        <CodeBlock language="bash">npm install @react-markdown-kit/editor</CodeBlock>
+      <h2>Install the plugin, and the editor if you want to author decks</h2>
+      <CodeBlock language="bash">npm install @react-markdown-kit/renderer @react-markdown-kit/slides</CodeBlock>
+      <CodeBlock language="bash">npm install @react-markdown-kit/editor</CodeBlock>
+      <p>
+        You only need the first line to render a deck. The root entry doesn&rsquo;t load React, so a
+        server component or a static build gets the same <code>&lt;article&gt;</code> of{' '}
+        <code>&lt;section&gt;</code>s. The <code>/present</code> entry adds present mode. The left pane
+        of this page is built from the editor and the <code>/editor</code> entry.
+      </p>
+
+      <h2>Making slides from Markdown</h2>
+      <Steps>
+        <li>
+          <strong>Render a deck.</strong> Put <code>slides()</code> in a preset. Slides split on{' '}
+          <code>---</code>, the notes start at <code>???</code>, a <code>--</code> is a pause, and{' '}
+          <code>&lt;!-- class | background | name: … --&gt;</code> comments set a slide&rsquo;s
+          properties. The output is static HTML with no script, classes or inline styles, and the
+          notes get the HTML <code>hidden</code> attribute.
+          <CodeBlock language="tsx">{RENDER}</CodeBlock>
+        </li>
+        <li>
+          <strong>Write plain Markdown.</strong> On GitHub, in a diff or in any other editor, the
+          file shows up as a document with horizontal rules. A <code>---</code> inside a fence, a
+          quote or a list doesn&rsquo;t split the slide, and front matter at the top sets the title,
+          the aspect ratio and the defaults for every slide.
+          <CodeBlock language="markdown">{DECK}</CodeBlock>
+        </li>
+        <li>
+          <strong>Present, then edit.</strong> The <code>/present</code> entry&rsquo;s{' '}
+          <code>slides()</code> gives the deck a Present button, keyboard and pointer navigation,
+          fragments, a presenter view with the notes and a clock, <code>#3</code> deep links and a{' '}
+          <code>BroadcastChannel</code> that keeps two windows on the same slide. The{' '}
+          <code>/editor</code> entry adds the slide break, the markers and the directive chips to the
+          editor, with four toolbar buttons.
+          <CodeBlock language="tsx">{PRESENT}</CodeBlock>
+          <CodeBlock language="tsx">{EDIT}</CodeBlock>
+        </li>
+      </Steps>
+
+      <Callout>
         <p>
-          You only need the first line to render a deck. The root entry doesn&rsquo;t load React, so a
-          server component or a static build gets the same <code>&lt;article&gt;</code> of{' '}
-          <code>&lt;section&gt;</code>s. The <code>/present</code> entry adds present mode. The left pane
-          of this page is built from the editor and the <code>/editor</code> entry.
+          <strong>More docs.</strong> The <a href={docsUrl('/docs/slides')}>slides plugin docs</a> cover
+          the dialect, every directive and diagnostic, the emitted HTML, the tokens the stylesheet
+          reads, printing, and the editor and present options.{' '}
+          <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> covers the editor the left pane
+          lives in.
         </p>
+      </Callout>
 
-        <h2>Making slides from Markdown</h2>
-        <Steps>
-          <li>
-            <strong>Render a deck.</strong> Put <code>slides()</code> in a preset. Slides split on{' '}
-            <code>---</code>, the notes start at <code>???</code>, a <code>--</code> is a pause, and{' '}
-            <code>&lt;!-- class | background | name: … --&gt;</code> comments set a slide&rsquo;s
-            properties. The output is static HTML with no script, classes or inline styles, and the
-            notes get the HTML <code>hidden</code> attribute.
-            <CodeBlock language="tsx">{RENDER}</CodeBlock>
-          </li>
-          <li>
-            <strong>Write plain Markdown.</strong> On GitHub, in a diff or in any other editor, the
-            file shows up as a document with horizontal rules. A <code>---</code> inside a fence, a
-            quote or a list doesn&rsquo;t split the slide, and front matter at the top sets the title,
-            the aspect ratio and the defaults for every slide.
-            <CodeBlock language="markdown">{DECK}</CodeBlock>
-          </li>
-          <li>
-            <strong>Present, then edit.</strong> The <code>/present</code> entry&rsquo;s{' '}
-            <code>slides()</code> gives the deck a Present button, keyboard and pointer navigation,
-            fragments, a presenter view with the notes and a clock, <code>#3</code> deep links and a{' '}
-            <code>BroadcastChannel</code> that keeps two windows on the same slide. The{' '}
-            <code>/editor</code> entry adds the slide break, the markers and the directive chips to the
-            editor, with four toolbar buttons.
-            <CodeBlock language="tsx">{PRESENT}</CodeBlock>
-            <CodeBlock language="tsx">{EDIT}</CodeBlock>
-          </li>
-        </Steps>
+      <h2>Put a deck in your own page</h2>
+      <p>
+        If you add <code>embed=1</code> to a share link, the page hides everything except the deck
+        (the footer, the landing copy and the editor all go away). The deck fills the frame, opens
+        in present mode and keeps keyboard and pointer navigation inside the frame, so arrow keys
+        and clicks move the slides once the frame has focus. There&rsquo;s a small{' '}
+        <em>Open in React Markdown Kit</em> link in the corner that opens the full editor in a new
+        tab with the same deck.
+      </p>
+      <CodeBlock language="html">{EMBED}</CodeBlock>
+      <p>
+        The <code>d</code> value is the whole deck, so the frame doesn&rsquo;t need to load anything
+        from your server. Press Share on this page to copy a link with your deck in it, then add{' '}
+        <code>&amp;embed=1</code>. An embedded deck doesn&rsquo;t touch the address bar or open a
+        sync channel, so several frames on one page stay independent. Give the frame the aspect
+        ratio of your slides (16 by 9 by default), and add <code>allowfullscreen</code> if you want
+        the full screen button to work.{' '}
+        <a href={`${sites.slidesDemo}?embed=1`}>See the embed on its own</a>.
+      </p>
 
-        <Callout>
-          <p>
-            <strong>More docs.</strong> The <a href={docsUrl('/docs/slides')}>slides plugin docs</a> cover
-            the dialect, every directive and diagnostic, the emitted HTML, the tokens the stylesheet
-            reads, printing, and the editor and present options.{' '}
-            <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> covers the editor the left pane
-            lives in.
-          </p>
-        </Callout>
+      <h2>About this editor</h2>
+      <ul>
+        <li>
+          The left pane is the rich editor with the <code>/editor</code> entry, and the right pane is
+          the renderer with the same preset. The deck re-renders as you type. Press Present in the
+          deck&rsquo;s control bar to show it from this window.
+        </li>
+        <li>
+          The deck lives in the address bar. <code>?d=</code> is the source, deflated and base64url
+          encoded, so a link carries the whole file. Share copies a link that opens in present mode.{' '}
+          <em>Presenter window</em> opens a second window with the next slide, the notes and a clock,
+          and it stays on the same slide as this window.
+        </li>
+        <li>
+          Printing gives each slide a 16 by 9 inch page, using the stylesheet&rsquo;s{' '}
+          <code>break-after: page</code> and this site&rsquo;s own <code>@page</code> rule. The deck
+          scales with container units, so nothing has to measure the window.
+        </li>
+        <li>
+          The other plugins are in the <a href={sites.editorDemo}>editor demo</a>, the Mermaid canvas
+          is in the <a href={sites.mermaidDemo}>Mermaid editor</a>, and the{' '}
+          <a href={sites.rendererDemo}>renderer demo</a> covers rendering on its own.
+        </li>
+      </ul>
 
-        <h2>Put a deck in your own page</h2>
-        <p>
-          If you add <code>embed=1</code> to a share link, the page hides everything except the deck
-          (the footer, the landing copy and the editor all go away). The deck fills the frame, opens
-          in present mode and keeps keyboard and pointer navigation inside the frame, so arrow keys
-          and clicks move the slides once the frame has focus. There&rsquo;s a small{' '}
-          <em>Open in React Markdown Kit</em> link in the corner that opens the full editor in a new
-          tab with the same deck.
-        </p>
-        <CodeBlock language="html">{EMBED}</CodeBlock>
-        <p>
-          The <code>d</code> value is the whole deck, so the frame doesn&rsquo;t need to load anything
-          from your server. Press Share on this page to copy a link with your deck in it, then add{' '}
-          <code>&amp;embed=1</code>. An embedded deck doesn&rsquo;t touch the address bar or open a
-          sync channel, so several frames on one page stay independent. Give the frame the aspect
-          ratio of your slides (16 by 9 by default), and add <code>allowfullscreen</code> if you want
-          the full screen button to work.{' '}
-          <a href={`${sites.slidesDemo}?embed=1`}>See the embed on its own</a>.
-        </p>
-
-        <h2>About this editor</h2>
-        <ul>
-          <li>
-            The left pane is the rich editor with the <code>/editor</code> entry, and the right pane is
-            the renderer with the same preset. The deck re-renders as you type. Press Present in the
-            deck&rsquo;s control bar to show it from this window.
-          </li>
-          <li>
-            The deck lives in the address bar. <code>?d=</code> is the source, deflated and base64url
-            encoded, so a link carries the whole file. Share copies a link that opens in present mode.{' '}
-            <em>Presenter window</em> opens a second window with the next slide, the notes and a clock,
-            and it stays on the same slide as this window.
-          </li>
-          <li>
-            Printing gives each slide a 16 by 9 inch page, using the stylesheet&rsquo;s{' '}
-            <code>break-after: page</code> and this site&rsquo;s own <code>@page</code> rule. The deck
-            scales with container units, so nothing has to measure the window.
-          </li>
-          <li>
-            The other plugins are in the <a href={sites.editorDemo}>editor demo</a>, the Mermaid canvas
-            is in the <a href={sites.mermaidDemo}>Mermaid editor</a>, and the{' '}
-            <a href={sites.rendererDemo}>renderer demo</a> covers rendering on its own.
-          </li>
-        </ul>
-
-        <Faq id="slides-faq" items={FAQ} />
-      </Prose>
+      <Faq id="slides-faq" items={FAQ} />
 
       <JsonLd data={webApplication({ name: TITLE, url: sites.slidesDemo, description: DESCRIPTION })} />
     </Page>

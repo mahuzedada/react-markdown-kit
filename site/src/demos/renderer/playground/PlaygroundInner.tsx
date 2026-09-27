@@ -22,7 +22,6 @@ import { formatBytes, formatMs, prettyHtml, timeMedian, treeJson, wordCount } fr
 import { DEFAULT_STATE, type OutputTab, type PlaygroundState } from './state'
 import { useShareLink } from './useShareLink'
 
-import '@react-markdown-kit/renderer/styles.css'
 import '@react-markdown-kit/mermaid/styles.css'
 import './utility-demo.css'
 import './showcase.css'

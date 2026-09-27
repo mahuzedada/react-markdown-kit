@@ -3,7 +3,7 @@ title: "React Markdown Kit Editor vs Milkdown"
 description: "A Milkdown alternative compared section by section: editing model, output format, round trip, bundle size, server rendering, ProseMirror and migration."
 ---
 
-import Link from '@docusaurus/Link'
+import Link from '@site/src/components/Link'
 import EditorExample from '@site/src/components/EditorExample'
 import sites from '@site/src/sites'
 import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
@@ -219,7 +219,7 @@ stylesheet, and the generator records CSS separately when a bundle emits any.
 For a page that only displays Markdown, neither number applies. That page imports the
 renderer, which is {kb(row('kit-renderer').gzipBytes)} gzipped for CommonMark,
 {kb(row('kit-renderer-gfm').gzipBytes)} with the GFM preset.
-<Link to="/react-markdown-renderer">The renderer</Link>
+<Link to="/markdown-renderer">The renderer</Link>
 
 ## Server rendering
 
@@ -350,7 +350,7 @@ to ship. <Link to="/markdown-round-trip">The script</Link>
 <Link href="https://www.npmjs.com/package/@milkdown/react">@milkdown/react on npm</Link> ·{' '}
 <Link href={sites.github}>Source on GitHub</Link>
 
-<Link to="/react-markdown-editor">React Markdown editor</Link> ·{' '}
+<Link to="/markdown-editor">React Markdown editor</Link> ·{' '}
 <Link to="/markdown-round-trip">Lossless Markdown editing</Link> ·{' '}
 <Link to="/compare/mdxeditor">Compared with MDXEditor</Link> ·{' '}
 <Link to="/docs/guides/lexical-markdown-editor">Lexical Markdown editor guide</Link>

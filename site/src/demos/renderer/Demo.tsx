@@ -1,5 +1,5 @@
-import { lazy, Suspense, type ReactNode } from 'react'
-import BrowserOnly from '@docusaurus/BrowserOnly'
+import { lazy, type ReactNode } from 'react'
+import ClientOnly from '@site/src/components/ClientOnly'
 import { DemoPlaceholder } from '@site/src/layouts/DemoLayout'
 
 // The demo is the whole first viewport and needs a browser, so it is its own
@@ -9,12 +9,8 @@ const Playground = lazy(() => import('./playground/PlaygroundInner'))
 
 export default function Demo(): ReactNode {
   return (
-    <BrowserOnly fallback={<DemoPlaceholder />}>
-      {() => (
-        <Suspense fallback={<DemoPlaceholder />}>
-          <Playground />
-        </Suspense>
-      )}
-    </BrowserOnly>
+    <ClientOnly fallback={<DemoPlaceholder />}>
+      <Playground />
+    </ClientOnly>
   )
 }

@@ -128,8 +128,6 @@ export default function RoundTrip(): ReactNode {
 
   const identical = result?.kind === 'ok' && groups.length === 0
 
-  // The panel sits inside the landing's Prose, whose `[&_p]:mb-4` outranks a
-  // plain `m-0`, so the paragraphs here reset their margin with `m-0!`.
   return (
     <ActivityScope feature="round-trip">
       <div className="mb-6 flex flex-col gap-3 rounded-md border border-border bg-card p-3.5">
@@ -151,20 +149,20 @@ export default function RoundTrip(): ReactNode {
 
         <div className="flex min-h-12 flex-col gap-2.5" aria-live="polite">
           {result === undefined ? (
-            <Text muted className="m-0!">
+            <Text muted className="m-0">
               Opening and saving…
             </Text>
           ) : result.kind === 'failed' ? (
-            <Text tone="danger" className="m-0!">
+            <Text tone="danger" className="m-0">
               The editor could not open this document: {result.message}
             </Text>
           ) : identical ? (
-            <Text tone="success" weight="semibold" className="m-0!">
+            <Text tone="success" weight="semibold" className="m-0">
               Identical. {characters(pasted)} in, {characters(result.outcome.saved)} out, 0 lines changed.
             </Text>
           ) : (
             <>
-              <Text tone="warning" weight="semibold" className="m-0!">
+              <Text tone="warning" weight="semibold" className="m-0">
                 {lineWord(result.outcome.removed)} removed, {lineWord(result.outcome.added)} added.{' '}
                 {characters(pasted)} in, {characters(result.outcome.saved)} out.
               </Text>
@@ -189,7 +187,7 @@ export default function RoundTrip(): ReactNode {
           )}
         </div>
 
-        <Text className="m-0! [&_a]:text-primary-text [&_code]:font-mono [&_code]:text-[0.9em]">
+        <Text className="m-0 [&_a]:text-primary-text [&_code]:font-mono [&_code]:text-[0.9em]">
           The document is opened and saved by the same headless bridge as{' '}
           <a href={ROUNDTRIP_TEST} data-zui-tag="roundtrip-test-link">
             <code>packages/editor/tests/roundtrip.test.ts</code>

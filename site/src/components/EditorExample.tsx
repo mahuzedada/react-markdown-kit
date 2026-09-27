@@ -1,5 +1,5 @@
-import { lazy, Suspense, type ReactNode } from 'react'
-import BrowserOnly from '@docusaurus/BrowserOnly'
+import { lazy, type ReactNode } from 'react'
+import ClientOnly from '@site/src/components/ClientOnly'
 import type { EditorExampleProps } from './EditorExampleInner'
 
 export type { EditorExampleProps }
@@ -18,19 +18,15 @@ export default function EditorExample(props: EditorExampleProps): ReactNode {
   const height = (props.height ?? 320) + 96
   const placeholder = (
     <div
-      className="mb-7 flex items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground"
+      className="flex items-center justify-center rounded-(--radius) border border-dashed border-border text-sm text-muted-foreground"
       style={{ height }}
     >
       Loading editor
     </div>
   )
   return (
-    <BrowserOnly fallback={placeholder}>
-      {() => (
-        <Suspense fallback={placeholder}>
-          <Inner {...props} />
-        </Suspense>
-      )}
-    </BrowserOnly>
+    <ClientOnly fallback={placeholder}>
+      <Inner {...props} />
+    </ClientOnly>
   )
 }

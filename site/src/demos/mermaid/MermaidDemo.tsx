@@ -100,7 +100,6 @@ const PROBLEM = 'm-0 border-t border-border bg-warning/8 px-3 py-2'
 const CHIP = 'h-[1.875rem] rounded-[9px]! px-[0.7rem] text-[0.76rem] font-medium'
 const ACTION_GRID = 'grid grid-cols-3 gap-[0.4rem] [&>*]:min-w-0'
 const CHEVRON = 'size-4 transition-transform duration-(--duration-normal)'
-const BRAND = 'flex items-center gap-2 text-[0.95rem] font-semibold whitespace-nowrap text-primary-text no-underline [&_img]:size-6'
 
 /** How long after the last keystroke the URL hash follows the source. */
 const HASH_DEBOUNCE_MS = 300
@@ -359,30 +358,6 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
           toolbar="left"
           zoom={zoom}
         >
-          <div className={cn(ISLAND, 'top-(--gap) left-(--gap) max-w-[calc(100%_-_2_*_var(--gap))] gap-2 py-1 pr-3 pl-2')}>
-            {embed ? (
-              <span className={BRAND}>
-                <img src="/logo.svg" alt="" />
-                <span>Mermaid Visual Editor</span>
-              </span>
-            ) : (
-              <a className={BRAND} href="/" data-zui-tag="brand">
-                <img src="/logo.svg" alt="" />
-                <span>Mermaid Visual Editor</span>
-              </a>
-            )}
-            <Text
-              as="span"
-              size="xs"
-              weight="medium"
-              tone={status.tone === 'ok' ? 'success' : 'warning'}
-              className="overflow-hidden rounded-full bg-muted px-2 py-[0.2rem] tracking-[0.02em] text-ellipsis whitespace-nowrap max-[900px]:hidden"
-              title={status.message}
-            >
-              {status.label}
-            </Text>
-          </div>
-
           <nav className={cn(ISLAND, ISLAND_TOOLS, 'top-(--gap) right-(--gap)')} aria-label="Editor">
             {embed ? (
               <Button as="a" href={fullEditor} target="_blank" rel="noopener" variant="ghost" size="sm" track="open-full-editor">
@@ -393,7 +368,7 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
               <>
                 <Button as="a" href={docsUrl('/docs/mermaid')} variant="ghost" size="sm" track="docs">
                   <BookIcon />
-                  Docs
+                  <span className="max-[600px]:sr-only">Docs</span>
                 </Button>
                 <Button as="a" href={sites.github} variant="ghost" size="icon" track="github" aria-label="GitHub repository">
                   <GitHubIcon />
@@ -408,10 +383,15 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                 </Button>
               </>
             )}
-            <Separator orientation="vertical" decorative className={DIVIDER} />
-            <Button variant="ghost" size="icon" track="theme" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
-              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-            </Button>
+            {/* The page's navbar holds the theme toggle; an embed has no navbar, so it gets its own. */}
+            {embed ? (
+              <>
+                <Separator orientation="vertical" decorative className={DIVIDER} />
+                <Button variant="ghost" size="icon" track="theme" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+                  {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+                </Button>
+              </>
+            ) : null}
             <Button
               variant={panelOpen ? 'outline' : 'ghost'}
               tone="primary"
@@ -442,9 +422,9 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                   bar, and editing will replace it.
                 </Text>
               ) : null}
-              {status.message === undefined ? null : (
+              {status.tone === 'ok' ? null : (
                 <Text size="sm" tone="warning" className={PROBLEM}>
-                  {status.message}
+                  {status.message === undefined ? status.label : `${status.label}: ${status.message}`}
                 </Text>
               )}
             </section>

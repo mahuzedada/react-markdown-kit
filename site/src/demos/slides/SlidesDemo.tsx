@@ -23,7 +23,6 @@ import {
   type DemoView,
 } from './url-state'
 
-import '@react-markdown-kit/renderer/styles.css'
 import '@react-markdown-kit/editor/styles.css'
 import '@react-markdown-kit/slides/styles.css'
 

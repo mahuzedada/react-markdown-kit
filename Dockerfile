@@ -1,4 +1,4 @@
-# The public site in one image (see nginx.container.conf): the Docusaurus build
+# The public site in one image (see nginx.container.conf): the static build
 # of site/, plus the redirects from the old hosts.
 # The site is built on the Mac by the Shipiru build command; nothing builds here.
 FROM nginx:1.29-alpine

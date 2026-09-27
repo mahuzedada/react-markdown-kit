@@ -1,6 +1,6 @@
 # Deploying reactmarkdownkit
 
-One app, one site. The image holds the Docusaurus build of `site`
+One app, one site. The image holds the static build of `site`
 under `/usr/share/nginx/html/site`, served at the apex. Every old host answers
 with a permanent redirect to its new path on the apex: `docs.` and `www` to the
 same path, and the demo subdomains (`renderer.`, `editor.`, `mermaid.`,

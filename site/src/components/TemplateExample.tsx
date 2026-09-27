@@ -99,7 +99,7 @@ export default function TemplateExample({
             {result.ok ? (
               <Markdown {...(useGfm ? { preset: gfmPreset } : {})} document={result.document} />
             ) : (
-              <ul className="m-0! pl-[1.1rem]! text-base">
+              <ul className="m-0 pl-[1.1rem] text-base">
                 {result.diagnostics.map((diagnostic) => (
                   <li key={`${diagnostic.code}-${diagnostic.path ?? ''}`}>
                     <code>{diagnostic.code}</code> {diagnostic.message}
@@ -120,7 +120,7 @@ export default function TemplateExample({
           </>
         }
       >
-        <pre className={cn(SOURCE, 'pl-0!')}>{JSON.stringify(active?.data ?? {}, null, 2)}</pre>
+        <pre className={cn(SOURCE, 'pl-0')}>{JSON.stringify(active?.data ?? {}, null, 2)}</pre>
       </Disclosure>
 
       {children !== undefined && <div className={NOTE}>{children}</div>}

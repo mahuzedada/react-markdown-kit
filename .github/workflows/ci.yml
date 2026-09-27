@@ -65,8 +65,8 @@ jobs:
       - run: pnpm --filter react-markdown-kit-site build
       - name: Live examples must have server-rendered
         run: |
-          grep -q "<table>" site/build/index.html
-          grep -q "Acme Industrial" site/build/index.html
+          grep -q "<table>" site/build/markdown-template-engine/index.html
+          grep -q "Acme Industrial" site/build/markdown-template-engine/index.html
       # The slides page renders a deck on the server (a second <section> proves
       # the split) and imports the plugin stylesheet, which must reach the
       # built CSS: RenderExample loads no plugin CSS on its own.

@@ -3,7 +3,7 @@ title: "Markdown in Next.js server components"
 description: "Render Markdown in a Next.js server component with no client JavaScript, and precompile documents at module scope so repeat requests skip the parse."
 ---
 
-import Link from '@docusaurus/Link'
+import Link from '@site/src/components/Link'
 import RenderExample from '@site/src/components/RenderExample'
 import sites from '@site/src/sites'
 import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
@@ -12,7 +12,7 @@ export const PATH = '/nextjs-markdown'
 
 export const crumbs = [
   { name: 'React Markdown Kit', path: '/' },
-  { name: 'React Markdown renderer', path: '/react-markdown-renderer' },
+  { name: 'React Markdown renderer', path: '/markdown-renderer' },
   { name: 'Markdown in Next.js' },
 ]
 
@@ -197,7 +197,7 @@ import { MarkdownEditor } from '@react-markdown-kit/editor'
 <Link href={sites.github}>Source on GitHub</Link>
 
 <Link to="/docs/server-rendering">Server rendering in depth</Link> ·{' '}
-<Link to="/react-markdown-renderer">React Markdown renderer</Link> ·{' '}
+<Link to="/markdown-renderer">React Markdown renderer</Link> ·{' '}
 <Link to="/docs/guides/render-markdown-in-react">How to render Markdown in React</Link> ·{' '}
 <Link to="/streaming-markdown">Streaming Markdown in React</Link> ·{' '}
 <Link to="/migrate-from-react-markdown">Migrate from react-markdown</Link>

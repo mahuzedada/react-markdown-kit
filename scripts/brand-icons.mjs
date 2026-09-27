@@ -18,7 +18,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const logo = readFileSync(join(root, 'site/brand/logo.svg'), 'utf8')
 
 // `dir` is the site's static root; `svgDir` is where logo.svg and favicon.svg
-// live (the docs site keeps them under img/ for Docusaurus).
+// live (the site keeps them under img/).
 const SITES = [
   { dir: 'site/static', svgDir: 'img', name: 'React Markdown Kit docs', shortName: 'RMK docs' },
 ]

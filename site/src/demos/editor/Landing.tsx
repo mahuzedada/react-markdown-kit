@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
-import useBrokenLinks from '@docusaurus/useBrokenLinks'
-import CodeBlock from '@theme/CodeBlock'
-import { Callout, Feature, Features, Hero, LinkRow, Page, Prose, Steps } from '../../components/landing/Page'
+import CodeBlock from '../../components/CodeBlock'
+import { Callout, Feature, Features, Hero, LinkRow, Page, Steps } from '../../components/landing/Page'
 import { docsUrl, sites } from '../../sites'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../components/landing/Seo'
 
@@ -112,8 +111,6 @@ export interface LandingProps {
 }
 
 export default function Landing({ roundTrip }: LandingProps): ReactNode {
-  // Other pages link to #round-trip; a plain id is invisible to the build's anchor check.
-  useBrokenLinks().collectAnchor('round-trip')
   return (
     <Page>
       <Hero
@@ -128,7 +125,7 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
         }
       >
         <LinkRow>
-          <a href={docsUrl('/react-markdown-editor')}>Editor docs</a>
+          <a href={docsUrl('/docs/editor/basics')}>Editor docs</a>
           <a href={npmUrl('editor')}>npm</a>
           <a href={sites.github}>GitHub</a>
           <a href={sites.home}>React Markdown Kit</a>
@@ -150,97 +147,95 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
         </Feature>
       </Features>
 
-      <Prose>
-        <h2>Install the editor and the two plugins this demo uses</h2>
-        <CodeBlock language="bash">npm install @react-markdown-kit/editor @react-markdown-kit/renderer</CodeBlock>
-        <CodeBlock language="bash">npm install @react-markdown-kit/template @react-markdown-kit/mermaid</CodeBlock>
+      <h2>Install the editor and the two plugins this demo uses</h2>
+      <CodeBlock language="bash">npm install @react-markdown-kit/editor @react-markdown-kit/renderer</CodeBlock>
+      <CodeBlock language="bash">npm install @react-markdown-kit/template @react-markdown-kit/mermaid</CodeBlock>
+      <p>
+        The editor needs the renderer for its preview mode and its parser. The template and Mermaid
+        packages are optional plugins, so you only need them if you want variables or diagrams.
+      </p>
+
+      <h2>Edit Markdown in three steps</h2>
+      <Steps>
+        <li>
+          <strong>Mount the editor.</strong> It takes Markdown and gives you Markdown back, so your
+          app keeps storing plain strings, and opening and closing a document doesn&rsquo;t change
+          it. The stylesheet is optional (the editor works without it).
+          <CodeBlock language="tsx">{EDITOR}</CodeBlock>
+        </li>
+        <li>
+          <strong>Share a dialect.</strong> Define your Markdown features once in a preset and pass
+          it to both the editor and the renderer. A <code>```mermaid</code> fence becomes a canvas in the
+          editor and static SVG in the renderer.
+          <CodeBlock language="tsx">{PRESET}</CodeBlock>
+        </li>
+        <li>
+          <strong>Add variables.</strong> The template plugin shows placeholders as chips while you
+          write and resolves them when rendering. Values go into the parsed tree, which means data
+          can&rsquo;t inject Markdown.
+          <CodeBlock language="tsx">{TEMPLATE}</CodeBlock>
+        </li>
+      </Steps>
+
+      <Callout>
         <p>
-          The editor needs the renderer for its preview mode and its parser. The template and Mermaid
-          packages are optional plugins, so you only need them if you want variables or diagrams.
+          <strong>More docs.</strong> <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> covers modes,
+          controlled and uncontrolled use and images, <a href={docsUrl('/docs/editor/headless')}>headless</a>{' '}
+          shows how to keep the engine and replace the chrome, and{' '}
+          <a href={docsUrl('/docs/editor/round-trip')}>round trip</a> explains how documents come
+          through editing byte for byte. For the plugins, see <a href={docsUrl('/docs/templates/basics')}>templates</a>{' '}
+          and <a href={docsUrl('/docs/mermaid')}>Mermaid</a>.
         </p>
+      </Callout>
 
-        <h2>Edit Markdown in three steps</h2>
-        <Steps>
-          <li>
-            <strong>Mount the editor.</strong> It takes Markdown and gives you Markdown back, so your
-            app keeps storing plain strings, and opening and closing a document doesn&rsquo;t change
-            it. The stylesheet is optional (the editor works without it).
-            <CodeBlock language="tsx">{EDITOR}</CodeBlock>
-          </li>
-          <li>
-            <strong>Share a dialect.</strong> Define your Markdown features once in a preset and pass
-            it to both the editor and the renderer. A <code>```mermaid</code> fence becomes a canvas in the
-            editor and static SVG in the renderer.
-            <CodeBlock language="tsx">{PRESET}</CodeBlock>
-          </li>
-          <li>
-            <strong>Add variables.</strong> The template plugin shows placeholders as chips while you
-            write and resolves them when rendering. Values go into the parsed tree, which means data
-            can&rsquo;t inject Markdown.
-            <CodeBlock language="tsx">{TEMPLATE}</CodeBlock>
-          </li>
-        </Steps>
+      <section id="round-trip">
+        <h2>Paste Markdown, save it, read the diff</h2>
+        <p>
+          Paste a document below. The editor opens it and saves it straight back through the same
+          headless bridge as{' '}
+          <a href={ROUNDTRIP_TEST}>
+            <code>packages/editor/tests/roundtrip.test.ts</code>
+          </a>
+          , then the panel diffs what you pasted against what was saved, line by line, and tells you
+          if they match. The box starts out with things another editor corrupted in the audit (a
+          setext heading, a list starting at 3, a nested quote, double backtick code, underscore
+          emphasis and a reference link).
+        </p>
+        {roundTrip}
+        <p>
+          That suite runs 22 audited documents in CI and fails the build if any of them comes back
+          changed. <a href={docsUrl('/docs/editor/round-trip')}>Round trip</a> lists the cases and
+          what each one used to break.
+        </p>
+      </section>
 
-        <Callout>
-          <p>
-            <strong>More docs.</strong> <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> covers modes,
-            controlled and uncontrolled use and images, <a href={docsUrl('/docs/editor/headless')}>headless</a>{' '}
-            shows how to keep the engine and replace the chrome, and{' '}
-            <a href={docsUrl('/docs/editor/round-trip')}>round trip</a> explains how documents come
-            through editing byte for byte. For the plugins, see <a href={docsUrl('/docs/templates/basics')}>templates</a>{' '}
-            and <a href={docsUrl('/docs/mermaid')}>Mermaid</a>.
-          </p>
-        </Callout>
+      <h2>About this editor</h2>
+      <ul>
+        <li>
+          The sample is a customer report, written once and resolved for one account. If you edit
+          the template on the left, the right pane updates, since you changed the document and the
+          data stayed the same. What gets saved is the placeholder. The chip only previews the value.
+        </li>
+        <li>
+          You can edit the flowchart in place. If you drag a box, the saved Markdown is still plain
+          Mermaid with one layout comment, and the placeholders around it aren&rsquo;t touched. The{' '}
+          <a href={sites.mermaidDemo}>Mermaid editor</a> shows the same thing on its own.
+        </li>
+        <li>
+          &ldquo;Copy link&rdquo; compresses the whole document into the URL hash and gives you the
+          link. Nothing is uploaded and there&rsquo;s no account involved. Opening the link loads the
+          document back into the editor.
+        </li>
+        <li>
+          If you only install the renderer, you don&rsquo;t pull in any editor code or Lexical. The
+          template and Mermaid root entries don&rsquo;t call React either, so the same resolution can
+          run in a worker, a CLI or an email job. The{' '}
+          <a href={docsUrl('/docs/security')}>security model</a> covers what to watch for when you mix
+          authored text with runtime data.
+        </li>
+      </ul>
 
-        <section id="round-trip">
-          <h2>Paste Markdown, save it, read the diff</h2>
-          <p>
-            Paste a document below. The editor opens it and saves it straight back through the same
-            headless bridge as{' '}
-            <a href={ROUNDTRIP_TEST}>
-              <code>packages/editor/tests/roundtrip.test.ts</code>
-            </a>
-            , then the panel diffs what you pasted against what was saved, line by line, and tells you
-            if they match. The box starts out with things another editor corrupted in the audit (a
-            setext heading, a list starting at 3, a nested quote, double backtick code, underscore
-            emphasis and a reference link).
-          </p>
-          {roundTrip}
-          <p>
-            That suite runs 22 audited documents in CI and fails the build if any of them comes back
-            changed. <a href={docsUrl('/docs/editor/round-trip')}>Round trip</a> lists the cases and
-            what each one used to break.
-          </p>
-        </section>
-
-        <h2>About this editor</h2>
-        <ul>
-          <li>
-            The sample is a customer report, written once and resolved for one account. If you edit
-            the template on the left, the right pane updates, since you changed the document and the
-            data stayed the same. What gets saved is the placeholder. The chip only previews the value.
-          </li>
-          <li>
-            You can edit the flowchart in place. If you drag a box, the saved Markdown is still plain
-            Mermaid with one layout comment, and the placeholders around it aren&rsquo;t touched. The{' '}
-            <a href={sites.mermaidDemo}>Mermaid editor</a> shows the same thing on its own.
-          </li>
-          <li>
-            &ldquo;Copy link&rdquo; compresses the whole document into the URL hash and gives you the
-            link. Nothing is uploaded and there&rsquo;s no account involved. Opening the link loads the
-            document back into the editor.
-          </li>
-          <li>
-            If you only install the renderer, you don&rsquo;t pull in any editor code or Lexical. The
-            template and Mermaid root entries don&rsquo;t call React either, so the same resolution can
-            run in a worker, a CLI or an email job. The{' '}
-            <a href={docsUrl('/docs/security')}>security model</a> covers what to watch for when you mix
-            authored text with runtime data.
-          </li>
-        </ul>
-
-        <Faq id="editor-faq" items={FAQ} />
-      </Prose>
+      <Faq id="editor-faq" items={FAQ} />
 
       <JsonLd data={webApplication({ name: TITLE, url: sites.editorDemo, description: DESCRIPTION })} />
     </Page>
