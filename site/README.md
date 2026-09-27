@@ -40,7 +40,7 @@ layouts only arrange them:
 | --- | --- | --- |
 | Doc | `/docs/*` | `src/layouts/DocLayout.tsx`: the docs sidebar (`DOCS_SIDEBAR` in `src/app/navigation.ts`), the reading column with its table of contents, previous and next |
 | Article | the MDX pages in `src/pages` (`/react-mermaid`, `/compare/*`, …) | `src/layouts/ArticleLayout.tsx`: the reading column with its table of contents |
-| Demo | `/markdown-renderer`, `/markdown-editor`, `/mermaid-editor`, `/markdown-slides` | `src/layouts/DemoLayout.tsx`: the demo filling the first viewport under the navbar, the copy below in the reading column |
+| Demo | `/markdown-renderer`, `/markdown-streaming`, `/markdown-editor`, `/mermaid-editor`, `/markdown-slides` | `src/layouts/DemoLayout.tsx`: the demo filling the first viewport under the navbar, the copy below in the reading column |
 
 The home page is the reading column on its own (`Page` in `src/components/landing/Page.tsx`).
 
@@ -141,7 +141,7 @@ renderer and editor have no overview page of their own: their demos
 
 `/docs/*` holds the reference. The landing page leads with the renderer and one
 component, per spec 13.1, not with architecture. The interactive demos are
-`/markdown-renderer`, `/markdown-editor`, `/mermaid-editor` and `/markdown-slides`,
+`/markdown-renderer`, `/markdown-streaming`, `/markdown-editor`, `/mermaid-editor` and `/markdown-slides`,
 with their code in `src/demos/`.
 
 ## Claims policy

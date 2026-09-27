@@ -14,13 +14,19 @@ export interface NavLink {
 const external = (href: string): boolean => /^https?:/.test(href)
 export { external as isExternal }
 
+/** The demo pages, in the order the navbar and the footer list them. */
+const DEMOS: readonly NavLink[] = [
+  { label: 'Render', href: '/markdown-renderer' },
+  { label: 'Stream', href: '/markdown-streaming' },
+  { label: 'Edit', href: '/markdown-editor' },
+  { label: 'Variables', href: '/markdown-variables' },
+  { label: 'Mermaid', href: '/mermaid-editor' },
+  { label: 'Slides', href: '/markdown-slides' },
+]
+
 export const NAVBAR: readonly NavLink[] = [
   { label: 'Docs', href: '/docs/getting-started' },
-  { label: 'Variables demo', href: '/markdown-variables' },
-  { label: 'Renderer demo', href: '/markdown-renderer' },
-  { label: 'Editor demo', href: '/markdown-editor' },
-  { label: 'Mermaid editor', href: '/mermaid-editor' },
-  { label: 'Slides demo', href: '/markdown-slides' },
+  ...DEMOS,
 ]
 
 export const NAVBAR_END: readonly NavLink[] = [
@@ -31,13 +37,7 @@ export const NAVBAR_END: readonly NavLink[] = [
 export const FOOTER: readonly { readonly title: string; readonly links: readonly NavLink[] }[] = [
   {
     title: 'Demos',
-    links: [
-      { label: 'Renderer demo', href: '/markdown-renderer' },
-      { label: 'Editor demo', href: '/markdown-editor' },
-      { label: 'Variables demo', href: '/markdown-variables' },
-      { label: 'Mermaid live editor', href: '/mermaid-editor' },
-      { label: 'Slides demo', href: '/markdown-slides' },
-    ],
+    links: DEMOS,
   },
   {
     title: 'Guides',

@@ -33,7 +33,7 @@ const SITES: readonly Site[] = [
     name: 'site',
     dir: 'site/build',
     url: 'https://reactmarkdownkit.com',
-    landings: ['/markdown-renderer/', '/markdown-editor/', '/markdown-variables/', '/mermaid-editor/', '/markdown-slides/'],
+    landings: ['/markdown-renderer/', '/markdown-streaming/', '/markdown-editor/', '/markdown-variables/', '/mermaid-editor/', '/markdown-slides/'],
   },
 ]
 

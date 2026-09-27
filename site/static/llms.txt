@@ -46,6 +46,7 @@ You don't need a provider, a stylesheet or any configuration.
 - [Compatibility matrix](https://reactmarkdownkit.com/docs/compatibility)
 - [Migrating from react-markdown](https://reactmarkdownkit.com/migrate-from-react-markdown)
 - [Renderer demo](https://reactmarkdownkit.com/markdown-renderer): the whole CommonMark and GFM syntax on one editable page, rendered by the component you would ship
+- [Streaming demo](https://reactmarkdownkit.com/markdown-streaming): edit Markdown and replay it into the renderer in chunks, the way a chat UI re-renders on every token from a model
 - [How to render Markdown in React](https://reactmarkdownkit.com/docs/guides/render-markdown-in-react): GFM, custom components, links, code blocks, security defaults and server rendering, each shown live
 - [Streaming Markdown in React](https://reactmarkdownkit.com/streaming-markdown): every partial prefix renders and finished blocks stay byte-identical; the page names the two constructs that do rewrite themselves
 - [React Markdown library comparisons](https://reactmarkdownkit.com/compare): every comparison page grouped by package, with one install-size table for every import
@@ -94,6 +95,7 @@ You don't need a provider, a stylesheet or any configuration.
 
 - https://reactmarkdownkit.com: documentation, funnels, guides and the compatibility matrix
 - https://reactmarkdownkit.com/markdown-renderer: the renderer playground
+- https://reactmarkdownkit.com/markdown-streaming: the streaming Markdown playground
 - https://reactmarkdownkit.com/markdown-editor: the free online Markdown editor for React
 - https://reactmarkdownkit.com/mermaid-editor: the free online Mermaid visual editor
 - https://reactmarkdownkit.com/markdown-slides: the Markdown slides editor with present mode

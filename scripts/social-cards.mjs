@@ -31,6 +31,12 @@ const CARDS = [
     host: 'reactmarkdownkit.com/markdown-renderer',
   },
   {
+    out: 'site/static/img/social-card-stream.png',
+    title: 'Streaming Markdown Playground',
+    lines: ['Markdown replayed in chunks, like a chat reply.', 'Every prefix renders.'],
+    host: 'reactmarkdownkit.com/markdown-streaming',
+  },
+  {
     out: 'site/static/img/social-card-editor.png',
     title: 'Free Online Markdown Editor',
     lines: ['Rich, source and preview modes.', 'Plain Markdown in, plain Markdown out.'],

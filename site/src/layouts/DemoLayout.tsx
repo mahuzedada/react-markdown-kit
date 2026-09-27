@@ -2,9 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react'
 import Shell from './Shell'
 
 /*
- * The demo pages (/markdown-renderer, /markdown-editor, /markdown-variables,
- * /mermaid-editor, /markdown-slides): the demo filling the first viewport under the navbar,
- * its copy below in the reading column, then the footer.
+ * The demo pages (/markdown-renderer, /markdown-streaming, /markdown-editor,
+ * /markdown-variables, /mermaid-editor, /markdown-slides): the demo filling
+ * the first viewport under the navbar, its copy below in the reading column,
+ * then the footer.
  *
  * A demo's root sizes itself with `h-[var(--rmk-demo-height,100dvh)]`: here
  * that is the viewport under the sticky navbar; in `?embed=1` mode the page

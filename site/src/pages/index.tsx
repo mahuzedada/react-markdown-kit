@@ -18,6 +18,7 @@ const GUIDES: readonly PageLink[] = [
   { to: '/markdown-renderer', label: 'Renderer demo', what: 'The whole syntax on one page you can edit, rendered by the component you would ship.' },
   { to: '/docs/guides/render-markdown-in-react', label: 'How to render Markdown in React', what: 'GFM, custom components, links, code blocks, security, server rendering.' },
   { to: '/streaming-markdown', label: 'Streaming Markdown in React', what: 'Every partial prefix renders, plus the two constructs that rewrite themselves.' },
+  { to: '/markdown-streaming', label: 'Streaming demo', what: 'Your Markdown replayed into the renderer in chunks, like a chat reply.' },
   { to: '/nextjs-markdown', label: 'Markdown in Next.js', what: 'Server components with no client JavaScript, and precompiled documents.' },
   { to: '/markdown-editor', label: 'Editor demo', what: 'Rich, source and preview modes that store plain Markdown.' },
   { to: '/markdown-round-trip', label: 'Lossless Markdown editing', what: '22 of 22 audited documents open and save byte for byte.' },
@@ -96,9 +97,6 @@ export default function Home(): ReactNode {
         <ActivityScope feature="hero" as="div" className="flex flex-wrap gap-3">
           <Button as="a" size="lg" track="get-started" href="/docs/getting-started">
             Get started
-          </Button>
-          <Button as="a" size="lg" variant="outline" track="renderer-demo" href="/markdown-renderer">
-            Try the renderer demo
           </Button>
         </ActivityScope>
         <CodeBlock language="bash">npm install @react-markdown-kit/renderer</CodeBlock>
