@@ -19,7 +19,7 @@ export function JsonLd({ data }: { readonly data: object }): ReactNode {
 }
 
 export interface PackageJsonLdProps {
-  readonly name: 'renderer' | 'editor' | 'template' | 'mermaid' | 'slides'
+  readonly name: 'renderer' | 'editor' | 'variables' | 'mermaid' | 'slides'
   readonly description: string
   readonly path: string
 }

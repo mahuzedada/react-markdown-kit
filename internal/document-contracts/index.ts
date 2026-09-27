@@ -14,7 +14,7 @@ import type { MarkdownDiagnostic } from '../diagnostics/index.js'
 
 /**
  * Structural mdast. Typed loosely on purpose: pinning `mdast`'s own types here
- * would force every consumer of the template package to install them. The
+ * would force every consumer of the variables package to install them. The
  * renderer narrows to the real mdast types internally.
  */
 export interface MarkdownNode {

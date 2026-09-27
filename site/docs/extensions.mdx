@@ -15,7 +15,7 @@ export const appMarkdown = defineMarkdownPreset({ extensions: [gfm()] })
 ```
 
 A preset describes what Markdown means in your application. If you pass the
-same preset to the renderer, the editor and the template engine, all three
+same preset to the renderer, the editor and the variables plugin, all three
 parse the same dialect. To add a feature you add an extension to that list,
 instead of adding a prop to three different components.
 
@@ -33,7 +33,7 @@ interface MarkdownExtension {
     readonly syntax?: SyntaxAdapter
     readonly renderer?: RendererAdapter
     readonly editor?: EditorAdapter
-    readonly template?: TemplateAdapter
+    readonly variables?: VariablesAdapter
   }
 }
 ```
@@ -46,13 +46,13 @@ reads the ones it understands.
 
 | Capability | Fields | Who reads it |
 | --- | --- | --- |
-| `syntax` | `micromarkExtensions`, `fromMarkdownExtensions`, `toMarkdownExtensions`, `nodeTypes`, `transform` | Renderer, editor and template engine |
+| `syntax` | `micromarkExtensions`, `fromMarkdownExtensions`, `toMarkdownExtensions`, `nodeTypes`, `transform` | Renderer, editor and variables plugin |
 | `renderer` | `handlers`, `components`, `rehypePlugins` | Renderer |
 | `editor` | `nodes`, `plugins`, `commands` | Editor |
-| `template` | `literalNodeTypes`, `formatters`, `transform` | Template engine |
+| `variables` | `literalNodeTypes`, `formatters`, `transform` | Variables plugin |
 
-The renderer ignores editor adapters. The template engine uses the syntax and
-template adapters and never imports editor code, which means a headless Node
+The renderer ignores editor adapters. The variables plugin uses the syntax and
+variables adapters and never imports editor code, which means a headless Node
 service can load an editor-aware extension without installing the editor.
 
 ## How gfm() is built
@@ -73,7 +73,7 @@ export function gfm(options: GfmOptions = {}): MarkdownExtension {
         toMarkdownExtensions: [gfmToMarkdown()],
         nodeTypes: ['table', 'tableRow', 'tableCell', 'delete', 'footnoteDefinition', 'footnoteReference'],
       },
-      template: { literalNodeTypes: [] },
+      variables: { literalNodeTypes: [] },
     },
   }
 }
@@ -83,7 +83,7 @@ The three syntax fields handle parsing, building the tree and serializing.
 With all three declared, the dialect round-trips, so text goes in, becomes a
 tree, and comes back out unchanged.
 
-`gfm()` ships once, from `@react-markdown-kit/renderer`. The template engine
+`gfm()` ships once, from `@react-markdown-kit/renderer`. The variables plugin
 and the editor read the same preset, so that one definition covers the dialect
 everywhere.
 
@@ -123,13 +123,13 @@ export function externalLinks(): MarkdownExtension {
 }
 ```
 
-### A template-only extension
+### A variables-only extension
 
 Formatters can ship inside an extension. That way a team can define its house
-date format once and every template picks it up.
+date format once and every document picks it up.
 
 ```ts
-import type { MarkdownExtension } from '@react-markdown-kit/template'
+import type { MarkdownExtension } from '@react-markdown-kit/variables'
 
 export function houseFormats(): MarkdownExtension {
   return {
@@ -137,7 +137,7 @@ export function houseFormats(): MarkdownExtension {
     version: '1',
     contractVersion: 1,
     capabilities: {
-      template: {
+      variables: {
         formatters: {
           shortDate: (value, { locale, timeZone }) =>
             new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeZone }).format(
@@ -150,23 +150,23 @@ export function houseFormats(): MarkdownExtension {
 }
 ```
 
-`literalNodeTypes` is the other half of the template adapter. If you list a
+`literalNodeTypes` is the other half of the variables adapter. If you list a
 node type there, the engine won't scan its text for placeholders (this is how
 code blocks stay literal).
 
 ### A multi-capability extension
 
-`template({ data })` from `@react-markdown-kit/template` is a `syntax.transform`
-that reads its siblings. Every other extension's `template.literalNodeTypes`
-and `template.formatters` apply, which is how `mermaid()` keeps placeholders
+`variables({ data })` from `@react-markdown-kit/variables` is a `syntax.transform`
+that reads its siblings. Every other extension's `variables.literalNodeTypes`
+and `variables.formatters` apply, which is how `mermaid()` keeps placeholders
 in a payload literal without either package knowing about the other.
 
-`templateVariables()` from the same package declares four capabilities at once.
-The `syntax` adapter lifts `{{...}}` runs into a `templateVariable` node and
-serializes them back byte-for-byte. The `template` adapter marks that node
+`variableChips()` from the same package declares four capabilities at once.
+The `syntax` adapter lifts `{{...}}` runs into a `variable` node and
+serializes them back byte-for-byte. The `variables` adapter marks that node
 literal so a chip never reaches the interpolator, and the `renderer` adapter
 shows an unresolved placeholder as a chip. The `editor` adapter is added by
-`@react-markdown-kit/template/editor` under the same name and supplies the
+`@react-markdown-kit/variables/editor` under the same name and supplies the
 Lexical chip, the `{{` trigger and the insert command.
 
 If a renderer loads the editor's version, it draws the document and ignores the
@@ -177,7 +177,7 @@ editor half. You don't need to configure anything for that.
 [`@react-markdown-kit/mermaid`](/docs/mermaid) is built only on this contract.
 Its `syntax` adapter lifts a ```` ```mermaid ```` fence into a `diagram` node
 and serializes it back. Its `renderer` adapter draws that node as a static SVG,
-its `template` adapter marks the payload literal, and
+its `variables` adapter marks the payload literal, and
 `@react-markdown-kit/mermaid/editor` adds an `editor` adapter with a Lexical
 node, a canvas and a toolbar button. The root entry doesn't load React or
 Lexical, so the same extension can go into a Node service's preset unchanged.
@@ -274,7 +274,7 @@ content policy still runs after them, so it filters what they produce, but the
 kit doesn't audit what a plugin does.
 
 I'd use a kit extension when you want the feature to work across the
-renderer, the editor and templates. remark or rehype makes more sense when the
+renderer, the editor and variables. remark or rehype makes more sense when the
 feature already exists there and only rendering needs it.
 
 ## Versioning

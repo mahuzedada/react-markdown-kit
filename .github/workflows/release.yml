@@ -39,7 +39,7 @@ jobs:
           const tag = process.argv[2].replace(/^v/, '')
           const files = [
             'packages/renderer', 'packages/editor',
-            'plugins/template', 'plugins/mermaid', 'plugins/slides',
+            'plugins/variables', 'plugins/mermaid', 'plugins/slides',
           ].map((dir) => `${dir}/package.json`)
           const mismatched = files
             .map((file) => ({ file, version: JSON.parse(readFileSync(file, 'utf8')).version }))

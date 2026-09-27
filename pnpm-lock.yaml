@@ -213,7 +213,7 @@ importers:
         specifier: ^0.35.0
         version: 0.35.0
 
-  plugins/template:
+  plugins/variables:
     dependencies:
       '@types/hast':
         specifier: ^3.0.4
@@ -255,9 +255,9 @@ importers:
       '@react-markdown-kit/slides':
         specifier: workspace:*
         version: link:../plugins/slides
-      '@react-markdown-kit/template':
+      '@react-markdown-kit/variables':
         specifier: workspace:*
-        version: link:../plugins/template
+        version: link:../plugins/variables
       '@zuilib/primitives':
         specifier: 0.4.0
         version: 0.4.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss@4.3.3)

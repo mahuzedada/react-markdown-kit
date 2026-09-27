@@ -159,7 +159,7 @@ export function useMarkdownEditor(options: UseMarkdownEditorOptions = {}): Markd
   }, [bridge])
 
   // Extension plugins. A new `extensions` array with the same dialect (say,
-  // `templateVariables()` handed fresh preview data) re-registers the plugins
+  // `variableChips()` handed fresh preview data) re-registers the plugins
   // in place; only a changed dialect rebuilds the editor.
   useEffect(() => {
     bridge.refreshExtensions({ preset: options.preset, extensions: options.extensions })

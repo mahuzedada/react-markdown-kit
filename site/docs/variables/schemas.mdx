@@ -1,0 +1,135 @@
+---
+title: "Schemas and types for variable data"
+sidebar_label: Schemas and types
+description: "Validate variable data at runtime with any Standard Schema validator and type it at compile time from the same schema, so TypeScript rejects a missing key."
+---
+
+import VariablesExample from '@site/src/components/VariablesExample'
+
+# Schemas and types
+
+```ts
+import { z } from 'zod'
+import { variables } from '@react-markdown-kit/variables'
+
+const ReportSchema = z.object({
+  customer: z.object({ name: z.string() }),
+  revenue: z.number(),
+})
+
+variables({ schema: ReportSchema, data: { customer: { name: 'Acme' }, revenue: 50_000 } })
+```
+
+`variables()` accepts any validator implementing
+[Standard Schema](https://standardschema.dev), the shared interface designed by
+contributors from Zod, Valibot and ArkType. When you pass `schema`, `data` is
+typed from it, so TypeScript will reject a call that leaves out `revenue` or
+misspells the customer key. Without a schema, `data` is whatever you pass, and
+you can type it with a generic parameter: `variables<ReportData>({ data })`.
+
+## Generics are compile time, schemas are runtime
+
+| | Generic type parameter | Standard Schema |
+| --- | --- | --- |
+| When it runs | `tsc`, and your editor | Every compilation |
+| Catches | A wrong literal in your own code | A wrong value from an API, a database or a user |
+| Cost at runtime | None | One validation pass |
+| Failure mode | A type error | An error diagnostic, and nothing rendered |
+
+Data that comes over the network is really `unknown`, whatever the type says,
+so I'd recommend validating it.
+
+Valibot and ArkType work the same way, through the same property, with no adapter:
+
+```ts
+import * as v from 'valibot'
+const ReportSchema = v.object({ customer: v.object({ name: v.string() }), revenue: v.number() })
+```
+
+```ts
+import { type } from 'arktype'
+const ReportSchema = type({ customer: { name: 'string' }, revenue: 'number' })
+```
+
+`@react-markdown-kit/variables` doesn't depend on any of these libraries. It just
+reads the `~standard` property, so the only validator installed is the one you
+picked.
+
+## What a rejection looks like
+
+If validation fails, resolution stops there. Resolving against rejected data
+would give you a document that looks fine to publish but is built on bad data,
+so the document becomes the `fallback` (nothing by default) and the diagnostics
+explain why:
+
+```ts
+// [{ code: 'VARIABLE_SCHEMA_INVALID', severity: 'error', path: 'revenue', message: ... }]
+```
+
+Each validator issue becomes one diagnostic with the data path it's about.
+Messages include the path but not the value, so they're safe to log.
+
+Resolution is synchronous. A validator that returns a Promise produces
+`VARIABLE_SCHEMA_ASYNC` instead of a half-resolved document, so do any async
+work before you compile.
+
+## Schemas stay optional
+
+Without a schema, a missing value still produces `VARIABLE_REQUIRED_VALUE` and
+an empty document. Adding a schema moves that check earlier, so bad data is
+rejected when it comes in instead of being caught while the document resolves.
+
+<VariablesExample
+  title="Missing data fails instead of half-rendering"
+  markdown={`## Statement for {{customer.name}}
+
+Balance: {{balance | currency:"EUR"}}
+`}
+  datasets={[
+    { label: 'Complete', data: { customer: { name: 'Northwind' }, balance: 1240.5 } },
+    { label: 'Missing balance', data: { customer: { name: 'Northwind' } } },
+  ]}
+>
+  The second dataset fails, so the pane shows diagnostics instead of a
+  document with a blank where the balance should be.
+</VariablesExample>
+
+## Presentation metadata is separate
+
+Runtime validation and editor UX are separate concerns, so labels go in
+`variables` instead of the schema. That way your validator doesn't need to know
+about any kit-specific annotations.
+
+```ts
+variables({
+  data,
+  schema: ReportSchema,
+  variables: {
+    'customer.name': { label: 'Customer name', group: 'Customer' },
+    revenue: { label: 'Revenue', group: 'Financials' },
+  },
+})
+```
+
+The same map is used by `variableChips({ variables })` in the editor (see
+[Authoring](/docs/variables/authoring)). Two of the fields affect resolution:
+
+```ts
+variables: {
+  'customer.vatNumber': { required: false },
+  'report.title': { default: 'Monthly report' },
+}
+```
+
+`required: false` lets a missing value resolve to empty text with a warning.
+`default` provides a value when the data doesn't have one, and makes the
+variable optional. Every other variable is required by default.
+
+## Next
+
+- [Formatting and localization](/docs/variables/formatting) for the built-in formatters.
+- [Variable basics](/docs/variables/basics) for options and diagnostics.
+
+## Read next
+
+The overview, from placeholder syntax to schemas: [Markdown variables](/markdown-variables).

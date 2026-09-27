@@ -76,7 +76,7 @@ asserts that `gfm()` and `remark-gfm` produce the same output.
 ## Presets: define your dialect once
 
 A preset is your application's answer to "what does Markdown mean here?" Define
-it once and reuse it in the renderer, the editor and the template engine.
+it once and reuse it in the renderer, the editor and the variables plugin.
 
 ```ts
 // markdown.ts
@@ -118,7 +118,7 @@ const doc = compileMarkdown(source, { preset: appMarkdown })
 
 `compileMarkdown` is deterministic and does no I/O. The document it returns is
 plain JSON: no React elements, no class instances, no closures. You can cache
-it, send it over the wire, or hand it to the template engine.
+it, send it over the wire, or hand it to the variables plugin.
 
 `children` and `document` are mutually exclusive in the types, so there is no
 "which one wins" rule to remember.
@@ -235,8 +235,8 @@ All optional. The renderer never requires them, and carries none of their code.
 
 - [`@react-markdown-kit/editor`](https://www.npmjs.com/package/@react-markdown-kit/editor):
   rich, source and preview editing that reads and writes the same Markdown.
-- [`@react-markdown-kit/template`](https://www.npmjs.com/package/@react-markdown-kit/template):
-  a plugin. `template({ data })` resolves typed placeholders while this
+- [`@react-markdown-kit/variables`](https://www.npmjs.com/package/@react-markdown-kit/variables):
+  a plugin. `variables({ data })` resolves typed placeholders while this
   renderer parses.
 - [`@react-markdown-kit/mermaid`](https://www.npmjs.com/package/@react-markdown-kit/mermaid):
   a plugin. `mermaid()` draws ```` ```mermaid ```` flowchart fences as static

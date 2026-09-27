@@ -24,9 +24,6 @@ export function isSlideDirectiveNode(node: MarkdownNode): node is SlideDirective
   return node.type === SLIDE_DIRECTIVE_NODE
 }
 
-/** Layout classes the stylesheet styles; any other token is the consumer's. */
-export const BUILT_IN_CLASSES: readonly string[] = ['left', 'center', 'right', 'top', 'middle', 'bottom', 'inverse']
-
 /**
  * One comment, one directive: `<!-- key: value -->` and nothing else.
  * Whitespace around the comment is allowed: an html node keeps up to three

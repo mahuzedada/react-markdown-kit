@@ -18,7 +18,7 @@ GFM adds tables, task lists, strikethrough, autolinks and footnotes on top of Co
 
 ## Two routes
 
-**The native extension.** `gfm()` is a Markdown extension, so through a shared preset it also configures the editor and the template engine.
+**The native extension.** `gfm()` is a Markdown extension, so through a shared preset it also configures the editor and the variables plugin.
 
 ```tsx
 import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
@@ -59,7 +59,7 @@ The default is `true`, which matches GitHub, cmark-gfm and `remark-gfm`. With th
   gfm
   editable
   title="Tables, with per-column alignment"
-  markdown={'| Package | Role | Size |\n| :--- | :---: | ---: |\n| renderer | display | 24 kB |\n| editor | create | larger |\n| template | personalize | small |\n'}
+  markdown={'| Package | Role | Size |\n| :--- | :---: | ---: |\n| renderer | display | 24 kB |\n| editor | create | larger |\n| variables | personalize | small |\n'}
 >
   The second row sets the alignment. `:---` is left, `:---:` is centre and `---:` is right.
 </RenderExample>

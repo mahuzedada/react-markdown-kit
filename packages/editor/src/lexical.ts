@@ -55,7 +55,7 @@ export interface EditorBlockAdapter {
  * equal to what was imported and is written back from its original bytes.
  */
 export interface EditorInlineAdapter {
-  /** The mdast `type` this adapter owns, e.g. `templateVariable`. */
+  /** The mdast `type` this adapter owns, e.g. `variable`. */
   readonly type: string
   /** Builds the editor node for an imported inline node. Runs inside `editor.update()`. */
   $import(node: MarkdownNode, source: string): LexicalNode
@@ -93,7 +93,7 @@ export interface LexicalEditorAdapter {
 
 /**
  * Types an `editor` capability. The contract stores these fields as opaque
- * lists so the renderer and template packages never load Lexical types; this
+ * lists so the renderer and variables packages never load Lexical types; this
  * is the typed door for the one package that does.
  */
 export function lexicalAdapter(adapter: LexicalEditorAdapter): EditorAdapter {

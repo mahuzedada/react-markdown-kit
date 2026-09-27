@@ -28,7 +28,7 @@ const SITES: readonly Site[] = [{ name: 'site', dir: 'site/build', url: 'https:/
 const READMES = [
   'packages/renderer/README.md',
   'packages/editor/README.md',
-  'plugins/template/README.md',
+  'plugins/variables/README.md',
   'plugins/mermaid/README.md',
   'plugins/slides/README.md',
 ]

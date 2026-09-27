@@ -2,8 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import Shell from './Shell'
 
 /*
- * The demo pages (/markdown-renderer, /markdown-editor, /mermaid-editor,
- * /markdown-slides): the demo filling the first viewport under the navbar,
+ * The demo pages (/markdown-renderer, /markdown-editor, /markdown-variables,
+ * /mermaid-editor, /markdown-slides): the demo filling the first viewport under the navbar,
  * its copy below in the reading column, then the footer.
  *
  * A demo's root sizes itself with `h-[var(--rmk-demo-height,100dvh)]`: here

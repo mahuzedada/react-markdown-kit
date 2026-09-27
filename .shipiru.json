@@ -14,12 +14,17 @@
       "status": 200
     },
     {
-      "url": "https://reactmarkdownkit.com/docs/guides/markdown-template-variables",
+      "url": "https://reactmarkdownkit.com/docs/guides/markdown-variables",
       "status": 200
     },
     {
       "url": "https://reactmarkdownkit.com/mermaid-editor",
       "status": 200
+    },
+    {
+      "url": "https://reactmarkdownkit.com/markdown-template-engine",
+      "status": 200,
+      "contains": "https://reactmarkdownkit.com/markdown-variables"
     },
     {
       "url": "https://docs.reactmarkdownkit.com/edit-ai-generated-mermaid",

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Markdown, compileMarkdown, defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
-import { template } from '@react-markdown-kit/template'
+import { variables } from '@react-markdown-kit/variables'
 import { slides, isSlideDirectiveNode, isSlideMarkerNode } from '../src/index.js'
 
 const DECK = `---
@@ -157,19 +157,19 @@ describe('slides(): extension object', () => {
     expect(html).not.toContain('data-rmk-slide-notes')
   })
 
-  it('declares its node types and marks them literal for templates', () => {
+  it('declares its node types and marks them literal for variables', () => {
     const extension = slides()
     expect(extension.contractVersion).toBe(1)
     expect(extension.capabilities?.syntax?.nodeTypes).toEqual(['slideMarker', 'slideDirective'])
-    expect(extension.capabilities?.template?.literalNodeTypes).toEqual(['slideMarker', 'slideDirective'])
+    expect(extension.capabilities?.variables?.literalNodeTypes).toEqual(['slideMarker', 'slideDirective'])
     expect(extension.capabilities?.editor).toBeUndefined()
   })
 })
 
-describe('slides(): template', () => {
+describe('slides(): variables', () => {
   it('resolves a placeholder in a slide and leaves markers and directives literal', () => {
     const source = '# {{name}}\n\n--\n\n<!-- background: https://x/{{name}}.png -->\n\ntext {{name}}\n'
-    const document = compileMarkdown(source, { extensions: [slides(), template({ data: { name: 'Acme' } })] })
+    const document = compileMarkdown(source, { extensions: [slides(), variables({ data: { name: 'Acme' } })] })
     expect(document.diagnostics).toEqual([])
     expect(JSON.stringify(document.tree.children[0])).toContain('Acme')
     expect(document.tree.children.filter(isSlideMarkerNode)).toHaveLength(1)

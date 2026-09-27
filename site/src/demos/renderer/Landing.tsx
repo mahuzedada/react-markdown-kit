@@ -165,7 +165,7 @@ export default function Landing(): ReactNode {
           the source. <strong>HTML</strong> is the static markup a server would send.{' '}
           <strong>Tree</strong> is the parsed document that <code>compileMarkdown</code> returns. It&rsquo;s
           plain JSON, so you can cache it or hand it to the{' '}
-          <a href={docsUrl('/markdown-template-engine')}>template plugin</a>. <strong>Code</strong> is
+          <a href={docsUrl('/markdown-variables')}>variables plugin</a>. <strong>Code</strong> is
           the JSX behind the render.
         </li>
         <li>

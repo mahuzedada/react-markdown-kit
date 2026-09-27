@@ -57,7 +57,7 @@ configuration. Tracked, not yet done.
 
 2.8x faster to re-render, because parsing is about two thirds of the work and
 `compileMarkdown` does it once. This is the architectural payoff of the shared
-document contract, and it is the path the template engine already uses.
+document contract, and it is the path the variables plugin already uses.
 
 ## Adversarial inputs
 

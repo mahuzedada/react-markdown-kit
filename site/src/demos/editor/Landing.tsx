@@ -18,7 +18,7 @@ export const TITLE = 'Free Online Markdown Editor for React'
 
 /** Also the meta description of the page (src/pages); tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
-  'Free online Markdown editor for React with rich, source and preview modes. It saves plain Markdown, needs no account and supports templates and diagrams.'
+  'Free online Markdown editor for React with rich, source and preview modes. It saves plain Markdown, needs no account and supports variables and diagrams.'
 
 const EDITOR = `'use client'
 
@@ -39,21 +39,21 @@ export const preset = defineMarkdownPreset({ extensions: [gfm(), mermaid()] })
 
 <MarkdownEditor preset={preset} value={value} onChange={setValue} />`
 
-const TEMPLATE = `import Markdown from '@react-markdown-kit/renderer'
+const VARIABLES = `import Markdown from '@react-markdown-kit/renderer'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
-import { template } from '@react-markdown-kit/template'
-import { templateVariables } from '@react-markdown-kit/template/editor'
+import { variables } from '@react-markdown-kit/variables'
+import { variableChips } from '@react-markdown-kit/variables/editor'
 
 // Authoring: every {{placeholder}} is a chip that previews the sample data.
 <MarkdownEditor
   preset={preset}
-  extensions={[templateVariables({ previewData: customer })]}
+  extensions={[variableChips({ previewData: customer })]}
   value={source}
   onChange={setSource}
 />
 
 // Rendering: the same source, resolved for one customer.
-<Markdown preset={preset} extensions={[template({ data: customer })]}>
+<Markdown preset={preset} extensions={[variables({ data: customer })]}>
   {source}
 </Markdown>`
 
@@ -91,8 +91,8 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'Can I add variables and diagrams?',
     answer:
-      'Yes. The template plugin shows {{placeholders}} as chips while you write and resolves them at render time. The Mermaid plugin turns a mermaid fence into a canvas you can draw on.',
-    more: { href: docsUrl('/docs/templates/basics'), label: 'Template basics.' },
+      'Yes. The variables plugin shows {{placeholders}} as chips while you write and resolves them at render time. The Mermaid plugin turns a mermaid fence into a canvas you can draw on.',
+    more: { href: docsUrl('/docs/variables/basics'), label: 'Variables basics.' },
   },
   {
     question: 'Does it need a design system?',
@@ -142,16 +142,16 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
           optional, and you can use the engine headless if you want.
         </Feature>
         <Feature title="Plugins">
-          Template variables shown as chips, Mermaid flowcharts on a canvas, and slide decks. Each
+          Variables shown as chips, Mermaid flowcharts on a canvas, and slide decks. Each
           one is a separate package.
         </Feature>
       </Features>
 
       <h2>Install the editor and the two plugins this demo uses</h2>
       <CodeBlock language="bash">npm install @react-markdown-kit/editor @react-markdown-kit/renderer</CodeBlock>
-      <CodeBlock language="bash">npm install @react-markdown-kit/template @react-markdown-kit/mermaid</CodeBlock>
+      <CodeBlock language="bash">npm install @react-markdown-kit/variables @react-markdown-kit/mermaid</CodeBlock>
       <p>
-        The editor needs the renderer for its preview mode and its parser. The template and Mermaid
+        The editor needs the renderer for its preview mode and its parser. The variables and Mermaid
         packages are optional plugins, so you only need them if you want variables or diagrams.
       </p>
 
@@ -170,10 +170,10 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
           <CodeBlock language="tsx">{PRESET}</CodeBlock>
         </li>
         <li>
-          <strong>Add variables.</strong> The template plugin shows placeholders as chips while you
+          <strong>Add variables.</strong> The variables plugin shows placeholders as chips while you
           write and resolves them when rendering. Values go into the parsed tree, which means data
           can&rsquo;t inject Markdown.
-          <CodeBlock language="tsx">{TEMPLATE}</CodeBlock>
+          <CodeBlock language="tsx">{VARIABLES}</CodeBlock>
         </li>
       </Steps>
 
@@ -183,7 +183,7 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
           controlled and uncontrolled use and images, <a href={docsUrl('/docs/editor/headless')}>headless</a>{' '}
           shows how to keep the engine and replace the chrome, and{' '}
           <a href={docsUrl('/docs/editor/round-trip')}>round trip</a> explains how documents come
-          through editing byte for byte. For the plugins, see <a href={docsUrl('/docs/templates/basics')}>templates</a>{' '}
+          through editing byte for byte. For the plugins, see <a href={docsUrl('/docs/variables/basics')}>variables</a>{' '}
           and <a href={docsUrl('/docs/mermaid')}>Mermaid</a>.
         </p>
       </Callout>
@@ -213,7 +213,7 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
       <ul>
         <li>
           The sample is a customer report, written once and resolved for one account. If you edit
-          the template on the left, the right pane updates, since you changed the document and the
+          the source on the left, the right pane updates, since you changed the document and the
           data stayed the same. What gets saved is the placeholder. The chip only previews the value.
         </li>
         <li>
@@ -228,7 +228,7 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
         </li>
         <li>
           If you only install the renderer, you don&rsquo;t pull in any editor code or Lexical. The
-          template and Mermaid root entries don&rsquo;t call React either, so the same resolution can
+          variables and Mermaid root entries don&rsquo;t call React either, so the same resolution can
           run in a worker, a CLI or an email job. The{' '}
           <a href={docsUrl('/docs/security')}>security model</a> covers what to watch for when you mix
           authored text with runtime data.

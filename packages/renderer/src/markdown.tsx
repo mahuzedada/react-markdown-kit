@@ -62,7 +62,7 @@ export function Markdown(props: MarkdownProps): ReactElement {
   if (providedDocument !== undefined && !isMarkdownDocument(providedDocument)) {
     throw new MarkdownConfigurationError(
       'DOCUMENT_INVALID',
-      'document must be a MarkdownDocument produced by compileMarkdown() or template.resolve().',
+      'document must be a MarkdownDocument produced by compileMarkdown().',
     )
   }
 

@@ -184,7 +184,7 @@ export interface DiagramNode extends MarkdownNode {
 - Every ```` ```mermaid ```` fence is lifted. No fence stays a `code` node.
 - `position` is copied from the code node. The editor's raw-source contract depends on it.
 - `value` and `meta` serialize back to the same fence with the existing backtick-run rule.
-- `template.literalNodeTypes` stays `['diagram']`.
+- `variables.literalNodeTypes` stays `['diagram']`.
 - `diagramNodeFrom(value, format, kinds, extra?)` in `extension.ts` builds the node; the syntax transform and the editor's block adapter both use it.
 
 Diagnostics live in `plugins/mermaid/src/diagnostics.ts` on the slides pattern: a code table, a severity table, a message table, `diagramDiagnostic(code, range, detail?)`. The `error` string of a `DiagramParseError` goes into the node, never into a message.

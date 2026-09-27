@@ -78,6 +78,6 @@ export function Faq({ id, title = 'Questions', items }: FaqProps): ReactNode {
 }
 
 /** The npm page of a package. */
-export function npmUrl(name: 'renderer' | 'editor' | 'template' | 'mermaid' | 'slides'): string {
+export function npmUrl(name: 'renderer' | 'editor' | 'variables' | 'mermaid' | 'slides'): string {
   return `https://www.npmjs.com/package/@react-markdown-kit/${name}`
 }

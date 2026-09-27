@@ -1,7 +1,7 @@
 ---
 title: "Getting started: Markdown in React"
 sidebar_label: Getting started
-description: "Install React Markdown Kit and render Markdown with one React component, then add the editor and the template plugin when you need them, in three steps."
+description: "Install React Markdown Kit and render Markdown with one React component, then add the editor and the variables plugin when you need them, in three steps."
 sidebar_position: 1
 ---
 
@@ -98,15 +98,15 @@ What you store is plain Markdown (there's no editor JSON format to keep around).
 
 ## Personalize the same document
 
-The template plugin fills in typed variables while the renderer parses the document.
+The variables plugin fills in typed values while the renderer parses the document.
 
 ```tsx
-import { template } from '@react-markdown-kit/template'
+import { variables } from '@react-markdown-kit/variables'
 
-<Markdown extensions={[template({ data: { user: { name: 'Chatis' } } })]}>{'# Hello {{user.name}}'}</Markdown>
+<Markdown extensions={[variables({ data: { user: { name: 'Chatis' } } })]}>{'# Hello {{user.name}}'}</Markdown>
 ```
 
-See [Templates](/docs/templates/basics).
+See [Variables](/docs/variables/basics).
 
 ## Where to go next
 

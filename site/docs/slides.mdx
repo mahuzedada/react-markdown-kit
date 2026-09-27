@@ -435,13 +435,13 @@ The built-in horizontal-rule button still inserts the editor's own rule node,
 which stays unlabelled until the document is loaded again. For a deck editor
 you'll probably want to hide it through the `toolbar` render prop.
 
-## Templates
+## Variables
 
-With `@react-markdown-kit/template`, a `{{placeholder}}` in slide prose
+With `@react-markdown-kit/variables`, a `{{placeholder}}` in slide prose
 resolves like it does anywhere else. Markers and directives stay literal, so a
 placeholder inside `<!-- background: … -->` is never treated as data and
 runtime values can't set a slide's properties. List `slides()` before
-`template()`.
+`variables()`.
 
 ## The three entries
 
@@ -453,7 +453,7 @@ runtime values can't set a slide's properties. List `slides()` before
 
 All three return an extension named `slides`, so a later entry replaces an
 earlier one in a preset. A Node service that renders decks to HTML, or
-resolves templates in them, can import the root entry and skip installing
+resolves variables in them, can import the root entry and skip installing
 React and Lexical.
 
 ## Programmatic API

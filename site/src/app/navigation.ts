@@ -15,8 +15,8 @@ const external = (href: string): boolean => /^https?:/.test(href)
 export { external as isExternal }
 
 export const NAVBAR: readonly NavLink[] = [
-  { label: 'Templates', href: '/markdown-template-engine' },
   { label: 'Docs', href: '/docs/getting-started' },
+  { label: 'Variables demo', href: '/markdown-variables' },
   { label: 'Renderer demo', href: '/markdown-renderer' },
   { label: 'Editor demo', href: '/markdown-editor' },
   { label: 'Mermaid editor', href: '/mermaid-editor' },
@@ -34,6 +34,7 @@ export const FOOTER: readonly { readonly title: string; readonly links: readonly
     links: [
       { label: 'Renderer demo', href: '/markdown-renderer' },
       { label: 'Editor demo', href: '/markdown-editor' },
+      { label: 'Variables demo', href: '/markdown-variables' },
       { label: 'Mermaid live editor', href: '/mermaid-editor' },
       { label: 'Slides demo', href: '/markdown-slides' },
     ],
@@ -42,7 +43,7 @@ export const FOOTER: readonly { readonly title: string; readonly links: readonly
     title: 'Guides',
     links: [
       { label: 'Getting started', href: '/docs/getting-started' },
-      { label: 'Templates', href: '/markdown-template-engine' },
+      { label: 'Variables', href: '/docs/variables/basics' },
       { label: 'Styling', href: '/docs/styling' },
       { label: 'Security', href: '/docs/security' },
       { label: 'Next.js', href: '/nextjs-markdown' },
@@ -60,7 +61,7 @@ export const FOOTER: readonly { readonly title: string; readonly links: readonly
       { label: 'vs Streamdown', href: '/compare/streamdown' },
       { label: 'Editor vs MDXEditor', href: '/compare/mdxeditor' },
       { label: 'Editor vs Milkdown', href: '/compare/milkdown' },
-      { label: 'Templating vs Handlebars', href: '/compare/handlebars' },
+      { label: 'Variables vs Handlebars', href: '/compare/handlebars' },
       { label: 'Marp and Slidev alternative', href: '/marp-alternative' },
     ],
   },
@@ -77,12 +78,12 @@ export const FOOTER: readonly { readonly title: string; readonly links: readonly
 
 export type SidebarItem = string | { readonly label: string; readonly open?: boolean; readonly items: readonly string[] }
 
-/** Ordered to match spec 13.1: the renderer first, the editor and templates as optional next steps. */
+/** Ordered to match spec 13.1: the renderer first, the editor and variables as optional next steps. */
 export const DOCS_SIDEBAR: readonly SidebarItem[] = [
   'getting-started',
   { label: 'Renderer', open: true, items: ['renderer/components', 'renderer/gfm', 'renderer/presets', 'renderer/compiling'] },
   { label: 'Editor', items: ['editor/basics', 'editor/headless', 'editor/round-trip', 'editor/images'] },
-  { label: 'Templates', items: ['templates/basics', 'templates/schemas', 'templates/formatting', 'templates/authoring'] },
+  { label: 'Variables', items: ['variables/basics', 'variables/schemas', 'variables/formatting', 'variables/authoring'] },
   {
     label: 'Guides',
     items: [
@@ -92,7 +93,7 @@ export const DOCS_SIDEBAR: readonly SidebarItem[] = [
       'server-rendering',
       'extensions',
       'guides/lexical-markdown-editor',
-      'guides/markdown-template-variables',
+      'guides/markdown-variables',
       'mermaid',
       'slides',
     ],

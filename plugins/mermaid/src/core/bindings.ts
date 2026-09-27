@@ -193,8 +193,6 @@ export function headingExitPoint(
   return { x: anchor.x + v.x * (t + gap), y: anchor.y + v.y * (t + gap) }
 }
 
-export type ResolvedEndpoints = Readonly<{ p1: Point; p2: Point }>
-
 /**
  * Recompute the endpoints of every bound connector from the current
  * positions of the boxes they're attached to, and drop bindings whose box

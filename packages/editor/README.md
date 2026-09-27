@@ -135,7 +135,7 @@ A `blob:` URL is never written into the document.
 
 ## Shared dialect
 
-Define what Markdown means once, and use it in the renderer, the editor and the template engine:
+Define what Markdown means once, and use it in the renderer, the editor and the variables plugin:
 
 ```ts
 import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
@@ -232,21 +232,21 @@ chip; its `$export` returns the mdast plus its Markdown spelling, which is the
 node's identity for the writer. A decorator component reaches the engine with
 `useLexicalEditor()`. `@react-markdown-kit/mermaid/editor` (a block),
 `@react-markdown-kit/slides/editor` (three blocks and an Enter shortcut) and
-`@react-markdown-kit/template/editor` (an inline) are the shipped examples.
+`@react-markdown-kit/variables/editor` (an inline) are the shipped examples.
 
 ## Plugins
 
-Templates, Mermaid flowcharts and slides are separate packages, used only through `extensions`:
+Variables, Mermaid flowcharts and slides are separate packages, used only through `extensions`:
 
 ```tsx
-import { templateVariables } from '@react-markdown-kit/template/editor'
+import { variableChips } from '@react-markdown-kit/variables/editor'
 import { mermaid } from '@react-markdown-kit/mermaid/editor'
 import { slides } from '@react-markdown-kit/slides/editor'
 
 <MarkdownEditor
   value={source}
   onChange={setSource}
-  extensions={[templateVariables({ previewData: sample }), mermaid(), slides()]}
+  extensions={[variableChips({ previewData: sample }), mermaid(), slides()]}
 />
 ```
 
@@ -255,7 +255,7 @@ written back to the source), a ```` ```mermaid ```` flowchart opens on a
 drawing canvas, and a deck gets numbered slide breaks, `???` / `--` dividers,
 directive chips, four toolbar buttons and a Preview that is the interactive
 deck. See each package's README:
-[template](https://www.npmjs.com/package/@react-markdown-kit/template),
+[variables](https://www.npmjs.com/package/@react-markdown-kit/variables),
 [mermaid](https://www.npmjs.com/package/@react-markdown-kit/mermaid),
 [slides](https://www.npmjs.com/package/@react-markdown-kit/slides).
 

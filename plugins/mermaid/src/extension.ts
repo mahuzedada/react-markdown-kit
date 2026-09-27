@@ -9,7 +9,7 @@
  *             the same fence byte for byte;
  *   renderer  the node becomes a <figure> holding a static SVG when a kind
  *             renders it, or the source when none does;
- *   template  the payload is literal, so `{{...}}` inside it is never data;
+ *   variables the payload is literal, so `{{...}}` inside it is never data;
  *   editor    absent here. The `/editor` entry adds the canvas and the
  *             source editor, and only that entry needs Lexical.
  *
@@ -90,7 +90,7 @@ export function mermaid(options: MermaidPluginOptions = {}): MarkdownExtension {
           [DIAGRAM_NODE]: (_state: unknown, node: DiagramNode): Element => toFigure(node, kinds, fallbackTitle),
         },
       },
-      template: { literalNodeTypes: [DIAGRAM_NODE] },
+      variables: { literalNodeTypes: [DIAGRAM_NODE] },
     },
   }
 }

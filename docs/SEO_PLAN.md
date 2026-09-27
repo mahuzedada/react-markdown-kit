@@ -289,13 +289,20 @@ Content and product work:
 - Get listed in the johnloy "List of markdown presentation tools" gist and the
   awesome-markdown lists. The gist is on page one.
 
-### 4.5 Template plugin (`@react-markdown-kit/template`)
+### 4.5 Variables plugin (`@react-markdown-kit/variables`)
+
+Renamed from `@react-markdown-kit/template` on 2026-09-27. The funnel moved from
+`/markdown-template-engine` to `/markdown-variables`, the reference pages from
+`/docs/templates/*` to `/docs/variables/*` and the guide from
+`/docs/guides/markdown-template-variables` to `/docs/guides/markdown-variables`,
+each with a 301. The search terms below are what people type, so they keep
+the word "template".
 
 Low volume, mixed intent, weak competition. Win it in one pass.
 
 | Term | Page | Holder today | Time |
 | --- | --- | --- | --- |
-| markdown template variables | docs `/markdown-template-engine` (exists) plus a guide | Medium, Reddit, a GitHub Action | 1 to 3 months |
+| markdown template variables | docs `/markdown-variables` (exists) plus a guide | Medium, Reddit, a GitHub Action | 1 to 3 months |
 | markdown templating engine, markdown variables react | same funnel | mkdocs macros, Handlebars blogs | 3 months |
 | personalized markdown, markdown placeholders react | new docs `/personalized-markdown` | nobody | 3 months |
 | handlebars markdown react | new compare `/compare/handlebars` | Handlebars docs | 6 months |
@@ -356,7 +363,7 @@ positions.
 Weeks 3 to 6: one page per package in this order, each with its demo copy and
 JSON-LD: Mermaid landing and alternative page (highest demand to competition
 ratio), renderer alternative and comparison pages, editor round-trip page,
-template guide, slides funnel.
+variables guide, slides funnel.
 
 Weeks 7 to 12: streaming Markdown (product check, then page), Lexical guide,
 react-mermaid page, flowchart-to-mermaid page, marp alternative. Outreach from
@@ -380,7 +387,7 @@ Track weekly, in one sheet:
 
 Checkpoints:
 
-| When | Renderer | Editor | Mermaid | Slides | Template |
+| When | Renderer | Editor | Mermaid | Slides | Variables |
 | --- | --- | --- | --- | --- | --- |
 | 30 days | indexed, impressions on 10 terms | indexed | page one for two "free / online" variants | indexed | page one for "markdown template variables" |
 | 90 days | #1 "react markdown alternative", top 5 "react markdown renderer" | top 10 "react markdown editor", #1 "markdown round trip" | #1 "mermaid live editor alternative", top 3 "mermaid visual editor free" | #1 "marp alternative" | #1 for three template terms |

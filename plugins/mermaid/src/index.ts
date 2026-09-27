@@ -3,7 +3,7 @@
  *
  * `mermaid()` is the API: put it in a preset or an `extensions` prop and a
  * ```mermaid fence becomes a static SVG in the renderer, stays literal in
- * the template engine, and, with the `/editor` entry, opens on a drawing
+ * the variables plugin, and, with the `/editor` entry, opens on a drawing
  * canvas or in a source editor. Diagram kinds are configuration values like
  * `gfm()`: `flowchart()` and `sequenceDiagram()` are the built-in ones, and
  * `mermaid({ kinds })` takes the ordered list to register. Fences of any

@@ -20,7 +20,7 @@ import { buildProps } from './buildProps'
 import { SHOWCASE_CLASS_NAME } from './showcase'
 import { formatBytes, formatMs, prettyHtml, timeMedian, treeJson, wordCount } from './measure'
 import { DEFAULT_STATE, type OutputTab, type PlaygroundState } from './state'
-import { useShareLink } from './useShareLink'
+import { useShareLink } from '../../../lib/use-share-link'
 
 import '@react-markdown-kit/mermaid/styles.css'
 import './utility-demo.css'
@@ -60,7 +60,7 @@ interface Timings {
  * The renderer demo: Markdown on the left, a live `<Markdown>` on the right,
  * with the HTML it produces, the document it parsed and the code that made it
  * one tab away. One document, one configuration; the reader edits the text.
- * The document also lives in the URL hash (./useShareLink.ts), so "Copy link"
+ * The document also lives in the URL hash (src/lib/use-share-link.ts), so "Copy link"
  * hands someone else the exact document on screen.
  */
 export default function PlaygroundInner(): ReactNode {

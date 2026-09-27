@@ -21,7 +21,7 @@ export type {
   RendererAdapter,
   SyntaxAdapter,
   SyntaxTransformContext,
-  TemplateAdapter,
+  VariablesAdapter,
   EditorAdapter,
 } from './preset.js'
 

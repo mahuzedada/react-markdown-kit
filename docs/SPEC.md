@@ -2,9 +2,9 @@
 
 > Status: Proposed specification. Public APIs in this document are contracts to build, not existing package exports.
 > Prepared: September 19, 2026.
-> Public packages: `@react-markdown-kit/renderer`, `@react-markdown-kit/editor`, and the plugin packages `@react-markdown-kit/template`, `@react-markdown-kit/mermaid`, `@react-markdown-kit/slides`.
+> Public packages: `@react-markdown-kit/renderer`, `@react-markdown-kit/editor`, and the plugin packages `@react-markdown-kit/variables`, `@react-markdown-kit/mermaid`, `@react-markdown-kit/slides`.
 >
-> **Amendment (2026-09-20).** Templates and diagrams are separate, installable packages whose only public surface is the plugin. `@react-markdown-kit/template` exports `template({ data })` (a `syntax.transform` that resolves placeholders while the renderer parses) and `templateVariables()`; `@react-markdown-kit/mermaid` exports `mermaid()`. Each has an `/editor` entry adding the editing half. There is no `defineTemplate`, `resolve()`, `<Template>`, `toMarkdown` or `parseDiagram`: resolution is `<Markdown extensions={[template({ data })]}>` or `compileMarkdown(source, { extensions: [template({ data })] })`, and text output is the renderer's `documentToMarkdown`. The renderer and the editor carry no template or diagram code, so they stay light, and there is one parser, one `gfm()` and one preset shape for the whole kit. Where section 8 below describes the template object API, read it as behaviour of the `template()` extension: every guarantee (structural interpolation, schema validation, never a half-filled document, no React needed to resolve) holds; authored-source locale maps and `inspect()` are gone, the application picks the source per locale and inspects by compiling with `templateVariables()`. The public sites live in `public-sites/`: the documentation site (`docs/`) and, as their own single-page sites rather than pages of it, the renderer demo, the editor demo (the flagship of 13.4), the Mermaid live editor and the slides demo.
+> **Amendment (2026-09-20).** Templates and diagrams are separate, installable packages whose only public surface is the plugin. `@react-markdown-kit/variables` exports `variables({ data })` (a `syntax.transform` that resolves placeholders while the renderer parses) and `variableChips()`; `@react-markdown-kit/mermaid` exports `mermaid()`. Each has an `/editor` entry adding the editing half. There is no `defineTemplate`, `resolve()`, `<Template>`, `toMarkdown` or `parseDiagram`: resolution is `<Markdown extensions={[variables({ data })]}>` or `compileMarkdown(source, { extensions: [variables({ data })] })`, and text output is the renderer's `documentToMarkdown`. The renderer and the editor carry no template or diagram code, so they stay light, and there is one parser, one `gfm()` and one preset shape for the whole kit. Where section 8 below describes the template object API, read it as behaviour of the `variables()` extension: every guarantee (structural interpolation, schema validation, never a half-filled document, no React needed to resolve) holds; authored-source locale maps and `inspect()` are gone, the application picks the source per locale and inspects by compiling with `variableChips()`. The public sites live in `public-sites/`: the documentation site (`docs/`) and, as their own single-page sites rather than pages of it, the renderer demo, the editor demo (the flagship of 13.4), the Mermaid live editor and the slides demo.
 >
 > **Amendment (2026-09-20, slides).** `@react-markdown-kit/slides` is the third plugin package. `slides()` reads a deck from plain CommonMark (slides split on `---`, notes after `???`, fragments after `--`, `<!-- key: value -->` directives, front matter) and renders it as a static `<article>` of `<section>`s; it has no standalone API. Its `/present` entry adds a client `article` component (present mode, keyboard and pointer navigation, presenter view, hash routing, cross-window sync) and its `/editor` entry the authoring nodes and toolbar commands. The dialect is specified in `plugins/slides/DIALECT.md`.
 > Product identity: React Markdown Kit by ZUI.
@@ -26,14 +26,14 @@ Build three independently useful packages that share one Markdown mental model:
 ```text
 renderer = display Markdown
 editor   = create and modify Markdown
-template = personalize Markdown
+variables = personalize Markdown
 ```
 
 The product promise is:
 
 > **Render Markdown. Add editing. Personalize the same document.**
 
-The renderer is the broadest adoption product and must be excellent on its own. The editor must never be required merely to display Markdown. The template package must remain useful without React so it can run in servers, workers, CLIs, email pipelines, PDF pipelines, and build tools.
+The renderer is the broadest adoption product and must be excellent on its own. The editor must never be required merely to display Markdown. The variables package must remain useful without React so it can run in servers, workers, CLIs, email pipelines, PDF pipelines, and build tools.
 
 The three packages must agree on what a Markdown document means. They share the same syntax model, diagnostics model, extension conventions, and document representation. They do not share unnecessary runtime dependencies.
 
@@ -57,13 +57,13 @@ render the resolved document through the same rendering system
 
 The strongest adoption story is not "another renderer." It is:
 
-> A developer can start with one `<Markdown>` component and later add rich editing and personalized templates without changing document formats or replacing the rendering stack.
+> A developer can start with one `<Markdown>` component and later add rich editing and personalized documents without changing document formats or replacing the rendering stack.
 
 ### 1.2 Initial exclusions
 
-V1 does not include hosted storage, PDF/DOCX export, comments, multiplayer collaboration, approvals, billing, AI-provider SDKs, arbitrary JavaScript expressions in templates, or a fourth public core package.
+V1 does not include hosted storage, PDF/DOCX export, comments, multiplayer collaboration, approvals, billing, AI-provider SDKs, arbitrary JavaScript expressions in placeholders, or a fourth public core package.
 
-A future ZUI Cloud may provide hosted operational capabilities. None are prerequisites for local rendering, editing, or templating.
+A future ZUI Cloud may provide hosted operational capabilities. None are prerequisites for local rendering, editing, or variable resolution.
 
 ---
 
@@ -112,7 +112,7 @@ Rich editing is an editing representation. `MarkdownDocument` is a compiled/runt
 
 ### 2.4 One meaning of Markdown per application
 
-Applications must be able to define their Markdown dialect once and reuse it across rendering, editing, and templating.
+Applications must be able to define their Markdown dialect once and reuse it across rendering, editing, and variable resolution.
 
 That is the role of a Markdown preset.
 
@@ -125,7 +125,7 @@ Cross-cutting optional behavior belongs in extensions:
 ```tsx
 extensions={[
   gfm(),
-  templateVariables(...),
+  variableChips(...),
   slashCommands(...),
 ]}
 ```
@@ -145,7 +145,7 @@ Expose compatibility escape hatches where useful. Do not leak Lexical types or r
 ```text
 @react-markdown-kit/renderer            (+ /gfm)
 @react-markdown-kit/editor              (+ /lexical)
-@react-markdown-kit/template            (+ /editor)   plugin package
+@react-markdown-kit/variables            (+ /editor)   plugin package
 @react-markdown-kit/mermaid            (+ /editor)   plugin package
 @react-markdown-kit/slides             (+ /present, /editor)   plugin package
 ```
@@ -154,14 +154,14 @@ Expose compatibility escape hatches where useful. Do not leak Lexical types or r
 
 | Package / entry point | Responsibility | Dependency rule |
 | --- | --- | --- |
-| `renderer` | Markdown → React, compilation, components, rendering policies | Must not depend on editor or template |
+| `renderer` | Markdown → React, compilation, components, rendering policies | Must not depend on editor or variables |
 | `renderer/gfm` | Convenient GFM preset/rendering entry | Optional convenience |
 | `renderer/styles.css` | Optional typography | No global reset |
 | `editor` | Rich/source/preview authoring | May depend on renderer and Lexical |
 | `editor/styles.css` | Editor chrome/theme defaults | No required Tailwind/ZUI provider |
 | `editor/lexical` | Extension-author entry: block and inline adapters, plugins, commands | The only public Lexical types |
-| `template` | `template({ data })` and `templateVariables()`, extensions only | Must not require React, renderer, editor or Lexical |
-| `template/editor` | `templateVariables()` with chips | Peers on the editor |
+| `variables` | `variables({ data })` and `variableChips()`, extensions only | Must not require React, renderer, editor or Lexical |
+| `variables/editor` | `variableChips()` with chips | Peers on the editor |
 | `mermaid` | `mermaid()`, an extension only: ```mermaid flowcharts as static SVG, legacy ```diagram / ```drawing JSON read | Must not require React, renderer, editor or Lexical |
 | `mermaid/editor` | `mermaid()` with the drawing canvas; edits are written as Mermaid plus one `%% rmk-layout v1 {…}` annotation (specified in `plugins/mermaid/LAYOUT_ANNOTATION.md`) | Peers on the editor |
 | `slides` | `slides()`, an extension only: a deck read from plain Markdown (`plugins/slides/DIALECT.md`), rendered as a static `<article>` of `<section>`s | Must not require React, renderer, editor or Lexical |
@@ -180,10 +180,10 @@ npm install @react-markdown-kit/renderer
 npm install @react-markdown-kit/editor
 
 # Personalized rendering
-npm install @react-markdown-kit/renderer @react-markdown-kit/template
+npm install @react-markdown-kit/renderer @react-markdown-kit/variables
 
 # Full kit
-npm install @react-markdown-kit/renderer @react-markdown-kit/editor @react-markdown-kit/template @react-markdown-kit/mermaid @react-markdown-kit/slides
+npm install @react-markdown-kit/renderer @react-markdown-kit/editor @react-markdown-kit/variables @react-markdown-kit/mermaid @react-markdown-kit/slides
 ```
 
 ### 3.3 Repository layout
@@ -193,7 +193,7 @@ packages/
   renderer/
   editor/
 plugins/
-  template/          plugin package: extensions only
+  variables/         plugin package: extensions only
   mermaid/           plugin package: extensions only
   slides/            plugin package: extensions only
 internal/
@@ -206,19 +206,19 @@ fixtures/
   gfm/
   compatibility/
   editor-roundtrip/
-  template-security/
+  variables-security/
 examples/
   renderer-basic/
   next-server-rendering/
   markdown-editor/
   custom-editor-ui/
-  typed-template/
+  typed-variables/
   localized-customer-report/
 benchmarks/
 docs/
 ```
 
-The `internal/` modules are build-time shared source, not a fourth public package. Public structural types must be emitted into the three packages so a headless template user does not need to install the renderer merely to satisfy a type import.
+The `internal/` modules are build-time shared source, not a fourth public package. Public structural types must be emitted into the three packages so a headless variables user does not need to install the renderer merely to satisfy a type import.
 
 ---
 
@@ -270,7 +270,7 @@ and render repeatedly:
 <Markdown document={document} />
 ```
 
-The template engine can resolve directly to a document:
+The variables plugin can resolve directly to a document:
 
 ```ts
 const result = report.resolve(data);
@@ -280,7 +280,7 @@ if (result.ok) {
 }
 ```
 
-This avoids unnecessary stringify/reparse cycles and creates one shared unit for diagnostics, templating, rendering, caching, and future tooling.
+This avoids unnecessary stringify/reparse cycles and creates one shared unit for diagnostics, variable resolution, rendering, caching, and future tooling.
 
 ### 4.3 Input union
 
@@ -355,17 +355,17 @@ This represents one answer to:
 
 > **What does Markdown mean in this application?**
 
-### 5.2 Headless template users
+### 5.2 Headless variables users
 
-A template-only application must not need the renderer package just to construct the same preset shape.
+A variables-only application must not need the renderer package just to construct the same preset shape.
 
-Therefore the preset contract is structural. The template package also exposes a lightweight `defineMarkdownPreset` helper generated from the same internal source:
+Therefore the preset contract is structural. The variables package also exposes a lightweight `defineMarkdownPreset` helper generated from the same internal source:
 
 ```ts
 import {
   defineMarkdownPreset,
   defineTemplate,
-} from "@react-markdown-kit/template";
+} from "@react-markdown-kit/variables";
 ```
 
 A preset created by either package must be accepted by the other because it uses the same versioned structural contract.
@@ -386,7 +386,7 @@ interface MarkdownExtension {
     syntax?: unknown;
     renderer?: unknown;
     editor?: unknown;
-    template?: unknown;
+    variables?: unknown;
   };
 }
 ```
@@ -405,11 +405,11 @@ callouts()
 Editor-oriented extensions:
 
 ```ts
-templateVariables(...)
+variableChips(...)
 slashCommands(...)
 ```
 
-The system must support an extension exposing only the capabilities it has. The renderer ignores editor-only adapters. The editor can use both syntax and editor adapters. The template engine uses syntax/template adapters but never imports editor code.
+The system must support an extension exposing only the capabilities it has. The renderer ignores editor-only adapters. The editor can use both syntax and editor adapters. The variables plugin uses syntax/variables adapters but never imports editor code.
 
 ### 5.4 Third-party ecosystem goal
 
@@ -428,7 +428,7 @@ If the extension supplies the appropriate adapters:
 ```text
 renderer → renders the block
 editor   → provides an editing representation
-template → safely preserves/resolves it
+variables → safely preserves/resolves it
 ```
 
 V1 does not need to freeze every third-party authoring API. It does need a versioned internal contract and built-in extensions implemented through the same mechanism wherever practical.
@@ -474,7 +474,7 @@ import { Markdown } from "@react-markdown-kit/renderer";
 
 The default and named exports point to the same component.
 
-No provider, account, stylesheet, cloud request, template configuration, editor package, or ZUI runtime is required.
+No provider, account, stylesheet, cloud request, variables configuration, editor package, or ZUI runtime is required.
 
 ### 6.2 Main props
 
@@ -686,7 +686,7 @@ Before stable v1:
 - migration fixtures pass for claimed compatibility;
 - server examples build;
 - TypeScript examples compile;
-- renderer-only tarball does not contain Lexical/editor/template runtime dependencies;
+- renderer-only tarball does not contain Lexical/editor/variables runtime dependencies;
 - security corpus passes;
 - optional CSS is scoped;
 - `compileMarkdown` and direct string rendering produce semantically equivalent output.
@@ -972,7 +972,7 @@ Editor-specific capabilities should use extensions:
 <MarkdownEditor
   extensions={[
     slashCommands(),
-    templateVariables(...),
+    variableChips(...),
   ]}
 />
 ```
@@ -1006,16 +1006,16 @@ Before stable v1:
 - controlled/uncontrolled usage passes;
 - IME/clipboard/undo/redo passes;
 - headless/composable example works without default toolbar;
-- default editor can be used without template package;
+- default editor can be used without the variables package;
 - Lexical types are not required for ordinary consumers.
 
 ---
 
-## 8. Template specification
+## 8. Variables specification
 
 ### 8.1 Package role
 
-`@react-markdown-kit/template` is a separate plugin package (see the amendment at the top: its API is the `template()` extension).
+`@react-markdown-kit/variables` is a separate plugin package (see the amendment at the top: its API is the `variables()` extension).
 
 Its responsibility is:
 
@@ -1025,7 +1025,7 @@ It does not render React. Rendering belongs to the renderer package.
 
 It does not require React, Lexical, a browser, or a cloud account.
 
-This separation keeps the renderer focused and lets the template engine work in:
+This separation keeps the renderer focused and lets the variables plugin work in:
 
 ```text
 React applications
@@ -1046,7 +1046,7 @@ A template is an object with behavior.
 Simple:
 
 ```ts
-import { defineTemplate } from "@react-markdown-kit/template";
+import { defineTemplate } from "@react-markdown-kit/variables";
 
 const greeting = defineTemplate(`
 # Hello {{user.name}}
@@ -1100,7 +1100,7 @@ finally display text
 
 The first useful result should take a few lines.
 
-### 8.4 Typed templates
+### 8.4 Typed variables
 
 Support generic TypeScript data typing:
 
@@ -1140,7 +1140,7 @@ Accept Standard Schema-compatible validators:
 
 ```ts
 import { z } from "zod";
-import { defineTemplate } from "@react-markdown-kit/template";
+import { defineTemplate } from "@react-markdown-kit/variables";
 
 const ReportSchema = z.object({
   customer: z.object({
@@ -1204,11 +1204,11 @@ type TemplateResult =
       ok: true;
       document: MarkdownDocument;
       resolvedLocale?: string;
-      diagnostics: readonly TemplateDiagnostic[];
+      diagnostics: readonly VariableDiagnostic[];
     }
   | {
       ok: false;
-      diagnostics: readonly TemplateDiagnostic[];
+      diagnostics: readonly VariableDiagnostic[];
     };
 ```
 
@@ -1217,7 +1217,7 @@ A missing required value should not silently produce a publishable-looking repor
 Diagnostics include:
 
 ```ts
-interface TemplateDiagnostic {
+interface VariableDiagnostic {
   code: string;
   severity: "info" | "warning" | "error";
   message: string;
@@ -1335,9 +1335,9 @@ Unknown variable paths and formatters produce diagnostics.
 
 ### 8.11 Safe structural interpolation
 
-Do not implement templating as global regex/string replacement followed by Markdown parsing.
+Do not implement variable resolution as global regex/string replacement followed by Markdown parsing.
 
-Parse the Markdown/template syntax first and represent template placeholders structurally.
+Parse the Markdown/placeholder syntax first and represent placeholders structurally.
 
 Example runtime value:
 
@@ -1405,7 +1405,7 @@ Prefer application-constructed complete URLs:
 }
 ```
 
-After resolution, destinations still pass through renderer/template URL policy validation.
+After resolution, destinations still pass through renderer/variables URL policy validation.
 
 ### 8.13 Localization
 
@@ -1517,7 +1517,7 @@ if (result.ok) {
 If methods on `MarkdownDocument` would make the document less serializable/stable, expose a utility instead:
 
 ```ts
-import { toMarkdown } from "@react-markdown-kit/template";
+import { toMarkdown } from "@react-markdown-kit/variables";
 
 const markdown = toMarkdown(result.document);
 ```
@@ -1534,7 +1534,7 @@ The preferred architectural output remains `MarkdownDocument`.
 Convenience API:
 
 ```tsx
-import { Template } from "@react-markdown-kit/template";
+import { Template } from "@react-markdown-kit/variables";
 
 <Template
   template={report}
@@ -1568,14 +1568,14 @@ Do not add template props directly to `<Markdown>`:
 
 Keep `<Markdown>` pure and `<Template>` semantically explicit.
 
-### 8.18 Template-aware editor integration
+### 8.18 Variables-aware editor integration
 
 Import:
 
 ```ts
 import {
-  templateVariables,
-} from "@react-markdown-kit/template/editor";
+  variableChips,
+} from "@react-markdown-kit/variables/editor";
 ```
 
 Use:
@@ -1585,8 +1585,8 @@ Use:
   value={source}
   onChange={setSource}
   extensions={[
-    templateVariables({
-      template: report,
+    variableChips({
+      variables: reportVariables,
       previewData: sampleCustomer,
     }),
   ]}
@@ -1607,7 +1607,7 @@ Do not create a giant editor API such as:
 
 The extension model scales much better.
 
-### 8.19 Template editor UX
+### 8.19 Variables editor UX
 
 The extension should support:
 
@@ -1645,11 +1645,11 @@ Saved source remains:
 Hello {{customer.name}}
 ```
 
-### 8.20 Template acceptance gate
+### 8.20 Variables acceptance gate
 
 Before stable v1:
 
-- template root has no React/editor/Lexical requirement;
+- variables root has no React/editor/Lexical requirement;
 - simple no-schema API works;
 - generic typing works;
 - at least two Standard Schema-compatible validators pass integration tests;
@@ -1758,12 +1758,12 @@ const editor = useMarkdownEditor({
 </MarkdownEditorProvider>
 ```
 
-### 9.3 Template
+### 9.3 Variables
 
 ```ts
 import {
   defineTemplate,
-} from "@react-markdown-kit/template";
+} from "@react-markdown-kit/variables";
 ```
 
 **Beginner**
@@ -1809,7 +1809,7 @@ const report = defineTemplate({
 **React**
 
 ```tsx
-import { Template } from "@react-markdown-kit/template";
+import { Template } from "@react-markdown-kit/variables";
 
 <Template
   template={report}
@@ -1818,15 +1818,15 @@ import { Template } from "@react-markdown-kit/template";
 />
 ```
 
-**Template-aware editing**
+**Variables-aware editing**
 
 ```tsx
-import { templateVariables } from "@react-markdown-kit/template/editor";
+import { variableChips } from "@react-markdown-kit/variables/editor";
 
 <MarkdownEditor
   extensions={[
-    templateVariables({
-      template: report,
+    variableChips({
+      variables: reportVariables,
       previewData: data,
     }),
   ]}
@@ -1848,7 +1848,7 @@ parser + syntax extensions
    ↓
 MarkdownDocument / mdast
    ↓
-optional template resolution
+optional variable resolution
    ↓
 remark transforms
    ↓
@@ -1867,17 +1867,17 @@ The exact ordering of user-supplied plugins must be documented and fixture-teste
 
 A precompiled `MarkdownDocument` enters after parsing, but must still pass through applicable transforms and security policies. Passing a document object is not a security bypass.
 
-### 10.2 Template interaction
+### 10.2 Variables interaction
 
-The template package may add typed variable nodes to its own compiled form. After successful resolution, those nodes lower into ordinary Markdown document nodes.
+The variables package may add typed variable nodes to its own compiled form. After successful resolution, those nodes lower into ordinary Markdown document nodes.
 
-The base renderer should not need to know how template evaluation works.
+The base renderer should not need to know how variable resolution works.
 
 This is an important package boundary:
 
 ```text
-template understands renderer's document contract
-renderer does not understand template semantics
+variables understands renderer's document contract
+renderer does not understand variables semantics
 ```
 
 ### 10.3 Editor interaction
@@ -1895,7 +1895,7 @@ Do not require rich-editor DOM structure to mirror renderer output. Require:
 
 Do not build three parsers.
 
-Use one shared syntax implementation internally for renderer/template concerns where possible and one documented adapter boundary for the editor.
+Use one shared syntax implementation internally for renderer/variables concerns where possible and one documented adapter boundary for the editor.
 
 Lexical currently exposes Markdown utilities and an mdast integration, with the latter documented as experimental. Evaluate it against the preservation corpus but keep it behind a private adapter so experimental upstream types do not become the public React Markdown Kit contract. [S8][S9]
 
@@ -1903,7 +1903,7 @@ Lexical currently exposes Markdown utilities and an mdast integration, with the 
 
 ## 11. Security specification
 
-Security is part of the product contract, especially because templates combine authored documents and runtime application data.
+Security is part of the product contract, especially because personalized documents combine authored documents and runtime application data.
 
 ### 11.1 Renderer threats
 
@@ -1919,9 +1919,9 @@ Test:
 - unsafe image destinations;
 - resource-exhaustion inputs.
 
-### 11.2 Template threats
+### 11.2 Variables threats
 
-Runtime data must not gain template-language privileges.
+Runtime data must not gain placeholder-language privileges.
 
 Disallow:
 
@@ -1929,18 +1929,18 @@ Disallow:
 - arbitrary property execution;
 - arbitrary method calls;
 - JS expression evaluation;
-- functions embedded in untrusted template source;
+- functions embedded in untrusted document source;
 - unbounded recursion;
 - unbounded iteration when loops are added;
 - cache keys that omit tenant/customer/locale data where resolved output is cached.
 
 ### 11.3 Cache rules
 
-Safe to cache by template identity/configuration:
+Safe to cache by source identity/configuration:
 
 ```text
-parsed template
-compiled template grammar
+parsed source
+compiled placeholder grammar
 static source AST
 ```
 
@@ -1949,7 +1949,7 @@ Resolved personalized output must be keyed by all relevant data/version/locale i
 Never globally cache:
 
 ```text
-report template ID → resolved Acme document
+report source ID → resolved Acme document
 ```
 
 when the next request may be for another customer.
@@ -1961,7 +1961,7 @@ Error objects should contain paths and source positions, not secrets.
 Good:
 
 ```text
-TEMPLATE_REQUIRED_VALUE
+VARIABLE_REQUIRED_VALUE
 Missing required variable: customer.accountNumber
 ```
 
@@ -1987,7 +1987,7 @@ unless the application explicitly asks for verbose development diagnostics.
 | Renderer security | HTML, protocols, plugin ordering, malicious URLs |
 | Document | Compile/string equivalence, contract versioning, serialization |
 | Editor | No-op preservation, edits, images, references, opaque nodes, IME, undo, clipboard |
-| Templates | Variables, schemas, formatting, locale, images/links, injection attempts |
+| Variables | Variables, schemas, formatting, locale, images/links, injection attempts |
 | Runtime | Browser, SSR, RSC host examples, TypeScript |
 | Packaging | Each installation combination from published tarballs |
 | Extensions | Preset reuse and extension ordering/collision behavior |
@@ -2015,11 +2015,11 @@ Renderer-only installation:
 ```text
 must not contain Lexical runtime
 must not contain editor runtime
-must not contain template runtime
+must not contain variables runtime
 must not require ZUI UI framework
 ```
 
-Headless template-only installation:
+Headless variables-only installation:
 
 ```text
 must not require React
@@ -2056,7 +2056,7 @@ Compile examples that prove:
 - controlled editor props infer correctly;
 - uncontrolled editor works;
 - mode values are restricted;
-- generic template data is enforced;
+- generic variable data is enforced;
 - Standard Schema inference is preserved where the schema implementation exposes it;
 - result narrowing on `result.ok` works;
 - preset objects cross package boundaries structurally.
@@ -2085,7 +2085,7 @@ Then show:
 4. compatibility evidence;
 5. migration;
 6. server behavior;
-7. editor/template as optional next steps.
+7. editor/variables as optional next steps.
 
 Do not open with schemas, cloud products, or an architectural diagram.
 
@@ -2097,14 +2097,14 @@ Create distinct, substantive pages:
 | --- | --- |
 | React markdown renderer | `@react-markdown-kit/renderer` |
 | React markdown editor | `@react-markdown-kit/editor` |
-| Markdown template engine / React markdown variables | `@react-markdown-kit/template` |
+| Markdown template engine / React markdown variables | `@react-markdown-kit/variables` |
 
 Recommended docs paths:
 
 ```text
 /react-markdown-renderer
 /react-markdown-editor
-/markdown-template-engine
+/markdown-variables
 /react-markdown-variables
 /localized-markdown
 /migrate-from-react-markdown
@@ -2119,7 +2119,7 @@ Example titles:
 ```text
 React Markdown Renderer | React Markdown Kit
 React Markdown Editor | React Markdown Kit
-Markdown Template Engine | React Markdown Kit
+Markdown Variables | React Markdown Kit
 ```
 
 ### 13.3 Migration product
@@ -2257,7 +2257,7 @@ These are targets, not predictions:
 | Renderer adoption | 25 confirmed production applications |
 | Distribution | 5 independently maintained integrations/examples |
 | Editor quality | No unresolved supported-syntax data-loss bug in release corpus |
-| Template value | Pilot examples showing meaningful reduction in interpolation/validation/editor glue |
+| Variables value | Pilot examples showing meaningful reduction in interpolation/validation/editor glue |
 
 ### 14.3 Claims policy
 
@@ -2286,13 +2286,13 @@ Credibility is a competitive advantage for infrastructure libraries.
 | C — Renderer | `<Markdown>`, compile API, GFM, policies, migration compatibility | Renderer acceptance gates pass |
 | D — Editor | New API, renderer preview, source preservation, images/references | Editor acceptance gates pass |
 | E — Template core | `defineTemplate`, `.resolve()`, schemas, diagnostics, safe interpolation | Headless + security gates pass |
-| F — Template integrations | `<Template>`, `templateVariables()` editor extension | Preview/source-preservation gates pass |
+| F — Template integrations | `<Template>`, `variableChips()` editor extension | Preview/source-preservation gates pass |
 | G — Migration tooling | Codemod, comparison runner, compatibility docs | Pilot migrations validate claims |
 | H — Launch/distribution | Flagship demo, SEO pages, integration PRs | Initial production adoption recorded |
 
-Renderer release does not need to wait for template loops, collaboration, export, or future cloud services.
+Renderer release does not need to wait for variables loops, collaboration, export, or future cloud services.
 
-Editor and template development can proceed in parallel once shared contracts stabilize.
+Editor and variables development can proceed in parallel once shared contracts stabilize.
 
 ---
 
@@ -2342,7 +2342,7 @@ Editor and template development can proceed in parallel once shared contracts st
 | DX-03 | Build local comparison runner | Corpus comparison fixture |
 | DOCS-01 | Renderer docs | Examples compile in CI |
 | DOCS-02 | Editor docs | Controlled/headless examples compile |
-| DOCS-03 | Template docs | Simple/typed/schema/localized examples compile |
+| DOCS-03 | Variables docs | Simple/typed/schema/localized examples compile |
 | DEMO-01 | Build customer-report flagship | Full three-package flow works |
 | RELEASE-01 | Trusted publishing/security policy | Reproducible release workflow |
 
@@ -2352,7 +2352,7 @@ Editor and template development can proceed in parallel once shared contracts st
 
 These decisions are important because they prevent future API drift.
 
-### 17.1 Do not roll template into renderer
+### 17.1 Do not roll variables into renderer
 
 Rejected:
 
@@ -2366,7 +2366,7 @@ Rejected:
 </Markdown>
 ```
 
-Reason: rendering and data resolution are separate concerns; this bloats the renderer and makes headless templating awkward.
+Reason: rendering and data resolution are separate concerns; this bloats the renderer and makes headless variable resolution awkward.
 
 Use:
 
@@ -2399,7 +2399,7 @@ Reason: locks React Markdown Kit to an implementation framework and leaks comple
 
 ### 17.3 Do not make remark/rehype the only extension system
 
-Keep compatibility, but lead with a React Markdown Kit extension API so renderer/editor/template can compose around one concept.
+Keep compatibility, but lead with a React Markdown Kit extension API so renderer/editor/variables can compose around one concept.
 
 ### 17.4 Do not make schema mandatory
 
@@ -2409,7 +2409,7 @@ This must remain valid:
 const template = defineTemplate(`Hello {{user.name}}`);
 ```
 
-### 17.5 Do not make editor template support a giant prop set
+### 17.5 Do not make editor variables support a giant prop set
 
 Rejected:
 
@@ -2427,7 +2427,7 @@ Use:
 
 ```tsx
 extensions={[
-  templateVariables({ template, previewData: data }),
+  variableChips({ variables, previewData: data }),
 ]}
 ```
 
@@ -2472,7 +2472,7 @@ rendering
 editing
 source preservation
 basic presets/extensions
-headless templating
+headless variable resolution
 schemas
 validation
 localization selection
@@ -2484,7 +2484,7 @@ image/link bindings
 Potential ZUI Cloud products can later include:
 
 ```text
-hosted template storage
+hosted document storage
 version history
 asset management
 approvals
@@ -2548,20 +2548,20 @@ const report = defineTemplate({
 const result = report.resolve(customer);
 ```
 
-**Later — template authoring**
+**Later — variables authoring**
 
 ```tsx
 <MarkdownEditor
   extensions={[
-    templateVariables({
-      template: report,
+    variableChips({
+      variables: reportVariables,
       previewData: customer,
     }),
   ]}
 />
 ```
 
-The developer never has to migrate from "renderer content" to "editor content" to "template content."
+The developer never has to migrate from "renderer content" to "editor content" to "personalized content."
 
 It remains Markdown throughout.
 

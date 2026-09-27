@@ -13,7 +13,7 @@ const SCOPES = ['.rmk-document', '.rmk-editor']
 const files = [
   'packages/renderer/src/styles.css',
   'packages/editor/src/styles.css',
-  'plugins/template/src/styles.css',
+  'plugins/variables/src/styles.css',
   'plugins/mermaid/src/styles.css',
   'plugins/slides/src/styles.css',
 ]

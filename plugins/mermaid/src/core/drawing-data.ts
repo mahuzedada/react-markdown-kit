@@ -57,7 +57,6 @@ export const ARROW_HEADS: readonly ArrowHead[] = ['circle', 'cross']
 
 /** The stroke widths the canvas offers (Excalidraw's thin, medium, bold) */
 export const STROKE_WIDTHS = { thin: 1, medium: 2, bold: 4 } as const
-export type StrokeWidthName = keyof typeof STROKE_WIDTHS
 /** Widths from here up are bold: Mermaid's thick link (`==>`) */
 export const THICK_WIDTH = 3
 

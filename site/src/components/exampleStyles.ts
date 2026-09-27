@@ -1,6 +1,6 @@
 /*
  * Class strings for the doc-site example chrome (RenderExample,
- * TemplateExample, EditorExample, StreamExample), shared so the four figures
+ * VariablesExample, EditorExample, StreamExample), shared so the four figures
  * stay one design.
  *
  * Note what is NOT here: any style for the rendered Markdown itself. That

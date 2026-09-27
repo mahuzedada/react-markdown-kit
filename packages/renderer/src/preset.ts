@@ -1,8 +1,8 @@
 /**
  * `defineMarkdownPreset` — one answer to "what does Markdown mean in this
- * application?", reused by the renderer, the editor and the template engine.
+ * application?", reused by the renderer, the editor and the variables plugin.
  *
- * The implementation lives in the shared internal contract so the template
+ * The implementation lives in the shared internal contract so the variables
  * package can emit the identical function without depending on this package
  * (spec 5.2). Presets built by either are structurally interchangeable.
  */
@@ -19,7 +19,7 @@ import {
   type RendererAdapter,
   type SyntaxAdapter,
   type SyntaxTransformContext,
-  type TemplateAdapter,
+  type VariablesAdapter,
 } from '@internal/extension-contracts/index.js'
 import type { ComponentType, JSX } from 'react'
 
@@ -48,5 +48,5 @@ export {
   type RendererAdapter,
   type SyntaxAdapter,
   type SyntaxTransformContext,
-  type TemplateAdapter,
+  type VariablesAdapter,
 }

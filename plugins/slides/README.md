@@ -82,14 +82,14 @@ rule nearby.
 ## The plugin is the API
 
 `slides()` is a plain `MarkdownExtension` and the package's only way in. The
-renderer, the editor and the template plugin each read the capability they
+renderer, the editor and the variables plugin each read the capability they
 understand.
 
 | Capability | What it does |
 | --- | --- |
 | `syntax` | Parses front matter as `yaml`; after parsing, re-types directives to `slideDirective` and markers to `slideMarker`, annotates rules, reports diagnostics; serializes every construct back to its spelling |
 | `renderer` | A root handler groups the flat tree into one `<article data-rmk-deck>` of `<section data-rmk-slide>`s. Static, no script, no classes, no inline style |
-| `template` | Markers and directives are literal: `{{…}}` inside a directive argument is never data. Placeholders in slide prose resolve as usual |
+| `variables` | Markers and directives are literal: `{{…}}` inside a directive argument is never data. Placeholders in slide prose resolve as usual |
 | `editor` | Absent on this entry. `@react-markdown-kit/slides/editor` adds it |
 
 ### Options
@@ -178,11 +178,11 @@ component per `slides()` call, so build the preset once (at module level,
 or in `useMemo`) rather than calling `slides()` inside render, which would
 remount the deck on every render.
 
-## Templates
+## Variables
 
-With `@react-markdown-kit/template`, `{{placeholders}}` in slide prose
+With `@react-markdown-kit/variables`, `{{placeholders}}` in slide prose
 resolve; markers and directives are literal. List `slides()` before
-`template()`.
+`variables()`.
 
 ## License
 

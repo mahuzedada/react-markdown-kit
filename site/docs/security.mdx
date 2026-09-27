@@ -1,16 +1,16 @@
 ---
-title: "Security: raw HTML, URLs and templates"
+title: "Security: raw HTML, URLs and variables"
 sidebar_label: Security
-description: "What the renderer does with raw HTML and URLs, what a template value can never do, the cache rule for personalized output, and how to report a problem."
+description: "What the renderer does with raw HTML and URLs, what a variable value can never do, the cache rule for personalized output, and how to report a problem."
 ---
 
 import RenderExample from '@site/src/components/RenderExample'
-import TemplateExample from '@site/src/components/TemplateExample'
+import VariablesExample from '@site/src/components/VariablesExample'
 
 # Security
 
 There are two separate things to think about here. The renderer takes Markdown
-that an author wrote, and the template engine also takes data produced at
+that an author wrote, and the variables plugin also takes data produced at
 runtime. Their threat models are different, so they're covered separately below.
 
 ## Renderer
@@ -105,19 +105,19 @@ on you.
 The kit doesn't claim anything beyond that. It isn't a sanitizer, and you
 should still have a Content Security Policy.
 
-## Templates
+## Variables
 
-Template data is harder to get right, since an author's Markdown and data from
+Variable data is harder to get right, since an author's Markdown and data from
 your runtime end up in the same document.
 
 ### Values go into the parsed tree
 
-Resolving a template doesn't do string replacement and then parse the result.
+Resolving variables doesn't do string replacement and then parse the result.
 The source gets parsed first, and values are placed into the parsed tree. A
 value is always a text node, so any Markdown punctuation in it stays as plain
 characters.
 
-<TemplateExample
+<VariablesExample
   title="Data that tries to be structure"
   markdown={`## Access review for {{account.name}}
 
@@ -143,7 +143,7 @@ Reviewer note: {{note}}
 >
   The third dataset renders as one line of text inside the paragraph. No table
   shows up, either in this document or if you re-parse its serialized Markdown.
-</TemplateExample>
+</VariablesExample>
 
 A value can't create a heading, a table row, a list item, a link destination,
 an HTML tag or a code fence.
@@ -165,13 +165,13 @@ Flattening newlines fixes that. Every character of the value is kept and only
 newlines turn into spaces, so nothing in a value can reach column one. If a
 value really needs line structure, that should be a block-level feature instead
 of something inline data sneaks through. The rule is implemented in
-`packages/renderer/src/template/interpolate.ts` and pinned by
-`tests/template-serialization-safety.test.ts`.
+`plugins/variables/src/engine/interpolate.ts` and pinned by
+`tests/variables-serialization-safety.test.ts`.
 
 ### Code contexts and escaped delimiters stay literal
 
 A placeholder inside inline code or a fenced block is never resolved. It's
-treated as documentation of the template, so it renders as written.
+treated as documentation of the placeholder syntax, so it renders as written.
 
 ````md
 `{{user.name}}`
@@ -188,18 +188,18 @@ A backslash escape does the same thing in prose:
 ```
 
 Raw HTML is a literal context too. A placeholder inside an HTML block stays
-unresolved and reports `TEMPLATE_PLACEHOLDER_IN_HTML`, so data can't end up in an
+unresolved and reports `VARIABLE_PLACEHOLDER_IN_HTML`, so data can't end up in an
 attribute.
 
 ### Paths cannot reach the prototype chain
 
 A path segment of `__proto__`, `constructor` or `prototype` gets rejected with
-`TEMPLATE_UNSAFE_PATH` and is never traversed. Lookup only reads own enumerable
+`VARIABLE_UNSAFE_PATH` and is never traversed. Lookup only reads own enumerable
 properties, so inherited getters never get called.
 
-There's no expression language. Templates can't call methods or functions, use
+There's no expression language. Placeholders can't call methods or functions, use
 `eval` or `new Function`, or reach application services, and runtime data
-never gets template-language privileges.
+never gets expression-language privileges.
 
 ### URLs are bound whole
 
@@ -211,7 +211,7 @@ A destination has to bind a complete URL.
 ![{{brand.logoAlt}}]({{brand.logoUrl}})
 ```
 
-Binding part of a URL is refused with `TEMPLATE_PARTIAL_URL`, because there's no
+Binding part of a URL is refused with `VARIABLE_PARTIAL_URL`, because there's no
 way to guarantee a fragment gets encoded correctly. Build the URL in your
 application and bind the result instead.
 
@@ -227,7 +227,7 @@ policy again on the way to HTML.
 ### Diagnostics leave out values
 
 ```text
-TEMPLATE_REQUIRED_VALUE
+VARIABLE_REQUIRED_VALUE
 Missing required variable: customer.accountNumber
 ```
 
@@ -239,35 +239,35 @@ runtime value, so it's safe to log a diagnostic or show it to a support agent.
 Resolved output is per customer. If you cache it wrong, one tenant's document
 can end up in front of another tenant.
 
-These are safe to cache by template identity alone:
+These are safe to cache by source identity alone:
 
-- the parsed template;
+- the parsed source;
 - the compiled grammar;
 - the static source tree.
 
-`template()` already does this internally, and the renderer parses a fresh tree
+`variables()` already does this internally, and the renderer parses a fresh tree
 for every resolution, so nothing from one caller's data carries over to another's.
 
 Resolved output needs more care. Either key it by everything that went into
 producing it, or keep it request-local.
 
 ```ts
-const key = [template.id, template.version, tenantId, dataVersion, locale, timeZone].join('|')
+const key = [documentId, documentVersion, tenantId, dataVersion, locale, timeZone].join('|')
 ```
 
 Don't do this:
 
 ```text
-report template ID → resolved Acme document
+report document ID → resolved Acme document
 ```
 
 The next request could be for a different customer. If a correct key is hard to
-build, I'd skip caching the output. Cache the template and resolve per request
+build, I'd skip caching the output. Cache the parsed source and resolve per request
 (that's the cheap part of the work anyway).
 
 ## Reporting
 
 Please send security issues to the repository's security contact instead of
 opening a public issue. Test coverage for these behaviours lives in `tests/` and in
-`packages/renderer/tests/template/`, including protocol obfuscation, event attributes,
+`plugins/variables/tests/`, including protocol obfuscation, event attributes,
 plugin-generated HTML, DOM clobbering and serialization round trips.

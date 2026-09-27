@@ -24,7 +24,7 @@ export const neitherInput = <Markdown />
 // @ts-expect-error children must be a string, not arbitrary React children
 export const elementChildren = <Markdown><span>no</span></Markdown>
 
-// --- the renderer accepts no template props (spec 17.1) ---
+// --- the renderer accepts no data props (spec 17.1) ---
 
 // @ts-expect-error rendering and data resolution stay separate concerns
 export const noTemplateProp = <Markdown template={doc}>{'x'}</Markdown>
@@ -47,10 +47,10 @@ const preset: MarkdownPreset = defineMarkdownPreset({ extensions: [gfm()] })
 export const withPreset = <Markdown preset={preset}>{'x'}</Markdown>
 
 /**
- * The template package emits its own `defineMarkdownPreset` from the same
+ * The variables package emits its own `defineMarkdownPreset` from the same
  * internal contract. A preset from either must satisfy the other's type
  * without either package importing the other. This function stands in for the
- * template package's parameter type.
+ * variables package's parameter type.
  */
 function acceptsAnyPreset(value: MarkdownPreset): string {
   return value.profile

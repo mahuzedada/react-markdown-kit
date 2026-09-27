@@ -3,7 +3,7 @@
  * (docs/STYLING.md).
  *
  * These assert the boundaries that make the split real: the renderer and the
- * editor, and three plugin packages (template, diagrams, slides) that are only ever
+ * editor, and three plugin packages (variables, diagrams, slides) that are only ever
  * used through the extension system. They run
  * against manifests and source, and `scripts/pack-check.mjs` runs the heavier
  * tarball-install version in CI.
@@ -18,17 +18,17 @@ const readJson = (p: string) => JSON.parse(readFileSync(join(root, p), 'utf8'))
 
 const renderer = readJson('packages/renderer/package.json')
 const editor = readJson('packages/editor/package.json')
-const template = readJson('plugins/template/package.json')
+const variables = readJson('plugins/variables/package.json')
 const diagrams = readJson('plugins/mermaid/package.json')
 const slides = readJson('plugins/slides/package.json')
 const PLUGINS = [
-  ['template', template],
+  ['variables', variables],
   ['mermaid', diagrams],
   ['slides', slides],
 ] as const
 
 /** The factory each plugin's root entry must export. */
-const FACTORY_NAME: Record<(typeof PLUGINS)[number][0], string> = { template: 'template', mermaid: 'mermaid', slides: 'slides' }
+const FACTORY_NAME: Record<(typeof PLUGINS)[number][0], string> = { variables: 'variables', mermaid: 'mermaid', slides: 'slides' }
 
 /** Anything that would force a styling system on a consumer. */
 const STYLING_PACKAGES = [
@@ -95,19 +95,19 @@ describe('package boundaries (spec 3.1, 12.3)', () => {
 
   it('the renderer and the editor carry no plugin code', () => {
     for (const pkg of [renderer, editor]) {
-      expect(pkg.exports['./template']).toBeUndefined()
+      expect(pkg.exports['./variables']).toBeUndefined()
       expect(pkg.exports['./diagrams']).toBeUndefined()
       expect(pkg.exports['./slides']).toBeUndefined()
       const deps = Object.keys(allDeps(pkg))
-      expect(deps).not.toContain('@react-markdown-kit/template')
+      expect(deps).not.toContain('@react-markdown-kit/variables')
       expect(deps).not.toContain('@react-markdown-kit/mermaid')
       expect(deps).not.toContain('@react-markdown-kit/slides')
     }
     for (const dir of [
-      'packages/renderer/src/template',
+      'packages/renderer/src/variables',
       'packages/renderer/src/diagrams',
       'packages/renderer/src/slides',
-      'packages/editor/src/template',
+      'packages/editor/src/variables',
       'packages/editor/src/diagrams',
       'packages/editor/src/slides',
     ]) {
@@ -137,7 +137,7 @@ describe('package boundaries (spec 3.1, 12.3)', () => {
       const source = readFileSync(join(root, `plugins/${name}/src/index.ts`), 'utf8')
       const named = [...source.matchAll(/^export \{ ([^}]+) \} from/gm)].flatMap((m) => (m[1] as string).split(',').map((s) => s.trim()))
       expect(named).toContain(FACTORY_NAME[name])
-      for (const forbidden of ['defineTemplate', 'toMarkdown', 'Template', 'parseDiagram', 'renderDrawingSvg', 'drawingToMermaid']) {
+      for (const forbidden of ['defineTemplate', 'defineVariables', 'toMarkdown', 'parseDiagram', 'renderDrawingSvg', 'drawingToMermaid']) {
         expect(named, `${forbidden} must not be a public export of ${name}`).not.toContain(forbidden)
       }
     })
@@ -167,11 +167,11 @@ describe('package boundaries (spec 3.1, 12.3)', () => {
     const versions: Record<string, string> = {
       '@react-markdown-kit/renderer': renderer.version,
       '@react-markdown-kit/editor': editor.version,
-      '@react-markdown-kit/template': template.version,
+      '@react-markdown-kit/variables': variables.version,
       '@react-markdown-kit/mermaid': diagrams.version,
       '@react-markdown-kit/slides': slides.version,
     }
-    for (const pkg of [renderer, editor, template, diagrams, slides]) {
+    for (const pkg of [renderer, editor, variables, diagrams, slides]) {
       for (const [dep, range] of Object.entries(pkg.peerDependencies ?? {})) {
         const actual = versions[dep]
         if (actual === undefined) continue
@@ -182,7 +182,7 @@ describe('package boundaries (spec 3.1, 12.3)', () => {
   })
 
   it('every package exports its own package.json for tooling', () => {
-    for (const pkg of [renderer, editor, template, diagrams, slides]) {
+    for (const pkg of [renderer, editor, variables, diagrams, slides]) {
       expect(pkg.exports['./package.json']).toBe('./package.json')
     }
   })
@@ -249,8 +249,8 @@ function expectHeadless(rootEntry: string): void {
 }
 
 describe('plugin root entries are headless (spec 8.20 gate 1)', () => {
-  it('the template root entry imports no React, renderer, editor or Lexical', () => {
-    expectHeadless('plugins/template/src/index.ts')
+  it('the variables root entry imports no React, renderer, editor or Lexical', () => {
+    expectHeadless('plugins/variables/src/index.ts')
   })
   it('the diagrams root entry imports no React, renderer, editor or Lexical (the canvas lives on /editor)', () => {
     expectHeadless('plugins/mermaid/src/index.ts')

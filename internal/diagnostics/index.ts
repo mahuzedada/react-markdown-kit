@@ -1,7 +1,7 @@
 /**
  * Shared diagnostics contract (CORE-03).
  *
- * One diagnostic shape is used by compilation, template resolution and the
+ * One diagnostic shape is used by compilation, variable resolution and the
  * editor so an application can surface every problem through one UI path.
  * Codes are stable strings: they are part of the public contract and may only
  * gain new members in a minor release, never change meaning.
@@ -22,7 +22,7 @@ export interface SourceRange {
 }
 
 export interface MarkdownDiagnostic {
-  /** Stable machine-readable code, e.g. `TEMPLATE_REQUIRED_VALUE`. */
+  /** Stable machine-readable code, e.g. `VARIABLE_REQUIRED_VALUE`. */
   readonly code: string
   readonly severity: DiagnosticSeverity
   /** Human-readable, safe to show a developer. Never contains runtime values. */
@@ -32,8 +32,8 @@ export interface MarkdownDiagnostic {
   readonly range?: SourceRange
 }
 
-/** Template diagnostics are Markdown diagnostics; the alias documents intent. */
-export type TemplateDiagnostic = MarkdownDiagnostic
+/** Variable diagnostics are Markdown diagnostics; the alias documents intent. */
+export type VariableDiagnostic = MarkdownDiagnostic
 
 export function diagnostic(
   code: string,
@@ -57,7 +57,7 @@ export function hasErrors(list: readonly MarkdownDiagnostic[]): boolean {
 /**
  * Thrown for configuration mistakes that cannot produce a valid document:
  * an unknown preset shape, a duplicate extension that cannot be merged, a
- * malformed template definition. Parse-level problems become diagnostics on
+ * malformed variables configuration. Parse-level problems become diagnostics on
  * the document instead, so a caller never has to try/catch ordinary content.
  */
 export class MarkdownConfigurationError extends Error {

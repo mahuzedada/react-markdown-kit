@@ -28,7 +28,7 @@ You don't need this to render Markdown. It's useful when the same document gets 
 
 Parsing is about two thirds of the work of rendering Markdown, so the main reason to compile is to only do it once.
 
-It also gives the renderer, the editor and the template plugin a common format to pass around. The renderer parses, the editor edits and the template engine resolves variables, all against the same tree. Without a shared document, each package would need its own parser, and they'd end up disagreeing.
+It also gives the renderer, the editor and the variables plugin a common format to pass around. The renderer parses, the editor edits and the variables plugin resolves placeholders, all against the same tree. Without a shared document, each package would need its own parser, and they'd end up disagreeing.
 
 ## The document shape
 
@@ -129,7 +129,7 @@ If you need the exact original bytes instead of a canonical form, the editor han
 
 **A list of lots of small documents.** Compile each one once and keep the documents in the list state.
 
-**A template.** The template engine already resolves into a document and hands it straight to the renderer.
+**Variables.** The variables plugin already resolves into a document and hands it straight to the renderer.
 
 <RenderExample
   title="Same output, either input"

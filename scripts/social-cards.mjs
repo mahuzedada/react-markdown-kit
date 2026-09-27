@@ -21,7 +21,7 @@ const CARDS = [
   {
     out: 'site/static/img/social-card.png',
     title: 'React Markdown Kit docs',
-    lines: ['Renderer, editor, templates,', 'Mermaid and slides for React.'],
+    lines: ['Renderer, editor, variables,', 'Mermaid and slides for React.'],
     host: 'reactmarkdownkit.com',
   },
   {
@@ -35,6 +35,12 @@ const CARDS = [
     title: 'Free Online Markdown Editor',
     lines: ['Rich, source and preview modes.', 'Plain Markdown in, plain Markdown out.'],
     host: 'reactmarkdownkit.com/markdown-editor',
+  },
+  {
+    out: 'site/static/img/social-card-variables.png',
+    title: 'Markdown Variables Playground',
+    lines: ['Typed placeholders, schemas and locales.', 'Data is placed as text, never as Markdown.'],
+    host: 'reactmarkdownkit.com/markdown-variables',
   },
   {
     out: 'site/static/img/social-card-mermaid.png',

@@ -79,7 +79,7 @@ Obsidian render the same fence. `mermaid()` is the package's API, and it turns
 every ```` ```mermaid ```` fence into a `diagram` node. The renderer draws
 flowcharts and sequence diagrams as static SVG with no Mermaid.js at runtime,
 shows every other Mermaid type as source, and lets a host render those with
-its own Mermaid.js through the [fallback entry](#host-fallback). The template
+its own Mermaid.js through the [fallback entry](#host-fallback). The variables
 plugin leaves the node literal. In the editor, flowcharts and sequence
 diagrams each get their own canvas, and every other kind opens in a source
 editor with a live preview.
@@ -425,7 +425,7 @@ saving, these are the codes to look for:
 A parse error's `error` string lives on the node and isn't copied into the
 diagnostic message, which keeps your content out of messages.
 
-## Templates
+## Variables
 
 Placeholders inside a diagram are never resolved. The node is literal, same
 as a code block, so runtime data can't reach a box's text, colour or
@@ -618,7 +618,7 @@ that hides the site chrome. The format is tested in
 [`tests/mermaid-share.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/mermaid-share.test.ts).
 
 Only the `/editor`, `/canvas` and `/client` entries load React. A Node
-service that renders or templates diagrams can import the root entry and
+service that renders diagrams or resolves variables in them can import the root entry and
 skip installing React and Lexical.
 
 ## Standalone canvas

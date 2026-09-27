@@ -31,7 +31,7 @@ export function gfm(options: GfmOptions = {}): MarkdownExtension {
         toMarkdownExtensions: [gfmToMarkdown({ tableCellPadding: true, tablePipeAlign: true })],
         nodeTypes: ['table', 'tableRow', 'tableCell', 'delete', 'footnoteDefinition', 'footnoteReference'],
       },
-      template: {
+      variables: {
         // A footnote definition's label is an identifier, not prose.
         literalNodeTypes: [],
       },

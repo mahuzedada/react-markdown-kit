@@ -66,7 +66,7 @@ export interface MarkdownBridge {
    * Re-reads the extensions' plugins and commands without rebuilding the
    * editor. The dialect (node classes, block and inline adapters) is fixed at
    * creation, so this only takes effect for extensions of the same names with
-   * new options: a template extension handed new preview data, a diagram
+   * new options: a variables extension handed new preview data, a diagram
    * extension handed a new style. Unregister the old plugins first and
    * register again afterwards.
    */

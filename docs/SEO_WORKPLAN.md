@@ -41,10 +41,10 @@ writing a single new page.
   `/docs/guides/render-markdown-in-react`, `/markdown-round-trip`,
   `/compare/mdxeditor`, `/compare/milkdown`,
   `/docs/guides/lexical-markdown-editor`, `/personalized-markdown`,
-  `/compare/handlebars`, `/docs/guides/markdown-template-variables` and
+  `/compare/handlebars`, `/docs/guides/markdown-variables` and
   `/marp-alternative`. All of them are in `sidebars.ts` or the footer, in
   `llms.txt` and `llms-full.txt`, on the home hub and on the docs index; the
-  reference pages under `/docs/renderer`, `/docs/editor` and `/docs/templates`
+  reference pages under `/docs/renderer`, `/docs/editor` and `/docs/variables`
   carry a "Read next" link to their funnel. `node scripts/seo-report.mjs`
   reports 49 pages and 0 problems. Next: deploy, then C 3.3 follow-ups and
   the remaining D items.
@@ -80,10 +80,10 @@ writing a single new page.
   product, and the three placeholder rows describe a real failure; the editor
   FAQ gives the renderer's measured 36.8 KB instead of "far smaller";
   `/docs/guides/lexical-markdown-editor` ends with demo, npm and source links;
-  the template guide no longer claims its left pane is editable and counts 6
+  the variables guide no longer claims its left pane is editable and counts 6
   code-context cases out of 13 in the file; `/compare/handlebars` counts 18
   prototype-path cases in a 33-case file and describes its pane honestly;
-  `/markdown-template-engine` cites both link test blocks; `/marp-alternative`
+  `/markdown-variables` cites both link test blocks; `/marp-alternative`
   builds its deck from `@react-markdown-kit/slides/present` so Present really
   works, describes Marp fragments as coming from the list marker, and links
   `tests/packaging.test.ts`; `/docs/slides` shows slide 2 of the deck the test
@@ -278,7 +278,7 @@ Applies to all six hosts: `reactmarkdownkit.com` (home),
    `ai-chat`; editor adds `markdown-editor`, `wysiwyg`, `lexical`,
    `round-trip`; mermaid adds `mermaid-editor`, `visual-editor`,
    `flowchart-editor`, `react-mermaid`; slides adds `markdown-slides`,
-   `presentation`, `marp-alternative`; template adds `template-variables`,
+   `presentation`, `marp-alternative`; variables (then template) adds `template-variables`,
    `templating`, `personalization`.
 6. Add a release workflow (`.github/workflows/release.yml`) that publishes on
    tag with provenance. It cannot run until a GitHub remote exists, but it
@@ -340,12 +340,17 @@ diff" panel that demonstrates the round trip live.
 | `/docs/slides` (revise into a funnel) | Markdown Presentations in React | own h1, example deck below the fold, dialect, present mode, editor commands, link to comparison |
 | `/marp-alternative` (new) | Marp and Slidev Alternative Inside a React App | honest framing: they export PDF and PPTX, this renders decks in your app from Markdown you already render; table of what each does |
 
-### 3.5 Template
+### 3.5 Variables
+
+The plugin was renamed from template to variables on 2026-09-27, and these
+routes moved with 301s: `/markdown-template-engine` to `/markdown-variables`,
+`/docs/guides/markdown-template-variables` to `/docs/guides/markdown-variables`.
+The titles below are the ones planned at the time.
 
 | Route | Title | Required sections |
 | --- | --- | --- |
-| `/markdown-template-engine` (exists, revise) | Markdown Template Engine with Typed Variables | example first, schemas, formatters, localization, injection safety with test links |
-| `/docs/guides/markdown-template-variables` (new) | Markdown Template Variables: Placeholders, Schemas and Safety | answer the literal questions ("can Markdown have variables", "how to inject variables into a .md file", "placeholders in Markdown") in one sentence each, then the plugin's way |
+| `/markdown-variables` (exists, revise) | Markdown Template Engine with Typed Variables | example first, schemas, formatters, localization, injection safety with test links |
+| `/docs/guides/markdown-variables` (new) | Markdown Template Variables: Placeholders, Schemas and Safety | answer the literal questions ("can Markdown have variables", "how to inject variables into a .md file", "placeholders in Markdown") in one sentence each, then the plugin's way |
 | `/personalized-markdown` (new) | Personalized Markdown: One Document, Every Customer | the customer-report example from `docs/SPEC.md` 13.4, built as a live example |
 | `/compare/handlebars` (new) | Markdown Templating: React Markdown Kit vs Handlebars and Mustache | string interpolation before parsing versus resolution inside the parser, with the injection tests as evidence |
 
@@ -411,7 +416,7 @@ canonical and JSON-LD are in the response body.
 | E | CI fails on any regression in section 5 |
 
 Suggested order: A, E (so A cannot regress while C is written), B, C (Mermaid
-first, then renderer, editor, template, slides), D interleaved with C where a
+first, then renderer, editor, variables, slides), D interleaved with C where a
 page depends on a feature.
 
 ## 8. Out of scope for the agent (human tasks)

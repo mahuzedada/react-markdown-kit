@@ -108,26 +108,26 @@ checks the dependency graph so we aren't relying on that by convention.
 | Installation | What the bundle must not contain |
 | --- | --- |
 | Renderer only | Lexical, editor runtime |
-| Template plugin on a server | Anything that renders: the plugin calls no React, no Lexical, no browser global |
+| Variables plugin on a server | Anything that renders: the plugin calls no React, no Lexical, no browser global |
 | Editor | May depend on the renderer and on Lexical |
 
 That means an app with a page for saved content and a separate editing route
 can use the renderer on the server and only load the editor where editing
 happens.
 
-## Templates on the server
+## Variables on the server
 
-`@react-markdown-kit/template` resolves templates without rendering them.
-`template()` runs inside `compileMarkdown` and doesn't call React or any browser
+`@react-markdown-kit/variables` resolves variables without rendering them.
+`variables()` runs inside `compileMarkdown` and doesn't call React or any browser
 globals, so you can run it in a route handler, a worker, a cron job or a CLI.
 
 ```ts
 import { compileMarkdown } from '@react-markdown-kit/renderer'
-import { template } from '@react-markdown-kit/template'
+import { variables } from '@react-markdown-kit/variables'
 
 export async function POST(request: Request) {
   const document = compileMarkdown(source, {
-    extensions: [template({ data: await request.json(), schema: ReceiptSchema })],
+    extensions: [variables({ data: await request.json(), schema: ReceiptSchema })],
   })
   if (document.diagnostics.some((d) => d.severity === 'error')) {
     return Response.json({ diagnostics: document.diagnostics }, { status: 422 })

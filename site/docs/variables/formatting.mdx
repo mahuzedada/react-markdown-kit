@@ -1,0 +1,185 @@
+---
+title: "Formatting and localization of values"
+sidebar_label: Formatting and localization
+description: "Format numbers, currency and dates in Markdown documents with an explicit locale and time zone, so the same document renders correctly for every reader."
+---
+
+import VariablesExample from '@site/src/components/VariablesExample'
+
+# Formatting and localization
+
+```text
+{{revenue | currency:"USD"}}
+{{completion | percent}}
+{{createdAt | date:"medium"}}
+```
+
+A formatter takes the value and returns a string, and that string is inserted as
+text. It's never re-parsed as Markdown, so adding a formatter doesn't open up
+any new way to inject content.
+
+## The six built-in formatters
+
+| Formatter | Argument | Example | Value it accepts |
+| --- | --- | --- | --- |
+| `number` | fraction digits, 0 to 20 | `{{count \| number}}` | a finite number or a bigint |
+| `currency` | ISO 4217 code, required | `{{total \| currency:"USD"}}` | a finite number or a bigint |
+| `percent` | fraction digits, 0 to 20 | `{{rate \| percent:1}}` | a finite number, where `0.42` is 42% |
+| `date` | `full`, `long`, `medium` or `short` | `{{signedAt \| date:"long"}}` | a `Date`, an epoch number or an ISO string |
+| `time` | `full`, `long`, `medium` or `short` | `{{startsAt \| time:"short"}}` | a `Date`, an epoch number or an ISO string |
+| `datetime` | `full`, `long`, `medium` or `short` | `{{updatedAt \| datetime}}` | a `Date`, an epoch number or an ISO string |
+
+Date styles default to `medium`. All six use the platform `Intl` APIs, so the
+output follows the same CLDR data as the rest of your application.
+
+A value of the wrong type gives you a diagnostic (it doesn't throw). For example
+`currency` applied to a `Date` produces `VARIABLE_FORMATTER_VALUE_TYPE` and `ok: false`.
+
+## Currency is always explicit
+
+A locale doesn't tell you which currency an amount is in. `fr-FR` formats
+euros and Swiss francs equally well, and if we guessed we'd sometimes print the
+wrong symbol on an invoice.
+
+```text
+{{total | currency:"USD"}}   ✓
+{{total | currency}}         ✗ VARIABLE_FORMATTER_ARGUMENT_REQUIRED
+```
+
+The code has to be three letters. The locale controls symbol placement, digit
+grouping and the decimal separator. The currency is whatever code you pass.
+
+## Locale and time zone
+
+Both are options of `variables()`.
+
+```ts
+variables({ data, locale: 'fr-FR', timeZone: 'America/New_York' })
+```
+
+`timeZone` defaults to `UTC`, so the same data gives you the same document on a
+laptop and on a build server. `locale` defaults to `en-US`.
+
+The same source, formatted for three locales:
+
+<VariablesExample
+  title="One source, three locales"
+  markdown={`## {{project.name}}
+
+Budget: {{budget | currency:"EUR"}}
+
+Completion: {{completion | percent}}
+
+Reviewed {{reviewedAt | date:"long"}}
+`}
+  datasets={[
+    {
+      label: 'en-US',
+      locale: 'en-US',
+      data: {
+        project: { name: 'Harbour migration' },
+        budget: 1284500.5,
+        completion: 0.62,
+        reviewedAt: '2026-02-17T09:30:00Z',
+      },
+    },
+    {
+      label: 'fr-FR',
+      locale: 'fr-FR',
+      data: {
+        project: { name: 'Harbour migration' },
+        budget: 1284500.5,
+        completion: 0.62,
+        reviewedAt: '2026-02-17T09:30:00Z',
+      },
+    },
+    {
+      label: 'de-DE',
+      locale: 'de-DE',
+      data: {
+        project: { name: 'Harbour migration' },
+        budget: 1284500.5,
+        completion: 0.62,
+        reviewedAt: '2026-02-17T09:30:00Z',
+      },
+    },
+  ]}
+>
+  The data and the source are the same in all three. The only thing that
+  changes is the `locale` option.
+</VariablesExample>
+
+## Custom formatters
+
+Pass them to `variables()`, or put them in an extension of your own so every
+document in the application gets them (see [Extensions](/docs/extensions)).
+
+```ts
+variables({
+  data,
+  formatters: {
+    accountStatus(value) {
+      return formatAccountStatus(value)
+    },
+  },
+})
+```
+
+A formatter gets the value plus a context with `argument`, `locale`,
+`timeZone` and `path`. The path is there for diagnostics. The value itself never
+shows up in a message the kit produces.
+
+```ts
+import type { VariableFormatter } from '@react-markdown-kit/variables'
+
+const rounded: VariableFormatter = (value, { locale, argument }) => {
+  if (typeof value !== 'number') throw new Error('rounded needs a number')
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: Number(argument ?? 0),
+  }).format(value)
+}
+```
+
+Formatters are layered in this order: built-ins, then formatters from other
+extensions in the same preset, then the `formatters` option. The last one wins,
+so an application can replace `date` with its own house style without forking
+anything. `builtinFormatters` is exported for reference:
+
+```ts
+import { builtinFormatters } from '@react-markdown-kit/variables'
+
+Object.keys(builtinFormatters)
+// ['number', 'currency', 'percent', 'date', 'time', 'datetime']
+```
+
+If a formatter throws, you get `VARIABLE_FORMATTER_FAILED`. If you want a more
+specific diagnostic, throw `VariableFormatterError` with your own code.
+
+## Localized source
+
+There are three separate concerns here. The kit doesn't handle translation for any of them.
+
+| Concern | Who owns it |
+| --- | --- |
+| Document language | The authored source you pick for the reader's locale |
+| Runtime formatting | The `locale` and `timeZone` options |
+| Localized assets | Application data, such as a per-locale image URL |
+
+Keep one authored source per language and pick the right one before compiling.
+The plugin formats with whatever `locale` you pass, regardless of which source
+it's applied to. The kit doesn't do any machine translation.
+
+```tsx
+const source = SOURCES[reader.locale] ?? SOURCES['en-US']
+
+<Markdown extensions={[variables({ data, locale: reader.locale })]}>{source}</Markdown>
+```
+
+## Next
+
+- [Authoring](/docs/variables/authoring) for the editor extension.
+- [Variable basics](/docs/variables/basics) for options and diagnostics.
+
+## Read next
+
+The overview, from placeholder syntax to schemas: [Markdown variables](/markdown-variables).

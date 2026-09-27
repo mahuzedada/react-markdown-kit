@@ -1,10 +1,9 @@
 /**
  * Ported from @zuilib/text-editor (MIT). The editor plugin: handles
- * `INSERT_DIAGRAM_COMMAND`, records `DIAGRAM_FOCUS_COMMAND`, publishes the
- * block options to the editor, and contributes one toolbar button per
- * registered kind.
+ * `INSERT_DIAGRAM_COMMAND`, publishes the block options to the editor, and
+ * contributes one toolbar button per registered kind.
  */
-import { COMMAND_PRIORITY_EDITOR, COMMAND_PRIORITY_LOW, type LexicalEditor, type NodeKey } from 'lexical'
+import { COMMAND_PRIORITY_EDITOR } from 'lexical'
 import type { EditorCommandContribution, EditorPlugin } from '@react-markdown-kit/editor/lexical'
 import { $insertNodeToNearestRoot } from '@lexical/utils'
 import type { BlockWidth } from '../core/block-width.js'
@@ -13,15 +12,8 @@ import type { DiagramKind } from '../core/kind.js'
 import type { DiagramCanvasOptions } from '../canvas/options.js'
 import { canvasKindOf, requestDiagramFocus, setDiagramOptions } from './options-store.js'
 import { Icon, KindIcon, UI_ICONS } from '../canvas/icons.js'
-import { DIAGRAM_FOCUS_COMMAND, INSERT_DIAGRAM_COMMAND } from './commands.js'
+import { INSERT_DIAGRAM_COMMAND } from './commands.js'
 import { $createDiagramNode, FLOWCHART_KIND } from './diagram-node.js'
-
-const focused = new WeakMap<LexicalEditor, NodeKey | null>()
-
-/** Key of the block that currently has focus, if any. */
-export function getFocusedDiagramKey(editor: LexicalEditor): NodeKey | null {
-  return focused.get(editor) ?? null
-}
 
 /**
  * The source an insert writes: the kind's starter. A flowchart inserted with
@@ -53,20 +45,9 @@ export function createDiagramPlugin(options: DiagramCanvasOptions): EditorPlugin
       },
       COMMAND_PRIORITY_EDITOR,
     )
-    const unregisterFocus = editor.registerCommand(
-      DIAGRAM_FOCUS_COMMAND,
-      (key) => {
-        focused.set(editor, key)
-        // Recorded, not consumed: an application listener still hears it.
-        return false
-      },
-      COMMAND_PRIORITY_LOW,
-    )
     return () => {
-      unregisterFocus()
       unregisterInsert()
       unregisterOptions()
-      focused.delete(editor)
     }
   }
 }

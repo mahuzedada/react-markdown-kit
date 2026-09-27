@@ -177,5 +177,5 @@ Evidence: remark-gfm produces a table from a string but not from a document comp
 ## What is not covered here
 
 Everything outside the prop surface — bundle size, the `MarkdownDocument`
-input, presets, extensions, the editor and template packages — has no
+input, presets, extensions, the editor and variables packages — has no
 react-markdown equivalent and is not a compatibility question.

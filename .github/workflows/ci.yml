@@ -50,7 +50,7 @@ jobs:
       - run: node benchmarks/run.mjs
 
   # The site build is also a real integration test: RenderExample,
-  # TemplateExample and the demo pages' landing copy server-render with the
+  # VariablesExample and the demo pages' landing copy server-render with the
   # actual packages, so a renderer or a plugin that reached for a browser
   # global would fail here.
   site:
@@ -65,8 +65,8 @@ jobs:
       - run: pnpm --filter react-markdown-kit-site build
       - name: Live examples must have server-rendered
         run: |
-          grep -q "<table>" site/build/markdown-template-engine/index.html
-          grep -q "Acme Industrial" site/build/markdown-template-engine/index.html
+          grep -q "<table>" site/build/docs/variables/basics/index.html
+          grep -q "Acme Industrial" site/build/docs/variables/basics/index.html
       # The slides page renders a deck on the server (a second <section> proves
       # the split) and imports the plugin stylesheet, which must reach the
       # built CSS: RenderExample loads no plugin CSS on its own.

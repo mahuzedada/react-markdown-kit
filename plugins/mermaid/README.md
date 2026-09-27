@@ -5,7 +5,7 @@ writes plain Mermaid back. A ```` ```mermaid ```` fence holds the diagram, the
 renderer draws flowcharts and sequence diagrams as static SVG with no
 Mermaid.js runtime, the editor opens flowcharts and sequence diagrams on a
 canvas and every other kind in a source editor with a preview, and the
-template plugin leaves
+variables plugin leaves
 the fence alone. Every other Mermaid type is shown as source, or drawn by the
 host through the `/client` fallback entry.
 
@@ -139,14 +139,14 @@ the conformance corpus.
 ## The plugin is the API
 
 `mermaid()` is a plain `MarkdownExtension` and the package's way in. The
-renderer, the editor and the template plugin each read the capability they
+renderer, the editor and the variables plugin each read the capability they
 understand.
 
 | Capability | What it does |
 | --- | --- |
 | `syntax` | Every ```` ```mermaid ```` fence (or a legacy ```` ```diagram ```` / ```` ```drawing ```` JSON fence) becomes a `diagram` node with its kind and support level, parsed once; it serializes back to the same fence |
 | `renderer` | The node becomes `<figure data-rmk-diagram data-rmk-diagram-kind data-rmk-diagram-support>` holding a static SVG, or the source for a kind no registered kind renders. No script, no `foreignObject`, no DOM needed |
-| `template` | The fence is literal. `{{placeholders}}` inside it are never resolved |
+| `variables` | The fence is literal. `{{placeholders}}` inside it are never resolved |
 | `editor` | On `@react-markdown-kit/mermaid/editor` only: a Lexical node, the flowchart canvas, the sequence canvas, the source editor, one insert button per kind |
 
 The same canvases also stand alone: `@react-markdown-kit/mermaid/canvas` (below) mounts them in any container with no Markdown editor.
@@ -155,7 +155,7 @@ The root entry also exports the kind factories `flowchart()` and
 `sequenceDiagram()`, `MERMAID_KEYWORDS` and the `DiagramKind` types, so a
 kind of your own is typed. No parser, renderer or writer is exported on its
 own. The root entry loads no React and no Lexical, so a Node service that
-only compiles or templates documents with `compileMarkdown` installs no
+only compiles or personalizes documents with `compileMarkdown` installs no
 editor.
 [`scripts/pack-check.mjs`](https://github.com/mahuzedada/react-markdown-kit/blob/main/scripts/pack-check.mjs)
 installs the packed tarball into a consumer with no Lexical and renders a

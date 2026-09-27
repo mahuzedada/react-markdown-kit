@@ -26,7 +26,7 @@ const run = (cmd, args, cwd) =>
 const PACKAGES = {
   renderer: 'packages/renderer',
   editor: 'packages/editor',
-  template: 'plugins/template',
+  variables: 'plugins/variables',
   mermaid: 'plugins/mermaid',
   slides: 'plugins/slides',
 }
@@ -51,33 +51,33 @@ console.log('ok')
 `,
   },
   {
-    name: 'template plugin: resolve through compileMarkdown, no Lexical installed',
-    install: ['renderer', 'template'],
+    name: 'variables plugin: resolve through compileMarkdown, no Lexical installed',
+    install: ['renderer', 'variables'],
     noLexical: true,
     file: 'check.mjs',
     code: `
 import { compileMarkdown, documentToMarkdown } from '@react-markdown-kit/renderer'
-import { template, templateVariables } from '@react-markdown-kit/template'
-const doc = compileMarkdown('# Hello {{user.name}}', { extensions: [template({ data: { user: { name: 'Chatis' } } })] })
+import { variables, variableChips } from '@react-markdown-kit/variables'
+const doc = compileMarkdown('# Hello {{user.name}}', { extensions: [variables({ data: { user: { name: 'Chatis' } } })] })
 if (doc.diagnostics.length !== 0) throw new Error('resolve failed: ' + JSON.stringify(doc.diagnostics))
 const md = await documentToMarkdown(doc)
 if (md.trim() !== '# Hello Chatis') throw new Error('unexpected: ' + md)
-if (templateVariables().name !== 'template-variables') throw new Error('bad extension')
+if (variableChips().name !== 'variable-chips') throw new Error('bad extension')
 console.log('ok')
 `,
   },
   {
-    name: 'template plugin: personalized React rendering',
-    install: ['renderer', 'template'],
+    name: 'variables plugin: personalized React rendering',
+    install: ['renderer', 'variables'],
     file: 'check.mjs',
     code: `
 import { Markdown } from '@react-markdown-kit/renderer'
-import { template } from '@react-markdown-kit/template'
+import { variables } from '@react-markdown-kit/variables'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement as h } from 'react'
-const out = renderToStaticMarkup(h(Markdown, { extensions: [template({ data: { user: { name: 'Acme' } } })] }, '# Hello {{user.name}}'))
+const out = renderToStaticMarkup(h(Markdown, { extensions: [variables({ data: { user: { name: 'Acme' } } })] }, '# Hello {{user.name}}'))
 if (out !== '<h1>Hello Acme</h1>') throw new Error('unexpected: ' + out)
-const failed = renderToStaticMarkup(h(Markdown, { extensions: [template({ data: {} })] }, '# Hello {{user.name}}'))
+const failed = renderToStaticMarkup(h(Markdown, { extensions: [variables({ data: {} })] }, '# Hello {{user.name}}'))
 if (failed !== '') throw new Error('a failed resolution rendered: ' + failed)
 console.log('ok')
 `,
@@ -128,19 +128,19 @@ console.log('ok')
   },
   {
     name: 'editor with all plugins',
-    install: ['renderer', 'editor', 'template', 'mermaid', 'slides'],
+    install: ['renderer', 'editor', 'variables', 'mermaid', 'slides'],
     file: 'check.mjs',
     code: `
 import { createMarkdownBridge } from '@react-markdown-kit/editor'
-import { templateVariables } from '@react-markdown-kit/template/editor'
+import { variableChips } from '@react-markdown-kit/variables/editor'
 import { mermaid } from '@react-markdown-kit/mermaid/editor'
 import { slides } from '@react-markdown-kit/slides/editor'
 const source = 'Hello {{customer.name}}.\\n\\n\`\`\`diagram\\n{"boxes":[{"id":"a","text":"A"}]}\\n\`\`\`\\n'
-const bridge = createMarkdownBridge({ extensions: [templateVariables(), mermaid()], headless: true })
+const bridge = createMarkdownBridge({ extensions: [variableChips(), mermaid()], headless: true })
 bridge.load(source)
 if (bridge.getMarkdown() !== source) throw new Error('round trip changed the source: ' + JSON.stringify(bridge.getMarkdown()))
 const deck = '# One\\n\\n<!-- class: center -->\\n\\nHello.\\n\\n???\\n\\nSay this.\\n\\n---\\n\\n# Two\\n'
-const deckBridge = createMarkdownBridge({ extensions: [templateVariables(), mermaid(), slides()], headless: true })
+const deckBridge = createMarkdownBridge({ extensions: [variableChips(), mermaid(), slides()], headless: true })
 deckBridge.load(deck)
 if (deckBridge.getMarkdown() !== deck) throw new Error('deck round trip changed the source: ' + JSON.stringify(deckBridge.getMarkdown()))
 console.log('ok')

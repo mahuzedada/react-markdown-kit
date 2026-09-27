@@ -2,7 +2,7 @@
  * Preset and extension contracts (CORE-04, CORE-05).
  *
  * These types are **structural**. A preset built by the renderer package and a
- * preset built by the template package are the same shape and are accepted by
+ * preset built by the variables package are the same shape and are accepted by
  * both, which is what lets the kit stay three packages with no shared runtime
  * core (spec 5.2).
  */
@@ -15,7 +15,7 @@ export const EXTENSION_CONTRACT_VERSION = 1 as const
 
 /**
  * Syntax adapter: how an extension changes what Markdown *means*.
- * Shared by the renderer, the template engine and the editor, so all three
+ * Shared by the renderer, the variables plugin and the editor, so all three
  * agree on the dialect.
  */
 export interface SyntaxAdapter {
@@ -37,8 +37,8 @@ export interface SyntaxTransformContext {
   readonly report: (d: MarkdownDiagnostic) => void
   /**
    * Every extension active in this compilation, in order. A plugin reads its
-   * siblings' capabilities here: the template plugin, for one, honours the
-   * `template` adapter (literal node types, formatters) of every other one.
+   * siblings' capabilities here: the variables plugin, for one, honours the
+   * `variables` adapter (literal node types, formatters) of every other one.
    */
   readonly extensions?: readonly MarkdownExtension[]
   /** The authored source, when the compiler retained it. */
@@ -62,7 +62,7 @@ export interface RendererAdapter {
 /**
  * Editor adapter: how an extension participates in authoring.
  * Deliberately opaque here. The editor package narrows it, so neither the
- * renderer nor the template package ever loads editor types.
+ * renderer nor the variables package ever loads editor types.
  */
 export interface EditorAdapter {
   /** Editor node definitions (Lexical nodes, behind the editor's own adapter). */
@@ -83,8 +83,8 @@ export interface EditorAdapter {
   readonly commands?: readonly unknown[]
 }
 
-/** Template adapter: how an extension's nodes survive template resolution. */
-export interface TemplateAdapter {
+/** Variables adapter: how an extension's nodes survive variable resolution. */
+export interface VariablesAdapter {
   /** Node types whose text content must NOT be scanned for placeholders. */
   readonly literalNodeTypes?: readonly string[]
   /** Formatters contributed by the extension. */
@@ -105,7 +105,7 @@ export interface MarkdownExtension {
     readonly syntax?: SyntaxAdapter
     readonly renderer?: RendererAdapter
     readonly editor?: EditorAdapter
-    readonly template?: TemplateAdapter
+    readonly variables?: VariablesAdapter
   }
 }
 
@@ -127,7 +127,7 @@ export interface MarkdownPreset {
   readonly contractVersion: typeof EXTENSION_CONTRACT_VERSION
   readonly profile: string
   readonly extensions: readonly MarkdownExtension[]
-  /** React components, opaque here so the template package never sees React. */
+  /** React components, opaque here so the variables package never sees React. */
   readonly components?: Readonly<Record<string, unknown>>
   /** Class name overrides, per the styling contract. */
   readonly classNames?: Readonly<Record<string, string>>
@@ -183,8 +183,8 @@ export function mergeExtensions(
 
 /**
  * Builds a preset. Shared by `@react-markdown-kit/renderer` and
- * `@react-markdown-kit/template`; both emit this same function so a headless
- * template user never installs the renderer to build one (spec 5.2).
+ * `@react-markdown-kit/variables`; both emit this same function so a headless
+ * variables user never installs the renderer to build one (spec 5.2).
  *
  * Merge rules, deterministic and documented:
  *   1. `extends` presets apply left to right.

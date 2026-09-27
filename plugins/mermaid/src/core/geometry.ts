@@ -102,20 +102,8 @@ export function unionRects(rects: readonly Rect[]): Rect {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
 }
 
-export function pointsBounds(points: readonly Point[]): Rect {
-  return unionRects(points.map((p) => ({ x: p.x, y: p.y, w: 0, h: 0 })))
-}
-
-export function distance(a: Point, b: Point): number {
-  return Math.hypot(a.x - b.x, a.y - b.y)
-}
-
 export function manhattan(a: Point, b: Point): number {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
-}
-
-export function lerp(a: Point, b: Point, t: number): Point {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
 }
 
 export function ellipsePolygon(r: Rect, segments = 40): Point[] {

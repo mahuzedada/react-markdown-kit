@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Markdown, compileMarkdown, defineMarkdownPreset, documentToMarkdown } from '@react-markdown-kit/renderer'
-import { template } from '@react-markdown-kit/template'
+import { variables } from '@react-markdown-kit/variables'
 import { MarkdownConfigurationError } from '@internal/diagnostics/index.js'
 import { mermaid, isDiagramNode, flowchart, sequenceDiagram, type DiagramKind } from '../src/index.js'
 import { diagramNodeFrom, parseDiagramSource } from '../src/extension.js'
@@ -166,10 +166,10 @@ function expectInert(html: string): void {
   expect(html).not.toContain('javascript:')
 }
 
-describe('mermaid(): template', () => {
+describe('mermaid(): variables', () => {
   it('never resolves a placeholder inside a diagram payload', () => {
     const source = '# {{name}}\n\n```drawing\n{"version":3,"canvasHeight":100,"shapes":[{"id":"a","type":"rect","x":0,"y":0,"width":100,"height":50,"stroke":"#000","fill":"transparent","strokeWidth":2,"text":"{{name}}"}]}\n```\n'
-    const document = compileMarkdown(source, { preset, extensions: [template({ data: { name: 'Acme' } })] })
+    const document = compileMarkdown(source, { preset, extensions: [variables({ data: { name: 'Acme' } })] })
     expect(document.diagnostics).toEqual([])
     const heading = document.tree.children?.[0]
     const diagram = document.tree.children?.[1]

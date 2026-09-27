@@ -6,8 +6,10 @@
  *
  * It reads the live sitemap, so it only ever submits what is deployed, and
  * compares each URL's lastmod with the last run, kept in `.indexnow.json`
- * (gitignored). A URL is submitted when it is new or its lastmod moved. A
- * first run, or a machine without the file, submits the whole sitemap once.
+ * (gitignored). A URL is submitted when it is new or its lastmod moved, or
+ * when it left the sitemap, so the engines recrawl it and find its 301 or
+ * 404. A first run, or a machine without the file, submits the whole sitemap
+ * once.
  *
  *   node scripts/indexnow.mjs            submit new and changed URLs
  *   node scripts/indexnow.mjs --dry-run  list them, submit nothing
@@ -65,19 +67,21 @@ if (!response.ok) {
 const current = parseSitemap(await response.text())
 const previous = !all && existsSync(STATE) ? JSON.parse(readFileSync(STATE, 'utf8')) : {}
 const changed = Object.keys(current).filter((url) => previous[url] !== current[url])
+const removed = Object.keys(previous).filter((url) => !(url in current))
 
-if (changed.length === 0) {
-  console.log('indexnow: nothing new or changed')
+if (changed.length === 0 && removed.length === 0) {
+  console.log('indexnow: nothing new, changed or removed')
   process.exit(0)
 }
-console.log(`indexnow: ${changed.length} of ${Object.keys(current).length} URLs new or changed`)
+console.log(`indexnow: ${changed.length} of ${Object.keys(current).length} URLs new or changed, ${removed.length} removed`)
 for (const url of changed) console.log(`  ${url}`)
+for (const url of removed) console.log(`  ${url} (removed)`)
 if (dryRun) process.exit(0)
 
 const submit = await fetch(ENDPOINT, {
   method: 'POST',
   headers: { 'content-type': 'application/json; charset=utf-8' },
-  body: JSON.stringify({ host: HOST, key, keyLocation, urlList: changed }),
+  body: JSON.stringify({ host: HOST, key, keyLocation, urlList: [...changed, ...removed] }),
 })
 // 200 and 202 both mean accepted; 202 while the engine still checks the key.
 if (submit.status !== 200 && submit.status !== 202) {

@@ -4,7 +4,7 @@ description: "Personalized Markdown in React: write the customer report once, re
 ---
 
 import Link from '@site/src/components/Link'
-import TemplateExample from '@site/src/components/TemplateExample'
+import VariablesExample from '@site/src/components/VariablesExample'
 import sites from '@site/src/sites'
 import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
 
@@ -12,22 +12,22 @@ export const PATH = '/personalized-markdown'
 
 export const crumbs = [
   { name: 'React Markdown Kit', path: '/' },
-  { name: 'Markdown template engine', path: '/markdown-template-engine' },
+  { name: 'Markdown variables', path: '/markdown-variables' },
   { name: 'Personalized Markdown' },
 ]
-export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/template'
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/variables'
 export const blob = (path) => `${sites.github}/blob/main/${path}`
 
 export const FAQ = [
   {
     question: 'What is personalized Markdown?',
     answer:
-      'It\'s a single authored Markdown document with placeholders, rendered once per reader with that reader’s data. The source file is never rewritten. @react-markdown-kit/template resolves the placeholders while the renderer parses, so one template covers every customer.',
+      'It\'s a single authored Markdown document with placeholders, rendered once per reader with that reader’s data. The source file is never rewritten. @react-markdown-kit/variables resolves the placeholders while the renderer parses, so one document covers every customer.',
   },
   {
     question: 'How do I render a different Markdown document per customer?',
     answer:
-      'Compile the same source with a different data object, e.g. compileMarkdown(source, { extensions: [template({ data: customer })] }). If you pass locale and timeZone alongside the data, dates, number grouping and percent signs change to match without touching the template.',
+      'Compile the same source with a different data object, e.g. compileMarkdown(source, { extensions: [variables({ data: customer })] }). If you pass locale and timeZone alongside the data, dates, number grouping and percent signs change to match without touching the source.',
   },
   {
     question: 'Can a customer’s own name break the layout of the report?',
@@ -35,7 +35,7 @@ export const FAQ = [
       'No. A resolved value becomes a text node in a parsed tree, so it can\'t open a heading, a table row, a link or an HTML tag. That still holds after the document is serialized back to Markdown and re-parsed, and there are 152 test cases checking it.',
   },
   {
-    question: 'Can the same template produce an email or a PDF?',
+    question: 'Can the same document produce an email or a PDF?',
     answer:
       'Yes. The root entry doesn\'t import React or Lexical, so you can use compileMarkdown plus documentToMarkdown to get resolved Markdown text in a Node service, a worker, a CLI or a PDF pipeline, from the same file the React app renders.',
   },
@@ -99,7 +99,7 @@ just makes that split explicit. The document is an authored file in version
 control, and the values come in at render time.
 
 ```bash
-npm install @react-markdown-kit/renderer @react-markdown-kit/template
+npm install @react-markdown-kit/renderer @react-markdown-kit/variables
 ```
 
 ## The customer report
@@ -110,7 +110,7 @@ here with the kit. The left pane is the file a person wrote. The right pane is
 an actual `<Markdown>` rendering the document `compileMarkdown` produced. Try
 switching the customer, then the locale.
 
-<TemplateExample
+<VariablesExample
   title="Quarterly account review"
   gfm
   markdown={report}
@@ -124,8 +124,8 @@ switching the customer, then the locale.
   Nothing in the left pane changes between datasets, including the logo, the
   account link and the table. The `fr-FR` and `de-DE` datasets change the date
   format, the grouping separator and the percent sign. The currency stays the
-  same, since it's written into the template as `currency:"USD"`.
-</TemplateExample>
+  same, since it's written into the source as `currency:"USD"`.
+</VariablesExample>
 
 That one document uses four kinds of binding.
 
@@ -134,27 +134,27 @@ That one document uses four kinds of binding.
 - **Formatted numbers and dates**: `{{plan.price | currency:"USD"}}`,
   `{{preparedAt | date:"long"}}`, `{{usage.share | percent:1}}`. Inside a table
   cell the pipe is escaped as `\|` (covered by
-  <Link href={blob('tests/template-table-formatters.test.ts#L25')}>`template-table-formatters.test.ts`</Link>).
+  <Link href={blob('tests/variables-table-formatters.test.ts#L25')}>`variables-table-formatters.test.ts`</Link>).
 - **An image**, with alt text and source together:
   `![{{brand.logoAlt}}]({{brand.logoUrl}})`.
 - **A link destination**: `[Open the account]({{links.account}})`. The
   placeholder has to be the whole destination, so the resolved URL can be
   checked against the protocol policy before it becomes an `href`
-  (<Link href={blob('plugins/template/tests/links.test.ts#L97')}>destination policy tests</Link>).
+  (<Link href={blob('plugins/variables/tests/links.test.ts#L97')}>destination policy tests</Link>).
 
 ## The code
 
 ```ts
 import { compileMarkdown } from '@react-markdown-kit/renderer'
 import { gfmPreset } from '@react-markdown-kit/renderer/gfm'
-import { template } from '@react-markdown-kit/template'
+import { variables } from '@react-markdown-kit/variables'
 
-const source = await readFile('templates/account-review.md', 'utf8')
+const source = await readFile('variables/account-review.md', 'utf8')
 
 export function reportFor(customer: Customer) {
   return compileMarkdown(source, {
     preset: gfmPreset,
-    extensions: [template({ data: customer.data, locale: customer.locale, timeZone: 'UTC' })],
+    extensions: [variables({ data: customer.data, locale: customer.locale, timeZone: 'UTC' })],
   })
 }
 ```
@@ -174,14 +174,14 @@ request handler can be rendered later without parsing it again.
 The main reason to do it this way is that the authored file never gets
 rewritten. You don't end up with per-customer copies that drift apart, a branch
 in the document for the customer with no overage, or a "regenerate the
-templates" step. `git log` on `account-review.md` gives you the full history of
+copies" step. `git log` on `account-review.md` gives you the full history of
 what every customer was told.
 
-It also means the people who own the wording can review the template.
-`@react-markdown-kit/template/editor` gives them the same file with every
+It also means the people who own the wording can review the source.
+`@react-markdown-kit/variables/editor` gives them the same file with every
 placeholder as a labelled chip and a sample-data preview, and saves plain
-template syntax back
-(<Link to="/docs/templates/authoring">Authoring templates</Link>).
+placeholder syntax back
+(<Link to="/docs/variables/authoring">Authoring variables</Link>).
 
 ## Customer data is untrusted input
 
@@ -189,7 +189,7 @@ Names, contact fields and company names come from sign-up forms. A template
 engine that replaces text before parsing treats those fields as Markdown
 source. This one treats them as values.
 
-<TemplateExample
+<VariablesExample
   title="The same report with a hostile customer name"
   gfm
   markdown={report}
@@ -200,10 +200,10 @@ source. This one treats them as values.
 >
   The second dataset tries to end the paragraph, open a heading, add a payment
   link, start a table cell and inject a script tag. All of it gets rendered as
-  plain characters, wherever the template put it. Both datasets compile to the
+  plain characters, wherever the source put it. Both datasets compile to the
   same six blocks in the same order (logo first, account link last) with no
   diagnostics.
-</TemplateExample>
+</VariablesExample>
 
 Values are placed into a parsed tree as nodes and never substituted into the
 source text. Every newline in a value also becomes a space, since a block
@@ -212,17 +212,17 @@ serialization. A resolved document written back to Markdown and re-parsed with
 GFM has the same node types it had before.
 
 There are 152 test cases for this across three files:
-<Link href={blob('plugins/template/tests/injection.test.ts#L21')}>`injection.test.ts`</Link>
+<Link href={blob('plugins/variables/tests/injection.test.ts#L21')}>`injection.test.ts`</Link>
 (22 hostile values, 77 cases),
-<Link href={blob('tests/template-serialization-safety.test.ts#L16')}>`template-serialization-safety.test.ts`</Link>
+<Link href={blob('tests/variables-serialization-safety.test.ts#L16')}>`variables-serialization-safety.test.ts`</Link>
 (12 line-start constructs in 5 authored contexts, 62 cases) and
-<Link href={blob('tests/template-security-independent.test.ts')}>`template-security-independent.test.ts`</Link>
+<Link href={blob('tests/variables-security-independent.test.ts')}>`variables-security-independent.test.ts`</Link>
 (13 cases). Run them with:
 
 ```bash
-pnpm test -- plugins/template/tests/injection.test.ts \
-  tests/template-serialization-safety.test.ts \
-  tests/template-security-independent.test.ts
+pnpm test -- plugins/variables/tests/injection.test.ts \
+  tests/variables-serialization-safety.test.ts \
+  tests/variables-security-independent.test.ts
 ```
 
 <Link to="/compare/handlebars">How that differs from Handlebars and Mustache</Link>
@@ -232,7 +232,7 @@ pnpm test -- plugins/template/tests/injection.test.ts \
 A report with a blank where an amount should be is worse than no report at
 all. A missing required value is an error, and on any error the document
 becomes your `fallback` (or nothing)
-(<Link href={blob('plugins/template/tests/resolve.test.ts#L53')}>missing-value tests</Link>).
+(<Link href={blob('plugins/variables/tests/resolve.test.ts#L53')}>missing-value tests</Link>).
 
 ```ts
 import { z } from 'zod'
@@ -244,16 +244,16 @@ const ReviewData = z.object({
   links: z.object({ account: z.string().url() }),
 })
 
-template({ data, schema: ReviewData, fallback: 'This report is temporarily unavailable.' })
+variables({ data, schema: ReviewData, fallback: 'This report is temporarily unavailable.' })
 ```
 
 `schema` takes any [Standard Schema](https://standardschema.dev) validator
 (Zod, Valibot and ArkType all implement it). The validator is recognized by its
 `~standard` member, so you don't need an adapter and the package doesn't depend
 on any of them
-(<Link href={blob('plugins/template/tests/schema.test.ts#L59')}>schema tests</Link>).
+(<Link href={blob('plugins/variables/tests/schema.test.ts#L59')}>schema tests</Link>).
 
-## The same template as an email or a PDF
+## The same document as an email or a PDF
 
 The root entry doesn't import React or Lexical, so a background job can
 produce the report as well as the app:
@@ -261,15 +261,15 @@ produce the report as well as the app:
 ```ts
 import { compileMarkdown, documentToMarkdown } from '@react-markdown-kit/renderer'
 
-const document = compileMarkdown(source, { preset: gfmPreset, extensions: [template({ data })] })
+const document = compileMarkdown(source, { preset: gfmPreset, extensions: [variables({ data })] })
 await sendEmail({ to: customer.email, markdown: await documentToMarkdown(document) })
 ```
 
 Serialization re-escapes the resolved values, so the Markdown that goes out
 reads the same way the rendered document did
-(<Link href={blob('plugins/template/tests/to-markdown.test.ts#L13')}>serializer tests</Link>).
+(<Link href={blob('plugins/variables/tests/to-markdown.test.ts#L13')}>serializer tests</Link>).
 <Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link>
-checks this by resolving a template from the packed tarball in a project that
+checks this by resolving a document from the packed tarball in a project that
 doesn't have Lexical installed.
 
 ## FAQ
@@ -283,10 +283,10 @@ doesn't have Lexical installed.
 
 ## Next
 
-<Link to="/markdown-template-engine">Markdown template engine</Link> ·{' '}
-<Link to="/docs/guides/markdown-template-variables">Markdown template variables</Link> ·{' '}
+<Link to="/markdown-variables">Markdown variables</Link> ·{' '}
+<Link to="/docs/guides/markdown-variables">Variables in a .md file</Link> ·{' '}
 <Link to="/compare/handlebars">Compared with Handlebars and Mustache</Link> ·{' '}
-<Link to="/docs/templates/schemas">Schemas and types</Link> ·{' '}
+<Link to="/docs/variables/schemas">Schemas and types</Link> ·{' '}
 <Link href="/markdown-editor">Editor demo</Link> ·{' '}
-<Link href={npm}>@react-markdown-kit/template on npm</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/variables on npm</Link> ·{' '}
 <Link href={sites.github}>Source on GitHub</Link>

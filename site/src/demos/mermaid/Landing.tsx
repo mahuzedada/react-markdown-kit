@@ -217,7 +217,7 @@ export default function Landing(): ReactNode {
           Delete the layout comment from a flowchart and it goes back to automatic layout.
         </li>
         <li>
-          The <a href={sites.editorDemo}>editor demo</a> shows diagrams next to regular Markdown, tables and template
+          The <a href={sites.editorDemo}>editor demo</a> shows diagrams next to regular Markdown, tables and
           variables. If you only need rendering, there&rsquo;s also the <a href={sites.rendererDemo}>renderer demo</a>
           .
         </li>

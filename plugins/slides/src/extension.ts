@@ -12,7 +12,7 @@
  *   renderer  the root handler groups the flat tree into <section>s inside
  *             one <article data-rmk-deck>, and the re-typed nodes render as
  *             nothing;
- *   template  markers and directives are literal, so `{{...}}` inside a
+ *   variables markers and directives are literal, so `{{...}}` inside a
  *             directive argument is never data;
  *   editor    absent here. `@react-markdown-kit/slides/editor` adds it, and
  *             `/present` adds the interactive deck; only those load React.
@@ -74,7 +74,7 @@ export function slides(options: SlidesOptions = {}): MarkdownExtension {
           yaml: (): undefined => undefined,
         },
       },
-      template: { literalNodeTypes: [SLIDE_MARKER_NODE, SLIDE_DIRECTIVE_NODE] },
+      variables: { literalNodeTypes: [SLIDE_MARKER_NODE, SLIDE_DIRECTIVE_NODE] },
     },
   }
 }

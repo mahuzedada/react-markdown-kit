@@ -100,16 +100,16 @@ Nothing on this site is a screenshot or a re-implementation.
 | Component | What it mounts | Where it runs |
 | --- | --- | --- |
 | `RenderExample` | a real `<Markdown>` | server, during the static build |
-| `TemplateExample` | `compileMarkdown` with `template({ data })`, then `<Markdown document>` | server, during the static build |
+| `VariablesExample` | `compileMarkdown` with `variables({ data })`, then `<Markdown document>` | server, during the static build |
 | `EditorExample` | a real `<MarkdownEditor>` | browser only, lazily |
 
-`RenderExample` and `TemplateExample` server-render into the static HTML. That is not a
-convenience, it is the proof: if the renderer or the template plugin needed a browser,
+`RenderExample` and `VariablesExample` server-render into the static HTML. That is not a
+convenience, it is the proof: if the renderer or the variables plugin needed a browser,
 the build would fail. You can check it after a build:
 
 ```bash
-grep -o "<table>" build/markdown-template-engine/index.html          # a GFM table rendered at build time
-grep -o "Acme Industrial" build/markdown-template-engine/index.html  # a template resolved at build time
+grep -o "<table>" build/markdown-variables/index.html          # a GFM table rendered at build time
+grep -o "Acme Industrial" build/markdown-variables/index.html  # variables resolved at build time
 ```
 
 The editor mounts client-side behind `ClientOnly` and a lazy import, because it needs a
@@ -135,7 +135,7 @@ renderer and editor have no overview page of their own: their demos
 
 | Route | Intent |
 | --- | --- |
-| `/markdown-template-engine` | Markdown template engine, variables |
+| `/markdown-variables` | Markdown variables, personalization |
 | `/migrate-from-react-markdown` | migration, with the differences first |
 | `/nextjs-markdown` | server rendering |
 

@@ -10,7 +10,7 @@ the rendering stack.
 ```text
 renderer  = display Markdown
 editor    = create and modify Markdown
-template  = plugin: personalize Markdown   (template({ data }) in the renderer, chips in the editor)
+variables = plugin: personalize Markdown   (variables({ data }) in the renderer, chips in the editor)
 mermaid   = plugin: Mermaid diagrams       (flowcharts and sequence diagrams as static SVG in the renderer, a canvas for each and a source editor in the editor)
 slides    = plugin: slides from Markdown   (a deck of <section>s in the renderer, present mode in /present, authoring in the editor)
 ```
@@ -19,18 +19,18 @@ slides    = plugin: slides from Markdown   (a deck of <section>s in the renderer
 | --- | --- | --- |
 | [`@react-markdown-kit/renderer`](packages/renderer) | `npm i @react-markdown-kit/renderer` | Markdown to React, safely |
 | [`@react-markdown-kit/editor`](packages/editor) | `npm i @react-markdown-kit/editor` | Rich, source and preview authoring |
-| [`@react-markdown-kit/template`](plugins/template) | `npm i @react-markdown-kit/template` | Typed variables, schemas, formatting, localization |
+| [`@react-markdown-kit/variables`](plugins/variables) | `npm i @react-markdown-kit/variables` | Typed variables, schemas, formatting, localization |
 | [`@react-markdown-kit/mermaid`](plugins/mermaid) | `npm i @react-markdown-kit/mermaid` | ```` ```mermaid ```` flowcharts and sequence diagrams as static SVG, both edited on a canvas, saved as Mermaid; other types shown as source or drawn by the host |
 | [`@react-markdown-kit/slides`](plugins/slides) | `npm i @react-markdown-kit/slides` | A deck from one Markdown file: `---` splits slides, `???` starts the notes, `--` is a pause; presented, printed and edited |
 
-The renderer never requires the editor, and neither carries template,
+The renderer never requires the editor, and neither carries variables,
 diagram or slide code. The three plugin packages export extensions
-(`template()`, `templateVariables()`, `mermaid()`, `slides()`) that go into a
+(`variables()`, `variableChips()`, `mermaid()`, `slides()`) that go into a
 preset or an `extensions` prop, and each `/editor` entry adds the editing half
 (`slides` also has a `/present` entry for the show). The one standalone piece
 is `@react-markdown-kit/mermaid/canvas`: the same Mermaid canvas as a
 component (or `createMermaidCanvas(container)`) that fills any container,
-with no Markdown editor. Their root entries call no React, so `template()` resolves in a worker,
+with no Markdown editor. Their root entries call no React, so `variables()` resolves in a worker,
 a CLI or an email job through `compileMarkdown`, and `slides()` renders a
 static deck in a server component.
 
@@ -51,13 +51,13 @@ Later, the same content becomes editable:
 Later still, it becomes personalized, with a plugin:
 
 ```tsx
-import { template } from '@react-markdown-kit/template'
+import { variables } from '@react-markdown-kit/variables'
 
-<Markdown extensions={[template({ data: customer, schema: ReportSchema })]}>{content}</Markdown>
+<Markdown extensions={[variables({ data: customer, schema: ReportSchema })]}>{content}</Markdown>
 ```
 
 It is Markdown at every step. There is no "renderer content" to migrate into
-"editor content" into "template content".
+"editor content" into "personalized content".
 
 ## Two constraints this project holds itself to
 
@@ -81,7 +81,7 @@ different`, with the test that proves each one.
 ```text
 packages/renderer     Markdown to React, compilation, policies
 packages/editor       Rich/source/preview authoring on a mdast <-> Lexical bridge
-plugins/template      Plugin: template({ data }) resolves placeholders; templateVariables() edits them as chips
+plugins/variables      Plugin: variables({ data }) resolves placeholders; variableChips() edits them as chips
 plugins/mermaid       Plugin: ```mermaid flowcharts and sequence diagrams as static SVG, both edited on a canvas, written back as Mermaid
 plugins/slides        Plugin: slides() reads a deck from plain Markdown; /present shows it, /editor authors it
 internal/             Build-time shared contracts, not a fifth package
@@ -100,7 +100,7 @@ have no shared runtime core.
 
 **One document representation.** `MarkdownDocument` is plain JSON: an mdast
 tree, a profile, diagnostics and optionally the source. No React elements, no
-editor instances, no closures. It is what the template engine produces and the
+editor instances, no closures. It is what the variables plugin produces and the
 renderer consumes, so personalization costs no stringify/reparse cycle.
 
 **Markdown is the storage format.** The editor reads and writes Markdown.
@@ -112,7 +112,7 @@ direct response to [`docs/AUDIT.md`](docs/AUDIT.md), which found seven
 reproducible save-corruption bugs in a prior editor built the other way. All
 seven are regression fixtures here.
 
-**Data can never inject Markdown structure.** Template values are placed
+**Data can never inject Markdown structure.** Variable values are placed
 structurally into a parsed tree, never substituted into source text. A value of
 `**Administrator**` renders as those literal characters, and no value can create
 a heading, a table row, a link destination or a code fence.
@@ -125,13 +125,13 @@ a heading, a table row, a link destination or a code fence.
 | B — Shared contracts | done, `internal/` |
 | C — Renderer | done. CommonMark 554/652 exact, 96% counting raw HTML dropped by design. 39/39 prop comparisons match `react-markdown@10.1.0` |
 | D — Editor | done. All 22 audited corruption cases round-trip byte-identically |
-| E — Template core | done. `template({ data })`, a plugin; resolves with no React |
-| F — Template integrations | done. `templateVariables()` with chips in the editor |
+| E — Variables core | done. `variables({ data })`, a plugin; resolves with no React |
+| F — Variables integrations | done. `variableChips()` with chips in the editor |
 | G — Migration tooling | done. `rmk-migrate` codemod and `rmk-compare` corpus runner |
 | H — Launch and distribution | not started |
 
 823 tests across 28 files. Three security fixes came out of building it, each
-with a regression suite: a Markdown injection through serialized template
+with a regression suite: a Markdown injection through serialized variables
 output, a silently non-functional `remark-gfm` plugin route, and an
 unpublishable dependency range that made a tarball uninstallable.
 

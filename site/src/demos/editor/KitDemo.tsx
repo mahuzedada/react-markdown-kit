@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import Markdown, { compileMarkdown, defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
-import { template } from '@react-markdown-kit/template'
+import { variables } from '@react-markdown-kit/variables'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Badge from '@zuilib/primitives/badge'
@@ -8,14 +8,14 @@ import Button from '@zuilib/primitives/button'
 import Text from '@zuilib/primitives/text'
 import { cn } from '@zuilib/primitives/lib/cn'
 import { mermaid } from '@react-markdown-kit/mermaid/editor'
-import { templateVariables } from '@react-markdown-kit/template/editor'
+import { variableChips } from '@react-markdown-kit/variables/editor'
 import { useShareHash } from './use-share-hash'
 
 import '@react-markdown-kit/editor/styles.css'
 import '@react-markdown-kit/mermaid/styles.css'
-import '@react-markdown-kit/template/styles.css'
+import '@react-markdown-kit/variables/styles.css'
 
-// One dialect for the editor, the template plugin and the renderer, Mermaid included.
+// One dialect for the editor, the variables plugin and the renderer, Mermaid included.
 const preset = defineMarkdownPreset({ extensions: [gfm(), mermaid()] })
 
 const INITIAL = `![{{brand.logoAlt}}]({{brand.logoUrl}})
@@ -70,7 +70,7 @@ const NOTE = 'm-0 border-t border-border px-3 py-1.5'
 
 /**
  * The editor, with both plugins, wired the way a real application would wire
- * them: the editor authors a template with placeholders as chips and a
+ * them: the editor authors a document with placeholders as chips and a
  * diagram on a canvas, and the renderer shows the same document resolved for
  * one customer. Edit on the left and the right follows.
  *
@@ -98,12 +98,12 @@ export default function KitDemo(): ReactNode {
     )
   }, [link])
 
-  // The source is recompiled as the author types, with the template plugin
+  // The source is recompiled as the author types, with the variables plugin
   // filling it in for the customer.
   const result = useMemo(() => {
     const document = compileMarkdown(source, {
       preset,
-      extensions: [template({ data: CUSTOMER.data, locale: CUSTOMER.locale })],
+      extensions: [variables({ data: CUSTOMER.data, locale: CUSTOMER.locale })],
     })
     const diagnostics = document.diagnostics
     return { ok: !diagnostics.some((diagnostic) => diagnostic.severity === 'error'), document, diagnostics }
@@ -112,7 +112,7 @@ export default function KitDemo(): ReactNode {
   // Chips in the editor preview the customer. Preview data is display only:
   // the saved source keeps its placeholders.
   const editorExtensions = useMemo(
-    () => [templateVariables({ previewData: CUSTOMER.data, previewLocale: CUSTOMER.locale })],
+    () => [variableChips({ previewData: CUSTOMER.data, previewLocale: CUSTOMER.locale })],
     [],
   )
 
@@ -124,7 +124,7 @@ export default function KitDemo(): ReactNode {
           <div className={COLUMN}>
             <div className={COLUMN_HEAD}>
               <Text as="span" size="sm" weight="semibold">
-                Authored template
+                Authored source
               </Text>
               <span className="flex min-w-0 items-center gap-1.5">
                 <Badge variant="subtle" tone="success" size="sm">

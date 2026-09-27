@@ -37,7 +37,7 @@ export function resolveExtensions(options: MarkdownCompileOptions | undefined): 
   if (preset !== undefined && !isMarkdownPreset(preset)) {
     throw new MarkdownConfigurationError(
       'PRESET_INVALID',
-      'preset must be created with defineMarkdownPreset() from the renderer or template package.',
+      'preset must be created with defineMarkdownPreset() from the renderer or variables package.',
     )
   }
   // Local extensions append after preset extensions; a local extension with the

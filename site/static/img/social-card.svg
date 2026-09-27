@@ -25,6 +25,6 @@
   <g font-family="ui-monospace, SFMono-Regular, monospace" font-size="27" fill="#8abbff">
     <text x="64" y="512">@react-markdown-kit/renderer</text>
     <text x="64" y="556">@react-markdown-kit/editor</text>
-    <text x="64" y="600">@react-markdown-kit/renderer/template</text>
+    <text x="64" y="600">@react-markdown-kit/variables</text>
   </g>
 </svg>
