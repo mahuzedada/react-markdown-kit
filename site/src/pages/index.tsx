@@ -104,7 +104,7 @@ export default function Home(): ReactNode {
             React Markdown Kit
           </Heading>
           <Text className="mx-auto! mt-0! mb-7! max-w-[34rem] text-[clamp(1rem,2.4vw,1.25rem)] text-balance">
-            Packages for rendering, streaming and editing markdown in react. Plus plugins for mermaid diagrams, slides and variables.
+            Markdown rendering, streaming and editing in react. Plus plugins for mermaid diagrams, slides and variables.
           </Text>
           <ActivityScope feature="hero" as="div" className="mb-10 flex flex-wrap justify-center gap-3">
             <Button as={Link} size="lg" track="get-started" to="/docs/getting-started">

@@ -20,7 +20,7 @@ const foundryPrism = {
 
 const config: Config = {
   title: 'React Markdown Kit',
-  tagline: 'React packages for rendering, editing and personalizing Markdown.',
+  tagline: 'Markdown rendering, streaming and editing in react.',
   favicon: 'img/favicon.svg',
 
   // v4 turns every `faster` flag on. The swc HTML minimizer strips attribute
