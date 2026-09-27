@@ -70,7 +70,7 @@ function jsonLd(html: string): Array<Record<string, unknown>> {
 
 /** A page with an FAQ section: the shared `Faq` component, or a heading that says so. */
 const hasFaq = (html: string): boolean =>
-  /class="[^"]*\bsite-faq\b/.test(html) || /<h[1-6][^>]*>[^<]*(FAQ|Frequently asked)/i.test(html)
+  /<section[^>]*\sdata-faq[\s=>]/.test(html) || /<h[1-6][^>]*>[^<]*(FAQ|Frequently asked)/i.test(html)
 
 /** Does `path` (site-relative, no query or hash) resolve to a file in `dir`? */
 function resolves(dir: string, path: string): boolean {

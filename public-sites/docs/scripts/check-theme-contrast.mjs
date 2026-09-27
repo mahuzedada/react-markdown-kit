@@ -1,6 +1,6 @@
 /*
  * Runs `@zuilib/tokens/contrast`, the tokens package's own WCAG pair checks,
- * against ../shared/foundry.css in both modes. Text pairs must reach 4.5:1 and
+ * against ../shared/theme.css in both modes. Text pairs must reach 4.5:1 and
  * ui pairs 3:1. The three hairline borders (`--border`, `--input`,
  * `--sidebar-border`) are decorative and expected to fail, exactly as the
  * tokens package lists them in its own contrast-exceptions.json.
@@ -14,8 +14,8 @@ import contract from '@zuilib/tokens/tokens.json' with { type: 'json' }
 
 const DECORATIVE = new Set(['--border', '--input', '--sidebar-border'])
 
-const css = readFileSync(fileURLToPath(new URL('../../shared/foundry.css', import.meta.url)), 'utf8')
-const blocks = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^}]*)\}/g)].map(m => [m[1].trim(), m[2]])
+const css = readFileSync(fileURLToPath(new URL('../../shared/theme.css', import.meta.url)), 'utf8')
+const blocks = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^}]*)\}/g)].map(m => [m[1].split(';').pop().trim(), m[2]])
 const read = sel =>
   Object.fromEntries(
     [...blocks.find(b => b[0].startsWith(sel))[1].matchAll(/(--[\w-]+):\s*([^;]+);/g)].map(m => [m[1], m[2].trim()]),

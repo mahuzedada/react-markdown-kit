@@ -73,21 +73,25 @@ const config: Config = {
         // priority are ignored by Google and dropped.
         sitemap: { lastmod: 'date', changefreq: null, priority: null },
         theme: {
-          // The ZUI token contract, the Foundry theme (token overrides, shared
-          // with the demo sites), the Mermaid plugin's optional stylesheet (so
-          // every example diagram scales to its column), the kit's diagram
-          // properties mapped onto the tokens, then the Infima-to-token map.
-          // Order matters: each layer overrides the last.
-          customCss: [
-            require.resolve('@zuilib/primitives/zui-no-preflight.css'),
-            require.resolve('../shared/foundry.css'),
-            require.resolve('@react-markdown-kit/mermaid/styles.css'),
-            require.resolve('../shared/kit.css'),
-            './src/css/custom.css',
-          ],
+          // The one site stylesheet (zui, Tailwind utilities and every
+          // variable override, shared with the other sites), then the Mermaid
+          // plugin's optional stylesheet so every example diagram scales to
+          // its column.
+          customCss: [require.resolve('../shared/theme.css'), require.resolve('@react-markdown-kit/mermaid/styles.css')],
         },
       } satisfies Preset.Options,
     ],
+  ],
+
+  plugins: [
+    // Tailwind v4 for shared/theme.css and the utility classes in pages and components.
+    () => ({
+      name: 'tailwindcss',
+      configurePostCss(options) {
+        options.plugins.push(require('@tailwindcss/postcss'))
+        return options
+      },
+    }),
   ],
 
   themeConfig: {
@@ -96,7 +100,7 @@ const config: Config = {
     colorMode: { respectPrefersColorScheme: true },
     navbar: {
       // Foundry's top bar is dark in both colour modes; `.navbar--dark` carries
-      // the dark token set (src/css/foundry.css).
+      // the dark token set (shared/theme.css).
       style: 'dark',
       title: 'React Markdown Kit',
       logo: { alt: 'React Markdown Kit', src: 'img/logo.svg' },

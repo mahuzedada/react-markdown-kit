@@ -33,12 +33,73 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
 } from './icons'
-import styles from './MermaidDemo.module.css'
-
 import '@react-markdown-kit/mermaid/styles.css'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
+import Separator from '@zuilib/primitives/separator'
+import Text from '@zuilib/primitives/text'
 import { cn } from '@zuilib/primitives/lib/cn'
+
+/*
+ * Chrome for the Mermaid visual editor, laid out like Excalidraw: the canvas
+ * is the whole window and everything else floats over it as an island (a card
+ * with a soft shadow and no frame). The stage declares the geometry every
+ * island reads (--gap, --island-radius, --island-shadow, --top-band,
+ * --panel-width); colours come from the theme tokens. Narrow is the same
+ * 900px as NARROW below.
+ */
+const STAGE =
+  'relative h-dvh bg-background text-foreground [--island-radius:12px] [--island-shadow:0_0_0_1px_color-mix(in_oklab,var(--border)_70%,transparent),var(--shadow-2)] max-[900px]:[--panel-width:calc(100%_-_2_*_var(--gap))]'
+const STAGE_PAGE = 'min-h-[32rem] [--gap:1rem] [--top-band:4.25rem] [--panel-width:24rem]'
+const STAGE_EMBED = 'min-h-0 [--gap:0.625rem] [--top-band:3.75rem] [--panel-width:20rem]'
+/** Fullscreen through the API paints the element alone; the fallback pins it. */
+const STAGE_FULL = '[&:not(:fullscreen)]:fixed [&:not(:fullscreen)]:inset-0 [&:not(:fullscreen)]:z-50'
+
+/*
+ * The canvas: the page background under a dotted grid, the plugin's tool
+ * island under the top band, and the free room it centres a diagram in (the
+ * padding below) clear of every island.
+ *
+ * The plugin's stylesheet is unlayered, so it outranks these layered
+ * utilities. The island and grid properties and min-h-0 lose to its
+ * `.rmk-editor.rmk-mermaid-canvas` defaults, exactly as the single-class
+ * module rule did before; the tools-top and background properties are not
+ * declared by the plugin and apply. The padding rules carry `!` to outrank
+ * the plugin's own padding for the same elements, as the doubled class did.
+ */
+const CANVAS = cn(
+  '[--rmk-mermaid-island-gap:var(--gap)] [--rmk-mermaid-island-radius:var(--island-radius)] [--rmk-mermaid-island-shadow:var(--island-shadow)]',
+  '[--rmk-mermaid-tools-top:var(--top-band)] [--rmk-mermaid-canvas-background:var(--background)]',
+  '[--rmk-diagram-grid:color-mix(in_oklab,var(--foreground)_13%,transparent)]',
+  'min-h-0 [--room-left:7rem] max-[900px]:[--room-left:6.5rem]',
+  '[&_.rmk-diagram-stage:not(.rmk-sequence-stage)]:[padding:var(--top-band)_var(--room-right)_4rem_var(--room-left)]!',
+  '[&[data-rmk-mermaid-toolbar]_.rmk-sequence-viewport]:[padding:var(--top-band)_var(--room-right)_4rem_var(--room-left)]!',
+  '[&_.rmk-mermaid-canvas-static]:[padding:var(--top-band)_var(--room-right)_4rem_var(--room-left)]!',
+  '[&_.rmk-diagram-source-pre]:[padding:var(--top-band)_var(--room-right)_4rem_var(--room-left)]!',
+)
+const CANVAS_ROOM = '[--room-right:2rem]'
+const CANVAS_ROOM_PANEL = '[--room-right:calc(var(--panel-width)_+_2_*_var(--gap))] max-[900px]:[--room-right:1rem]'
+
+/** A floating island; each one adds its corner, gap and padding. */
+const ISLAND = 'absolute z-4 box-border flex min-h-[2.75rem] items-center rounded-(--island-radius) bg-card [box-shadow:var(--island-shadow)]'
+const ISLAND_TOOLS = 'gap-[0.15rem] p-1'
+
+const DIVIDER = 'mx-1 h-5 self-center'
+
+/** The code panel: an island down the right edge, under the top band. */
+const PANEL =
+  'absolute top-(--top-band) right-(--gap) bottom-(--gap) z-4 flex w-(--panel-width) max-w-[calc(100%_-_2_*_var(--gap))] flex-col overflow-hidden rounded-(--island-radius) bg-card [box-shadow:var(--island-shadow)] [&[hidden]]:hidden'
+const SECTION = 'flex min-h-0 flex-col border-t border-border first:border-t-0'
+const SECTION_HEAD = 'box-border flex min-h-10 items-center gap-2 py-1 pr-2 pl-3 text-[0.85rem] font-semibold text-foreground'
+/** A section head that folds its section: a full-width ghost button with an inset focus ring. */
+const SECTION_TOGGLE =
+  'h-auto w-full justify-start rounded-none text-left focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid'
+const PROBLEM = 'm-0 border-t border-border bg-warning/8 px-3 py-2'
+/* Radii on a Button carry `!`: tailwind-merge doesn't know zui's `rounded-button`, keeps both, and that one sorts later. */
+const CHIP = 'h-[1.875rem] rounded-[9px]! px-[0.7rem] text-[0.76rem] font-medium'
+const ACTION_GRID = 'grid grid-cols-3 gap-[0.4rem] [&>*]:min-w-0'
+const CHEVRON = 'size-4 transition-transform duration-(--duration-normal)'
+const BRAND = 'flex items-center gap-2 text-[0.95rem] font-semibold whitespace-nowrap text-primary-text no-underline [&_img]:size-6'
 
 /** How long after the last keystroke the URL hash follows the source. */
 const HASH_DEBOUNCE_MS = 300
@@ -284,11 +345,11 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
     <ActivityScope feature="mermaid-editor">
       <section
         ref={stage}
-        className={cn(styles.stage, embed && styles.stageEmbed, fullscreen.active && styles.stageFull, panelOpen && styles.panelOpen)}
+        className={cn(STAGE, embed ? STAGE_EMBED : STAGE_PAGE, fullscreen.active && STAGE_FULL)}
         aria-label="Mermaid visual editor"
       >
         <MermaidCanvas
-          className={cn(styles.canvas)}
+          className={cn(CANVAS, panelOpen ? CANVAS_ROOM_PANEL : CANVAS_ROOM)}
           value={code}
           onChange={setCode}
           kinds={KINDS}
@@ -297,24 +358,31 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
           toolbar="left"
           zoom={zoom}
         >
-          <div className={cn(styles.island, styles.topLeft)}>
+          <div className={cn(ISLAND, 'top-(--gap) left-(--gap) max-w-[calc(100%_-_2_*_var(--gap))] gap-2 py-1 pr-3 pl-2')}>
             {embed ? (
-              <span className={cn(styles.brand)}>
+              <span className={BRAND}>
                 <img src="/logo.svg" alt="" />
                 <span>Mermaid Visual Editor</span>
               </span>
             ) : (
-              <a className={cn(styles.brand)} href="/" data-zui-tag="brand">
+              <a className={BRAND} href="/" data-zui-tag="brand">
                 <img src="/logo.svg" alt="" />
                 <span>Mermaid Visual Editor</span>
               </a>
             )}
-            <span className={cn(styles.status, status.tone === 'ok' ? styles.statusOk : styles.statusWarn)} title={status.message}>
+            <Text
+              as="span"
+              size="xs"
+              weight="medium"
+              tone={status.tone === 'ok' ? 'success' : 'warning'}
+              className="overflow-hidden rounded-full bg-muted px-2 py-[0.2rem] tracking-[0.02em] text-ellipsis whitespace-nowrap max-[900px]:hidden"
+              title={status.message}
+            >
               {status.label}
-            </span>
+            </Text>
           </div>
 
-          <nav className={cn(styles.island, styles.topRight)} aria-label="Editor">
+          <nav className={cn(ISLAND, ISLAND_TOOLS, 'top-(--gap) right-(--gap)')} aria-label="Editor">
             {embed ? (
               <Button as="a" href={fullEditor} target="_blank" rel="noopener" variant="ghost" size="sm" track="open-full-editor">
                 <ExternalIcon />
@@ -329,8 +397,8 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                 <Button as="a" href={sites.github} variant="ghost" size="icon" track="github" aria-label="GitHub repository">
                   <GitHubIcon />
                 </Button>
-                <span className={cn(styles.divider)} aria-hidden="true" />
-                <Button variant="ghost" size="sm" className={cn(styles.hideNarrow)} track="copy-link" disabled={link === undefined} onClick={() => link !== undefined && copy('link', link)}>
+                <Separator orientation="vertical" decorative className={DIVIDER} />
+                <Button variant="ghost" size="sm" className="max-[900px]:hidden" track="copy-link" disabled={link === undefined} onClick={() => link !== undefined && copy('link', link)}>
                   {copyLabel('link', 'Copy link')}
                 </Button>
                 <Button variant="solid" tone="primary" size="sm" track="share" onClick={() => setShareOpen(true)}>
@@ -339,7 +407,7 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                 </Button>
               </>
             )}
-            <span className={cn(styles.divider)} aria-hidden="true" />
+            <Separator orientation="vertical" decorative className={DIVIDER} />
             <Button variant="ghost" size="icon" track="theme" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </Button>
@@ -357,43 +425,49 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
             </Button>
           </nav>
 
-          <aside id="mermaid-code-panel" className={cn(styles.panel)} hidden={!panelOpen} aria-label="Mermaid code">
-            <section className={cn(styles.section, styles.codeSection)} aria-label="Code">
-              <div className={cn(styles.sectionHead)}>
+          <aside id="mermaid-code-panel" className={PANEL} hidden={!panelOpen} aria-label="Mermaid code">
+            <section className={cn(SECTION, 'min-h-48 flex-[1_1_auto]')} aria-label="Code">
+              <div className={SECTION_HEAD}>
                 <CodeIcon />
-                <span className={cn(styles.sectionTitle)}>Mermaid</span>
-                <Button variant="ghost" size="sm" className={cn(styles.headButton)} track="copy-mermaid" onClick={() => copy('mermaid', code)}>
+                <span className="flex-1">Mermaid</span>
+                <Button variant="ghost" size="sm" className="h-7" track="copy-mermaid" onClick={() => copy('mermaid', code)}>
                   {copyLabel('mermaid', 'Copy')}
                 </Button>
               </div>
               <CodePane value={code} onChange={setCode} label="Mermaid source" kind={status.kind} />
               {unreadable ? (
-                <p className={cn(styles.problem)}>
+                <Text size="sm" tone="warning" className={PROBLEM}>
                   This browser couldn&rsquo;t read the link, so you&rsquo;re seeing the default diagram instead. The shared link is still in the address
                   bar, and editing will replace it.
-                </p>
+                </Text>
               ) : null}
-              {status.message === undefined ? null : <p className={cn(styles.problem)}>{status.message}</p>}
+              {status.message === undefined ? null : (
+                <Text size="sm" tone="warning" className={PROBLEM}>
+                  {status.message}
+                </Text>
+              )}
             </section>
 
-            <section className={cn(styles.section)} aria-label="Sample diagrams">
-              <button type="button" className={cn(styles.sectionHead, styles.sectionToggle)} aria-expanded={samplesOpen} onClick={() => setSamplesOpen((open) => !open)} data-zui-tag="samples-toggle">
-                <SamplesIcon />
-                <span className={cn(styles.sectionTitle)}>Samples</span>
-                <ChevronIcon className={cn(styles.chevron, samplesOpen && styles.chevronOpen)} />
-              </button>
+            <section className={cn(SECTION, 'flex-none')} aria-label="Sample diagrams">
+              <Button variant="ghost" track="samples-toggle" className={cn(SECTION_HEAD, SECTION_TOGGLE)} aria-expanded={samplesOpen} onClick={() => setSamplesOpen((open) => !open)}>
+                <SamplesIcon className="size-4" />
+                <span className="flex-1">Samples</span>
+                <ChevronIcon className={cn(CHEVRON, samplesOpen && 'rotate-180')} />
+              </Button>
               {samplesOpen
                 ? SAMPLE_GROUPS.map((group) => (
-                    <div key={group.label} className={cn(styles.chipGroup)} role="group" aria-label={group.label}>
-                      <span className={cn(styles.chipsHeading)}>{group.label}</span>
-                      <div className={cn(styles.chips)}>
+                    <div key={group.label} className="px-3 py-1" role="group" aria-label={group.label}>
+                      <Text as="span" size="sm" weight="medium" className="mb-[0.4rem] block">
+                        {group.label}
+                      </Text>
+                      <div className="flex flex-wrap gap-[0.4rem] pb-2">
                         {group.samples.map((sample) => (
                           <Button
                             key={sample.id}
                             variant={code === sample.code ? 'solid' : 'outline'}
                             tone="primary"
                             size="sm"
-                            className={cn(styles.chip)}
+                            className={CHIP}
                             track={`sample-${sample.id}`}
                             aria-pressed={code === sample.code}
                             onClick={() => setCode(sample.code)}
@@ -407,82 +481,109 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                 : null}
             </section>
 
-            <section className={cn(styles.section)} aria-label="Export">
-              <button type="button" className={cn(styles.sectionHead, styles.sectionToggle)} aria-expanded={actionsOpen} onClick={() => setActionsOpen((open) => !open)} data-zui-tag="actions-toggle">
-                <ActionsIcon />
-                <span className={cn(styles.sectionTitle)}>Export</span>
-                <ChevronIcon className={cn(styles.chevron, actionsOpen && styles.chevronOpen)} />
-              </button>
+            <section className={cn(SECTION, 'flex-none')} aria-label="Export">
+              <Button variant="ghost" track="actions-toggle" className={cn(SECTION_HEAD, SECTION_TOGGLE)} aria-expanded={actionsOpen} onClick={() => setActionsOpen((open) => !open)}>
+                <ActionsIcon className="size-4" />
+                <span className="flex-1">Export</span>
+                <ChevronIcon className={cn(CHEVRON, actionsOpen && 'rotate-180')} />
+              </Button>
               {actionsOpen ? (
-                <div className={cn(styles.actions)}>
-                  <div className={cn(styles.actionRow)}>
-                    <span className={cn(styles.actionLabel)}>PNG scale</span>
-                    <span className={cn(styles.segment)} role="group" aria-label="PNG scale">
+                <div className="flex flex-col gap-2 px-3 pt-1 pb-3">
+                  <div className="flex items-center gap-[0.6rem]">
+                    <Text as="span" size="sm" weight="medium">
+                      PNG scale
+                    </Text>
+                    <span className="inline-flex gap-1" role="group" aria-label="PNG scale">
                       {[1, 2, 3].map((scale) => (
-                        <Button key={scale} variant={pngScale === scale ? 'solid' : 'outline'} tone="primary" size="sm" className={cn(styles.chip)} track={`png-scale-${scale}`} aria-pressed={pngScale === scale} onClick={() => setPngScale(scale)}>
+                        <Button key={scale} variant={pngScale === scale ? 'solid' : 'outline'} tone="primary" size="sm" className={CHIP} track={`png-scale-${scale}`} aria-pressed={pngScale === scale} onClick={() => setPngScale(scale)}>
                           {scale}×
                         </Button>
                       ))}
                     </span>
                   </div>
-                  <div className={cn(styles.actionGrid)}>
-                    <Button variant="outline" tone="primary" size="sm" className={cn(styles.chip)} track="download-png" onClick={() => void downloadPng()}>
+                  <div className={ACTION_GRID}>
+                    <Button variant="outline" tone="primary" size="sm" className={CHIP} track="download-png" onClick={() => void downloadPng()}>
                       {copied === 'png' ? <CheckIcon /> : <DownloadIcon />}
                       PNG
                     </Button>
-                    <Button variant="outline" tone="primary" size="sm" className={cn(styles.chip)} track="download-svg" onClick={() => void downloadSvg()}>
+                    <Button variant="outline" tone="primary" size="sm" className={CHIP} track="download-svg" onClick={() => void downloadSvg()}>
                       {copied === 'svg' ? <CheckIcon /> : <DownloadIcon />}
                       SVG
                     </Button>
-                    <Button variant="outline" tone="primary" size="sm" className={cn(styles.chip)} track="copy-image" onClick={() => void copyPng()}>
+                    <Button variant="outline" tone="primary" size="sm" className={CHIP} track="copy-image" onClick={() => void copyPng()}>
                       {copied === 'image' ? <CheckIcon /> : <ImageIcon />}
                       {copied === 'image' ? 'Copied' : 'Image'}
                     </Button>
                   </div>
-                  <div className={cn(styles.actionGrid)}>
-                    <Button variant="outline" tone="primary" size="sm" className={cn(styles.chip)} track="copy-markdown" onClick={() => copy('markdown', markdown)}>
+                  <div className={ACTION_GRID}>
+                    <Button variant="outline" tone="primary" size="sm" className={CHIP} track="copy-markdown" onClick={() => copy('markdown', markdown)}>
                       {copyLabel('markdown', 'Markdown')}
                     </Button>
-                    <Button as="a" href={liveUrl ?? '#'} target="_blank" rel="noopener" variant="outline" size="sm" className={cn(styles.chip)} track="open-mermaid-live" disabled={liveUrl === undefined}>
+                    <Button as="a" href={liveUrl ?? '#'} target="_blank" rel="noopener" variant="outline" size="sm" className={CHIP} track="open-mermaid-live" disabled={liveUrl === undefined}>
                       <ExternalIcon />
                       mermaid.live
                     </Button>
-                    <Button variant="outline" size="sm" className={cn(styles.chip)} track="reset" disabled={code === DEFAULT_CODE} onClick={() => setCode(DEFAULT_CODE)}>
+                    <Button variant="outline" size="sm" className={CHIP} track="reset" disabled={code === DEFAULT_CODE} onClick={() => setCode(DEFAULT_CODE)}>
                       <ResetIcon />
                       Reset
                     </Button>
                   </div>
-                  {exportProblem === undefined ? null : <p className={cn(styles.actionProblem)}>{exportProblem}</p>}
+                  {exportProblem === undefined ? null : (
+                    <Text size="sm" tone="warning" className="m-0">
+                      {exportProblem}
+                    </Text>
+                  )}
                 </div>
               ) : null}
             </section>
           </aside>
 
-          <div className={cn(styles.island, styles.bottomLeft)} role="group" aria-label="Zoom">
+          <div className={cn(ISLAND, ISLAND_TOOLS, 'bottom-(--gap) left-(--gap)')} role="group" aria-label="Zoom">
             <Button variant="ghost" size="icon" track="zoom-out" aria-label="Zoom out" disabled={zoom <= ZOOM_MIN} onClick={() => zoomTo(zoom / ZOOM_STEP)}>
               <ZoomOutIcon />
             </Button>
-            <button type="button" className={cn(styles.zoomText)} aria-label="Reset zoom" title="Reset zoom" onClick={() => setZoom(1)} data-zui-tag="zoom-reset">
+            <Button
+              variant="ghost"
+              size="sm"
+              track="zoom-reset"
+              className="h-8 min-w-[3.25rem] rounded-[8px]! px-1 text-[0.8rem] font-normal tabular-nums"
+              aria-label="Reset zoom"
+              title="Reset zoom"
+              onClick={() => setZoom(1)}
+            >
               {Math.round(zoom * 100)}%
-            </button>
+            </Button>
             <Button variant="ghost" size="icon" track="zoom-in" aria-label="Zoom in" disabled={zoom >= ZOOM_MAX} onClick={() => zoomTo(zoom * ZOOM_STEP)}>
               <ZoomInIcon />
             </Button>
-            <span className={cn(styles.divider)} aria-hidden="true" />
+            <Separator orientation="vertical" decorative className={DIVIDER} />
             <Button variant="ghost" size="icon" track="fullscreen" aria-pressed={fullscreen.active} aria-label={fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'} onClick={fullscreen.toggle}>
               <FullscreenIcon />
             </Button>
           </div>
 
           {embed || fullscreen.active ? null : (
-            <a className={cn(styles.island, styles.bottomCenter)} href="#docs" data-zui-tag="scroll-to-docs">
+            <a
+              className={cn(
+                ISLAND,
+                'bottom-(--gap) left-1/2 -translate-x-1/2 gap-[0.4rem] px-[0.9rem] py-0 text-[0.8rem] font-medium whitespace-nowrap text-muted-foreground no-underline hover:text-foreground max-[900px]:hidden',
+              )}
+              href="#docs"
+              data-zui-tag="scroll-to-docs"
+            >
               <ArrowDownIcon />
               Docs and FAQ below
             </a>
           )}
 
-          <div className={cn(styles.island, styles.bottomRight)}>
-            <a className={cn(styles.version)} href={docsUrl('/docs/mermaid')} data-zui-tag="version">
+          <div
+            className={cn(
+              ISLAND,
+              'bottom-(--gap) px-3 py-0',
+              panelOpen ? 'right-[calc(var(--panel-width)_+_2_*_var(--gap))] max-[900px]:hidden' : 'right-(--gap)',
+            )}
+          >
+            <a className="text-xs text-muted-foreground no-underline hover:text-foreground" href={docsUrl('/docs/mermaid')} data-zui-tag="version">
               v{mermaidPackage.version}
             </a>
           </div>

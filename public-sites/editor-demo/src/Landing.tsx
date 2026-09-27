@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { CopyCode } from '../../shared/CopyCode'
+import { Callout, Feature, Features, Hero, LinkRow, Page, Prose, Steps } from '../../shared/Page'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../shared/Seo'
 
@@ -111,43 +112,42 @@ export interface LandingProps {
 
 export default function Landing({ roundTrip }: LandingProps): ReactNode {
   return (
-    <article className="site-landing">
-      <header className="site-hero">
-        <span className="site-eyebrow">Free and open source, no account needed</span>
-        <h1>{TITLE}</h1>
-        <p className="site-lede">
-          A rich text editor that reads and writes plain Markdown. It&rsquo;s free, runs in your
-          browser and doesn&rsquo;t need an account. You can write in rich, source or preview mode,
-          add typed variables and Mermaid diagrams, and what you save is the same string you opened.
-        </p>
-        <p className="site-hero-links">
+    <Page>
+      <Hero
+        kicker="Free and open source, no account needed"
+        title={TITLE}
+        lede={
+          <>
+            A rich text editor that reads and writes plain Markdown. It&rsquo;s free, runs in your
+            browser and doesn&rsquo;t need an account. You can write in rich, source or preview mode,
+            add typed variables and Mermaid diagrams, and what you save is the same string you opened.
+          </>
+        }
+      >
+        <LinkRow>
           <a href={docsUrl('/react-markdown-editor')}>Editor docs</a>
           <a href={npmUrl('editor')}>npm</a>
           <a href={sites.github}>GitHub</a>
           <a href={sites.home}>React Markdown Kit</a>
-        </p>
-      </header>
+        </LinkRow>
+      </Hero>
 
-      <ul className="site-features">
-        <li>
-          <strong>Saves plain Markdown</strong>
+      <Features>
+        <Feature title="Saves plain Markdown">
           Your app keeps storing plain strings. All 22 audited documents open and save byte for
           byte, and that suite runs in CI.
-        </li>
-        <li>
-          <strong>Three modes</strong>
+        </Feature>
+        <Feature title="Three modes">
           Rich, source and preview, and you can switch between them at any time. The toolbar is
           optional, and you can use the engine headless if you want.
-        </li>
-        <li>
-          <strong>Plugins</strong>
+        </Feature>
+        <Feature title="Plugins">
           Template variables shown as chips, Mermaid flowcharts on a canvas, and slide decks. Each
           one is a separate package.
-        </li>
-      </ul>
+        </Feature>
+      </Features>
 
-      <div className="site-prose">
-        <span className="site-eyebrow">Install</span>
+      <Prose>
         <h2>Install the editor and the two plugins this demo uses</h2>
         <CopyCode code="npm install @react-markdown-kit/editor @react-markdown-kit/renderer" />
         <CopyCode code="npm install @react-markdown-kit/template @react-markdown-kit/mermaid" />
@@ -156,9 +156,8 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
           packages are optional plugins, so you only need them if you want variables or diagrams.
         </p>
 
-        <span className="site-eyebrow">How to</span>
         <h2>Edit Markdown in three steps</h2>
-        <ol className="site-steps">
+        <Steps>
           <li>
             <strong>Mount the editor.</strong> It takes Markdown and gives you Markdown back, so your
             app keeps storing plain strings, and opening and closing a document doesn&rsquo;t change
@@ -177,9 +176,9 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
             can&rsquo;t inject Markdown.
             <CopyCode code={TEMPLATE} />
           </li>
-        </ol>
+        </Steps>
 
-        <div className="site-deeper">
+        <Callout>
           <p>
             <strong>More docs.</strong> <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> covers modes,
             controlled and uncontrolled use and images, <a href={docsUrl('/docs/editor/headless')}>headless</a>{' '}
@@ -188,10 +187,9 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
             through editing byte for byte. For the plugins, see <a href={docsUrl('/docs/templates/basics')}>templates</a>{' '}
             and <a href={docsUrl('/docs/mermaid')}>Mermaid</a>.
           </p>
-        </div>
+        </Callout>
 
         <section id="round-trip">
-          <span className="site-eyebrow">Round trip</span>
           <h2>Paste Markdown, save it, read the diff</h2>
           <p>
             Paste a document below. The editor opens it and saves it straight back through the same
@@ -239,9 +237,9 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
         </ul>
 
         <Faq id="editor-faq" items={FAQ} />
-      </div>
+      </Prose>
 
       <JsonLd data={webApplication({ name: TITLE, url: sites.editorDemo, description: DESCRIPTION })} />
-    </article>
+    </Page>
   )
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { CopyCode } from '../../shared/CopyCode'
+import { Callout, Feature, Features, Hero, LinkRow, Page, Prose, Steps } from '../../shared/Page'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../shared/Seo'
 
@@ -83,43 +84,42 @@ const FAQ: readonly FaqItem[] = [
 
 export default function Landing(): ReactNode {
   return (
-    <article className="site-landing">
-      <header className="site-hero">
-        <span className="site-eyebrow">Free and open source, runs in your browser</span>
-        <h1>{TITLE}</h1>
-        <p className="site-lede">
-          Paste some Markdown, try the React Markdown Kit renderer&rsquo;s options, and copy the
-          code that produced the output. The renderer is safe and unstyled by default, and it takes
-          the same props as react-markdown.
-        </p>
-        <p className="site-hero-links">
+    <Page>
+      <Hero
+        kicker="Free and open source, runs in your browser"
+        title={TITLE}
+        lede={
+          <>
+            Paste some Markdown, try the React Markdown Kit renderer&rsquo;s options, and copy the
+            code that produced the output. The renderer is safe and unstyled by default, and it takes
+            the same props as react-markdown.
+          </>
+        }
+      >
+        <LinkRow>
           <a href={docsUrl('/react-markdown-renderer')}>Renderer docs</a>
           <a href={npmUrl('renderer')}>npm</a>
           <a href={sites.github}>GitHub</a>
           <a href={sites.home}>React Markdown Kit</a>
-        </p>
-      </header>
+        </LinkRow>
+      </Hero>
 
-      <ul className="site-features">
-        <li>
-          <strong>Safe by default</strong>
+      <Features>
+        <Feature title="Safe by default">
           Raw HTML is shown as text and never run, and unsafe URL schemes are emptied. You don&rsquo;t
           have to configure anything for this.
-        </li>
-        <li>
-          <strong>Same props as react-markdown</strong>
+        </Feature>
+        <Feature title="Same props as react-markdown">
           The props match react-markdown 10 across 39 tested comparisons. There are three
           documented differences, and a codemod for them.
-        </li>
-        <li>
-          <strong>Works on the server</strong>
+        </Feature>
+        <Feature title="Works on the server">
           There&rsquo;s no <code>use client</code> directive, so you can render in server components
           and static builds. You can also precompile once and re-render 2.8x faster.
-        </li>
-      </ul>
+        </Feature>
+      </Features>
 
-      <div className="site-prose">
-        <span className="site-eyebrow">Install</span>
+      <Prose>
         <h2>Install the package</h2>
         <CopyCode code="npm install @react-markdown-kit/renderer" />
         <p>
@@ -128,9 +128,8 @@ export default function Landing(): ReactNode {
           server components, during server rendering and in static builds.
         </p>
 
-        <span className="site-eyebrow">How to</span>
         <h2>Render Markdown in three steps</h2>
-        <ol className="site-steps">
+        <Steps>
           <li>
             <strong>Render a string.</strong> Raw HTML is shown as text and never run, and unsafe URL
             schemes are emptied (no config needed).
@@ -148,9 +147,9 @@ export default function Landing(): ReactNode {
             playground above uses a component for every element, and its Code tab has the source.
             <CopyCode code={STYLE} />
           </li>
-        </ol>
+        </Steps>
 
-        <div className="site-deeper">
+        <Callout>
           <p>
             <strong>More docs.</strong> The <a href={docsUrl('/docs/getting-started')}>getting started guide</a>{' '}
             covers every prop, <a href={docsUrl('/docs/renderer/components')}>components</a> and{' '}
@@ -158,7 +157,7 @@ export default function Landing(): ReactNode {
             <a href={docsUrl('/docs/compatibility')}>compatibility matrix</a> lists each difference from{' '}
             <code>react-markdown</code> along with the test that checks it.
           </p>
-        </div>
+        </Callout>
 
         <h2>About this playground</h2>
         <ul>
@@ -188,9 +187,9 @@ export default function Landing(): ReactNode {
         </ul>
 
         <Faq id="renderer-faq" items={FAQ} />
-      </div>
+      </Prose>
 
       <JsonLd data={webApplication({ name: TITLE, url: sites.rendererDemo, description: DESCRIPTION })} />
-    </article>
+    </Page>
   )
 }

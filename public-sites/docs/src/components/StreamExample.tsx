@@ -2,8 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react'
 import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
+import { cn } from '@zuilib/primitives/lib/cn'
 import Slider from '@zuilib/primitives/slider'
-import styles from './StreamExample.module.css'
+import Text from '@zuilib/primitives/text'
+import { CAPTION, EXAMPLE, NOTE, OUTPUT, PANE_LABEL, SOURCE, SPLIT } from './exampleStyles'
 
 const gfmPreset = defineMarkdownPreset({ extensions: [gfm()] })
 
@@ -67,9 +69,9 @@ export default function StreamExample({
   const done = shown >= tokens.length
 
   return (
-    <ActivityScope feature="stream-example" as="figure" className={styles.example}>
-      {title !== undefined && <figcaption className={styles.caption}>{title}</figcaption>}
-      <div className={styles.controls}>
+    <ActivityScope feature="stream-example" as="figure" className={EXAMPLE}>
+      {title !== undefined && <figcaption className={CAPTION}>{title}</figcaption>}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2.5">
         <Button
           variant="outline"
           size="sm"
@@ -102,7 +104,7 @@ export default function StreamExample({
         >
           One token
         </Button>
-        <div className={styles.scrub}>
+        <div className="flex items-center gap-2">
           <Slider
             track="scrub"
             size="sm"
@@ -116,27 +118,29 @@ export default function StreamExample({
               setShown(value)
             }}
           />
-          <span className={styles.count}>
+          <Text as="span" size="sm" muted className="font-mono tabular-nums">
             {shown} / {tokens.length}
-          </span>
+          </Text>
         </div>
       </div>
-      <div className={styles.split}>
-        <div className={styles.pane}>
-          <div className={styles.paneLabel}>Tokens received</div>
-          <pre className={styles.source}>
+      <div className={SPLIT}>
+        <div>
+          <div className={PANE_LABEL}>Tokens received</div>
+          <pre className={cn(SOURCE, 'min-h-56')}>
             {prefix}
-            {!done && <span className={styles.caret} />}
+            {!done && (
+              <span className="inline-block h-[1em] w-[0.5em] bg-primary align-text-bottom motion-safe:animate-[fade-out_1s_steps(2,jump-none)_infinite]" />
+            )}
           </pre>
         </div>
-        <div className={styles.pane}>
-          <div className={styles.paneLabel}>Rendered from the prefix</div>
-          <div className={`${styles.output} rmk-document`}>
+        <div>
+          <div className={PANE_LABEL}>Rendered from the prefix</div>
+          <div className={cn(OUTPUT, 'min-h-56 rmk-document')}>
             <Markdown {...(useGfm ? { preset: gfmPreset } : {})}>{prefix}</Markdown>
           </div>
         </div>
       </div>
-      {children !== undefined && <div className={styles.note}>{children}</div>}
+      {children !== undefined && <div className={NOTE}>{children}</div>}
     </ActivityScope>
   )
 }

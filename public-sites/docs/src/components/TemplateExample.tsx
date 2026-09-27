@@ -3,8 +3,10 @@ import Markdown, { compileMarkdown, defineMarkdownPreset, gfm } from '@react-mar
 import { template } from '@react-markdown-kit/template'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
+import Badge from '@zuilib/primitives/badge'
 import Disclosure from '@zuilib/primitives/disclosure'
-import styles from './Example.module.css'
+import { cn } from '@zuilib/primitives/lib/cn'
+import { CAPTION, EXAMPLE, NOTE, OUTPUT, PANE_LABEL, SOURCE, SPLIT } from './exampleStyles'
 
 const gfmPreset = defineMarkdownPreset({ extensions: [gfm()] })
 
@@ -58,10 +60,10 @@ export default function TemplateExample({
   }, [markdown, useGfm, active])
 
   return (
-    <ActivityScope feature="template-example" as="figure" className={styles.example}>
-      {title !== undefined && <figcaption className={styles.caption}>{title}</figcaption>}
+    <ActivityScope feature="template-example" as="figure" className={EXAMPLE}>
+      {title !== undefined && <figcaption className={CAPTION}>{title}</figcaption>}
 
-      <div className={styles.switcher} role="group" aria-label="Sample data">
+      <div className="flex flex-wrap gap-1.5 border-b border-border px-3 py-2.5" role="group" aria-label="Sample data">
         {datasets.map((dataset, at) => (
           <Button
             key={dataset.label}
@@ -76,22 +78,28 @@ export default function TemplateExample({
         ))}
       </div>
 
-      <div className={styles.split}>
-        <div className={styles.pane}>
-          <div className={styles.paneLabel}>
-            Authored template <span className={styles.badgeOk}>never changes</span>
+      <div className={SPLIT}>
+        <div>
+          <div className={PANE_LABEL}>
+            Authored template
+            <Badge variant="subtle" tone="success" size="sm">
+              never changes
+            </Badge>
           </div>
-          <pre className={styles.source}>{markdown}</pre>
+          <pre className={cn(SOURCE, 'min-h-32')}>{markdown}</pre>
         </div>
-        <div className={styles.pane}>
-          <div className={styles.paneLabel}>
-            Resolved for {active?.label} <span className={styles.badgeEdit}>changes</span>
+        <div>
+          <div className={PANE_LABEL}>
+            Resolved for {active?.label}
+            <Badge variant="subtle" tone="warning" size="sm">
+              changes
+            </Badge>
           </div>
-          <div className={`${styles.output} rmk-document`}>
+          <div className={cn(OUTPUT, 'rmk-document')}>
             {result.ok ? (
               <Markdown {...(useGfm ? { preset: gfmPreset } : {})} document={result.document} />
             ) : (
-              <ul className={styles.diagnostics}>
+              <ul className="m-0! pl-[1.1rem]! text-base">
                 {result.diagnostics.map((diagnostic) => (
                   <li key={`${diagnostic.code}-${diagnostic.path ?? ''}`}>
                     <code>{diagnostic.code}</code> {diagnostic.message}
@@ -105,17 +113,17 @@ export default function TemplateExample({
 
       <Disclosure
         track="data"
-        className={styles.details}
+        className="rounded-none border-0 border-t shadow-none"
         title={
           <>
             Data passed to <code>template()</code>
           </>
         }
       >
-        <pre className={styles.source}>{JSON.stringify(active?.data ?? {}, null, 2)}</pre>
+        <pre className={cn(SOURCE, 'pl-0!')}>{JSON.stringify(active?.data ?? {}, null, 2)}</pre>
       </Disclosure>
 
-      {children !== undefined && <div className={styles.note}>{children}</div>}
+      {children !== undefined && <div className={NOTE}>{children}</div>}
     </ActivityScope>
   )
 }

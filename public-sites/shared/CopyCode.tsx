@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import Button from '@zuilib/primitives/button'
 
 export function CopyCode({ code, label = 'Copy' }: { readonly code: string; readonly label?: string }): ReactNode {
   const ref = useRef<HTMLElement>(null)
@@ -28,13 +29,20 @@ export function CopyCode({ code, label = 'Copy' }: { readonly code: string; read
   }
 
   return (
-    <div className="site-code-block">
-      <pre className="site-code">
+    <div data-copy-code className="relative mb-6">
+      <pre className="m-0 overflow-x-auto rounded-md border border-border bg-muted p-4 pr-20 font-mono text-sm leading-normal text-foreground">
         <code ref={ref}>{code}</code>
       </pre>
-      <button type="button" className="site-code-copy" data-zui-tag="copy-code" aria-label={copied ? 'Copied' : `${label} to clipboard`} onClick={copy}>
+      <Button
+        variant="outline"
+        size="sm"
+        track="copy-code"
+        className="absolute top-2 right-2"
+        aria-label={copied ? 'Copied' : `${label} to clipboard`}
+        onClick={copy}
+      >
         {copied ? 'Copied' : label}
-      </button>
+      </Button>
     </div>
   )
 }

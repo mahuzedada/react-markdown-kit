@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
 import { ActivityScope } from '@zuilib/primitives/activity'
-import styles from './Example.module.css'
+import { cn } from '@zuilib/primitives/lib/cn'
+import { CAPTION, EXAMPLE, NOTE, OUTPUT, PANE_LABEL, SOURCE, SPLIT } from './exampleStyles'
 
 const gfmPreset = defineMarkdownPreset({ extensions: [gfm()] })
 
@@ -38,16 +39,16 @@ export default function RenderExample({
   const value = editable ? source : markdown
 
   return (
-    <ActivityScope feature="render-example" as="figure" className={styles.example}>
-      {title !== undefined && <figcaption className={styles.caption}>{title}</figcaption>}
-      <div className={styles.split}>
-        <div className={styles.pane}>
-          <div className={styles.paneLabel}>
+    <ActivityScope feature="render-example" as="figure" className={EXAMPLE}>
+      {title !== undefined && <figcaption className={CAPTION}>{title}</figcaption>}
+      <div className={SPLIT}>
+        <div>
+          <div className={PANE_LABEL}>
             {editable ? 'Markdown (edit me)' : 'Markdown'}
           </div>
           {editable ? (
             <textarea
-              className={styles.source}
+              className={cn(SOURCE, 'min-h-32 resize-y -outline-offset-2')}
               value={source}
               spellCheck={false}
               onChange={(event) => setSource(event.target.value)}
@@ -55,12 +56,12 @@ export default function RenderExample({
               data-zui-tag="source"
             />
           ) : (
-            <pre className={styles.source}>{markdown}</pre>
+            <pre className={cn(SOURCE, 'min-h-32')}>{markdown}</pre>
           )}
         </div>
-        <div className={styles.pane}>
-          <div className={styles.paneLabel}>Rendered</div>
-          <div className={`${styles.output} rmk-document`}>
+        <div>
+          <div className={PANE_LABEL}>Rendered</div>
+          <div className={cn(OUTPUT, 'rmk-document')}>
             <Markdown
               {...(useGfm ? { preset: gfmPreset } : {})}
               {...(rendererProps as Record<string, never>)}
@@ -70,7 +71,7 @@ export default function RenderExample({
           </div>
         </div>
       </div>
-      {children !== undefined && <div className={styles.note}>{children}</div>}
+      {children !== undefined && <div className={NOTE}>{children}</div>}
     </ActivityScope>
   )
 }

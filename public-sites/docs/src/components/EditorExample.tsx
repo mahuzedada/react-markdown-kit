@@ -1,7 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import BrowserOnly from '@docusaurus/BrowserOnly'
 import type { EditorExampleProps } from './EditorExampleInner'
-import styles from './Example.module.css'
 
 export type { EditorExampleProps }
 
@@ -18,7 +17,10 @@ const Inner = lazy(() => import('./EditorExampleInner'))
 export default function EditorExample(props: EditorExampleProps): ReactNode {
   const height = (props.height ?? 320) + 96
   const placeholder = (
-    <div className={styles.placeholder} style={{ height }}>
+    <div
+      className="mb-7 flex items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground"
+      style={{ height }}
+    >
       Loading editor
     </div>
   )

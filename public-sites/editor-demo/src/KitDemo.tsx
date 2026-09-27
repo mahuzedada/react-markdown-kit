@@ -3,11 +3,13 @@ import Markdown, { compileMarkdown, defineMarkdownPreset, gfm } from '@react-mar
 import { template } from '@react-markdown-kit/template'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
 import { ActivityScope } from '@zuilib/primitives/activity'
+import Badge from '@zuilib/primitives/badge'
 import Button from '@zuilib/primitives/button'
+import Text from '@zuilib/primitives/text'
+import { cn } from '@zuilib/primitives/lib/cn'
 import { mermaid } from '@react-markdown-kit/mermaid/editor'
 import { templateVariables } from '@react-markdown-kit/template/editor'
 import { useShareHash } from './use-share-hash'
-import styles from './KitDemo.module.css'
 
 import '@react-markdown-kit/renderer/styles.css'
 import '@react-markdown-kit/editor/styles.css'
@@ -60,6 +62,13 @@ type CopyState = 'copied' | 'blocked' | undefined
 /** How long the button reports the copy before going back to its label. */
 const COPIED_MS = 1500
 
+/** One pane of the workbench, and the title bar across its top. */
+const COLUMN = 'flex min-h-0 min-w-0 flex-col'
+const COLUMN_HEAD = 'flex items-center justify-between gap-2 border-b border-border px-3 py-1.5'
+
+/** A line under the editor about the share link. */
+const NOTE = 'm-0 border-t border-border px-3 py-1.5'
+
 /**
  * The editor, with both plugins, wired the way a real application would wire
  * them: the editor authors a template with placeholders as chips and a
@@ -110,13 +119,18 @@ export default function KitDemo(): ReactNode {
 
   return (
     <ActivityScope feature="editor-workbench">
-      <div className={styles.shell}>
-        <div className={styles.body}>
-          <div className={styles.col}>
-            <div className={styles.colHead}>
-              <span>Authored template</span>
-              <span className={styles.actions}>
-                <span className={styles.badgeStable}>saved as Markdown, placeholders and all</span>
+      {/* Full-bleed and exactly one viewport tall; the page scrolls past it. */}
+      <div className="flex h-dvh flex-col overflow-hidden border-b border-border bg-card">
+        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className={COLUMN}>
+            <div className={COLUMN_HEAD}>
+              <Text as="span" size="sm" weight="semibold">
+                Authored template
+              </Text>
+              <span className="flex min-w-0 items-center gap-1.5">
+                <Badge variant="subtle" tone="success" size="sm">
+                  saved as Markdown, placeholders and all
+                </Badge>
                 <Button
                   variant="outline"
                   tone="primary"
@@ -130,33 +144,46 @@ export default function KitDemo(): ReactNode {
                 </Button>
               </span>
             </div>
-            <div className={styles.editorWrap}>
+            {/* The editor fills its pane; its toolbar stays put and only the content scrolls. */}
+            <div
+              className={cn(
+                'flex min-h-0 flex-1 flex-col',
+                // The kit's stylesheet is unlayered, so overrides of its own properties need `!`.
+                '[&>.rmk-editor]:min-h-0 [&>.rmk-editor]:flex-1 [&>.rmk-editor]:rounded-none! [&>.rmk-editor]:border-0!',
+                '[&_.rmk-editor_.rmk-content]:min-h-0! [&_.rmk-editor_.rmk-content]:flex-1 [&_.rmk-editor_.rmk-content]:overflow-auto',
+                '[&_.rmk-editor_.rmk-source-textarea]:min-h-0! [&_.rmk-editor_.rmk-source-textarea]:flex-1 [&_.rmk-editor_.rmk-source-textarea]:resize-none!',
+              )}
+            >
               <MarkdownEditor preset={preset} extensions={editorExtensions} value={source} onChange={setSource} />
             </div>
             {copied === 'blocked' ? (
-              <p className={styles.note}>
+              <Text size="sm" className={NOTE}>
                 This browser blocked the clipboard, but the same link is in the address bar.
-              </p>
+              </Text>
             ) : null}
             {unreadable ? (
-              <p className={styles.note}>
+              <Text size="sm" className={NOTE}>
                 This browser couldn&rsquo;t read the link, so you&rsquo;re seeing the example document instead. The
                 shared link is still in the address bar, and editing will replace it.
-              </p>
+              </Text>
             ) : null}
           </div>
 
-          <div className={styles.col}>
-            <div className={styles.colHead}>
-              <span>Resolved for {CUSTOMER.label}</span>
-              <span className={styles.badgeLive}>follows every edit</span>
+          <div className={cn(COLUMN, 'border-l border-border max-[900px]:border-t max-[900px]:border-l-0')}>
+            <div className={COLUMN_HEAD}>
+              <Text as="span" size="sm" weight="semibold">
+                Resolved for {CUSTOMER.label}
+              </Text>
+              <Badge variant="subtle" tone="warning" size="sm">
+                follows every edit
+              </Badge>
             </div>
             {result.ok ? (
-              <div className={`${styles.output} rmk-document`}>
+              <div className="rmk-document min-h-0 flex-1 overflow-auto px-4.5 py-3.5">
                 <Markdown preset={preset} document={result.document} />
               </div>
             ) : (
-              <ul className={styles.diagnostics}>
+              <ul className="m-0 py-3 pr-3 pl-7.5 text-sm text-danger-text">
                 {result.diagnostics.map((diagnostic, index) => (
                   <li key={`${diagnostic.code}-${index}`}>
                     <code>{diagnostic.code}</code>{' '}

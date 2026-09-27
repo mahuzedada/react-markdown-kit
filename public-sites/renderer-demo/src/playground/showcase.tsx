@@ -8,6 +8,7 @@
  * The Code tab shows `SHOWCASE_SOURCE`, a compact copy of the same code.
  */
 import { Children, cloneElement, isValidElement, useState, type ComponentProps, type ReactNode } from 'react'
+import Button from '@zuilib/primitives/button'
 
 /** The parts of a hast node the showcase reads. Avoids a type dependency on hast. */
 interface HastNode {
@@ -124,7 +125,7 @@ function CodeWindow({ node, children, ...props }: WithNode<ComponentProps<'pre'>
           {title !== undefined && language !== undefined ? `${language} · ` : ''}
           {lines.length} {lines.length === 1 ? 'line' : 'lines'}
         </span>
-        <button type="button" className="sc-code-copy" data-zui-tag="sample-code-copy" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+        <Button variant="outline" size="sm" track="sample-code-copy" className="sc-code-copy h-auto" onClick={copy}>{copied ? 'Copied' : 'Copy'}</Button>
       </figcaption>
       <pre {...props} className="sc-code-body">
         <code className={language === undefined ? undefined : `language-${language}`}>

@@ -64,12 +64,6 @@ export function useTheme(): ThemeState {
   return { theme, toggle }
 }
 
-/**
- * The demo is the first thing on the page, so there is no header. Everything
- * that is not the demo (the home page, the other sites, the docs, the colour
- * mode) sits in a footer after it. `index.html` sets the initial `data-theme` before paint;
- * the toggle only reads and updates it.
- */
 export function Shell({ site, children }: ShellProps): ReactNode {
   const { theme, toggle } = useTheme()
 
@@ -77,12 +71,12 @@ export function Shell({ site, children }: ShellProps): ReactNode {
     <>
       {children}
       <ActivityScope feature="footer">
-        <footer className="site-footer">
-          <a className="site-brand" href={sites.home} data-zui-tag="brand">
-            <img src="/logo.svg" alt="" />
+        <footer className="mx-auto flex print:hidden max-w-(--container-width-md) flex-wrap items-center gap-x-4 gap-y-3 border-t border-border px-4 pt-5 pb-10">
+          <a className="flex items-center gap-2 font-semibold whitespace-nowrap text-foreground no-underline" href={sites.home} data-zui-tag="brand">
+            <img src="/logo.svg" alt="" className="size-6" />
             React Markdown Kit
           </a>
-          <nav className="site-nav" aria-label="Sites">
+          <nav className="ml-auto flex flex-wrap items-center gap-1" aria-label="Sites">
             {SITE_LINKS.map((link) => (
               <Button
                 key={link.track}
@@ -92,6 +86,7 @@ export function Shell({ site, children }: ShellProps): ReactNode {
                 size="sm"
                 track={link.track}
                 aria-current={link.site === site ? 'page' : undefined}
+                className="aria-[current=page]:font-semibold aria-[current=page]:text-primary-text"
               >
                 {link.label}
               </Button>

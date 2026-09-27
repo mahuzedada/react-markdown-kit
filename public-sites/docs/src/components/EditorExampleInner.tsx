@@ -6,7 +6,9 @@ import {
   type MarkdownExtension,
 } from '@react-markdown-kit/editor'
 import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
-import styles from './Example.module.css'
+import Badge from '@zuilib/primitives/badge'
+import { cn } from '@zuilib/primitives/lib/cn'
+import { CAPTION, EXAMPLE, PANE_LABEL, SOURCE } from './exampleStyles'
 
 import '@react-markdown-kit/editor/styles.css'
 import '@react-markdown-kit/renderer/styles.css'
@@ -54,9 +56,9 @@ export default function EditorExampleInner({
   const untouched = value === markdown
 
   return (
-    <figure className={styles.example}>
-      {title !== undefined && <figcaption className={styles.caption}>{title}</figcaption>}
-      <div className={styles.editorShell} style={{ minHeight: height }}>
+    <figure className={EXAMPLE}>
+      {title !== undefined && <figcaption className={CAPTION}>{title}</figcaption>}
+      <div className="border-b border-border" style={{ minHeight: height }}>
         <MarkdownEditor
           value={value}
           onChange={setValue}
@@ -68,14 +70,14 @@ export default function EditorExampleInner({
         />
       </div>
       {showSource && (
-        <div className={styles.pane}>
-          <div className={styles.paneLabel}>
-            Saved Markdown{' '}
-            <span className={untouched ? styles.badgeOk : styles.badgeEdit}>
+        <div className="min-w-0">
+          <div className={PANE_LABEL}>
+            Saved Markdown
+            <Badge variant="subtle" tone={untouched ? 'success' : 'warning'} size="sm">
               {untouched ? 'unchanged' : 'edited'}
-            </span>
+            </Badge>
           </div>
-          <pre className={styles.source}>{value}</pre>
+          <pre className={cn(SOURCE, 'min-h-32')}>{value}</pre>
         </div>
       )}
     </figure>

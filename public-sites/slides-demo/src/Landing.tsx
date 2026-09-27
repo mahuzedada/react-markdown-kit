@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { CopyCode } from '../../shared/CopyCode'
+import { Callout, Feature, Features, Hero, LinkRow, Page, Prose, Steps } from '../../shared/Page'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../shared/Seo'
 
@@ -113,43 +114,43 @@ const FAQ: readonly FaqItem[] = [
 
 export default function Landing(): ReactNode {
   return (
-    <article className="site-landing">
-      <header className="site-hero">
-        <span className="site-eyebrow">Free and open source, no account needed</span>
-        <h1>{TITLE}</h1>
-        <p className="site-lede">
-          Write a deck in plain Markdown on the left and it renders on the right. You can present
-          it from this page, open a presenter window with your notes, share a link that holds the
-          whole deck, or print it with one page per slide.
-        </p>
-        <p className="site-hero-links">
+    // Print is the deck alone: the landing copy and the footer after it stay off the page.
+    <Page className="print:hidden">
+      <Hero
+        kicker="Free and open source, no account needed"
+        title={TITLE}
+        lede={
+          <>
+            Write a deck in plain Markdown on the left and it renders on the right. You can present
+            it from this page, open a presenter window with your notes, share a link that holds the
+            whole deck, or print it with one page per slide.
+          </>
+        }
+      >
+        <LinkRow>
           <a href={docsUrl('/docs/slides')}>Plugin docs</a>
           <a href={npmUrl('slides')}>npm</a>
           <a href={sites.github}>GitHub</a>
           <a href={sites.home}>React Markdown Kit</a>
-        </p>
-      </header>
+        </LinkRow>
+      </Hero>
 
-      <ul className="site-features">
-        <li>
-          <strong>Plain Markdown</strong>
+      <Features>
+        <Feature title="Plain Markdown">
           Slides split on <code>---</code>, notes go after <code>???</code> and fragments after{' '}
           <code>--</code>. GitHub still renders the file as a normal document.
-        </li>
-        <li>
-          <strong>Present mode</strong>
+        </Feature>
+        <Feature title="Present mode">
           Full screen with keyboard and pointer navigation. There&rsquo;s a presenter window with the
           next slide and a clock, and you can deep link to any slide.
-        </li>
-        <li>
-          <strong>Uses the same renderer</strong>
+        </Feature>
+        <Feature title="Uses the same renderer">
           One plugin turns the Markdown your app stores into an <code>&lt;article&gt;</code> of{' '}
           <code>&lt;section&gt;</code>s. It works on the server or in the browser.
-        </li>
-      </ul>
+        </Feature>
+      </Features>
 
-      <div className="site-prose">
-        <span className="site-eyebrow">Install</span>
+      <Prose>
         <h2>Install the plugin, and the editor if you want to author decks</h2>
         <CopyCode code="npm install @react-markdown-kit/renderer @react-markdown-kit/slides" />
         <CopyCode code="npm install @react-markdown-kit/editor" />
@@ -160,9 +161,8 @@ export default function Landing(): ReactNode {
           of this page is built from the editor and the <code>/editor</code> entry.
         </p>
 
-        <span className="site-eyebrow">How to</span>
         <h2>Making slides from Markdown</h2>
-        <ol className="site-steps">
+        <Steps>
           <li>
             <strong>Render a deck.</strong> Put <code>slides()</code> in a preset. Slides split on{' '}
             <code>---</code>, the notes start at <code>???</code>, a <code>--</code> is a pause, and{' '}
@@ -188,9 +188,9 @@ export default function Landing(): ReactNode {
             <CopyCode code={PRESENT} />
             <CopyCode code={EDIT} />
           </li>
-        </ol>
+        </Steps>
 
-        <div className="site-deeper">
+        <Callout>
           <p>
             <strong>More docs.</strong> The <a href={docsUrl('/docs/slides')}>slides plugin docs</a> cover
             the dialect, every directive and diagnostic, the emitted HTML, the tokens the stylesheet
@@ -198,9 +198,8 @@ export default function Landing(): ReactNode {
             <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> covers the editor the left pane
             lives in.
           </p>
-        </div>
+        </Callout>
 
-        <span className="site-eyebrow">Embed</span>
         <h2>Put a deck in your own page</h2>
         <p>
           If you add <code>embed=1</code> to a share link, the page hides everything except the deck
@@ -247,9 +246,9 @@ export default function Landing(): ReactNode {
         </ul>
 
         <Faq id="slides-faq" items={FAQ} />
-      </div>
+      </Prose>
 
       <JsonLd data={webApplication({ name: TITLE, url: sites.slidesDemo, description: DESCRIPTION })} />
-    </article>
+    </Page>
   )
 }

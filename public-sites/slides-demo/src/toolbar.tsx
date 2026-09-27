@@ -4,14 +4,17 @@
  * image and history, then the slides plugin's four commands, and only the
  * rich and source modes. `thematicBreak` is hidden because the plugin's
  * "New slide" writes the same `---` through its own node, and `preview` is
- * hidden because the right pane already is the preview. The buttons reuse
- * the editor stylesheet's `rmk-toolbar*` classes, so they look like the
- * default toolbar; the slides group also shows its labels as text. Each
- * button carries a `data-zui-tag`, so the activity capture reports it like
- * a primitive.
+ * hidden because the right pane already is the preview. The buttons are zui
+ * ghost buttons; the slides group also shows its labels as text, and
+ * collapses to icons like the others in a phone-width pane (the labels stay
+ * in aria-label and title).
  */
 import type { MarkdownToolbarItem, MarkdownToolbarRenderer } from '@react-markdown-kit/editor'
-import styles from './SlidesDemo.module.css'
+import Button from '@zuilib/primitives/button'
+import { cn } from '@zuilib/primitives/lib/cn'
+
+/** The slides buttons show their labels: the buttons are the point of the demo. */
+const LABELLED_BUTTON = 'w-auto gap-1.5 text-sm px-[0.55rem] whitespace-nowrap max-[480px]:w-8 max-[480px]:p-0'
 
 const HIDDEN: ReadonlySet<string> = new Set(['thematicBreak', 'preview'])
 
@@ -39,29 +42,30 @@ export const renderToolbar: MarkdownToolbarRenderer = (items) => (
       return (
         <div
           key={name}
-          className={labelled ? `rmk-toolbar-group ${styles.slidesGroup}` : 'rmk-toolbar-group'}
+          className={cn('rmk-toolbar-group', labelled && 'flex-wrap')}
           role="group"
           aria-label={GROUP_LABELS[name]}
         >
           {group.map((item) => (
-            <button
+            <Button
               key={item.id}
-              type="button"
-              className={item.active ? 'rmk-toolbar-button rmk-toolbar-button-active' : 'rmk-toolbar-button'}
+              variant="ghost"
+              size="icon"
+              track={`toolbar-${item.id}`}
+              className={cn('size-8 text-base', item.active && 'bg-accent text-accent-foreground', labelled && LABELLED_BUTTON)}
               aria-label={item.label}
               aria-pressed={item.active}
               title={item.label}
               disabled={item.disabled}
               data-rmk-toolbar-item={item.id}
-              data-zui-tag={`toolbar-${item.id}`}
               onMouseDown={(event) => {
                 event.preventDefault()
               }}
               onClick={item.run}
             >
               {item.icon}
-              {labelled ? <span>{item.label}</span> : null}
-            </button>
+              {labelled ? <span className="max-[480px]:hidden">{item.label}</span> : null}
+            </Button>
           ))}
         </div>
       )

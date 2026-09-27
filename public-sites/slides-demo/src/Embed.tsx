@@ -3,7 +3,6 @@ import { Markdown, defineMarkdownPreset, gfm, type MarkdownPreset } from '@react
 import { slides } from '@react-markdown-kit/slides/present'
 import { SAMPLE_DECK } from './sample-deck'
 import { decodeSource, fullDemoLink, readSourceParam } from './url-state'
-import styles from './Embed.module.css'
 
 import '@react-markdown-kit/renderer/styles.css'
 import '@react-markdown-kit/slides/styles.css'
@@ -46,15 +45,22 @@ export default function Embed(): ReactNode {
   }, [])
 
   return (
-    <div className={styles.frame}>
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-background">
       {source === undefined ? (
-        <div className={styles.deck} aria-busy="true" />
+        <div className="min-h-0 flex-1 overflow-auto" aria-busy="true" />
       ) : (
-        <div className={`${styles.deck} rmk-document`}>
+        <div className="rmk-document min-h-0 flex-1 overflow-auto">
           <Markdown preset={PRESET}>{source}</Markdown>
         </div>
       )}
-      <a className={styles.open} href={link} target="_blank" rel="noopener noreferrer" data-zui-tag="embed:open-full-demo">
+      {/* Above the deck, which is z-index 1000 while it presents, and in the corner away from its control bar. */}
+      <a
+        className="fixed top-2 right-2 z-1001 rounded-(--radius) border border-border bg-card/88 px-2 py-[0.2rem] text-xs text-foreground no-underline opacity-75 hover:bg-card hover:opacity-100 focus-visible:bg-card focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-zui-tag="embed:open-full-demo"
+      >
         Open in React Markdown Kit
       </a>
     </div>

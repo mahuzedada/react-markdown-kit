@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Markdown, compileMarkdown, defineMarkdownPreset, gfm, type MarkdownPreset } from '@react-markdown-kit/renderer'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
 import { ActivityScope } from '@zuilib/primitives/activity'
+import { cn } from '@zuilib/primitives/lib/cn'
+import Badge from '@zuilib/primitives/badge'
 import Button from '@zuilib/primitives/button'
+import Heading from '@zuilib/primitives/heading'
+import Text from '@zuilib/primitives/text'
 import { slides } from '@react-markdown-kit/slides/editor'
 import { SAMPLE_DECK } from './sample-deck'
 import { renderToolbar } from './toolbar'
@@ -18,7 +22,6 @@ import {
   writeSourceParam,
   type DemoView,
 } from './url-state'
-import styles from './SlidesDemo.module.css'
 
 import '@react-markdown-kit/renderer/styles.css'
 import '@react-markdown-kit/editor/styles.css'
@@ -29,6 +32,23 @@ const SYNC_CHANNEL = 'rmk-slides-demo'
 const PRESENTER_WINDOW = 'rmk-slides-presenter'
 const URL_DEBOUNCE_MS = 400
 const STATUS_MS = 3500
+
+/*
+ * Chrome for the workbench: the header and the two panes. The editor, the
+ * deck and present mode are styled by the kit's own stylesheets. Kit rules
+ * are unlayered and beat Tailwind's layered utilities, so a class that
+ * overrides a property the kit sets carries `!`.
+ *
+ * Print is the deck alone: one slide per 16in x 9in page (the `rmk-slides`
+ * page in shared/theme.css), nothing else. Only the width is set, so the
+ * plugin's aspect-ratio gives the height: a 16:9 slide fills the page, a 4:3
+ * slide is 12in wide, centred, and still 9in tall.
+ */
+const SHELL =
+  'flex h-dvh flex-col overflow-hidden border-b border-border bg-card print:h-auto print:overflow-visible print:border-0 print:bg-transparent print:[page:rmk-slides]'
+const PANE = 'flex min-h-0 min-w-0 flex-col'
+const PANE_HEAD = 'flex items-center justify-between gap-2 border-b border-border px-3 py-2 print:hidden'
+const INLINE_CODE = '[&_code]:font-mono [&_code]:text-[0.9em]'
 
 /**
  * One preset for both panes. The `/editor` entry's `slides()` carries the
@@ -90,7 +110,7 @@ export default function SlidesDemo(): ReactNode {
     }
   }, [])
 
-  if (initial === undefined) return <div className={styles.shell} aria-busy="true" />
+  if (initial === undefined) return <div className={SHELL} aria-busy="true" />
   return <Workbench preset={preset} initial={initial} />
 }
 
@@ -190,19 +210,18 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
 
   return (
     <ActivityScope feature="slides-workbench">
-      <div className={styles.shell}>
-        <header className={styles.header}>
-          <div className={styles.heading}>
-            <span className={styles.eyebrow}>Deck</span>
-            <h2 className={styles.title}>{meta.title === '' ? 'Untitled deck' : meta.title}</h2>
-          </div>
-          <span className={styles.badgeOk}>
+      <div className={SHELL}>
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5 print:hidden">
+          <Heading as="h2" size="md" truncate className="m-0 mr-1 max-w-md min-w-0 leading-snug">
+            {meta.title === '' ? 'Untitled deck' : meta.title}
+          </Heading>
+          <Badge variant="subtle" tone="success" size="sm" className="whitespace-nowrap">
             {meta.count} {meta.count === 1 ? 'slide' : 'slides'}
-          </span>
-          <span className={worst === 'ok' || worst === 'info' ? styles.badgeOk : styles.badgeWarn}>
+          </Badge>
+          <Badge variant="subtle" tone={worst === 'ok' || worst === 'info' ? 'success' : 'warning'} size="sm" className="whitespace-nowrap">
             {problems.length === 0 ? 'no problems' : `${problems.length} ${problems.length === 1 ? 'note' : 'notes'} from the parser`}
-          </span>
-          <div className={styles.actions} role="group" aria-label="Deck actions">
+          </Badge>
+          <div className="ml-auto flex flex-wrap gap-1.5" role="group" aria-label="Deck actions">
             <Button variant="outline" size="sm" track="share" onClick={() => void share()}>
               Share
             </Button>
@@ -216,40 +235,71 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
               Reset
             </Button>
           </div>
-          <output className={styles.status} aria-live="polite">
+          <output className="min-h-0 basis-full text-sm text-foreground empty:hidden" aria-live="polite">
             {status}
           </output>
         </header>
 
-        {notice === undefined ? null : <p className={styles.notice}>{notice}</p>}
+        {notice === undefined ? null : (
+          <Text size="sm" tone="warning" className="m-0 border-b border-border bg-warning/10 px-4 py-2 print:hidden">
+            {notice}
+          </Text>
+        )}
 
-        <div className={styles.body}>
-          <div className={styles.col}>
-            <div className={styles.colHead}>
-              <span>Markdown</span>
-              <span className={styles.badgeOk}>rich editor, writes the file back</span>
+        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] print:block">
+          <div className={cn(PANE, 'print:hidden')}>
+            <div className={PANE_HEAD}>
+              <Text as="span" size="sm" weight="medium">
+                Markdown
+              </Text>
+              <Badge variant="subtle" tone="success" size="sm" className="whitespace-nowrap">
+                rich editor, writes the file back
+              </Badge>
             </div>
-            <div className={styles.editorWrap}>
+            <div
+              className={cn(
+                'flex min-h-0 flex-1 flex-col overflow-auto',
+                // The editor fills its pane. Its toolbar is the demo's own render prop (toolbar.tsx).
+                '[&>.rmk-editor]:min-h-0 [&>.rmk-editor]:flex-1 [&>.rmk-editor]:rounded-none! [&>.rmk-editor]:border-0!',
+                '[&_.rmk-editor_.rmk-content]:min-h-0! [&_.rmk-editor_.rmk-content]:flex-1 [&_.rmk-editor_.rmk-content]:overflow-auto [&_.rmk-editor_.rmk-content]:px-[1.1rem] [&_.rmk-editor_.rmk-content]:py-[0.85rem]',
+                '[&_.rmk-editor_.rmk-toolbar]:sticky [&_.rmk-editor_.rmk-toolbar]:top-0 [&_.rmk-editor_.rmk-toolbar]:z-1',
+              )}
+            >
               <MarkdownEditor preset={preset} value={source} onChange={setSource} toolbar={renderToolbar} aria-label="Deck source" />
             </div>
-            <div className={styles.hint}>
+            <Text size="sm" muted className={cn('m-0 border-t border-border px-[0.9rem] py-2', INLINE_CODE)}>
               Type <code>---</code>, <code>--</code> or <code>???</code> on a line and press Enter, or use the Slides buttons. Switch to
               Markdown source to see the file.
-            </div>
+            </Text>
           </div>
 
-          <div className={styles.col}>
-            <div className={styles.colHead}>
-              <span>Deck</span>
-              <span className={styles.badgeOk}>static sections until you press Present</span>
+          <div className={cn(PANE, 'border-l border-border max-[900px]:border-t max-[900px]:border-l-0 print:border-0')}>
+            <div className={PANE_HEAD}>
+              <Text as="span" size="sm" weight="medium">
+                Deck
+              </Text>
+              <Badge variant="subtle" tone="success" size="sm" className="whitespace-nowrap">
+                static sections until you press Present
+              </Badge>
             </div>
-            <div className={styles.deckWrap} ref={deckRef}>
-              <div className="rmk-document">
+            <div className="min-h-0 flex-1 overflow-auto bg-muted p-4 print:overflow-visible print:bg-transparent print:p-0" ref={deckRef}>
+              <div
+                className={cn(
+                  'rmk-document mx-auto max-w-5xl print:m-0 print:max-w-none',
+                  "print:[&_[data-rmk-slide]]:mx-auto print:[&_[data-rmk-slide]]:w-[16in] print:[&_[data-rmk-deck-aspect='4:3']_[data-rmk-slide]]:w-[12in]",
+                )}
+              >
                 <Markdown preset={preset} document={document} />
               </div>
             </div>
             {problems.length === 0 ? null : (
-              <ul className={styles.problems} aria-label="Parser notes">
+              <ul
+                className={cn(
+                  'm-0 list-none border-t border-border bg-warning/10 px-[0.9rem] py-1.5 text-sm text-warning-text print:hidden [&>li+li]:mt-1',
+                  INLINE_CODE,
+                )}
+                aria-label="Parser notes"
+              >
                 {problems.slice(0, 3).map((problem, index) => (
                   <li key={`${problem.code}-${index}`}>
                     <code>{problem.code}</code> {problem.message}

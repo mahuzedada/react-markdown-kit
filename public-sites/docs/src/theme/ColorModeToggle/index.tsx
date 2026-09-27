@@ -12,7 +12,8 @@ import { translate } from '@docusaurus/Translate'
 import IconLightMode from '@theme/Icon/LightMode'
 import IconDarkMode from '@theme/Icon/DarkMode'
 import type { Props } from '@theme/ColorModeToggle'
-import styles from './styles.module.css'
+import Button from '@zuilib/primitives/button'
+import { cn } from '@zuilib/primitives/lib/cn'
 
 type ColorMode = 'light' | 'dark'
 
@@ -23,17 +24,14 @@ function resolvedColorMode(value: Props['value']): ColorMode {
 
 export default function ColorModeToggle({ className, buttonClassName, value, onChange }: Props): ReactNode {
   const isBrowser = useIsBrowser()
-  const classes = [styles.toggle, className].filter(Boolean).join(' ')
-  const buttonClasses = ['clean-btn', styles.toggleButton, !isBrowser && styles.toggleButtonDisabled, buttonClassName]
-    .filter(Boolean)
-    .join(' ')
   return (
-    <div className={classes}>
-      <button
-        className={buttonClasses}
-        type="button"
+    <div className={cn('size-8', className)}>
+      <Button
+        variant="ghost"
+        size="icon"
+        track="navbar:theme"
+        className={cn('size-full text-inherit', buttonClassName)}
         onClick={() => onChange(resolvedColorMode(value) === 'dark' ? 'light' : 'dark')}
-        data-zui-tag="navbar:theme"
         disabled={!isBrowser}
         title={translate({
           message: 'Switch between dark and light mode',
@@ -47,9 +45,9 @@ export default function ColorModeToggle({ className, buttonClassName, value, onC
         })}
       >
         {/* Both icons render; `html[data-theme]` picks one, so it is right before hydration too. */}
-        <IconLightMode aria-hidden className={`${styles.toggleIcon} ${styles.lightToggleIcon}`} />
-        <IconDarkMode aria-hidden className={`${styles.toggleIcon} ${styles.darkToggleIcon}`} />
-      </button>
+        <IconLightMode aria-hidden className="hidden [html[data-theme=light]_&]:inline" />
+        <IconDarkMode aria-hidden className="hidden [html[data-theme=dark]_&]:inline" />
+      </Button>
     </div>
   )
 }

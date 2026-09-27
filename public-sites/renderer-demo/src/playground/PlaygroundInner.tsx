@@ -15,12 +15,12 @@ import Button from '@zuilib/primitives/button'
 import Checkbox from '@zuilib/primitives/checkbox'
 import { cn } from '@zuilib/primitives/lib/cn'
 import Tabs from '@zuilib/primitives/tabs'
+import Text from '@zuilib/primitives/text'
 import { buildProps } from './buildProps'
 import { SHOWCASE_CLASS_NAME } from './showcase'
 import { formatBytes, formatMs, prettyHtml, timeMedian, treeJson, wordCount } from './measure'
 import { DEFAULT_STATE, type OutputTab, type PlaygroundState } from './state'
 import { useShareLink } from './useShareLink'
-import styles from './Playground.module.css'
 
 import '@react-markdown-kit/renderer/styles.css'
 import '@react-markdown-kit/mermaid/styles.css'
@@ -36,6 +36,20 @@ const TABS: readonly [OutputTab, string][] = [
 
 const TREE_LIMIT = 20_000
 type MobilePane = 'source' | 'output'
+
+/*
+ * Playground chrome: hairlines, one accent, tabular numbers. The rendered
+ * Markdown itself is styled only by whatever the reader selected: nothing,
+ * the kit's `.rmk-document` stylesheet, or the demo utility classes. Below
+ * 900px the two panes stack and a switch in the status strip picks one.
+ */
+const PANE_HEAD =
+  'flex min-h-[2.35rem] items-center justify-between gap-2 border-b border-border px-[0.8rem] py-[0.3rem]'
+const PANE = 'flex min-h-0 min-w-0 flex-col max-[900px]:data-[mobile-hidden]:hidden'
+const FILL = 'flex min-h-0 flex-1 flex-col'
+const ACTIONS = 'flex items-center gap-1'
+const SOURCE_VIEW =
+  'm-0 flex-1 overflow-auto bg-transparent p-[0.9rem] font-mono text-[0.76rem] leading-[1.55] whitespace-pre text-foreground [tab-size:2]'
 
 interface Timings {
   readonly parse: number
@@ -140,12 +154,12 @@ export default function PlaygroundInner(): ReactNode {
 
   return (
     <ActivityScope feature="playground">
-      <div className={styles.shell}>
-        <div className={styles.work}>
-          <section className={styles.sourcePane} data-mobile-hidden={mobilePane !== 'source' ? '' : undefined}>
-            <div className={styles.paneHead}>
-              <span>Markdown</span>
-              <span className={styles.actions}>
+      <div className="flex h-dvh flex-col overflow-hidden border-b border-border bg-card">
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] max-[900px]:grid-cols-1">
+          <section className={cn(PANE, 'border-r border-border max-[900px]:border-r-0')} data-mobile-hidden={mobilePane !== 'source' ? '' : undefined}>
+            <div className={PANE_HEAD}>
+              <Text as="span" size="sm" weight="medium" muted>Markdown</Text>
+              <span className={ACTIONS}>
                 <Button variant="ghost" size="sm" track="copy-markdown" onClick={() => copy('markdown', state.source)}>
                   {copied === 'markdown' ? 'Copied' : 'Copy'}
                 </Button>
@@ -162,7 +176,10 @@ export default function PlaygroundInner(): ReactNode {
               </span>
             </div>
             <textarea
-              className={`${styles.textarea} ${dropping ? styles.dropping : ''}`}
+              className={cn(
+                'm-0 box-border min-h-0 w-full flex-1 resize-none border-0 bg-transparent p-[0.9rem] font-mono text-[0.8rem] leading-[1.6] text-foreground [tab-size:2] focus:shadow-[inset_3px_0_0_var(--primary)]',
+                dropping ? 'outline-2 -outline-offset-8 outline-primary outline-dashed' : 'outline-none',
+              )}
               value={state.source}
               spellCheck={false}
               aria-label="Markdown source"
@@ -175,23 +192,23 @@ export default function PlaygroundInner(): ReactNode {
               onDragLeave={() => setDropping(false)}
               onDrop={onDrop}
             />
-            <div className={styles.note}>
+            <Text as="div" size="sm" className="m-0 border-t border-border px-[0.9rem] py-[0.6rem]">
               {unreadable
                 ? 'This browser couldn’t read the link, so you’re seeing the sample instead. The shared link is still in the address bar, and editing will replace it.'
                 : 'Type, paste or drop a .md file here. Copy link puts the whole document in the URL (nothing is uploaded).'}
-            </div>
+            </Text>
           </section>
 
-          <section className={styles.outPane} data-mobile-hidden={mobilePane !== 'output' ? '' : undefined}>
+          <section className={PANE} data-mobile-hidden={mobilePane !== 'output' ? '' : undefined}>
             <Tabs
-              className={cn(styles.outTabs)}
+              className={FILL}
               variant="pills"
               size="sm"
               track="output"
               selectedIndex={tabIndex}
               onSelectedIndexChange={(index) => patch({ tab: TABS[index]?.[0] ?? 'rendered' })}
             >
-              <div className={styles.paneHead}>
+              <div className={PANE_HEAD}>
                 <Tabs.List>
                   {TABS.map(([tab, label]) => (
                     <Tabs.Tab key={tab}>{label}</Tabs.Tab>
@@ -212,28 +229,28 @@ export default function PlaygroundInner(): ReactNode {
                 )}
               </div>
 
-              <Tabs.Panels className={cn(styles.panels)}>
-                <Tabs.Panel className={cn(styles.output, wrapperClassName)} style={built.wrapperStyle} data-zui-private="">
+              <Tabs.Panels className={cn(FILL, 'mt-0')}>
+                <Tabs.Panel className={cn('flex-1 overflow-auto px-[1.1rem] py-4 text-[0.94rem]', wrapperClassName)} style={built.wrapperStyle} data-zui-private="">
                   {element}
                 </Tabs.Panel>
-                <Tabs.Panel className={cn(styles.panel)}>
-                  <pre className={styles.htmlView}>{prettyHtml(html)}</pre>
+                <Tabs.Panel className={FILL}>
+                  <pre className={cn(SOURCE_VIEW, 'whitespace-pre-wrap [word-break:break-word]')}>{prettyHtml(html)}</pre>
                 </Tabs.Panel>
-                <Tabs.Panel className={cn(styles.panel)}>
-                  <pre className={styles.treeView}>
+                <Tabs.Panel className={FILL}>
+                  <pre className={SOURCE_VIEW}>
                     {treeText ?? `The tree is shown for documents under ${formatBytes(TREE_LIMIT)}. This one is ${formatBytes(source.length)}.`}
                   </pre>
                 </Tabs.Panel>
-                <Tabs.Panel className={cn(styles.panel)}>
-                  <pre className={styles.codeView}>{built.code}</pre>
+                <Tabs.Panel className={FILL}>
+                  <pre className={SOURCE_VIEW}>{built.code}</pre>
                 </Tabs.Panel>
               </Tabs.Panels>
             </Tabs>
           </section>
         </div>
 
-        <div className={styles.status}>
-          <div className={`${styles.actions} ${styles.mobileSwitch}`} role="group" aria-label="Pane">
+        <div className="flex flex-wrap gap-x-[1.4rem] gap-y-[0.4rem] border-t border-border bg-muted px-[0.9rem] py-2 text-xs text-muted-foreground tabular-nums [&_b]:font-semibold [&_b]:text-foreground">
+          <div className={cn(ACTIONS, 'hidden max-[900px]:inline-flex')} role="group" aria-label="Pane">
             {(['source', 'output'] as const).map((pane) => (
               <Button
                 key={pane}
@@ -247,22 +264,22 @@ export default function PlaygroundInner(): ReactNode {
               </Button>
             ))}
           </div>
-          <span className={styles.stat}>
+          <span>
             <b>{formatBytes(state.source.length)}</b> · {wordCount(state.source)} words
           </span>
-          <span className={styles.stat}>
+          <span>
             parse <b>{timings === undefined ? '…' : formatMs(timings.parse)}</b>
           </span>
-          <span className={styles.stat}>
+          <span>
             render from source <b>{timings === undefined ? '…' : formatMs(timings.renderFromSource)}</b>
           </span>
-          <span className={styles.stat}>
+          <span>
             from compiled document <b>{timings === undefined ? '…' : formatMs(timings.renderFromDocument)}</b>
           </span>
-          <span className={styles.stat}>
+          <span>
             diagnostics <b>{document.diagnostics.length}</b>
           </span>
-          <span className={`${styles.stat} ${styles.method}`}>medians, measured in this browser</span>
+          <span className="ml-auto max-[900px]:ml-0">medians, measured in this browser</span>
         </div>
       </div>
     </ActivityScope>

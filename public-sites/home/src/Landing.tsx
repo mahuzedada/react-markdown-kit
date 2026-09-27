@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
+import Heading from '@zuilib/primitives/heading'
+import Text from '@zuilib/primitives/text'
 import { CopyCode } from '../../shared/CopyCode'
+import { Page } from '../../shared/Page'
 import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, softwareSourceCode, type FaqItem } from '../../shared/Seo'
 import size from '../../../docs/data/mermaid-size.json'
@@ -250,19 +253,47 @@ const FAQ: readonly FaqItem[] = [
   },
 ]
 
+function Section({ id, title, children }: { readonly id: string; readonly title: string; readonly children: ReactNode }): ReactNode {
+  return (
+    <section className="mb-12" aria-labelledby={id}>
+      <Heading id={id} as="h2" size="xl" className="mt-0 mb-3">
+        {title}
+      </Heading>
+      {children}
+    </section>
+  )
+}
+
+function LinkList({ items }: { readonly items: readonly Evidence[] }): ReactNode {
+  return (
+    <ul className="m-0 list-none border-t border-border p-0">
+      {items.map((item) => (
+        <li key={item.href} className="border-b border-border py-3">
+          <a className="font-medium text-primary-text no-underline hover:underline" href={item.href}>
+            {item.label}
+          </a>
+          <Text className="m-0 mt-0.5">{item.what}</Text>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export default function Landing(): ReactNode {
   return (
-    <main className="home">
-      <header className="home-hero">
-        <div className="flex">
-          <img className="home-logo" src="/logo.svg" alt="" width={40} height={40} />
-          <h1>{TITLE}</h1>
+    <Page as="main" className="max-w-(--container-width-sm) pt-20 max-sm:pt-12">
+      <header className="mb-14">
+        <div className="mb-4 flex items-center gap-3">
+          <img src="/logo.svg" alt="" width={40} height={40} className="size-10" />
+          <Heading as="h1" size="3xl" className="m-0">
+            {TITLE}
+          </Heading>
         </div>
-        <p className="home-lede">
+        <Text size="lg" weight="medium" className="m-0 mb-8 text-xl max-sm:text-lg">
           Packages for rendering, streaming and editing markdown in react.{' '}
-          <span className="home-lede-note">Plus plugins for diagrams, slides and variables.</span>
-        </p>
-        <ActivityScope feature="hero" as="div" className="home-actions">
+          <span className="mt-1 block text-base font-semibold">Plus plugins for diagrams, slides and variables.</span>
+        </Text>
+        <ActivityScope feature="hero" as="div" className="flex flex-wrap gap-2">
           <Button as="a" href={docsUrl('/docs/getting-started')} track="get-started">
             Get started
           </Button>
@@ -275,27 +306,25 @@ export default function Landing(): ReactNode {
         </ActivityScope>
       </header>
 
-      <section className="home-section" aria-labelledby="home-install">
-        <h2 id="home-install">Install</h2>
+      <Section id="home-install" title="Install">
         <CopyCode code="npm install @react-markdown-kit/renderer" />
         <CopyCode code={USE} />
-        <p>
+        <Text className="m-0">
           Raw HTML is shown as text and unsafe URLs are dropped by default, so there’s nothing to
           configure for that. For styling you can use your own CSS, the shipped typography, utility
           classes or your own components.
-        </p>
-      </section>
+        </Text>
+      </Section>
 
-      <section className="home-section" aria-labelledby="home-packages">
-        <h2 id="home-packages">Packages</h2>
-        <ul className="home-packages">
+      <Section id="home-packages" title="Packages">
+        <ul className="m-0 mb-4 list-none border-t border-border p-0">
           {PACKAGES.map((pkg) => (
-            <li key={pkg.name}>
-              <a className="home-package-name" href={pkg.docs}>
-                <code>@react-markdown-kit/{pkg.name}</code>
+            <li key={pkg.name} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 border-b border-border py-3">
+              <a className="text-foreground no-underline hover:text-primary-text" href={pkg.docs}>
+                <code className="font-mono text-sm font-semibold">@react-markdown-kit/{pkg.name}</code>
               </a>
-              <span className="home-package-what">{pkg.what}</span>
-              <span className="home-package-links">
+              <Text className="col-start-1 m-0">{pkg.what}</Text>
+              <span className="col-start-2 row-span-2 row-start-1 flex gap-3 self-center [&_a]:text-primary-text [&_a]:no-underline [&_a:hover]:underline">
                 <a href={pkg.docs}>Docs</a>
                 {pkg.demo ? <a href={pkg.demo}>Demo</a> : null}
                 <a href={npmUrl(pkg.name)}>npm</a>
@@ -303,95 +332,39 @@ export default function Landing(): ReactNode {
             </li>
           ))}
         </ul>
-        <p>
+        <Text className="m-0">
           Every package reads and writes plain Markdown. If you start with the renderer and later
           want editing, templates or slides, the documents you already have should work as they are.
-        </p>
-      </section>
+        </Text>
+      </Section>
 
-      <section className="home-section" aria-labelledby="home-renderer-guides">
-        <h2 id="home-renderer-guides">Renderer guides</h2>
-        <ul className="home-list">
-          {RENDERER_PAGES.map((guide) => (
-            <li key={guide.href}>
-              <a href={guide.href}>{guide.label}</a>
-              <span>{guide.what}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Section id="home-renderer-guides" title="Renderer guides">
+        <LinkList items={RENDERER_PAGES} />
+      </Section>
 
-      <section className="home-section" aria-labelledby="home-editor-guides">
-        <h2 id="home-editor-guides">Editor guides</h2>
-        <ul className="home-list">
-          {EDITOR_PAGES.map((guide) => (
-            <li key={guide.href}>
-              <a href={guide.href}>{guide.label}</a>
-              <span>{guide.what}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Section id="home-editor-guides" title="Editor guides">
+        <LinkList items={EDITOR_PAGES} />
+      </Section>
 
-      <section className="home-section" aria-labelledby="home-template-guides">
-        <h2 id="home-template-guides">Template guides</h2>
-        <ul className="home-list">
-          {TEMPLATE_PAGES.map((guide) => (
-            <li key={guide.href}>
-              <a href={guide.href}>{guide.label}</a>
-              <span>{guide.what}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Section id="home-template-guides" title="Template guides">
+        <LinkList items={TEMPLATE_PAGES} />
+      </Section>
 
-      <section className="home-section" aria-labelledby="home-guides">
-        <h2 id="home-guides">Mermaid guides</h2>
-        <ul className="home-list">
-          {MERMAID_GUIDES.map((guide) => (
-            <li key={guide.href}>
-              <a href={guide.href}>{guide.label}</a>
-              <span>{guide.what}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Section id="home-guides" title="Mermaid guides">
+        <LinkList items={MERMAID_GUIDES} />
+      </Section>
 
-      <section className="home-section" aria-labelledby="home-slides-guides">
-        <h2 id="home-slides-guides">Slides guides</h2>
-        <ul className="home-list">
-          {SLIDES_PAGES.map((guide) => (
-            <li key={guide.href}>
-              <a href={guide.href}>{guide.label}</a>
-              <span>{guide.what}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Section id="home-slides-guides" title="Slides guides">
+        <LinkList items={SLIDES_PAGES} />
+      </Section>
 
-      <section className="home-section" aria-labelledby="home-comparisons">
-        <h2 id="home-comparisons">Comparisons</h2>
-        <ul className="home-list">
-          {COMPARISONS.map((item) => (
-            <li key={item.href}>
-              <a href={item.href}>{item.label}</a>
-              <span>{item.what}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Section id="home-comparisons" title="Comparisons">
+        <LinkList items={COMPARISONS} />
+      </Section>
 
-      <section className="home-section" aria-labelledby="home-evidence">
-        <h2 id="home-evidence">Compare and migrate</h2>
-        <ul className="home-list">
-          {EVIDENCE.map((item) => (
-            <li key={item.href}>
-              <a href={item.href}>{item.label}</a>
-              <span>{item.what}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Section id="home-evidence" title="Compare and migrate">
+        <LinkList items={EVIDENCE} />
+      </Section>
 
       <Faq id="home-faq" items={FAQ} />
 
@@ -405,6 +378,6 @@ export default function Landing(): ReactNode {
           description: DESCRIPTION,
         }}
       />
-    </main>
+    </Page>
   )
 }

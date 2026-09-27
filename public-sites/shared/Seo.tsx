@@ -92,13 +92,15 @@ export interface FaqProps {
 /** The questions people type into a search box, answered in one sentence each. */
 export function Faq({ id, title = 'Questions', items }: FaqProps): ReactNode {
   return (
-    <section className="site-faq" aria-labelledby={id}>
-      <h2 id={id}>{title}</h2>
-      <dl>
+    <section data-faq className="mt-12" aria-labelledby={id}>
+      <h2 id={id} className="mt-0 mb-3 text-2xl font-semibold leading-tight">
+        {title}
+      </h2>
+      <dl className="m-0">
         {items.map((item) => (
-          <div key={item.question}>
-            <dt>{item.question}</dt>
-            <dd>
+          <div key={item.question} className="mt-5">
+            <dt className="mb-1 font-semibold">{item.question}</dt>
+            <dd className="m-0 [&_a]:text-primary-text">
               {item.answer}
               {item.more ? (
                 <>

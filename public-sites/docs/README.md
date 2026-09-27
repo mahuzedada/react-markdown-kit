@@ -38,9 +38,10 @@ DOM. That split mirrors how an application should use the packages.
 
 ## Styling
 
-The site chrome is Docusaurus, themed through `@zuilib/tokens`: the theme lives in
-`../shared/foundry.css` (shared with the demo sites) and `src/css/custom.css` maps
-Infima's variables onto the tokens without naming a colour. The rendered Markdown inside
+The site chrome is Docusaurus with Infima's defaults, themed through `@zuilib/tokens`:
+`../shared/theme.css` (shared with the other sites) sets the token values and maps
+Infima's variables onto them. Pages and components use zui primitives and Tailwind
+classes, with no CSS files of their own. The rendered Markdown inside
 every example is styled only by `@react-markdown-kit/renderer/styles.css`, scoped to
 `.rmk-document`, which is the same opt-in stylesheet a consumer would import. The site
 does not restyle the kit's output, so what you see is what you get.

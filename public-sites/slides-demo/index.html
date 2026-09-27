@@ -28,9 +28,10 @@
     <style>
       /* `?embed=1` renders the deck alone. The built index.html carries the
          prerendered landing copy and footer for crawlers, so hide them before
-         first paint; the app never renders them in an embed. */
-      html[data-embed='1'] .site-landing,
-      html[data-embed='1'] .site-footer {
+         first paint; the app never renders them in an embed. The landing copy
+         is the article directly in #root (the deck's own article is nested). */
+      html[data-embed='1'] #root > article,
+      html[data-embed='1'] #root footer {
         display: none;
       }
     </style>

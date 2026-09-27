@@ -1,8 +1,27 @@
 import { useCallback, useMemo, useRef, type ChangeEvent, type KeyboardEvent, type ReactNode, type UIEvent } from 'react'
-import { tokenize } from './highlight'
-import styles from './CodePane.module.css'
+import { cn } from '@zuilib/primitives/lib/cn'
+import { tokenize, type TokenKind } from './highlight'
 
 const INDENT = '    '
+
+/*
+ * The highlighted layer and the textarea share every metric below, so the
+ * caret sits exactly over the coloured text: absolutely stacked, one padding
+ * (the textarea adds the gutter on the left), the pane's font inherited.
+ */
+const STACKED = 'absolute inset-0 m-0 box-border border-0 py-(--code-pad) pr-(--code-pad) pl-0 [font:inherit] [tab-size:inherit] whitespace-pre'
+
+/** Token colours, all derived from the theme's intent colours. */
+const TOKEN_CLASSES = {
+  comment: 'text-muted-foreground italic',
+  string: 'text-success-text',
+  label: 'text-success-text',
+  edge: 'text-warning-text font-semibold',
+  color: 'text-danger-text',
+  keyword: 'text-primary-text font-semibold',
+  direction: 'text-primary-text',
+  bracket: 'text-muted-foreground',
+} satisfies Record<Exclude<TokenKind, 'plain'>, string>
 
 export interface CodePaneProps {
   readonly value: string
@@ -56,15 +75,15 @@ export default function CodePane({ value, onChange, label, kind = 'flowchart' }:
   const onInput = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value), [onChange])
 
   return (
-    <div className={styles.pane}>
-      <pre ref={layer} className={styles.layer} aria-hidden="true">
+    <div className="relative min-h-0 flex-1 font-mono text-[12.5px] leading-[1.6] [tab-size:4] [--code-gutter:3rem] [--code-pad:0.75rem]">
+      <pre ref={layer} className={cn(STACKED, 'pointer-events-none overflow-hidden bg-transparent text-foreground')} aria-hidden="true">
         {lines.map((tokens, index) => (
-          <div key={index} className={styles.line}>
-            <span className={styles.number}>{index + 1}</span>
-            <span className={styles.text}>
+          <div key={index} className="flex min-w-max">
+            <span className="flex-[0_0_var(--code-gutter)] pr-[0.9rem] text-right text-muted-foreground opacity-70 select-none">{index + 1}</span>
+            <span className="flex-1">
               {tokens.map((token, position) =>
                 token.kind === 'plain' ? token.text : (
-                  <span key={position} className={styles[token.kind]}>
+                  <span key={position} className={TOKEN_CLASSES[token.kind]}>
                     {token.text}
                   </span>
                 ),
@@ -75,7 +94,11 @@ export default function CodePane({ value, onChange, label, kind = 'flowchart' }:
         ))}
       </pre>
       <textarea
-        className={styles.input}
+        className={cn(
+          STACKED,
+          'resize-none overflow-auto bg-transparent pl-(--code-gutter) text-transparent caret-foreground outline-none',
+          'selection:bg-primary/30 placeholder:text-muted-foreground',
+        )}
         value={value}
         onChange={onInput}
         onScroll={onScroll}

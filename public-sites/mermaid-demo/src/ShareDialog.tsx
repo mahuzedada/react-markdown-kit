@@ -1,12 +1,22 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { Dialog, DialogBody, DialogDescription, DialogHeader, DialogPanel, DialogTitle } from '@zuilib/primitives/dialog'
 import Button from '@zuilib/primitives/button'
+import Heading from '@zuilib/primitives/heading'
 import Input from '@zuilib/primitives/input'
+import Text from '@zuilib/primitives/text'
 import Textarea from '@zuilib/primitives/textarea'
-import { cn } from '@zuilib/primitives/lib/cn'
 import { badgeMarkdown, embedHtml } from './share'
 import { CheckIcon, CopyIcon, ExternalIcon } from './icons'
-import styles from './ShareDialog.module.css'
+
+/** One block of the dialog; a rule above every block but the first. */
+const SECTION = 'flex flex-col gap-2 border-t border-border pt-4 first:border-t-0 first:pt-0'
+/** A field with its Copy button beside it. */
+const ROW = 'grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2'
+/** The copied snippets: links and HTML read better in the code face. */
+const MONO = 'font-mono text-xs'
+/** The explanation under each block: body copy, full size. */
+const NOTE = 'm-0 [&_a]:text-primary-text'
+const SIZE_LABEL = 'flex flex-col gap-1 text-sm font-medium text-foreground'
 
 export interface ShareDialogProps {
   readonly open: boolean
@@ -43,60 +53,60 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
 
   return (
     <Dialog track="share" open={open} onOpenChange={onOpenChange} size="lg">
-      <DialogPanel className={cn(styles.dialog)}>
+      <DialogPanel className="rounded-[16px]">
       <DialogHeader>
         <DialogTitle>Shareable links</DialogTitle>
         <DialogDescription>The diagram is stored in the link itself, so nothing gets uploaded.</DialogDescription>
       </DialogHeader>
-      <DialogBody className={cn(styles.body)}>
-        <section className={styles.section}>
-          <h3 className={styles.heading}>Mermaid Visual Editor</h3>
-          <div className={styles.row}>
-            <Input ref={linkField} track="share-link-field" size="sm" fullWidth inputClassName={cn(styles.mono)} readOnly value={link ?? ''} aria-label="Link to this diagram" onFocus={(event) => event.target.select()} />
+      <DialogBody className="flex flex-col gap-4">
+        <section className={SECTION}>
+          <Heading as="h3" size="md" className="m-0">Mermaid Visual Editor</Heading>
+          <div className={ROW}>
+            <Input ref={linkField} track="share-link-field" size="sm" fullWidth inputClassName={MONO} readOnly value={link ?? ''} aria-label="Link to this diagram" onFocus={(event) => event.target.select()} />
             {copyButton('link', link ?? '', linkField.current)}
           </div>
-          <p className={styles.note}>The source (layout comment included) is compressed into the URL hash. Opening the link puts the same drawing back on the canvas.</p>
+          <Text className={NOTE}>The source (layout comment included) is compressed into the URL hash. Opening the link puts the same drawing back on the canvas.</Text>
         </section>
 
-        <section className={styles.section}>
-          <h3 className={styles.heading}>README badge</h3>
-          <div className={styles.row}>
-            <Textarea ref={badgeField} track="share-badge-field" resize="none" fullWidth textareaClassName={cn(styles.mono)} readOnly rows={2} value={badge} aria-label="Badge Markdown for a README" onFocus={(event) => event.target.select()} />
+        <section className={SECTION}>
+          <Heading as="h3" size="md" className="m-0">README badge</Heading>
+          <div className={ROW}>
+            <Textarea ref={badgeField} track="share-badge-field" resize="none" fullWidth textareaClassName={MONO} readOnly rows={2} value={badge} aria-label="Badge Markdown for a README" onFocus={(event) => event.target.select()} />
             {copyButton('badge', badge, badgeField.current)}
           </div>
-          <p className={styles.note}>
+          <Text className={NOTE}>
             Paste it in a README: the <a href="/badge.svg">badge</a> opens this diagram on the canvas.
-          </p>
+          </Text>
         </section>
 
-        <section className={styles.section}>
-          <h3 className={styles.heading}>Embed</h3>
-          <p className={styles.note}>Puts the live editor on your own site or blog, with the site chrome hidden.</p>
-          <div className={styles.sizes}>
-            <label className={styles.size}>
+        <section className={SECTION}>
+          <Heading as="h3" size="md" className="m-0">Embed</Heading>
+          <Text className={NOTE}>Puts the live editor on your own site or blog, with the site chrome hidden.</Text>
+          <div className="grid grid-cols-2 gap-3">
+            <label className={SIZE_LABEL}>
               <span>Width</span>
               <Input track="embed-width" size="sm" fullWidth value={width} onChange={(event) => setWidth(event.target.value)} />
             </label>
-            <label className={styles.size}>
+            <label className={SIZE_LABEL}>
               <span>Height</span>
               <Input track="embed-height" size="sm" fullWidth value={height} onChange={(event) => setHeight(event.target.value)} />
             </label>
           </div>
-          <div className={styles.row}>
-            <Textarea ref={embedField} track="share-embed-field" resize="none" fullWidth textareaClassName={cn(styles.mono)} readOnly rows={3} value={iframe} aria-label="Embed HTML for a page" onFocus={(event) => event.target.select()} />
+          <div className={ROW}>
+            <Textarea ref={embedField} track="share-embed-field" resize="none" fullWidth textareaClassName={MONO} readOnly rows={3} value={iframe} aria-label="Embed HTML for a page" onFocus={(event) => event.target.select()} />
             {copyButton('embed', iframe, embedField.current)}
           </div>
         </section>
 
-        <section className={styles.section}>
-          <h3 className={styles.heading}>Elsewhere</h3>
-          <div className={styles.row}>
+        <section className={SECTION}>
+          <Heading as="h3" size="md" className="m-0">Elsewhere</Heading>
+          <div className={ROW}>
             <Button as="a" href={liveUrl ?? '#'} target="_blank" rel="noopener" variant="outline" size="sm" track="open-mermaid-live" disabled={liveUrl === undefined}>
               <ExternalIcon />
               Open in mermaid.live
             </Button>
           </div>
-          <p className={styles.note}>Opens the same source in the Mermaid project&rsquo;s editor. A flowchart&rsquo;s layout comment goes along with it, and mermaid.live ignores it.</p>
+          <Text className={NOTE}>Opens the same source in the Mermaid project&rsquo;s editor. A flowchart&rsquo;s layout comment goes along with it, and mermaid.live ignores it.</Text>
         </section>
       </DialogBody>
       </DialogPanel>
