@@ -15,7 +15,7 @@ export const TITLE = 'Free Online Mermaid Visual Editor'
 
 /** Also the meta description in index.html; tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
-  'Free, open source Mermaid visual editor: edit flowcharts and sequence diagrams on a canvas, watch the code follow, and get plain Mermaid back. No account.'
+  'Free, open source Mermaid visual editor. Edit flowcharts and sequence diagrams on a canvas, the code updates as you go, and you get plain Mermaid back.'
 
 const RENDER = `import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
 import { mermaid } from '@react-markdown-kit/mermaid'
@@ -120,17 +120,17 @@ export default function Landing(): ReactNode {
 
       <ul className="site-features">
         <li>
-          <strong>Code and Canvas Stay in Sync</strong>
+          <strong>Code and canvas stay in sync</strong>
           Type in the code panel and the diagram updates. Drag something on the canvas and the
           code changes to match.
         </li>
         <li>
-          <strong>It&rsquo;s Just Mermaid</strong>
+          <strong>Saves regular Mermaid</strong>
           You save ordinary Mermaid, so it still renders on GitHub, GitLab, Notion and Obsidian.
           Flowcharts get one extra comment that remembers the layout, and other tools ignore it.
         </li>
         <li>
-          <strong>No Mermaid.js Needed</strong>
+          <strong>Doesn&rsquo;t need Mermaid.js</strong>
           The plugin reads your diagrams itself and draws them as plain SVG. There&rsquo;s no script
           to load and nothing comes from a CDN.
         </li>
@@ -138,7 +138,7 @@ export default function Landing(): ReactNode {
 
       <div className="site-prose">
         <span className="site-eyebrow">Installation</span>
-        <h2>Install in One Line</h2>
+        <h2>Install</h2>
         <CopyCode code="npm install @react-markdown-kit/mermaid" />
         <p>
           That&rsquo;s everything you need to render diagrams and use the canvas. npm installs the
@@ -150,11 +150,11 @@ export default function Landing(): ReactNode {
         </p>
 
         <span className="site-eyebrow">Standalone</span>
-        <h2>Use the Canvas Anywhere</h2>
+        <h2>Using the canvas on its own</h2>
         <p>
           The editor you&rsquo;re using on this page is the standalone canvas. You give it Mermaid and
-          it gives you Mermaid back, no Markdown editor required. It fills whatever container you
-          put it in.
+          it gives you Mermaid back (you don&rsquo;t need a Markdown editor for this). It fills
+          whatever container you put it in.
         </p>
         <p>In a React app:</p>
         <CopyCode code={STANDALONE} />
@@ -172,11 +172,11 @@ export default function Landing(): ReactNode {
             them, or pull a handle on the frame to resize them. Hold Alt to resize from the centre.
           </li>
           <li>Nudge the selection with the arrow keys, and hold Shift for bigger steps.</li>
-          <li>Made a mistake? Cmd+Z or Ctrl+Z undoes it.</li>
+          <li>Cmd+Z or Ctrl+Z undoes the last change.</li>
         </ul>
 
         <span className="site-eyebrow">Guide</span>
-        <h2>Add Mermaid to Your App in Three Steps</h2>
+        <h2>Adding Mermaid to your app</h2>
         <ol className="site-steps">
           <li>
             <strong>Render your diagrams.</strong> Add <code>mermaid()</code> to your preset and every{' '}
@@ -201,7 +201,7 @@ export default function Landing(): ReactNode {
 
         <div className="site-deeper">
           <p>
-            <strong>Want more detail?</strong> The <a href={docsUrl('/docs/mermaid')}>Mermaid plugin docs</a>{' '}
+            <strong>More docs.</strong> The <a href={docsUrl('/docs/mermaid')}>Mermaid plugin docs</a>{' '}
             cover every supported shape and arrow, the layout comment and all the editor options,
             and <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> explains the editor itself.
             There are also guides for{' '}
@@ -212,7 +212,7 @@ export default function Landing(): ReactNode {
           </p>
         </div>
 
-        <h2>About This Editor</h2>
+        <h2>About this editor</h2>
         <ul>
           <li>
             The panel on the right is your Mermaid code, and the rest of the window is the canvas.
@@ -226,14 +226,14 @@ export default function Landing(): ReactNode {
             to automatic layout.
           </li>
           <li>
-            Want to see diagrams next to regular Markdown, tables and template variables? Try the{' '}
-            <a href={sites.editorDemo}>editor demo</a>. If you only need rendering, there&rsquo;s the{' '}
+            The <a href={sites.editorDemo}>editor demo</a> shows diagrams next to regular Markdown,
+            tables and template variables. If you only need rendering, there&rsquo;s also the{' '}
             <a href={sites.rendererDemo}>renderer demo</a>.
           </li>
         </ul>
 
         <span className="site-eyebrow">Share</span>
-        <h2>Add an &ldquo;Open in Visual Editor&rdquo; Badge</h2>
+        <h2>Adding an &ldquo;Open in visual editor&rdquo; badge</h2>
         <p>
           Every link to this editor carries the whole diagram inside the URL (<code>#pako:</code>,
           compressed the same way mermaid.live does it). Nothing gets uploaded and there&rsquo;s no
@@ -247,8 +247,8 @@ export default function Landing(): ReactNode {
         </p>
         <CopyCode code={EXAMPLE_SOURCE} />
         <p>
-          Want the editor inside a blog post or a docs page? Add <code>?embed=1</code> to any link
-          and the rest of the site is hidden:
+          To put the editor inside a blog post or a docs page, add <code>?embed=1</code> to any link.
+          That hides the rest of the site:
         </p>
         <CopyCode code={EMBED} />
 

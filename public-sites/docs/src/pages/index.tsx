@@ -94,36 +94,36 @@ interface PageLink {
 
 /** The funnel and guide pages, listed so every one is reachable from this page. */
 const GUIDES: readonly PageLink[] = [
-  { to: '/react-markdown-renderer', label: 'React Markdown renderer', what: 'One component, every default, with the evidence for each.' },
+  { to: '/react-markdown-renderer', label: 'React Markdown renderer', what: 'The one component and its defaults, with the tests behind each.' },
   { to: '/docs/guides/render-markdown-in-react', label: 'How to render Markdown in React', what: 'GFM, custom components, links, code blocks, security, server rendering.' },
-  { to: '/streaming-markdown', label: 'Streaming Markdown in React', what: 'Every partial prefix renders; the two constructs that rewrite themselves are named.' },
+  { to: '/streaming-markdown', label: 'Streaming Markdown in React', what: 'Every partial prefix renders, plus the two constructs that rewrite themselves.' },
   { to: '/nextjs-markdown', label: 'Markdown in Next.js', what: 'Server components with no client JavaScript, and precompiled documents.' },
   { to: '/react-markdown-editor', label: 'React Markdown editor', what: 'Rich, source and preview modes that store plain Markdown.' },
   { to: '/markdown-round-trip', label: 'Lossless Markdown editing', what: '22 of 22 audited documents open and save byte for byte.' },
   { to: '/docs/guides/lexical-markdown-editor', label: 'Lexical Markdown editor', what: 'Why Lexical, how the package wraps it, when to use the headless API.' },
   { to: '/markdown-template-engine', label: 'Markdown template engine', what: 'Typed variables, schemas, formatters and locales, resolved in the parser.' },
-  { to: '/docs/guides/markdown-template-variables', label: 'Markdown template variables', what: 'Placeholder syntax in a .md file, and why data cannot inject structure.' },
-  { to: '/personalized-markdown', label: 'Personalized Markdown', what: 'One authored report, resolved per customer and per locale.' },
+  { to: '/docs/guides/markdown-template-variables', label: 'Markdown template variables', what: 'Placeholder syntax in a .md file, and why data can\'t inject structure.' },
+  { to: '/personalized-markdown', label: 'Personalized Markdown', what: 'Write a report once and resolve it per customer and per locale.' },
   { to: '/react-mermaid', label: 'Mermaid in React', what: 'Flowcharts and sequence diagrams as static SVG without Mermaid.js.' },
   { to: '/docs/slides', label: 'Markdown presentations in React', what: 'A deck from one Markdown file, with present mode and speaker notes.' },
 ]
 
 /** One page per compared library. */
 const COMPARISONS: readonly PageLink[] = [
-  { to: '/react-markdown-alternative', label: 'react-markdown alternative', what: '39 of 39 prop comparisons render identical markup; three differences documented.' },
+  { to: '/react-markdown-alternative', label: 'react-markdown alternative', what: '39 of 39 prop comparisons render identical markup, and the three differences.' },
   { to: '/compare/react-markdown', label: 'vs react-markdown', what: 'Install size, GFM, security defaults, streaming, server rendering, migration.' },
   { to: '/compare/markdown-to-jsx', label: 'vs markdown-to-jsx', what: 'Install size, GFM, security defaults, streaming, server rendering, migration.' },
-  { to: '/compare/streamdown', label: 'vs Streamdown', what: 'The same rows, for an AI chat UI that renders tokens as they arrive.' },
+  { to: '/compare/streamdown', label: 'vs Streamdown', what: 'Same sections, for an AI chat UI that renders tokens as they arrive.' },
   { to: '/compare/mdxeditor', label: 'Editor vs MDXEditor', what: 'Editing model, output format, round trip, bundle size, server rendering.' },
   { to: '/compare/milkdown', label: 'Editor vs Milkdown', what: 'Editing model, output format, round trip, bundle size, ProseMirror.' },
-  { to: '/compare/handlebars', label: 'Templating vs Handlebars', what: 'String interpolation before parsing, against resolution inside the parser.' },
+  { to: '/compare/handlebars', label: 'Templating vs Handlebars', what: 'Replacing placeholders before parsing, compared with resolving them inside the parser.' },
   { to: '/marp-alternative', label: 'Marp and Slidev alternative', what: 'A deck inside a React app, with no PDF or PPTX export.' },
-  { to: '/mermaid-live-editor-alternative', label: 'Mermaid Live Editor alternative', what: 'mermaid.live next to the canvas: editing, sharing, price, licence, diagram types.' },
-  { to: '/migrate-from-react-markdown', label: 'Migrate from react-markdown', what: 'The three differences, and a codemod that refuses to guess.' },
+  { to: '/mermaid-live-editor-alternative', label: 'Mermaid Live Editor alternative', what: 'mermaid.live compared with the canvas on editing, sharing, price, licence and diagram types.' },
+  { to: '/migrate-from-react-markdown', label: 'Migrate from react-markdown', what: 'The three differences, and a codemod that skips anything it can\'t safely convert.' },
 ]
 
 const DESCRIPTION =
-  'Render Markdown as React, add rich editing, and personalize the same document with typed variables. Two packages, one Markdown model, no design system.'
+  'Render Markdown as React, add rich editing, and personalize the same document with typed variables. The packages all share one Markdown model.'
 
 export default function Home(): ReactNode {
   return (
@@ -164,10 +164,9 @@ export default function Home(): ReactNode {
         <div className="container">
           <h1>React Markdown renderer, editor and template engine</h1>
           <p className={styles.tagline}>
-            Render Markdown. Add editing. Personalize it. Three React packages that share
-            one Markdown model, so an app can grow from
-            displaying Markdown to authoring and personalizing it without changing how
-            anything is stored.
+            React packages for rendering, editing and personalizing Markdown. They share
+            one Markdown model, so an app can go from displaying Markdown to authoring and
+            personalizing it without changing how anything is stored.
           </p>
           <ActivityScope feature="hero" as="div" className={styles.actions}>
             <Button as={Link} size="lg" track="get-started" to="/docs/getting-started">
@@ -187,8 +186,8 @@ export default function Home(): ReactNode {
             <span className={styles.eyebrow}>Start here</span>
             <h2>One component</h2>
             <p>
-              No provider, no stylesheet, no configuration, no design system. Edit the
-              Markdown on the left and watch the output follow, or open the{' '}
+              You don't need a provider, stylesheet or config to get started. Edit the
+              Markdown on the left and the output updates, or open the{' '}
               <Link href={sites.rendererDemo}>renderer demo</Link> to try every option and copy
               the code.
             </p>
@@ -206,13 +205,13 @@ export default function Home(): ReactNode {
             <span className={styles.eyebrow}>Then, when you need it</span>
             <h2>The same document, personalized</h2>
             <p>
-              Switch customer. The output changes and the authored source does not. That is
-              the whole idea: it stays Markdown at every step.
+              Switch the customer and the output changes, while the authored source stays
+              the same. It's plain Markdown the whole way through.
             </p>
           </div>
           <TemplateExample markdown={TEMPLATE_SAMPLE} datasets={DATASETS} gfm>
-            Resolution runs here in your browser with the same engine a Node service, an
-            email job or a PDF pipeline would use. Resolving never calls React.
+            This runs in your browser using the same engine a Node service, an email job or
+            a PDF pipeline would use. Resolving doesn't call React at all.
           </TemplateExample>
         </div>
       </section>
@@ -221,14 +220,14 @@ export default function Home(): ReactNode {
         <div className="container">
           <div className={styles.sectionHead}>
             <h2>Two packages, and three plugin packages that work in both</h2>
-            <p>The renderer never requires the editor. Templates, Mermaid diagrams and slides install separately and are used only through the extension system.</p>
+            <p>The renderer doesn't depend on the editor. Templates, Mermaid diagrams and slides are installed separately and plug in through the extension system.</p>
           </div>
           <div className={styles.cards}>
             <div className={styles.card}>
               <h3>Renderer</h3>
               <p>
-                Markdown to React. Safe by default, unstyled by default, server-ready.
-                Matches react-markdown on every compared prop.
+                Renders Markdown to React. It's safe and unstyled by default, works on the server,
+                and matches react-markdown on every compared prop.
               </p>
               <Link to="/react-markdown-renderer">Read more</Link>
             </div>
@@ -236,7 +235,7 @@ export default function Home(): ReactNode {
               <h3>Editor</h3>
               <p>
                 Rich, source and preview authoring that reads and writes plain Markdown.
-                Opening and closing a document does not change a byte of it.
+                Opening and closing a document doesn't change any of its bytes.
               </p>
               <Link to="/react-markdown-editor">Read more</Link> ·{' '}
               <Link href={sites.editorDemo}>Demo</Link>
@@ -245,8 +244,8 @@ export default function Home(): ReactNode {
               <h3>Templates</h3>
               <p>
                 <code>template({'{ data }'})</code> resolves typed variables while the renderer
-                parses; <code>templateVariables()</code> edits them as chips. A plugin package:
-                no engine to call, and no React needed to resolve.
+                parses, and <code>templateVariables()</code> edits them as chips in the editor. It's a
+                plugin package, so there's no separate engine to call and resolving doesn't need React.
               </p>
               <Link to="/markdown-template-engine">Read more</Link>
             </div>
@@ -254,7 +253,7 @@ export default function Home(): ReactNode {
               <h3>Diagrams</h3>
               <p>
                 <code>mermaid()</code> turns a <code>```mermaid</code> flowchart into static SVG in the
-                renderer and a drawing canvas in the editor. A plugin package with one export.
+                renderer and a drawing canvas in the editor. It's a plugin package with one export.
               </p>
               <Link to="/docs/mermaid">Read more</Link> ·{' '}
               <Link href={sites.mermaidDemo}>Live editor</Link>
@@ -278,7 +277,7 @@ export default function Home(): ReactNode {
           <div className={styles.sectionHead}>
             <h2>Guides</h2>
             <p>
-              Task pages with live examples, each rendered by the kit itself when this
+              Task-focused pages with live examples. The kit itself rendered each one when this
               site was built.
             </p>
           </div>
@@ -297,8 +296,8 @@ export default function Home(): ReactNode {
           <div className={styles.sectionHead}>
             <h2>Comparisons</h2>
             <p>
-              One page per library, on install size, output format, security defaults,
-              server rendering and migration. Byte counts come from{' '}
+              There's one page per library, covering install size, output format, security
+              defaults, server rendering and migration. Byte counts come from{' '}
               <Link href={`${sites.github}/blob/main/docs/data/bundle-sizes.json`}>
                 docs/data/bundle-sizes.json
               </Link>
@@ -319,10 +318,10 @@ export default function Home(): ReactNode {
       <section className={styles.section}>
         <div className="container">
           <div className={styles.sectionHead}>
-            <h2>Evidence, not adjectives</h2>
+            <h2>Numbers with tests behind them</h2>
             <p>
-              We do not claim &ldquo;drop-in replacement&rdquo; or &ldquo;fastest&rdquo;.
-              Every number here has a test behind it.
+              We don&rsquo;t claim &ldquo;drop-in replacement&rdquo; or &ldquo;fastest&rdquo;.
+              Every number here comes from a test you can run.
             </p>
           </div>
           <div className={styles.facts}>

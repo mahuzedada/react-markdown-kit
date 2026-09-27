@@ -29,12 +29,12 @@ export const FAQ = [
   {
     question: 'Does markdown-to-jsx render raw HTML by default?',
     answer:
-      'Yes. Its readme documents disableParsingRawHTML defaulting to false, so HTML in the Markdown is parsed into JSX, with tagfilter on by default escaping script, iframe, style and similar tags. React Markdown Kit does the opposite by default: raw HTML stays visible escaped text until you add rehype-raw yourself.',
+      'Yes. Its readme documents disableParsingRawHTML defaulting to false, so HTML in the Markdown is parsed into JSX, with tagfilter on by default escaping script, iframe, style and similar tags. React Markdown Kit goes the other way by default and shows raw HTML as escaped text until you add rehype-raw yourself.',
   },
   {
     question: 'Which one should I use for a React Markdown renderer?',
     answer:
-      'Use markdown-to-jsx for the smallest bundle, zero dependencies, or output targets other than React. Use React Markdown Kit when you want the remark and rehype plugin surface, raw HTML inert by default, streaming tested prefix by prefix, or an editor and diagram plugins reading the same compiled document.',
+      'I\'d pick markdown-to-jsx if you want the smallest bundle, zero dependencies, or output targets other than React. React Markdown Kit makes more sense when you want the remark and rehype plugin surface, raw HTML inert by default, streaming tested prefix by prefix, or an editor and diagram plugins reading the same compiled document.',
   },
 ]
 
@@ -60,10 +60,11 @@ export const htmlSource = `Inline <b>bold tag</b> and a <div>block</div>.
 `markdown-to-jsx` is a single-package Markdown toolchain with no runtime dependencies
 that compiles to React, React Native, SolidJS, Vue, HTML, Markdown or an AST.
 `@react-markdown-kit/renderer` is a React renderer built on micromark with the
-`react-markdown` prop surface. They differ most on raw HTML and on how you extend them.
+`react-markdown` props. The biggest differences are how they handle raw HTML and how you
+extend them.
 
-This page uses the same section order as every comparison page here: install size, GFM,
-security defaults, streaming, server rendering, plugins, migration. Facts about
+This page follows the same section order as the other comparison pages (install size, GFM,
+security defaults, streaming, server rendering, plugins, migration). Facts about
 `markdown-to-jsx` come from its readme at version 9.10.3,
 <Link href={theirs}>quantizor/markdown-to-jsx</Link>. Facts about the kit link to the
 test or the generated table that produced them.
@@ -83,12 +84,12 @@ committed to
   licenses
 />
 
-`markdown-to-jsx` wins this section by
+`markdown-to-jsx` is smaller, by
 {' '}{gzipDifference('kit-renderer', 'markdown-to-jsx')} gzipped against the kit on
 CommonMark, and by {gzipDifference('kit-renderer-gfm', 'markdown-to-jsx')} against the kit
 with GFM enabled. Its npm metadata lists no runtime dependencies, so nothing else arrives
-with it. The kit brings the micromark and
-unified packages, which is what buys it the remark and rehype interface.
+with it. The kit pulls in the micromark and unified packages, which is where the remark and
+rehype interface comes from.
 
 ## GFM
 
@@ -96,7 +97,7 @@ unified packages, which is what buys it the remark and rehype interface.
 GFM special syntaxes are supported, including tables, task lists, strikethrough,
 autolinks and tag filtering.
 
-The kit needs one line.
+The kit needs one extra line.
 
 ```tsx
 import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
@@ -113,18 +114,18 @@ import remarkGfm from 'remark-gfm'
 <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
 ```
 
-What the kit can show is the conformance run.
+On the kit side there's a conformance run you can look at.
 <Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link> asserts 68 cases derived
 from the GFM spec three ways: through `gfm()`, through `remarkPlugins={[remarkGfm]}`, and
 through plain CommonMark, where the first two must agree after normalizing attribute
 order, entity spelling and whitespace between block tags
 (<Link href={blob('tests/helpers/html.ts')}>`tests/helpers/html.ts`</Link>) and the third
 must not produce the GFM markup, unless the case is one of the 12 that assert something
-is *not* GFM, which are named in the test so the exemption cannot spread.
+is *not* GFM (those are named in the test so the exemption can't spread).
 <Link href={blob('tests/commonmark.test.ts')}>`tests/commonmark.test.ts`</Link> runs every
 example from CommonMark 0.31.2. This repository runs no conformance suite against
-`markdown-to-jsx`, so its compliance is reported here as its readme states it and not as
-a measurement.
+`markdown-to-jsx`, so its compliance is reported here the way its readme states it, and we
+haven't measured it.
 
 <RenderExample
   title="GFM on this page, rendered by @react-markdown-kit/renderer"
@@ -132,11 +133,11 @@ a measurement.
   gfm
 />
 
-`markdown-to-jsx` for less setup. Kit for a published conformance run.
+`markdown-to-jsx` takes less setup. The kit has a published conformance run.
 
 ## Security defaults
 
-This is the section where the two packages disagree on purpose. Neither uses
+This is where the two packages deliberately differ. Neither uses
 `dangerouslySetInnerHTML`.
 
 | Default | markdown-to-jsx 9.10.3 | React Markdown Kit |
@@ -147,37 +148,37 @@ This is the section where the two packages disagree on purpose. Neither uses
 | URLs | Built-in sanitizer, replaceable through `options.sanitizer` | Default `urlTransform` allows `http`, `https`, `irc`, `ircs`, `mailto`, `xmpp` and empties the rest |
 | Custom components | `overrides` by tag name | `components` by tag name, trusted code in both |
 
-Read the two positions in full:
+You can read both positions in full in
 <Link href={`${theirs}#raw-html-sanitization`}>raw HTML sanitization</Link> and
 <Link href={`${theirs}#optionssanitizer`}>`options.sanitizer`</Link> on their side,
 <Link to="/docs/security">the security model</Link> on this one.
 
-The practical question is what happens to HTML you did not write. On the kit it is text
-until you add a plugin, which is asserted by
+In practice it comes down to what happens to HTML you didn't write. On the kit it stays text
+until you add a plugin, which is covered by
 <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>the renderer security tests</Link>:
-raw HTML not executed, script tags escaped rather than emitted, `javascript:` URLs
+raw HTML isn't executed, script tags are escaped instead of emitted, `javascript:` URLs are
 blocked, obfuscated protocols blocked, dangerous image sources blocked, relative and
-anchor URLs kept, and the same policy applied to a precompiled document so it is not a
-bypass.
+anchor URLs are kept, and the same policy applies to a precompiled document so that can't
+be used to get around it.
 
 <RenderExample
   title="Raw HTML through @react-markdown-kit/renderer, default settings"
   markdown={htmlSource}
 >
-  The tags are text. On `markdown-to-jsx` defaults, `b` and `div` would be real elements
+  The tags come out as text. On `markdown-to-jsx` defaults, `b` and `div` would be real elements
   and the `img` tag would mount as a real `<img src="x">` with the `onerror` attribute
   dropped. `tagfilter` does not cover `img`; it escapes `script`, `iframe`, `style`,
   `title`, `textarea`, `xmp`, `noembed`, `noframes` and `plaintext`
   (<Link href={`${theirs}#raw-html-sanitization`}>their readme</Link>).
 </RenderExample>
 
-Different goals. Pick `markdown-to-jsx` if authors are meant to write HTML in the
-Markdown. Pick the kit if the Markdown can come from a user, a model or a CMS.
+They're built for different situations. If authors are meant to write HTML in the Markdown,
+`markdown-to-jsx` is the better fit. If the Markdown can come from a user, a model or a CMS,
+I'd go with the kit.
 
 ## Streaming
 
-Both packages address streaming, and they choose opposite behaviour for an incomplete
-construct.
+Both packages handle streaming, but they do opposite things with an incomplete construct.
 
 `markdown-to-jsx` has an opt-in `optimizeForStreaming` option, `false` by default, which
 its readme says suppresses incomplete structures until the closing delimiter arrives:
@@ -186,7 +187,7 @@ unclosed links and an incomplete table are held back, while a fenced code block 
 content as it arrives
 (<Link href={`${theirs}#streaming-markdown`}>streaming Markdown</Link>).
 
-**React Markdown Kit passes with no option to set, and the behaviour is tested.**
+React Markdown Kit needs no option for this, and the behaviour is tested.
 <Link href={blob('packages/renderer/tests/streaming.test.tsx')}>`packages/renderer/tests/streaming.test.tsx`</Link>
 is 59 tests that feed seven documents token by token and assert four properties on every
 prefix: no prefix throws, the HTML of the closed prefix is byte-identical at every later
@@ -196,14 +197,14 @@ and through a mounted React root that grows token by token.
 
 An incomplete construct renders as the characters typed so far. `**str` is the text
 `**str`, `[text](` is the text `[text](`, and a table is a paragraph until its delimiter
-row is complete. Nothing is dropped and nothing is invented. Two prefixes legitimately
-rewrite output that already rendered, and both are pinned by tests: a paragraph becomes a
+row is complete. Nothing gets dropped or made up. Two prefixes do rewrite output that already rendered, and both are pinned by tests: a paragraph becomes a
 heading when a setext underline arrives, and a GFM autolink points at the truncated host
 while the URL is still being typed.
 
-Which you want depends on the UI. Suppression hides the syntax and shows nothing;
-literal text shows the syntax and never moves the text above it. The kit's guarantee is
-the byte-stable closed prefix, which is what stops a long chat answer from reflowing.
+Which one you want depends on the UI. Suppression hides the syntax until it's complete,
+while literal text shows the syntax and never moves the text above it. What the kit
+guarantees is that the closed prefix stays byte-stable, which keeps a long chat answer from
+reflowing.
 
 ## Server rendering
 
@@ -212,23 +213,23 @@ detects a React Server Component environment and adapts with no `'use client'` d
 (<Link href={`${theirs}#react-server-components-rsc`}>RSC usage</Link>), and it also
 compiles to HTML, Markdown and an AST outside React entirely.
 
-The kit is server-safe by construction. Its conformance suites call
+The kit is built to run on the server too. Its conformance suites call
 `renderToStaticMarkup`, and
 <Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link> installs the
 packed tarball into a consumer with no Lexical and renders there, so the renderer entry
 pulls in no browser-only code
 (<Link to="/docs/server-rendering">server rendering</Link>).
 
-The kit's extra is `compileMarkdown`. A `MarkdownDocument` compiled once renders many
+The kit also has `compileMarkdown`. A `MarkdownDocument` compiled once renders many
 times without parsing again: on the reference machine in
 <Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link> a 10 KB document
 takes 16.80 ms from a string and 5.99 ms precompiled, 2.8x faster.
 
-Single-render speed against `react-markdown@10.1.0`, both sides parsing GFM, is the
-honest counterweight: **1 KB is 1.21x slower** (2.69 ms against 2.23 ms), 10 KB is at
+On the other hand, single-render speed against `react-markdown@10.1.0` (both sides parsing
+GFM) is **1.21x slower at 1 KB** (2.69 ms against 2.23 ms), 10 KB is at
 parity, and 100 KB is 0.89x. The 1 KB row is an open regression, tracked in
 <Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link>. No benchmark
-against `markdown-to-jsx` is published here, so no speed claim is made against it.
+against `markdown-to-jsx` is published here, so this page doesn't make a speed claim against it.
 
 ## Plugins
 
@@ -237,7 +238,7 @@ against `markdown-to-jsx` is published here, so no speed claim is made against i
 `sanitizer` for URLs, `slugify` for heading ids, and `createElement` for another
 framework. Its own AST is exported for anything else.
 
-The kit takes the unified ecosystem directly: `remarkPlugins`, `rehypePlugins` and
+The kit works with the unified ecosystem directly, through `remarkPlugins`, `rehypePlugins` and
 `remarkRehypeOptions`, compared prop for prop against `react-markdown` at 4 of 4, 3 of 3
 and 3 of 3 identical
 (<Link href={blob('docs/COMPATIBILITY.md')}>`docs/COMPATIBILITY.md`</Link>). On top of
@@ -247,8 +248,8 @@ only compiles the document all read the same thing
 (<Link to="/docs/extensions">extensions</Link>). `@react-markdown-kit/mermaid`,
 `@react-markdown-kit/slides` and `@react-markdown-kit/template` are built that way.
 
-Kit, if you want existing remark or rehype plugins or an editor.
-`markdown-to-jsx`, if overrides are all you need and you want to stay at zero
+The kit is the better fit if you want existing remark or rehype plugins or an editor.
+`markdown-to-jsx` is fine if overrides are all you need and you want to stay at zero
 dependencies.
 
 ## Migration
@@ -256,7 +257,7 @@ dependencies.
 There is no codemod for this direction. `rmk-migrate` and `rmk-compare` handle
 `react-markdown` only
 (<Link href={blob('packages/renderer/src/codemod/compare.mjs')}>`compare.mjs`</Link>), so
-moving from `markdown-to-jsx` is a hand edit. The shape of it:
+moving from `markdown-to-jsx` is a hand edit. It looks roughly like this.
 
 ```diff
 -import Markdown from 'markdown-to-jsx'
@@ -268,7 +269,7 @@ moving from `markdown-to-jsx` is a hand edit. The shape of it:
 +<Markdown preset={preset} components={{ a: Anchor }}>{content}</Markdown>
 ```
 
-Three things to check before you start.
+A few things to check before you start.
 
 - **Raw HTML stops rendering.** Anything relying on HTML inside the Markdown becomes
   text unless you add `rehype-raw` and a sanitizer, in that order.
@@ -277,7 +278,7 @@ Three things to check before you start.
 - **`renderRule` has no equivalent.** Per-rule rendering is a rehype plugin or an
   extension here.
 
-Diff your own corpus through both before committing. Render the same files with each
+I'd recommend diffing your own corpus through both before committing. Render the same files with each
 package and compare the HTML, the way
 <Link href={blob('tests/compatibility.test.tsx')}>`tests/compatibility.test.tsx`</Link>
 does for `react-markdown`.

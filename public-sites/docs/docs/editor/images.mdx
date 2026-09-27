@@ -19,25 +19,25 @@ import EditorExample from '@site/src/components/EditorExample'
 />
 ```
 
-Your application chooses where the bytes go. The editor manages the UI state, the cancellation and the Markdown that ends up in the document.
+Your app decides where the file goes. The editor handles the UI state, cancellation and the Markdown that ends up in the document.
 
 ## Inserting an image by URL
 
-No configuration is needed for an image that already has a URL. The toolbar's image button asks for one, and `![alt](src)` works in source mode.
+If the image already has a URL you don't need to configure anything. The toolbar's image button asks for the URL, and `![alt](src)` works in source mode.
 
 <EditorExample
   title="Images are in the default dialect"
   height={280}
-  markdown={'![The project logo](/img/logo.svg "React Markdown Kit")\n\nAn image is a first-class node, so it survives a save.\n'}
+  markdown={'![The project logo](/img/logo.svg "React Markdown Kit")\n\nAn image is a real node in the document, so it survives a save.\n'}
 >
-  This is the fix for the first audit finding. The previous editor rendered `![alt](src)` as a literal exclamation mark followed by a link.
+  This fixes the first audit finding. The previous editor rendered `![alt](src)` as a literal exclamation mark followed by a link.
 </EditorExample>
 
-Reference images work too. `![alt][id]` keeps its definition, and the definition is preserved as written. See [Round-trip preservation](./round-trip.mdx).
+Reference images work too. `![alt][id]` keeps its definition, and the definition is kept exactly as written. See [Round-trip preservation](./round-trip.mdx).
 
 ## Uploading a file
 
-`onUploadImage` is how a file becomes a URL.
+`onUploadImage` is where you turn a file into a URL.
 
 ```ts
 type MarkdownUploadImage = (
@@ -57,7 +57,7 @@ interface MarkdownImageValue {
 }
 ```
 
-Resolve with the URL your storage returned. The editor inserts the image at the selection.
+Resolve with the URL your storage gave you back, and the editor inserts the image at the selection.
 
 ```tsx
 <MarkdownEditor
@@ -79,35 +79,35 @@ Resolve with the URL your storage returned. The editor inserts the image at the 
 />
 ```
 
-`documentKey` is passed through so your endpoint knows which document the asset belongs to. That is what lets you clean up orphans later.
+`documentKey` is passed through so your endpoint knows which document the asset belongs to, which makes it possible to clean up orphaned uploads later.
 
 ## Cancellation
 
-`context.signal` is aborted when the editor unmounts. Pass it to `fetch`, or to whichever client your storage uses.
+`context.signal` is aborted when the editor unmounts. Pass it to `fetch` or whatever client your storage uses.
 
-An upload that outlives its editor has nowhere to put the result. Honouring the signal is how you avoid a write into a component that is gone.
+If an upload outlives its editor there's nowhere to put the result. Respecting the signal keeps you from writing into a component that's already gone.
 
 ## Errors
 
-Reject the promise. Let it reach your own error reporting and your own toast.
+Reject the promise and let it go through your own error reporting and toast.
 
-The editor does not invent an error message and does not insert anything on failure. Nothing enters the document unless the promise resolves.
+The editor doesn't make up an error message and doesn't insert anything on failure. Nothing goes into the document unless the promise resolves.
 
-Calling `commands.uploadImage(file)` without `onUploadImage` configured rejects with an explanatory error, rather than failing silently.
+Calling `commands.uploadImage(file)` without `onUploadImage` configured rejects with an error that says so (it doesn't fail silently).
 
 ## Never persist a blob URL
 
-`URL.createObjectURL(file)` gives a URL that works in exactly one browser tab, for exactly as long as that page lives.
+`URL.createObjectURL(file)` gives you a URL that only works in that one browser tab, and only while the page is open.
 
-Written into Markdown it is a broken image the moment the document is saved and reopened. It is also a leak, because the object stays alive until it is revoked.
+If it gets written into Markdown, it's a broken image as soon as the document is saved and reopened. It's also a memory leak, since the object stays alive until it's revoked.
 
-The editor never writes a `blob:` URL into a document. Only the `src` your handler resolves with reaches the Markdown.
+The editor never writes a `blob:` URL into a document. Only the `src` your handler resolves with makes it into the Markdown.
 
-If you want an optimistic local preview while the upload runs, keep the blob URL in your own component state and insert the image when the upload resolves.
+If you want a local preview while the upload runs, keep the blob URL in your own component state and insert the image once the upload resolves.
 
 ## Your own drop zone or file picker
 
-Build the affordance you want and call the command.
+Build whatever UI you want and call the command from it.
 
 ```tsx
 'use client'
@@ -138,21 +138,21 @@ function ImageDropZone({ children }) {
 
 `commands.uploadImage(file)` runs `onUploadImage` and inserts the result. `commands.insertImage({ src, alt, title })` inserts an image you already have a URL for.
 
-Both are available on the instance from `useMarkdownEditor` or `useMarkdownEditorContext`. See [Headless editing](./headless.mdx).
+Both are on the instance you get from `useMarkdownEditor` or `useMarkdownEditorContext`. See [Headless editing](./headless.mdx).
 
 ## Alt text
 
-Alt text is content, not decoration. Return a real one from your handler when you can, and let authors edit it.
+Alt text is part of the content. Return real alt text from your handler when you can, and let authors edit it.
 
-An empty `alt` is correct for a purely decorative image. A missing one is not the same thing.
+An empty `alt` is correct for a purely decorative image. A missing `alt` means something different, so don't treat them as the same.
 
-The renderer passes `alt` straight through to your `img` component, so an accessible image component is one override away. See [Components](../renderer/components.mdx).
+The renderer passes `alt` straight through to your `img` component, so you can swap in an accessible image component with one override. See [Components](../renderer/components.mdx).
 
 ## Rendering the result
 
-Images the editor writes are ordinary Markdown images. The renderer applies the same URL policy it applies to links, so an unsafe scheme is emptied before it reaches the DOM.
+Images the editor writes are normal Markdown images. The renderer applies the same URL policy it uses for links, so an unsafe scheme gets emptied before it reaches the DOM.
 
-If your assets live behind a CDN or need sizing, override `img` in the preset you share between the editor preview and the published page. See [Presets](../renderer/presets.mdx).
+If your assets sit behind a CDN or need sizing, override `img` in the preset that the editor preview and the published page share. See [Presets](../renderer/presets.mdx).
 
 ## Read next
 

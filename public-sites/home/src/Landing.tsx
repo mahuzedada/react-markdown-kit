@@ -37,30 +37,30 @@ interface Package {
 const PACKAGES: readonly Package[] = [
   {
     name: 'renderer',
-    what: 'Markdown to React. Safe by default, unstyled by default, server-ready.',
+    what: 'Renders Markdown to React elements. Safe and unstyled by default, and it runs on the server.',
     docs: docsUrl('/react-markdown-renderer'),
     demo: sites.rendererDemo,
   },
   {
     name: 'editor',
-    what: 'Rich, source and preview editing. Markdown in, Markdown out.',
+    what: 'Rich, source and preview modes. It loads Markdown and saves Markdown.',
     docs: docsUrl('/react-markdown-editor'),
     demo: sites.editorDemo,
   },
   {
     name: 'template',
-    what: 'Plugin. Typed variables, formatters and schemas in the same document.',
+    what: 'Plugin for typed variables, formatters and schemas inside the Markdown document itself.',
     docs: docsUrl('/markdown-template-engine'),
   },
   {
     name: 'mermaid',
-    what: 'Plugin. Flowcharts as static SVG, edited by dragging on a canvas.',
+    what: 'Plugin that renders flowcharts as static SVG. You can edit them by dragging things around on a canvas.',
     docs: docsUrl('/docs/mermaid'),
     demo: sites.mermaidDemo,
   },
   {
     name: 'slides',
-    what: 'Plugin. A deck from one Markdown file, presented and printed.',
+    what: 'Plugin that turns one Markdown file into a deck you can present or print.',
     docs: docsUrl('/docs/slides'),
     demo: sites.slidesDemo,
   },
@@ -73,10 +73,10 @@ interface Demo {
 }
 
 const DEMOS: readonly Demo[] = [
-  { href: sites.rendererDemo, label: 'Renderer playground', what: 'Paste Markdown, switch every option, copy the code.' },
-  { href: sites.editorDemo, label: 'Online Markdown editor', what: 'Rich, source and preview modes with templates and diagrams.' },
-  { href: sites.mermaidDemo, label: 'Mermaid visual editor', what: 'Drag a flowchart on a canvas, get plain Mermaid back.' },
-  { href: sites.slidesDemo, label: 'Markdown slides editor', what: 'Write a deck, present it, open a presenter window.' },
+  { href: sites.rendererDemo, label: 'Renderer playground', what: 'Paste some Markdown, flip the options and copy the code it generates.' },
+  { href: sites.editorDemo, label: 'Online Markdown editor', what: 'The editor in rich, source and preview modes, with templates and diagrams turned on.' },
+  { href: sites.mermaidDemo, label: 'Mermaid visual editor', what: 'Drag a flowchart around on a canvas and copy plain Mermaid back out.' },
+  { href: sites.slidesDemo, label: 'Markdown slides editor', what: 'Write a deck in Markdown and present it, with a separate presenter window if you want one.' },
 ]
 
 interface Evidence {
@@ -89,7 +89,7 @@ const EVIDENCE: readonly Evidence[] = [
   {
     href: docsUrl('/migrate-from-react-markdown'),
     label: 'Migrating from react-markdown',
-    what: 'The three differences, and a codemod that refuses to guess.',
+    what: 'Covers the three differences. The codemod won’t guess when it isn’t sure.',
   },
   {
     href: docsUrl('/docs/compatibility'),
@@ -104,12 +104,12 @@ const EVIDENCE: readonly Evidence[] = [
   {
     href: docsUrl('/docs/security'),
     label: 'Security model',
-    what: 'Raw HTML shown as text, unsafe URLs emptied, template values that cannot inject.',
+    what: 'Raw HTML is shown as text, unsafe URLs are emptied, and template values can’t inject markup.',
   },
   {
     href: docsUrl('/nextjs-markdown'),
     label: 'Next.js and server components',
-    what: 'No use client directive; render on the server or in static builds.',
+    what: 'The renderer has no use client directive, so you can render on the server or in a static build.',
   },
 ]
 
@@ -122,17 +122,17 @@ const MERMAID_GUIDES: readonly Evidence[] = [
   {
     href: docsUrl('/mermaid-live-editor-alternative'),
     label: 'Mermaid Live Editor alternative',
-    what: 'mermaid.live and the visual canvas side by side: editing, sharing, price, licence, diagram types.',
+    what: 'How mermaid.live compares with the visual canvas on editing, sharing, price, licence and diagram types.',
   },
   {
     href: docsUrl('/flowchart-to-mermaid'),
     label: 'Flowchart to Mermaid',
-    what: 'Draw a flowchart on the canvas and copy the Mermaid it writes.',
+    what: 'Draw a flowchart on the canvas and copy out the Mermaid it writes.',
   },
   {
     href: docsUrl('/edit-ai-generated-mermaid'),
     label: 'Fix AI-generated Mermaid',
-    what: 'Paste model output, drag the layout right, copy it back with positions kept in a comment.',
+    what: 'Paste what the model gave you, drag the layout until it looks right, then copy it back (positions are kept in a comment).',
   },
 ]
 
@@ -140,17 +140,17 @@ const RENDERER_PAGES: readonly Evidence[] = [
   {
     href: docsUrl('/docs/guides/render-markdown-in-react'),
     label: 'How to render Markdown in React',
-    what: 'GFM, custom components, links, code blocks, security defaults and server rendering, each shown live.',
+    what: 'Covers GFM, custom components, links, code blocks, security defaults and server rendering, with a live example for each.',
   },
   {
     href: docsUrl('/streaming-markdown'),
     label: 'Streaming Markdown in React',
-    what: 'Every partial prefix renders and finished blocks stay byte-identical; the two exceptions are named.',
+    what: 'Every partial prefix renders, and blocks that are finished stay byte-identical. There are two exceptions and the page lists them.',
   },
   {
     href: docsUrl('/react-markdown-alternative'),
     label: 'react-markdown alternative',
-    what: '39 of 39 prop comparisons render identical markup, and the three differences come with a codemod.',
+    what: '39 of 39 prop comparisons render identical markup. There’s a codemod for the three differences.',
   },
 ]
 
@@ -158,12 +158,12 @@ const EDITOR_PAGES: readonly Evidence[] = [
   {
     href: docsUrl('/markdown-round-trip'),
     label: 'Lossless Markdown editing',
-    what: 'What a round trip has to preserve, the 22-document corpus, and how to run it on your own files.',
+    what: 'What a round trip needs to preserve, the 22-document corpus we test with, and how to run it against your own files.',
   },
   {
     href: docsUrl('/docs/guides/lexical-markdown-editor'),
     label: 'Lexical Markdown editor',
-    what: 'Why Lexical, how @react-markdown-kit/editor wraps it, and when to drop to the headless API.',
+    what: 'Why we went with Lexical, how @react-markdown-kit/editor wraps it, and when you’d want the headless API instead.',
   },
 ]
 
@@ -171,12 +171,12 @@ const TEMPLATE_PAGES: readonly Evidence[] = [
   {
     href: docsUrl('/docs/guides/markdown-template-variables'),
     label: 'Markdown template variables',
-    what: 'Placeholder syntax in a .md file, and why a resolved value cannot create Markdown structure.',
+    what: 'The placeholder syntax for a .md file, and why a resolved value can’t create Markdown structure.',
   },
   {
     href: docsUrl('/personalized-markdown'),
     label: 'Personalized Markdown',
-    what: 'Write the customer report once, resolve typed variables per customer and locale.',
+    what: 'Write a customer report once and resolve its typed variables for each customer and locale.',
   },
 ]
 
@@ -184,12 +184,12 @@ const SLIDES_PAGES: readonly Evidence[] = [
   {
     href: docsUrl('/docs/slides'),
     label: 'Markdown presentations in React',
-    what: 'Slides split on ---, speaker notes after ???, fragments after --, present mode, one plugin.',
+    what: 'Slides are split on ---, speaker notes go after ??? and fragments after --. Present mode is in the same plugin.',
   },
   {
     href: docsUrl('/marp-alternative'),
     label: 'Marp and Slidev alternative',
-    what: 'A deck rendered inside your own React app, with no PDF or PPTX export.',
+    what: 'The deck renders inside your own React app. There’s no PDF or PPTX export.',
   },
 ]
 
@@ -198,37 +198,37 @@ const COMPARISONS: readonly Evidence[] = [
   {
     href: docsUrl('/compare'),
     label: 'All comparisons',
-    what: 'Every comparison page, grouped by package, with one install-size table for every import.',
+    what: 'Every comparison page grouped by package, plus one install-size table that covers every import.',
   },
   {
     href: docsUrl('/compare/react-markdown'),
     label: 'vs react-markdown',
-    what: 'Install size, GFM, security defaults, streaming, server rendering, plugins and migration.',
+    what: 'Compares install size, GFM, security defaults, streaming, server rendering, plugins and migration.',
   },
   {
     href: docsUrl('/compare/markdown-to-jsx'),
     label: 'vs markdown-to-jsx',
-    what: 'The same rows, against the smaller renderer that parses with regular expressions.',
+    what: 'Same comparison against markdown-to-jsx, a smaller renderer that parses with regular expressions.',
   },
   {
     href: docsUrl('/compare/streamdown'),
     label: 'vs Streamdown',
-    what: 'The same rows, for an AI chat UI that renders tokens as they arrive.',
+    what: 'Same comparison, aimed at AI chat UIs that render tokens as they arrive.',
   },
   {
     href: docsUrl('/compare/mdxeditor'),
     label: 'Editor vs MDXEditor',
-    what: 'Editing model, output format, round trip, bundle size, server rendering and migration.',
+    what: 'Compares editing model, output format, round trip, bundle size, server rendering and migration.',
   },
   {
     href: docsUrl('/compare/milkdown'),
     label: 'Editor vs Milkdown',
-    what: 'The same rows, against the ProseMirror editor and its plugin system.',
+    what: 'Same comparison against Milkdown, which is built on ProseMirror and has its own plugin system.',
   },
   {
     href: docsUrl('/compare/handlebars'),
     label: 'Templating vs Handlebars',
-    what: 'String interpolation before parsing, against placeholders resolved inside the parser.',
+    what: 'Handlebars interpolates strings before parsing. The template plugin resolves placeholders inside the parser instead.',
   },
 ]
 
@@ -236,12 +236,12 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'What is React Markdown Kit?',
     answer:
-      'Two React packages and three plugins that share one Markdown model: a renderer, an editor, and plugins for typed template variables, Mermaid flowcharts and slides. Markdown stays the storage format throughout.',
+      'It’s two React packages (a renderer and an editor) plus three plugins for typed template variables, Mermaid flowcharts and slides. They all share one Markdown model, and what you store is always plain Markdown.',
   },
   {
     question: 'Which package do I install?',
     answer:
-      '@react-markdown-kit/renderer to render Markdown, and @react-markdown-kit/editor to edit it. The template, mermaid and slides plugins are separate packages used only through the renderer’s extension system.',
+      'Use @react-markdown-kit/renderer to render Markdown and @react-markdown-kit/editor to edit it. The template, mermaid and slides plugins are separate packages, and you only use them through the renderer’s extension system.',
     more: { href: docsUrl('/docs/getting-started'), label: 'Getting started.' },
   },
   {
@@ -252,19 +252,19 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'How is it different from react-markdown?',
     answer:
-      'The prop surface matches react-markdown 10 in 39 of 39 tested comparisons, raw HTML and unsafe URLs are dropped by default without a plugin, and a document can be compiled once and rendered many times. Three differences are documented, with a codemod.',
+      'The props match react-markdown 10 in 39 of 39 tested comparisons. Raw HTML and unsafe URLs are dropped by default without needing a plugin, and you can compile a document once and render it many times. There are three documented differences, and a codemod handles them.',
     more: { href: docsUrl('/migrate-from-react-markdown'), label: 'The migration guide.' },
   },
   {
     question: 'Does it need a design system?',
     answer:
-      'No. There are zero styling dependencies in any package. Style the output with your own CSS, the shipped typography, utility classes or your own components.',
+      'No. None of the packages has a styling dependency. You can style the output with your own CSS, the shipped typography, utility classes or your own components.',
     more: { href: docsUrl('/docs/styling'), label: 'The four styling approaches.' },
   },
   {
     question: 'Does it work with Next.js?',
     answer:
-      'Yes. The renderer has no use client directive and works in React Server Components; the editor is a client component that saves plain Markdown.',
+      'Yes. The renderer has no use client directive and works in React Server Components. The editor is a client component, and it saves plain Markdown.',
     more: { href: docsUrl('/nextjs-markdown'), label: 'Markdown in Next.js.' },
   },
 ]
@@ -276,8 +276,9 @@ export default function Landing(): ReactNode {
         <img className="home-logo" src="/logo.svg" alt="" width={40} height={40} />
         <h1>{TITLE}</h1>
         <p className="home-lede">
-          Add Markdown to the React app you already have. Rendering, editing, diagrams and slides
-          are solved, and the file stays plain Markdown, so you keep building your product.
+          Packages for rendering and editing Markdown in a React app you already have, plus plugins
+          for diagrams and slides. Documents stay plain Markdown the whole way through, so you can
+          get back to working on your own product.
         </p>
         <ActivityScope feature="hero" as="div" className="home-actions">
           <Button as="a" href={docsUrl('/docs/getting-started')} track="get-started">
@@ -297,8 +298,9 @@ export default function Landing(): ReactNode {
         <CopyCode code="npm install @react-markdown-kit/renderer" />
         <CopyCode code={USE} />
         <p>
-          Raw HTML is shown as text and unsafe URLs are dropped, with nothing to configure. Style
-          it with your own CSS, the shipped typography, utility classes or your own components.
+          Raw HTML is shown as text and unsafe URLs are dropped by default, so there’s nothing to
+          configure for that. For styling you can use your own CSS, the shipped typography, utility
+          classes or your own components.
         </p>
       </section>
 
@@ -320,8 +322,8 @@ export default function Landing(): ReactNode {
           ))}
         </ul>
         <p>
-          Every package reads and writes plain Markdown, so a document that is rendered today
-          can be edited, personalized or presented tomorrow without a migration.
+          Every package reads and writes plain Markdown. If you start with the renderer and later
+          want editing, templates or slides, the documents you already have should work as they are.
         </p>
       </section>
 

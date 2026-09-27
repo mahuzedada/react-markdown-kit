@@ -64,7 +64,7 @@ async function loadInitialSource(): Promise<InitialSource> {
   if (decoded !== undefined) return { source: decoded }
   return {
     source: stored ?? SAMPLE_DECK,
-    notice: 'The deck in this link could not be read here (a compressed link needs a browser with the streams API), so this is the last deck you edited.',
+    notice: 'This browser couldn’t read the deck in the link (compressed links need the streams API), so you’re seeing the last deck you edited.',
   }
 }
 
@@ -158,7 +158,7 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
       await navigator.clipboard.writeText(link)
       setStatus('Link copied. It opens this deck in present mode.')
     } catch {
-      setStatus('Could not copy. The address bar holds this deck; add &view=present to open it presenting.')
+      setStatus('Couldn’t copy the link. The deck is in the address bar, and you can add &view=present to open it in present mode.')
     }
   }, [encodedNow])
 
@@ -170,7 +170,7 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
       return
     }
     popup.location.href = linkFor(await encodedNow(), 'presenter')
-    setStatus('Presenter window open. Press Present here, or open the share link on the projector; the windows move together.')
+    setStatus('Presenter window is open. Press Present here, or open the share link on the projector, and the two windows will stay on the same slide.')
   }, [encodedNow])
 
   const reset = useCallback((): void => {
@@ -241,7 +241,7 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
           <div className={styles.col}>
             <div className={styles.colHead}>
               <span>Deck</span>
-              <span className={styles.badgeOk}>static sections; Present makes them a show</span>
+              <span className={styles.badgeOk}>static sections until you press Present</span>
             </div>
             <div className={styles.deckWrap} ref={deckRef}>
               <div className="rmk-document">

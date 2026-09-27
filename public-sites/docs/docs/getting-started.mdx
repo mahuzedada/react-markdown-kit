@@ -22,25 +22,25 @@ export function Article({ content }: { content: string }) {
 }
 ```
 
-That is the whole first-use experience. No provider, no stylesheet, no account, no design system.
+That's all you need to get started. There's no provider to wrap your app in and no stylesheet to import.
 
 <RenderExample
   editable
   title="The renderer, running on this page"
   markdown={'## Release notes\n\nWe shipped **two** things this week.\n\n1. A faster importer\n2. A [changelog](https://example.com)\n\n> Thanks for the reports.\n'}
 >
-  The right-hand pane is a real `Markdown` component, server-rendered with the rest of the page. Edit the source and watch it follow.
+  The right-hand pane is a real `Markdown` component, server-rendered with the rest of the page. If you edit the source, it re-renders as you type.
 </RenderExample>
 
 ## What you get by default
 
-CommonMark, parsed with micromark rather than regular expressions.
+You get CommonMark, parsed with micromark instead of regular expressions.
 
-Raw HTML is not executed, and unsafe URL schemes are blocked. See [Security](/docs/security).
+Raw HTML isn't executed and unsafe URL schemes are blocked. See [Security](/docs/security).
 
-Plain semantic HTML with no classes and no inline styles. See [Styling](/docs/styling).
+The output is plain semantic HTML without classes or inline styles, so your own CSS applies to it directly. See [Styling](/docs/styling).
 
-No `"use client"` on the renderer entry, so it works in server components and static rendering. See [Server rendering](/docs/server-rendering).
+The renderer entry doesn't have `"use client"`, so it works in server components and static rendering. See [Server rendering](/docs/server-rendering).
 
 ## Turn on GitHub Flavored Markdown
 
@@ -66,11 +66,11 @@ Tables, task lists, strikethrough, autolinks and footnotes are covered in [GFM](
 </Markdown>
 ```
 
-Any element can be replaced, and the override receives the element's props plus its source node. See [Components](./renderer/components.mdx).
+You can replace any element. The override gets the element's props plus its source node. See [Components](./renderer/components.mdx).
 
 ## Add editing
 
-The editor is a separate package. The renderer never requires it.
+The editor is a separate package, and the renderer doesn't depend on it.
 
 ```bash
 npm install @react-markdown-kit/editor
@@ -94,11 +94,11 @@ export function Notes() {
   markdown={'## Notes\n\nEdit this document. The saved Markdown is shown underneath.\n\n- [ ] Try the toolbar\n- [ ] Switch to source mode\n'}
 />
 
-You store Markdown, not editor JSON. See [Editor basics](./editor/basics.mdx).
+What you store is plain Markdown (there's no editor JSON format to keep around). See [Editor basics](./editor/basics.mdx).
 
 ## Personalize the same document
 
-The template plugin resolves typed variables while the renderer parses.
+The template plugin fills in typed variables while the renderer parses the document.
 
 ```tsx
 import { template } from '@react-markdown-kit/template'

@@ -14,9 +14,9 @@ import TemplateExample from '@site/src/components/TemplateExample'
 {{createdAt | date:"medium"}}
 ```
 
-A formatter runs on the value, returns a string, and that string is inserted as
-text. It is never re-parsed as Markdown, so a formatter cannot widen the
-injection surface.
+A formatter takes the value and returns a string, and that string is inserted as
+text. It's never re-parsed as Markdown, so adding a formatter doesn't open up
+any new way to inject content.
 
 ## The six built-in formatters
 
@@ -29,25 +29,25 @@ injection surface.
 | `time` | `full`, `long`, `medium` or `short` | `{{startsAt \| time:"short"}}` | a `Date`, an epoch number or an ISO string |
 | `datetime` | `full`, `long`, `medium` or `short` | `{{updatedAt \| datetime}}` | a `Date`, an epoch number or an ISO string |
 
-Date styles default to `medium`. All six use the platform `Intl` APIs, so
-output follows the same CLDR data the rest of your application uses.
+Date styles default to `medium`. All six use the platform `Intl` APIs, so the
+output follows the same CLDR data as the rest of your application.
 
-A wrong value type is a diagnostic, not a crash. `currency` applied to a `Date`
-produces `TEMPLATE_FORMATTER_VALUE_TYPE` and `ok: false`.
+A value of the wrong type gives you a diagnostic (it doesn't throw). For example
+`currency` applied to a `Date` produces `TEMPLATE_FORMATTER_VALUE_TYPE` and `ok: false`.
 
 ## Currency is always explicit
 
-A locale says nothing about which currency an amount is in. `fr-FR` formats
-euros and Swiss francs identically well, and guessing would print the wrong
-symbol on an invoice.
+A locale doesn't tell you which currency an amount is in. `fr-FR` formats
+euros and Swiss francs equally well, and if we guessed we'd sometimes print the
+wrong symbol on an invoice.
 
 ```text
 {{total | currency:"USD"}}   ✓
 {{total | currency}}         ✗ TEMPLATE_FORMATTER_ARGUMENT_REQUIRED
 ```
 
-The code must be three letters. The locale decides symbol placement, digit
-grouping and the decimal separator. The data decides the currency.
+The code has to be three letters. The locale controls symbol placement, digit
+grouping and the decimal separator. The currency is whatever code you pass.
 
 ## Locale and time zone
 
@@ -57,7 +57,7 @@ Both are options of `template()`.
 template({ data, locale: 'fr-FR', timeZone: 'America/New_York' })
 ```
 
-`timeZone` defaults to `UTC`, so the same data produces the same document on a
+`timeZone` defaults to `UTC`, so the same data gives you the same document on a
 laptop and on a build server. `locale` defaults to `en-US`.
 
 The same source, formatted for three locales:
@@ -105,13 +105,13 @@ Reviewed {{reviewedAt | date:"long"}}
     },
   ]}
 >
-  The data and the template are identical across the three. Only the `locale`
-  option changes.
+  The data and the template are the same in all three. The only thing that
+  changes is the `locale` option.
 </TemplateExample>
 
 ## Custom formatters
 
-Pass them to `template()`, or ship them in an extension of your own so every
+Pass them to `template()`, or put them in an extension of your own so every
 template in the application gets them (see [Extensions](/docs/extensions)).
 
 ```ts
@@ -125,9 +125,9 @@ template({
 })
 ```
 
-A formatter receives the value and a context of `argument`, `locale`,
-`timeZone` and `path`. The path is there for diagnostics; the value never
-appears in a message the kit produces.
+A formatter gets the value plus a context with `argument`, `locale`,
+`timeZone` and `path`. The path is there for diagnostics. The value itself never
+shows up in a message the kit produces.
 
 ```ts
 import type { TemplateFormatter } from '@react-markdown-kit/template'
@@ -140,9 +140,9 @@ const rounded: TemplateFormatter = (value, { locale, argument }) => {
 }
 ```
 
-Layering runs built-ins first, then formatters contributed by other
-extensions in the same preset, then the `formatters` option. Later wins, so
-an application can replace `date` with its own house style without forking
+Formatters are layered in this order: built-ins, then formatters from other
+extensions in the same preset, then the `formatters` option. The last one wins,
+so an application can replace `date` with its own house style without forking
 anything. `builtinFormatters` is exported for reference:
 
 ```ts
@@ -152,13 +152,12 @@ Object.keys(builtinFormatters)
 // ['number', 'currency', 'percent', 'date', 'time', 'datetime']
 ```
 
-A formatter that throws becomes `TEMPLATE_FORMATTER_FAILED`. Throw
-`TemplateFormatterError` with a code of your choosing when you want a specific
-diagnostic instead.
+If a formatter throws, you get `TEMPLATE_FORMATTER_FAILED`. If you want a more
+specific diagnostic, throw `TemplateFormatterError` with your own code.
 
 ## Localized source
 
-Three concerns stay separate, and none of them is translation.
+There are three separate concerns here. The kit doesn't handle translation for any of them.
 
 | Concern | Who owns it |
 | --- | --- |
@@ -166,9 +165,9 @@ Three concerns stay separate, and none of them is translation.
 | Runtime formatting | The `locale` and `timeZone` options |
 | Localized assets | Application data, such as a per-locale image URL |
 
-Keep one authored source per language and choose before compiling; the plugin
-formats with whatever `locale` you pass, whichever source it is applied to.
-The kit never machine-translates.
+Keep one authored source per language and pick the right one before compiling.
+The plugin formats with whatever `locale` you pass, regardless of which source
+it's applied to. The kit doesn't do any machine translation.
 
 ```tsx
 const source = SOURCES[reader.locale] ?? SOURCES['en-US']

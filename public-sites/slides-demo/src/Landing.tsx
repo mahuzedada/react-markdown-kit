@@ -14,7 +14,7 @@ export const TITLE = 'Markdown Slides Editor Online'
 
 /** Also the meta description in index.html; tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
-  'Write a slide deck as plain Markdown and present it from the browser: slides split on ---, notes after ???, fragments after --, plus a presenter window.'
+  'Write a slide deck in plain Markdown and present it in the browser. Slides split on ---, notes go after ???, fragments after --, with a presenter window.'
 
 const RENDER = `import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
 import { slides } from '@react-markdown-kit/slides'
@@ -76,37 +76,37 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'Can I make slides from Markdown?',
     answer:
-      'Yes. Separate slides with --- between blank lines and the file is a deck. The same file is still a plain document on GitHub, in a diff and in any editor that does not know the plugin.',
+      'Yes. Separate slides with --- between blank lines and the file becomes a deck. It’s still a normal document on GitHub, in a diff, and in any editor that doesn’t know about the plugin.',
     more: { href: docsUrl('/docs/slides'), label: 'The dialect.' },
   },
   {
     question: 'How do I add speaker notes to Markdown slides?',
     answer:
-      'Put ??? on its own line. Everything after it in that slide is a note: hidden in the deck, shown in the presenter window next to the next slide and a clock.',
+      'Put ??? on its own line. Everything after it in that slide is a note. Notes are hidden in the deck and shown in the presenter window, next to the upcoming slide and a clock.',
   },
   {
     question: 'Can I present Markdown slides in the browser?',
     answer:
-      'Yes. Press Present for full screen with keyboard navigation, open a presenter window that stays in sync, and share a link that opens the deck in present mode.',
+      'Yes. Present goes full screen with keyboard navigation. You can also open a presenter window that stays in sync, and share a link that opens the deck in present mode.',
   },
   {
     question: 'How do I reveal points one at a time?',
-    answer: 'Put -- on its own line between them. Each -- starts a fragment that appears on the next keypress.',
+    answer: 'Put -- on its own line between them. Each -- starts a fragment that shows up on the next keypress.',
   },
   {
     question: 'Can I set a class or a background on one slide?',
     answer:
-      'Yes, with a comment alone on its line: class, background or name. Front matter at the top of the file sets the title, the aspect ratio and defaults for every slide.',
+      'Yes. Use a comment on a line by itself to set class, background or name. Front matter at the top of the file sets the title, the aspect ratio and the defaults for every slide.',
   },
   {
     question: 'Can I embed a Markdown deck in a blog post?',
     answer:
-      'Yes. Add embed=1 to a share link and put it in an iframe. The frame holds the deck alone, in present mode, with the keys working inside it and a link that opens the full editor.',
+      'Yes. Add embed=1 to a share link and put it in an iframe. The frame shows only the deck, in present mode. Keys work inside it, and there’s a link that opens the full editor.',
   },
   {
     question: 'Is it a Marp or Slidev alternative?',
     answer:
-      'For decks inside a React app, yes. For exporting files, no: Marp and Slidev export PDF and PPTX, while this plugin renders sections from Markdown your app already stores and prints one page per slide.',
+      'For decks inside a React app, yes. If you need to export files, probably not. Marp and Slidev export PDF and PPTX, and this plugin only renders sections from Markdown your app already stores (and prints one page per slide).',
     more: { href: docsUrl('/docs/slides'), label: 'What the plugin renders.' },
   },
 ]
@@ -115,12 +115,12 @@ export default function Landing(): ReactNode {
   return (
     <article className="site-landing">
       <header className="site-hero">
-        <span className="site-eyebrow">Free, open source, no account</span>
+        <span className="site-eyebrow">Free and open source, no account needed</span>
         <h1>{TITLE}</h1>
         <p className="site-lede">
-          Write a deck as plain Markdown on the left and watch it render on the right. Present it
-          from this page, open a presenter window with your notes, share a link that holds the whole
-          deck, and print one page per slide.
+          Write a deck in plain Markdown on the left and it renders on the right. You can present
+          it from this page, open a presenter window with your notes, share a link that holds the
+          whole deck, or print it with one page per slide.
         </p>
         <p className="site-hero-links">
           <a href={docsUrl('/docs/slides')}>Plugin docs</a>
@@ -133,49 +133,49 @@ export default function Landing(): ReactNode {
       <ul className="site-features">
         <li>
           <strong>Plain Markdown</strong>
-          Slides split on <code>---</code>, notes after <code>???</code>, fragments after{' '}
-          <code>--</code>. GitHub still renders the file as a document.
+          Slides split on <code>---</code>, notes go after <code>???</code> and fragments after{' '}
+          <code>--</code>. GitHub still renders the file as a normal document.
         </li>
         <li>
           <strong>Present mode</strong>
-          Full screen, keyboard and pointer navigation, a presenter window with the next slide and
-          a clock, deep links to any slide.
+          Full screen with keyboard and pointer navigation. There&rsquo;s a presenter window with the
+          next slide and a clock, and you can deep link to any slide.
         </li>
         <li>
-          <strong>The renderer you already use</strong>
+          <strong>Uses the same renderer</strong>
           One plugin turns the Markdown your app stores into an <code>&lt;article&gt;</code> of{' '}
-          <code>&lt;section&gt;</code>s, on the server or in the browser.
+          <code>&lt;section&gt;</code>s. It works on the server or in the browser.
         </li>
       </ul>
 
       <div className="site-prose">
         <span className="site-eyebrow">Install</span>
-        <h2>The plugin, plus the editor for authoring</h2>
+        <h2>Install the plugin, and the editor if you want to author decks</h2>
         <CopyCode code="npm install @react-markdown-kit/renderer @react-markdown-kit/slides" />
         <CopyCode code="npm install @react-markdown-kit/editor" />
         <p>
-          Rendering a deck needs only the first line, and the root entry loads no React: a server
-          component or a static build gets the same <code>&lt;article&gt;</code> of{' '}
-          <code>&lt;section&gt;</code>s. The <code>/present</code> entry adds the show; the editor and the{' '}
-          <code>/editor</code> entry are what the left pane of this page is made of.
+          You only need the first line to render a deck. The root entry doesn&rsquo;t load React, so a
+          server component or a static build gets the same <code>&lt;article&gt;</code> of{' '}
+          <code>&lt;section&gt;</code>s. The <code>/present</code> entry adds present mode. The left pane
+          of this page is built from the editor and the <code>/editor</code> entry.
         </p>
 
         <span className="site-eyebrow">How to</span>
-        <h2>Slides from Markdown in three steps</h2>
+        <h2>Making slides from Markdown</h2>
         <ol className="site-steps">
           <li>
             <strong>Render a deck.</strong> Put <code>slides()</code> in a preset. Slides split on{' '}
             <code>---</code>, the notes start at <code>???</code>, a <code>--</code> is a pause, and{' '}
             <code>&lt;!-- class | background | name: … --&gt;</code> comments set a slide&rsquo;s
-            properties. The output is static: no script, no classes, no inline style, and the notes
-            carry the HTML <code>hidden</code> attribute.
+            properties. The output is static HTML with no script, classes or inline styles, and the
+            notes get the HTML <code>hidden</code> attribute.
             <CopyCode code={RENDER} />
           </li>
           <li>
-            <strong>Write plain Markdown.</strong> The same file is a document with rules on GitHub,
-            in a diff and in any editor. A <code>---</code> inside a fence, a quote or a list never
-            splits, and front matter at the top sets the title, the aspect ratio, and defaults for
-            every slide.
+            <strong>Write plain Markdown.</strong> On GitHub, in a diff or in any other editor, the
+            file shows up as a document with horizontal rules. A <code>---</code> inside a fence, a
+            quote or a list doesn&rsquo;t split the slide, and front matter at the top sets the title,
+            the aspect ratio and the defaults for every slide.
             <CopyCode code={DECK} />
           </li>
           <li>
@@ -192,7 +192,7 @@ export default function Landing(): ReactNode {
 
         <div className="site-deeper">
           <p>
-            <strong>Go deeper.</strong> The <a href={docsUrl('/docs/slides')}>slides plugin docs</a> cover
+            <strong>More docs.</strong> The <a href={docsUrl('/docs/slides')}>slides plugin docs</a> cover
             the dialect, every directive and diagnostic, the emitted HTML, the tokens the stylesheet
             reads, printing, and the editor and present options.{' '}
             <a href={docsUrl('/docs/editor/basics')}>Editor basics</a> covers the editor the left pane
@@ -203,44 +203,46 @@ export default function Landing(): ReactNode {
         <span className="site-eyebrow">Embed</span>
         <h2>Put a deck in your own page</h2>
         <p>
-          Add <code>embed=1</code> to a share link and the page drops everything but the deck: no
-          footer, no landing copy, no editor. The deck fills the frame, opens in present mode, and
-          keeps its keyboard and pointer navigation inside it, so arrow keys and clicks move the
-          slides once the frame has the focus. A small <em>Open in React Markdown Kit</em> link sits
-          in the corner and opens the full editor in a new tab with the same deck.
+          If you add <code>embed=1</code> to a share link, the page hides everything except the deck
+          (the footer, the landing copy and the editor all go away). The deck fills the frame, opens
+          in present mode and keeps keyboard and pointer navigation inside the frame, so arrow keys
+          and clicks move the slides once the frame has focus. There&rsquo;s a small{' '}
+          <em>Open in React Markdown Kit</em> link in the corner that opens the full editor in a new
+          tab with the same deck.
         </p>
         <CopyCode code={EMBED} />
         <p>
-          The <code>d</code> value is the whole deck, so the frame loads nothing from you. Press
-          Share on this page to copy a link with your deck in it, then add <code>&amp;embed=1</code>.
-          An embedded deck writes no address bar and opens no sync channel, so several frames on one
-          page stay independent. Give the frame the aspect ratio of your slides (16 by 9 by
-          default) and <code>allowfullscreen</code> if you want the full screen button to work.{' '}
+          The <code>d</code> value is the whole deck, so the frame doesn&rsquo;t need to load anything
+          from your server. Press Share on this page to copy a link with your deck in it, then add{' '}
+          <code>&amp;embed=1</code>. An embedded deck doesn&rsquo;t touch the address bar or open a
+          sync channel, so several frames on one page stay independent. Give the frame the aspect
+          ratio of your slides (16 by 9 by default), and add <code>allowfullscreen</code> if you want
+          the full screen button to work.{' '}
           <a href={`${sites.slidesDemo}/?embed=1`}>See the embed on its own</a>.
         </p>
 
         <h2>About this editor</h2>
         <ul>
           <li>
-            The left pane is the rich editor with the <code>/editor</code> entry; the right pane is the
-            renderer with the same preset. Type and the deck re-renders; press Present in the deck&rsquo;s
-            control bar to show it from this window.
+            The left pane is the rich editor with the <code>/editor</code> entry, and the right pane is
+            the renderer with the same preset. The deck re-renders as you type. Press Present in the
+            deck&rsquo;s control bar to show it from this window.
           </li>
           <li>
-            The address bar holds the deck: <code>?d=</code> is the source, deflated and base64url
-            encoded, so a link is the whole file. Share copies a link that opens in present mode.{' '}
-            <em>Presenter window</em> opens a second window with the next slide, the notes and a clock;
-            it and this window move together.
+            The deck lives in the address bar. <code>?d=</code> is the source, deflated and base64url
+            encoded, so a link carries the whole file. Share copies a link that opens in present mode.{' '}
+            <em>Presenter window</em> opens a second window with the next slide, the notes and a clock,
+            and it stays on the same slide as this window.
           </li>
           <li>
-            Print gives each slide a 16 by 9 inch page, with the stylesheet&rsquo;s{' '}
+            Printing gives each slide a 16 by 9 inch page, using the stylesheet&rsquo;s{' '}
             <code>break-after: page</code> and this site&rsquo;s own <code>@page</code> rule. The deck
-            uses container units to scale, so nothing measures the window.
+            scales with container units, so nothing has to measure the window.
           </li>
           <li>
-            See the other plugins at work in the <a href={sites.editorDemo}>editor demo</a>, the Mermaid
-            canvas in the <a href={sites.mermaidDemo}>Mermaid editor</a>, or just the rendering in the{' '}
-            <a href={sites.rendererDemo}>renderer demo</a>.
+            The other plugins are in the <a href={sites.editorDemo}>editor demo</a>, the Mermaid canvas
+            is in the <a href={sites.mermaidDemo}>Mermaid editor</a>, and the{' '}
+            <a href={sites.rendererDemo}>renderer demo</a> covers rendering on its own.
           </li>
         </ul>
 

@@ -22,13 +22,13 @@ const doc = compileMarkdown(source, { preset: appMarkdown })
 
 `compileMarkdown` turns a Markdown string into a `MarkdownDocument`. The renderer accepts either one.
 
-You do not need this to render Markdown. Reach for it when the same document is rendered more than once, or when parsing happens somewhere other than the component.
+You don't need this to render Markdown. It's useful when the same document gets rendered more than once, or when parsing happens somewhere other than the component.
 
 ## Why it exists
 
-Parsing is about two thirds of the work of rendering Markdown. Doing it once is the whole point.
+Parsing is about two thirds of the work of rendering Markdown, so the main reason to compile is to only do it once.
 
-It also gives the renderer, the editor and the template plugin something to exchange. The renderer parses, the editor edits, and the template engine resolves variables, all against the same tree. Without a shared document each package would need its own parser, and they would disagree.
+It also gives the renderer, the editor and the template plugin a common format to pass around. The renderer parses, the editor edits and the template engine resolves variables, all against the same tree. Without a shared document, each package would need its own parser, and they'd end up disagreeing.
 
 ## The document shape
 
@@ -42,23 +42,23 @@ interface MarkdownDocument {
 }
 ```
 
-`tree` is authoritative. It is mdast, the standard Markdown syntax tree, with source positions retained.
+`tree` is the source of truth. It's mdast (the standard Markdown syntax tree) with source positions kept.
 
-`profile` records the dialect that produced the tree, such as `commonmark` or `gfm`. Use it in a cache key.
+`profile` records the dialect that produced the tree, such as `commonmark` or `gfm`. You'll want it in your cache key.
 
-`source` is the authored string, kept for preservation and debugging. Turn it off with `retainSource: false`.
+`source` is the original string, kept around for preservation and debugging. You can turn it off with `retainSource: false`.
 
-`diagnostics` holds nonfatal problems found while parsing. It is an array, usually empty.
+`diagnostics` holds nonfatal problems found while parsing. It's an array, and it's usually empty.
 
-The document is plain JSON. No React elements, no class instances, no closures. You can cache it, store it, or send it over the wire.
+The document is plain JSON (there are no React elements, class instances or closures in it), so you can cache it, store it or send it over the wire.
 
-Here is a real one, compiled while this page was built:
+Here's a real one, compiled when this page was built:
 
 <pre style={{ maxHeight: '22rem', overflow: 'auto' }}>{JSON.stringify(compiled, null, 2)}</pre>
 
-Every node carries its `position`, which is what lets the editor write unchanged blocks back byte-for-byte.
+Every node keeps its `position`, which is how the editor can write unchanged blocks back byte-for-byte.
 
-`isMarkdownDocument(value)` is the runtime guard, and `DOCUMENT_CONTRACT_VERSION` is the version it checks.
+`isMarkdownDocument(value)` is the runtime guard, and `DOCUMENT_CONTRACT_VERSION` is the version it checks against.
 
 ## Two inputs, no precedence rule
 
@@ -67,9 +67,9 @@ type MarkdownProps = MarkdownBaseProps &
   ({ children: string; document?: never } | { children?: never; document: MarkdownDocument })
 ```
 
-`children` and `document` are mutually exclusive in the types. Passing both is a type error, and a runtime `MarkdownConfigurationError` in JavaScript.
+`children` and `document` are mutually exclusive in the types. Passing both is a type error, and in plain JavaScript it throws a `MarkdownConfigurationError` at runtime.
 
-There is no "which one wins" rule to remember, because there is no case where both are present.
+Since both can never be present, there's no "which one wins" rule to remember.
 
 ## Performance
 
@@ -82,29 +82,29 @@ Measured on a 10 kB document, server-rendered, median of the printed iteration c
 
 About 2.8x faster to re-render. Reference machine is an Apple M4 Max on Node 24.17, and the method is in `benchmarks/README.md`.
 
-The saving is parsing. Everything after parsing still runs on every render.
+All of the saving comes from skipping the parse. Everything after parsing still runs on every render.
 
 ## What still runs
 
-A precompiled document is not a fast path around the security policy.
+A precompiled document doesn't get to skip the security policy.
 
-Every syntax transform runs. Every remark and rehype plugin runs. The URL policy, the element filter and the raw-HTML rule all run.
+Every syntax transform and every remark and rehype plugin still runs, and so do the URL policy, the element filter and the raw-HTML rule.
 
-Passing a document is a way to skip parsing, and nothing else.
+Passing a document only skips parsing.
 
-A document you hold is also cloned before rendering, so rendering never mutates the object you cached.
+The document you pass in is also cloned before rendering, so rendering won't mutate the object you cached.
 
 ## Errors and diagnostics
 
-Content problems become diagnostics on the document. You never have to wrap ordinary Markdown in a `try`.
+Problems with the content show up as diagnostics on the document, so you don't need to wrap ordinary Markdown in a `try`.
 
-Configuration mistakes throw `MarkdownConfigurationError`. An invalid preset and a non-string source are configuration mistakes.
+Configuration mistakes (like an invalid preset or a non-string source) throw `MarkdownConfigurationError`.
 
 ```ts
 import { MarkdownConfigurationError } from '@react-markdown-kit/renderer'
 ```
 
-Compilation is deterministic for the same source and configuration, and does no network access.
+Compilation is deterministic for the same source and configuration, and it doesn't touch the network.
 
 ## Back to Markdown
 
@@ -115,35 +115,35 @@ const doc = compileMarkdown(source, { preset: appMarkdown })
 const markdown = await documentToMarkdown(doc, { preset: appMarkdown })
 ```
 
-`documentToMarkdown` returns a promise, because the serializer is loaded on demand and stays out of a render-only bundle.
+`documentToMarkdown` returns a promise because the serializer is loaded on demand, which keeps it out of a render-only bundle.
 
-The serializer canonicalizes. A setext heading becomes an ATX heading, and a `~~~` fence becomes a backtick fence. Meaning is preserved, and serializing twice gives the same bytes as serializing once.
+The serializer normalizes the output to a canonical form. A setext heading becomes an ATX heading, and a `~~~` fence becomes a backtick fence. The meaning stays the same, and serializing twice gives the same bytes as serializing once.
 
-Pass the same preset to both calls. An extension that adds syntax also adds the rule for writing it back.
+Pass the same preset to both calls, since an extension that adds syntax also brings the rule for writing it back.
 
-If you need the exact original bytes rather than a canonical form, that is the editor's job. See [Round-trip preservation](../editor/round-trip.mdx).
+If you need the exact original bytes instead of a canonical form, the editor handles that. See [Round-trip preservation](../editor/round-trip.mdx).
 
 ## Where compiling pays
 
-**A server that renders the same article repeatedly.** Compile at publish time, cache the document, render per request.
+**A server that renders the same article over and over.** Compile at publish time, cache the document and render it per request.
 
-**A list of many small documents.** Compile each once, keep the documents in the list state.
+**A list of lots of small documents.** Compile each one once and keep the documents in the list state.
 
-**A template.** The template engine already resolves into a document, and hands that document straight to the renderer.
+**A template.** The template engine already resolves into a document and hands it straight to the renderer.
 
 <RenderExample
   title="Same output, either input"
   markdown={sample}
 >
-  This example renders from a string. Passing `document={compileMarkdown(source)}` produces the same tree, the same policy pass and the same DOM.
+  This example renders from a string. Passing `document={compileMarkdown(source)}` gives you the same tree, runs the same policy pass and produces the same DOM.
 </RenderExample>
 
 ## Related
 
-Set the dialect a document compiles with in a [preset](./presets.mdx).
+You can set the dialect a document compiles with in a [preset](./presets.mdx).
 
-Read the rendered node metadata in a [component override](./components.mdx).
+To read the rendered node metadata, use a [component override](./components.mdx).
 
 ## Read next
 
-The renderer overview, with every default in one page: [React Markdown renderer](/react-markdown-renderer).
+The renderer overview has every default on one page: [React Markdown renderer](/react-markdown-renderer).

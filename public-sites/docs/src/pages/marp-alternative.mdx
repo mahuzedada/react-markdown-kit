@@ -21,15 +21,15 @@ export const blob = (path) => `${sites.github}/blob/main/${path}`
 export const faq = [
   {
     q: 'Is there a Marp alternative that runs inside a React app?',
-    a: 'This plugin is one. It adds slide rules to the Markdown renderer you already use, so a deck is a component in your own routes rather than a separate site or a build step.',
+    a: 'This plugin is one option. It adds slide rules to the Markdown renderer you already use, so a deck is a component in your own routes instead of a separate site or build step.',
   },
   {
     q: 'Can I export a deck to PDF or PPTX?',
-    a: 'There is no export command. The shipped stylesheet gives each slide its own page under @media print, so a browser prints a deck to PDF. PPTX is what Marp and Slidev do; this does not.',
+    a: 'There is no export command. The shipped stylesheet gives each slide its own page under @media print, so you can print a deck to PDF from the browser. If you need PPTX, use Marp or Slidev.',
   },
   {
     q: 'Does an existing Marp deck render unchanged?',
-    a: 'The slide breaks, the prose and the code fences do. Marp directives, themes and its image sizing syntax do not; the mapping table on this page says what each one becomes.',
+    a: 'The slide breaks, prose and code fences should render unchanged. Marp directives, themes and its image sizing syntax won\'t; the mapping table on this page shows what to use for each one.',
   },
   {
     q: 'Do I have to move my content out of my app?',
@@ -89,15 +89,16 @@ Questions?
 
 # Marp and Slidev alternative inside a React app
 
-Start with what this does not do. [Marp](https://marp.app) and [Slidev](https://sli.dev)
-export decks to PDF and PPTX from the command line.
+First, what this doesn't do. [Marp](https://marp.app) and [Slidev](https://sli.dev)
+export decks to PDF and PPTX from the command line, and
 [reveal.js](https://revealjs.com) prints to PDF from the browser.
-`@react-markdown-kit/slides` has no export command and writes no PPTX. If the
-deliverable is a file to email, use one of those three.
+`@react-markdown-kit/slides` has no export command and can't write PPTX. If what you
+need at the end is a file to email, use one of those three.
 
-What it does instead: it turns Markdown your React app already renders into a deck, in
-the same page, through the same `<Markdown>` component. No second toolchain, no second
-copy of the content, no static site to deploy beside your app.
+What it does is turn Markdown your React app already renders into a deck, on the same
+page and through the same `<Markdown>` component. You don't need a second toolchain or a
+second copy of the content, and there's no separate static site to deploy next to your
+app.
 
 ```bash
 npm install @react-markdown-kit/renderer @react-markdown-kit/slides
@@ -127,16 +128,17 @@ const preset = defineMarkdownPreset({ extensions: [slides()] })
 | Styling | a theme is a CSS file of Marp's classes | UnoCSS and Vue components | a theme is a CSS file of reveal's classes | data attributes and `--rmk-slide-*` properties, no class from the kit (<a href={blob('plugins/slides/tests/extension.test.tsx')}>extension.test.tsx</a>) |
 | Editing | your editor, with a preview | your editor, with hot reload | your editor | the same file, plus a rich editor with four deck commands (<a href={blob('plugins/slides/tests/editor-toolbar.test.tsx')}>editor-toolbar.test.tsx</a>) |
 
-Every claim in the last column links to the test or the file that holds it.
+Each entry in the last column links to the test or file it comes from.
 
 ## The deck, rendered by the kit
 
-The deck below is not a screenshot. It was rendered when this page was built, by the
-same renderer that draws this paragraph. Click Present, then use the arrow keys.
+The deck below isn't a screenshot. It was rendered when this page was built, by the
+same renderer that draws this paragraph. Click Present and use the arrow keys to move
+through it.
 
 <div className="slides-examples">
 <RenderExample title="A three-slide deck, rendered in this page" markdown={deck} rendererProps={{ extensions: present }}>
-  The static stack shows every slide at once. Present mode covers the viewport; Escape brings this page back.
+  The static stack shows every slide at once. Present mode takes over the viewport, and Escape gets you back to this page.
 </RenderExample>
 </div>
 
@@ -153,45 +155,45 @@ same renderer that draws this paragraph. Click Present, then use the arrow keys.
 | front matter for the whole deck | front matter for the whole deck: `title`, `aspect`, `class`, `background` |
 
 The dialect is written out in <a href={blob('plugins/slides/DIALECT.md')}>DIALECT.md</a>
-and on the <Link to="/docs/slides">slides page</Link>. A construct the plugin does not
-accept is reported as a diagnostic with its source range, not swallowed.
+and on the <Link to="/docs/slides">slides page</Link>. If the plugin doesn't accept a
+construct, it reports a diagnostic with the source range instead of silently dropping it.
 
 ## Stay with Marp or Slidev when
 
-- The output is a file. A PDF for a conference upload, or a PPTX for a colleague who
-  edits in PowerPoint, is their job and not this plugin's.
-- The deck is a standalone artefact with no app around it, and a CLI is the shorter path.
-- You want Vue components, UnoCSS or Monaco inside slides, which is Slidev's design.
-- You want a theme you can install. Marp and reveal.js both have theme ecosystems; this
-  has CSS custom properties and no themes to install.
+- You need a file at the end. A PDF for a conference upload, or a PPTX for a colleague
+  who edits in PowerPoint, is what those tools are for, and this plugin doesn't do it.
+- The deck stands on its own with no app around it. A CLI is probably less work.
+- You want Vue components, UnoCSS or Monaco inside slides, which is how Slidev is built.
+- You want a theme you can install. Marp and reveal.js both have theme ecosystems. This
+  only has CSS custom properties, and there are no themes to install.
 
 ## Use this plugin when
 
-- The content already lives in your React app and is already rendered as Markdown. A
-  deck then costs one preset, not a second pipeline.
-- The deck must sit behind your auth, your routing or your data. It is a component, so
-  the page around it is yours.
-- The same file has to stay readable as a document. A deck is CommonMark or GFM with
-  rules, so GitHub and a diff still show it as prose.
-- The deck must render on the server. It is built from the parsed tree by a root
-  handler, so a server component emits the full markup.
-- The document is edited by people who do not write Markdown by hand. The editor entry
-  adds New slide, Speaker notes, Pause and Background as toolbar buttons, tested in
+- The content already lives in your React app and is already rendered as Markdown. In
+  that case a deck is one more preset rather than a second pipeline.
+- The deck has to sit behind your auth, your routing or your data. It's a component, so
+  you control the page around it.
+- The same file needs to stay readable as a document. A deck is CommonMark or GFM with a
+  few rules on top, so GitHub and a diff still show it as prose.
+- The deck has to render on the server. A root handler builds it from the parsed tree,
+  so a server component emits the full markup.
+- The people editing it don't write Markdown by hand. The editor entry adds New slide,
+  Speaker notes, Pause and Background as toolbar buttons, tested in
   <a href={blob('plugins/slides/tests/editor-toolbar.test.tsx')}>editor-toolbar.test.tsx</a>.
 
 ## What a CLI cannot give you
 
-- **One source.** The deck and the document are the same file, and a deck loaded and
-  saved without edits is written back byte for byte
+- **One source.** The deck and the document are the same file, and if you load and save
+  a deck without editing it, it's written back byte for byte
   (<a href={blob('plugins/slides/tests/round-trip.test.ts')}>round-trip.test.ts</a>).
-- **The renderer's security policy.** A `javascript:` background loses its `src` like
-  any other URL in the document
+- **The renderer's security policy.** A `javascript:` background loses its `src` the
+  same as any other URL in the document
   (<a href={blob('plugins/slides/tests/extension.test.tsx')}>extension.test.tsx</a>), under
-  the same <Link to="/docs/security">security model</Link> as your prose.
-- **Markup you can style.** The deck emits no class, no inline style and no id beyond
-  `slide-<name>`, so your stylesheet needs nothing from the kit.
-- **No runtime for the static deck.** The root entry loads nothing beyond the parser.
-  React comes in with the present entry, Lexical only with the editor entry
+  the same <Link to="/docs/security">security model</Link> as the rest of your content.
+- **Markup you can style.** Apart from `slide-<name>` ids, the deck doesn't emit any
+  class, inline style or id, so your stylesheet doesn't need anything from the kit.
+- **No runtime for the static deck.** The root entry only loads the parser. React comes
+  in with the present entry, and Lexical only with the editor entry
   (<a href={blob('tests/packaging.test.ts')}>packaging.test.ts</a>).
 
 ## Questions

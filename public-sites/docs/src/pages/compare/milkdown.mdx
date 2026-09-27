@@ -32,7 +32,7 @@ export const FAQ = [
   {
     question: 'Is there an alternative to Milkdown for React?',
     answer:
-      `Yes. @react-markdown-kit/editor is a rich, source and preview Markdown editor for React. It is built on Lexical rather than ProseMirror, it ships a default toolbar, and it asserts byte identity for ${cases} audited documents opened and saved without an edit.`,
+      `Yes. @react-markdown-kit/editor is a rich, source and preview Markdown editor for React. It's built on Lexical instead of ProseMirror, ships a default toolbar, and has tests that check byte identity for ${cases} audited documents opened and saved without an edit.`,
   },
   {
     question: 'Is Milkdown or React Markdown Kit smaller?',
@@ -42,12 +42,12 @@ export const FAQ = [
   {
     question: 'Does either editor do collaborative editing?',
     answer:
-      'Milkdown does, through its collaborative plugin built on Yjs. React Markdown Kit has no collaboration support. If several people must type in the same document at the same time, that is a reason to choose Milkdown.',
+      'Milkdown does, through its collaborative plugin built on Yjs. React Markdown Kit doesn\'t support collaboration. If several people need to type in the same document at the same time, go with Milkdown.',
   },
   {
     question: 'Which one keeps my Markdown files unchanged?',
     answer:
-      `React Markdown Kit writes unchanged blocks back from the original source bytes, and ${cases} of ${cases} audit documents are asserted byte-identical in packages/editor/tests/roundtrip.test.ts. Milkdown serializes the ProseMirror document through remark, so the output is the serializer canonical form.`,
+      `React Markdown Kit writes unchanged blocks back from the original source bytes, and ${cases} of ${cases} audit documents are checked for byte identity in packages/editor/tests/roundtrip.test.ts. Milkdown serializes the ProseMirror document through remark, so what you get back is the serializer's canonical form.`,
   },
 ]
 
@@ -68,12 +68,13 @@ Both editors store Markdown. Only one of them is built on **Lexical**.
 # React Markdown Kit editor vs Milkdown
 
 [Milkdown](https://milkdown.dev/) is a plugin-driven WYSIWYG Markdown editor framework
-built on ProseMirror and remark, MIT licensed, headless by design, with a React binding
-in `@milkdown/react`. This page compares it with `@react-markdown-kit/editor`, which is
+built on ProseMirror and remark. It's MIT licensed and headless by design, and has a React
+binding in `@milkdown/react`. This page compares it with `@react-markdown-kit/editor`, which is
 built on Lexical and ships a default interface.
 
-The short version: Milkdown is a framework you assemble, with collaborative editing
-available; this kit is a component you drop in, with the round trip proved by a test.
+Roughly speaking, Milkdown is a framework you put together yourself and it supports
+collaborative editing. This kit is a component you add to a page, and its round trip is
+covered by a test.
 
 Facts about Milkdown come from its [documentation](https://milkdown.dev/docs/guide/getting-started)
 and its [repository](https://github.com/Milkdown/milkdown). Facts about this editor link
@@ -96,17 +97,17 @@ to the code or the test that backs them.
 
 Milkdown is a framework. You create an editor, configure a root element, add a preset
 such as `@milkdown/preset-commonmark`, add plugins for anything else, and mount it with
-`MilkdownProvider` and `useEditor`. Nothing is present until you add it, which is the
-point: the same core drives very different editors, and `@milkdown/crepe` is the
-ready-made one built on top.
+`MilkdownProvider` and `useEditor`. Nothing is there until you add it, which is
+intentional, since the same core drives very different editors (`@milkdown/crepe` is the
+ready-made one built on top).
 
 ```tsx
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
 import { commonmark } from '@milkdown/preset-commonmark'
 ```
 
-React Markdown Kit is a component. `<MarkdownEditor value onChange />` is the whole
-integration, and what varies is the **dialect**, expressed as a preset shared with the
+React Markdown Kit is a component. You add `<MarkdownEditor value onChange />` and that's
+most of the integration. What you configure is the **dialect**, as a preset shared with the
 renderer.
 
 ```tsx
@@ -118,10 +119,10 @@ const appMarkdown = defineMarkdownPreset({ extensions: [gfm()] })
 <MarkdownEditor preset={appMarkdown} value={value} onChange={setValue} />
 ```
 
-The trade is assembly against agreement. Milkdown gives you more room to build an editor
-that looks like nothing else. This kit gives you one parser and one preset for the editor
-and the published page, so the preview cannot disagree with production: preview delegates
-to `@react-markdown-kit/renderer` rather than to a second renderer.
+So it's a tradeoff. Milkdown gives you more room to build a very custom editor. This kit
+uses one parser and one preset for both the editor and the published page, so the preview
+can't disagree with production (preview uses `@react-markdown-kit/renderer` instead of a
+second renderer).
 
 <EditorExample
   title="The kit's editor, on this page"
@@ -132,27 +133,28 @@ to `@react-markdown-kit/renderer` rather than to a second renderer.
 ## Output format
 
 Both store Markdown strings, and neither asks your application to persist editor JSON.
-That is the main thing the two have in common and the reason a migration is feasible at
-all.
+That's the main thing they have in common, and it's why migrating between them is
+feasible at all.
 
-Under the surface the representations differ. Milkdown holds a ProseMirror document and
+Internally the representations are different. Milkdown holds a ProseMirror document and
 serializes it through remark on the way out. This kit holds mdast, the same tree the
 renderer compiles, plus the original source text and the byte span of every top-level
-block. That extra retention is what the next section is about.
+block. The next section covers why it keeps all that.
 
-Constructs neither editing model can represent are handled differently too. Here they
-become opaque nodes: a raw HTML block, a link definition, a footnote definition or a
+They also handle constructs the editing model can't represent differently. Here they
+become opaque nodes, so a raw HTML block, a link definition, a footnote definition or a
 third-party extension's node keeps its exact source slice, renders as a non-editable
-block, and is written back from the bytes it arrived with. Nothing degrades into
+block, and is written back from the bytes it arrived with. None of it gets turned into
 paragraph text.
 <Link to="/docs/editor/round-trip">Round-trip reference</Link>
 
 ## Round trip
 
-Open a document, switch modes, close it without typing. The file must be identical.
+If you open a document, switch modes and close it without typing, the file should be
+identical.
 
-Because unchanged blocks are copied from the original source rather than re-serialized,
-a setext heading stays setext, a `~~~` fence stays tildes, `_emphasis_` does not become
+Because unchanged blocks are copied from the original source instead of re-serialized,
+a setext heading stays setext, a `~~~` fence stays tildes, `_emphasis_` doesn't become
 `*emphasis*`, and four blank lines stay four blank lines.
 
 The corpus is {cases} documents that a line-oriented editor damaged on save, from
@@ -165,12 +167,12 @@ The corpus is {cases} documents that a line-oriented editor damaged on save, fro
   (<Link href={blob('tests/roundtrip.test.ts')}>`tests/roundtrip.test.ts`</Link>).
 
 Any editor that serializes the whole document on save produces its serializer's
-canonical form, which is a correct document and usually a different one. That is fine
-when the editor owns the content. It is a problem when the content is files in a
-repository that humans also edit by hand.
+canonical form, which is a correct document but usually a different one. That's fine
+when the editor owns the content. It's a problem when the content is files in a
+repository that people also edit by hand.
 
-We found no published byte-identity corpus for Milkdown, so the table says "not found",
-not "fails". The fixture is plain JSON with a `cases` array of `{ name, source, why }`,
+We couldn't find a published byte-identity corpus for Milkdown, so the table says "not
+found" (we're not saying it fails). The fixture is plain JSON with a `cases` array of `{ name, source, why }`,
 so you can run it against any editor that imports and exports a Markdown string.
 <Link to="/markdown-round-trip">How to run the suite on your own documents</Link>
 
@@ -207,15 +209,15 @@ external. 1 KB is 1024 bytes.
   </tbody>
 </table>
 
-Milkdown wins this row by {delta} gzipped, and the comparison is not quite like for
-like in either direction. The Milkdown entry is the React binding with the CommonMark
+Milkdown is {delta} smaller gzipped, though the comparison isn't quite like for like in
+either direction. The Milkdown entry is the React binding with the CommonMark
 preset and no toolbar, no theme and no further plugins; adding them adds bytes. The kit's
 entry includes `@react-markdown-kit/renderer`, the toolbar and all three modes, because
-the editor imports them. Neither row includes CSS: the measured entries import no
+the editor imports them. Neither row includes CSS, since the measured entries import no
 stylesheet, and the generator records CSS separately when a bundle emits any.
 
 For a page that only displays Markdown, neither number applies. That page imports the
-renderer: {kb(row('kit-renderer').gzipBytes)} gzipped for CommonMark,
+renderer, which is {kb(row('kit-renderer').gzipBytes)} gzipped for CommonMark,
 {kb(row('kit-renderer-gfm').gzipBytes)} with the GFM preset.
 <Link to="/react-markdown-renderer">The renderer</Link>
 
@@ -224,12 +226,12 @@ renderer: {kb(row('kit-renderer').gzipBytes)} gzipped for CommonMark,
 Neither rich surface server-renders. ProseMirror and Lexical both need a DOM for
 selection, undo history and keyboard handling, so both components are client components.
 
-What differs is the blast radius. Here the renderer and the editor are separate packages
+The difference is how much a server page has to import. Here the renderer and the editor are separate packages
 with separate installs, so a server-rendered document page imports
 `@react-markdown-kit/renderer`, needs no `"use client"` boundary, and pulls no Lexical
 into the server bundle. <Link to="/docs/server-rendering">Server rendering</Link>
 
-The editor also has a Node path with no DOM:
+The editor also has a Node path with no DOM.
 
 ```ts
 import { createMarkdownBridge } from '@react-markdown-kit/editor'
@@ -239,30 +241,31 @@ bridge.load(source)
 const saved = bridge.getMarkdown()
 ```
 
-It runs on `@lexical/headless`, it is the pipeline the React editor runs, and it is how
-the round trip is tested. Use it in a migration script or a content check in CI.
+It runs on `@lexical/headless`, it's the same pipeline the React editor runs, and the
+round-trip tests use it. You can use it in a migration script or a content check in CI.
 
 ## Lexical versus ProseMirror
 
-ProseMirror is the older and deeper of the two. Its schema, transforms and plugin model
-are the reason Milkdown can be a framework rather than a component, and the reason
-collaborative editing over Yjs is available there and not here.
+ProseMirror is the older and more mature of the two. Its schema, transforms and plugin
+model are why Milkdown can be a framework instead of a component, and why collaborative
+editing over Yjs is available there and not here.
 
-Lexical is what this kit is built on, and the kit treats it as an implementation detail:
+This kit is built on Lexical, and treats it as an implementation detail.
 
-- **Markdown is not parsed by the engine.** Parsing is micromark into mdast, the same
+- **The engine doesn't parse Markdown.** Parsing is micromark into mdast, the same
   pipeline the renderer uses. `@lexical/markdown` and its line-oriented transformer
-  protocol are not used anywhere in the package. That protocol is the root cause listed
-  in the audit, and avoiding it is what makes byte identity reachable.
-- **Lexical is not in your types.** Nothing the root entry exports requires a Lexical
+  protocol aren't used anywhere in the package. That protocol is the root cause listed
+  in the audit, and avoiding it is what makes byte identity possible.
+- **Lexical stays out of your types.** Nothing the root entry exports requires a Lexical
   type, and a test asserts that `src/index.ts` and `src/types.ts` import nothing from
   `lexical` or `@lexical/*`
   (<Link href={blob('packages/editor/tests/styling.test.tsx')}>test</Link>). The opt-in
   `@react-markdown-kit/editor/lexical` entry is the exception, for extension authors. The
   one escape hatch, `editor.getNativeEditor()`, returns `unknown`.
 
-So the engine choice is reversible here and load-bearing there. Neither is better in the
-abstract; it decides what you can extend and what you can replace.
+So here the engine could be swapped out later, while in Milkdown it's built into the
+design. Neither is better in general. It mostly decides what you can extend and what you
+can replace.
 <Link to="/docs/guides/lexical-markdown-editor">How the kit wraps Lexical</Link>
 
 ## Migration
@@ -301,23 +304,23 @@ function Notes({ value, onChange }) {
 
 Four things to check before you commit:
 
-1. **Collaboration.** If you use the Yjs plugin, stop here. There is no equivalent.
+1. **Collaboration.** If you use the Yjs plugin, stop here. There's no equivalent.
 2. **Plugins to preset.** Milkdown plugins have no one-to-one mapping. Decide the
    dialect instead: CommonMark, or CommonMark plus `gfm()`, plus any extension you also
    render with. <Link to="/docs/renderer/presets">Presets</Link>
 3. **Theme to class names.** The stylesheet here is optional and the chrome takes your
-   own class names through `classNames`, rather than a theme package.
+   own class names through `classNames` instead of a theme package.
    <Link to="/docs/styling">Styling</Link>
 4. **Listener to `onChange`.** The value is a Markdown string on every edit. Debounce
    persistence outside the editor. <Link to="/docs/editor/basics">Editor basics</Link>
 
-Run the round-trip script over your content directory first, with the preset you intend
+I'd run the round-trip script over your content directory first, with the preset you intend
 to ship. <Link to="/markdown-round-trip">The script</Link>
 
 ## Who should stay with Milkdown
 
 - You need collaborative editing.
-- You are building an editor product, not adding editing to an application, and you want
+- You're building an editor product (as opposed to adding editing to an application) and you want
   ProseMirror's schema and plugin model underneath it.
 - You have already built Milkdown plugins or a Milkdown theme.
 - The smaller entry bundle matters more than the round-trip guarantee.
@@ -325,11 +328,11 @@ to ship. <Link to="/markdown-round-trip">The script</Link>
 ## Who should try this one
 
 - Your Markdown lives in files or in a column that humans also edit by hand, and a save
-  must not rewrite what nobody touched.
+  shouldn't rewrite what nobody touched.
 - You already render Markdown with React and want the editor to write that exact dialect.
 - You want a working editor in one component, with the headless API available when the
   default chrome stops fitting.
-- You want the round trip to be a test you can run, not a promise.
+- You want the round trip backed by a test you can run yourself.
 
 ## FAQ
 

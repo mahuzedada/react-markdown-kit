@@ -59,69 +59,72 @@ flowchart LR
 
 # Flowchart to Mermaid
 
-This page turns a drawing into Mermaid text. You draw the flowchart on the
-canvas at <a href={sites.mermaidDemo}>mermaid.reactmarkdownkit.com</a>, and
-the editor writes the Mermaid flowchart syntax as you draw. It does not read
-an image, a photo or a PDF of a flowchart. If you have a picture, redraw it
-on the canvas and copy the text. Three boxes and two arrows is five drags.
+This page is about turning a drawing into Mermaid text. You draw the flowchart
+on the canvas at <a href={sites.mermaidDemo}>mermaid.reactmarkdownkit.com</a>,
+and the editor writes the Mermaid flowchart syntax as you go. It can't read an
+image, a photo or a PDF of a flowchart, so if all you have is a picture, you'll
+need to redraw it on the canvas and copy the text. Three boxes and two arrows
+takes five drags.
 
-The canvas in the editor draws flowcharts. The plugin behind it,
+The canvas described here is for flowcharts. The plugin behind it,
 `@react-markdown-kit/mermaid`, also renders sequence diagrams as static SVG
-and edits them on a canvas of their own. Class, Gantt and the other Mermaid
+and has a separate canvas for editing them. Class, Gantt and the other Mermaid
 diagram types are shown as
 source
 ([`mermaid-parse.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts)).
-The editor is free, open source under MIT, and runs in the browser with no
+The editor is free and MIT licensed, and it runs in your browser without an
 account.
 
 ## Draw a three-step flowchart
 
-The walkthrough draws Start, Work and Done, joined by two arrows. The key
-handling it relies on is in
+This walks through drawing Start, Work and Done, joined by two arrows. If you
+want to see how the keyboard handling works, it's in
 [`drawing-canvas.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/src/canvas/drawing-canvas.tsx)
 and
 [`text-edit-overlay.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/src/canvas/text-edit-overlay.tsx).
 
 1. Open <a href={sites.mermaidDemo}>the editor</a>. It loads with an example
-   diagram. Click the canvas on the right to focus it, press `Ctrl+A`
-   (`Cmd+A` on macOS) to select every shape, then press `Delete`. The code
-   pane on the left now reads `flowchart LR` plus an empty layout line.
+   diagram, so clear that first. Click the canvas on the right to focus it,
+   press `Ctrl+A` (`Cmd+A` on macOS) to select every shape, then press
+   `Delete`. The code pane on the left should now read `flowchart LR` plus an
+   empty layout line.
 2. Pick **Rectangle** in the canvas toolbar and drag on the canvas. The new
-   box is selected. Press `Enter`, type `Start`, and press `Enter` again to
-   commit the text. Double-clicking a box also opens its text.
+   box stays selected. Press `Enter`, type `Start`, and press `Enter` again to
+   commit the text. You can also double-click a box to edit its text.
 3. Repeat step 2 twice, to the right of the first box, with `Work` and
    `Done`.
-4. Pick **Arrow**. Drag from inside the Start box to inside the Work box.
-   The arrow binds to the boxes it starts and ends on, and follows them when
-   they move. Draw a second arrow from Work to Done.
+4. Pick **Arrow** and drag from inside the Start box to inside the Work box.
+   The arrow attaches to the boxes it starts and ends on, and follows them if
+   you move them. Draw a second arrow from Work to Done.
 5. Copy the text from the **Mermaid code** pane on the left. Every drag has
    already been written there. **Copy as Mermaid** in the canvas toolbar
    copies the same text.
 
-The code pane holds this, with generated node ids and the layout line the
-canvas writes. The right-hand side below is the plugin rendering that text on
-this page, as static SVG.
+You should end up with something like this in the code pane, with generated
+node ids and the layout line the canvas writes. The right-hand side below is
+the plugin rendering that same text on this page as static SVG.
 
 <RenderExample title="What the canvas wrote: three boxes, two arrows, one layout line" markdown={drawn} rendererProps={{ extensions: [mermaid()] }} />
 
-For a README, most people rename the ids and drop the layout line. The
-result is the shortest Mermaid that draws the same flowchart, and every
-Mermaid renderer lays it out automatically. Edit the left pane to try it.
+For a README you'll probably want to rename the ids and drop the layout line.
+That gives you the shortest Mermaid that draws the same flowchart, and any
+Mermaid renderer will lay it out automatically. You can edit the left pane
+below to try it.
 
 <RenderExample editable title="The same flowchart, ids renamed, layout line removed" markdown={plain} rendererProps={{ extensions: [mermaid()] }} />
 
-If you rename an id in the syntax while keeping the layout line, the entry
-under the old id names nothing and is ignored, and that box falls back to
-automatic layout
+If you rename an id in the syntax but keep the layout line, the entry under the
+old id doesn't match anything anymore and gets ignored, so that box goes back
+to automatic layout
 ([LAYOUT_ANNOTATION.md, section 6, rule 7](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/LAYOUT_ANNOTATION.md)).
 
-There are no screenshots on this page. The diagrams above are rendered by
-the plugin itself from the text shown next to them.
+The diagrams above aren't screenshots. The plugin renders them from the text
+shown next to them.
 
 ## Where the output works
 
-The canvas writes ordinary Mermaid flowchart syntax, so the fence renders
-wherever Mermaid fences render. Each renderer below documents ```` ```mermaid ````
+The canvas writes ordinary Mermaid flowchart syntax, so the fence should render
+anywhere Mermaid fences render. Each host below documents its ```` ```mermaid ````
 support on its own site.
 
 | Host | Documentation |
@@ -134,15 +137,15 @@ support on its own site.
 
 The layout line starts with `%%`, which
 [Mermaid defines as a comment](https://mermaid.js.org/syntax/flowchart.html#comments).
-Those hosts render the flowchart with their own automatic layout and skip
-the line. The plugin reads it back and reproduces the drawing; the round
-trip is covered by
+Those hosts skip the line and render the flowchart with their own automatic
+layout. The plugin reads it back and redraws it the way you drew it. The
+round trip is covered by
 [`layout-annotation.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/layout-annotation.test.ts).
 
-In React, the same fence becomes static SVG with no script, no event
-attribute, no `foreignObject` and no external reference, asserted in
+In React, the same fence becomes static SVG without any script, event
+attribute, `foreignObject` or external reference, which is checked in
 [`extension.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/extension.test.tsx).
-The package lists no Mermaid.js dependency
+The package doesn't depend on Mermaid.js
 ([`package.json`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/package.json)).
 
 ```bash

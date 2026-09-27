@@ -34,13 +34,13 @@ export const appMarkdown = defineMarkdownPreset({
 <Markdown preset={appMarkdown}>{content}</Markdown>
 ```
 
-A preset is your application's answer to one question. What does Markdown mean here?
+A preset defines what Markdown means in your application.
 
-Answer it once, in one file, and reuse the answer everywhere Markdown is read or written.
+You define it once, in one file, and reuse it everywhere Markdown gets read or written.
 
 ## Why not pass props each time
 
-Props work for one call site. A preset works for every call site, including the ones in other packages.
+Props are fine for a single call site. A preset covers every call site, including the ones in other packages.
 
 The same preset object goes to the renderer, the editor and the template engine.
 
@@ -52,7 +52,7 @@ The same preset object goes to the renderer, the editor and the template engine.
 const doc = compileMarkdown(source, { preset: appMarkdown })
 ```
 
-The editor's preview mode delegates to the renderer with the same preset. What an author sees while editing is what a reader sees.
+The editor's preview mode hands off to the renderer with the same preset, so what an author sees while editing matches what a reader sees.
 
 ## What a preset holds
 
@@ -70,11 +70,11 @@ defineMarkdownPreset({
 })
 ```
 
-`profile` names the dialect. It defaults to `gfm` when a `gfm` extension is present, and `commonmark` otherwise. It ends up on every compiled document, which is how a cache key or a diagnostic can say which dialect produced a tree.
+`profile` names the dialect. It defaults to `gfm` when a `gfm` extension is present and `commonmark` otherwise. It gets recorded on every compiled document, so a cache key or a diagnostic can tell which dialect produced a tree.
 
-`policy` is the security and content surface, gathered into one object so it travels with the dialect. It holds `allowedElements`, `disallowedElements`, `allowElement`, `skipHtml`, `unwrapDisallowed` and `urlTransform`.
+`policy` groups the security and content settings into one object so they travel with the dialect. It holds `allowedElements`, `disallowedElements`, `allowElement`, `skipHtml`, `unwrapDisallowed` and `urlTransform`.
 
-A preset holds no React elements and no closures beyond the handlers you put in it. `isMarkdownPreset(value)` is the runtime guard.
+A preset doesn't hold React elements or closures, apart from any handlers you put in it. `isMarkdownPreset(value)` is the runtime guard.
 
 <RenderExample
   title="A preset with components, applied through rendererProps"
@@ -84,7 +84,7 @@ A preset holds no React elements and no closures beyond the handlers you put in 
 
 ## Composing with extends
 
-Compose presets rather than copying them.
+You can compose presets instead of copying them.
 
 ```ts
 export const docsMarkdown = defineMarkdownPreset({
@@ -94,39 +94,39 @@ export const docsMarkdown = defineMarkdownPreset({
 })
 ```
 
-`extends` takes a list. Presets apply left to right, and then this preset's own fields apply last.
+`extends` takes a list. Presets apply left to right, and this preset's own fields apply last.
 
-A preset is a plain object with a structural contract rather than a shared runtime class, so one built anywhere in an application is accepted by the renderer, the editor and the template engine alike.
+A preset is a plain object with a structural contract (there's no shared runtime class), so the renderer, the editor and the template engine will all accept a preset built anywhere in your application.
 
 ## Merge rules
 
-Merging is deterministic, and there are exactly five rules. They come from the specification, section 6.3.
+Merging is deterministic and follows five rules, taken from section 6.3 of the specification.
 
-**1. The preset is the baseline.** Everything else is layered onto it.
+**1. The preset is the baseline.** Everything else gets layered on top of it.
 
-**2. Local extensions append after preset extensions.** A locally passed extension runs after the preset's, unless rule 5 applies to it.
+**2. Local extensions append after preset extensions.** An extension you pass locally runs after the preset's, unless rule 5 applies to it.
 
 ```tsx
 <Markdown preset={appMarkdown} extensions={[callouts()]}>{content}</Markdown>
 ```
 
-**3. Local components shallowly override matching preset components.** One key at a time, with no deep merging.
+**3. Local components shallowly override matching preset components.** It goes one key at a time, with no deep merging.
 
 ```tsx
 // Keeps the preset's img and code, replaces only a.
 <Markdown preset={appMarkdown} components={{ a: SpecialLink }}>{content}</Markdown>
 ```
 
-**4. A policy prop overrides the preset only when you pass it explicitly.** An absent prop inherits. Passing `undefined` is the same as not passing it, so a spread cannot silently erase a preset's policy.
+**4. A policy prop overrides the preset only when you pass it explicitly.** If you leave a prop out, it's inherited. Passing `undefined` counts as not passing it, so a spread can't quietly wipe out a preset's policy.
 
 ```tsx
 // skipHtml comes from the preset; urlTransform is replaced here.
 <Markdown preset={appMarkdown} urlTransform={myUrlTransform}>{content}</Markdown>
 ```
 
-**5. Duplicate extensions are resolved by name.** A later extension with the same `name` replaces the earlier one in place, keeping the earlier one's position. A new name appends.
+**5. Duplicate extensions are resolved by name.** A later extension with the same `name` replaces the earlier one in place and keeps its position. A new name gets appended.
 
-Keeping the position matters, because ordering is part of what an extension does. Overriding one entry of a shared preset must not move the others.
+Keeping the position matters because ordering is part of how an extension behaves, and overriding one entry of a shared preset shouldn't shuffle the others around.
 
 ```ts
 // gfm() runs where the base preset put it, with the new options.
@@ -138,7 +138,7 @@ const strictMarkdown = defineMarkdownPreset({
 
 `mergeExtensions(base, next)` is exported if you need to apply rule 5 yourself.
 
-There is no deep merging of arbitrary plugin options. If you want different options, pass a different extension instance.
+Arbitrary plugin options don't get deep-merged. If you want different options, pass a different extension instance.
 
 ## A worked example
 
@@ -169,16 +169,16 @@ export const commentMarkdown = defineMarkdownPreset({
 })
 ```
 
-Two dialects, one definition of each, and a `profile` on every document that says which one produced it.
+That gives you two dialects, each defined once, and every document has a `profile` saying which one produced it.
 
 ## Related
 
-Writing your own extension is covered in [Extensions](/docs/extensions).
+[Extensions](/docs/extensions) covers writing your own extension.
 
-Compiled documents carry the profile they were built with. See [Compiling](./compiling.mdx).
+Compiled documents keep the profile they were built with. See [Compiling](./compiling.mdx).
 
-The same preset configures editing. See [Editor basics](../editor/basics.mdx).
+The same preset also configures the editor. See [Editor basics](../editor/basics.mdx).
 
 ## Read next
 
-The renderer overview, with every default in one page: [React Markdown renderer](/react-markdown-renderer).
+The renderer overview has every default on one page: [React Markdown renderer](/react-markdown-renderer).

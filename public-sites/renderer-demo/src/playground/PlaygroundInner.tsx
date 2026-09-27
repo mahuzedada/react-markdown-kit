@@ -177,8 +177,8 @@ export default function PlaygroundInner(): ReactNode {
             />
             <div className={styles.note}>
               {unreadable
-                ? 'This link could not be read in this browser, so the sample is shown. The address bar still holds the shared link; editing replaces it.'
-                : 'Type, paste, or drop a .md file here. Copy link puts the whole document in the URL; nothing is uploaded.'}
+                ? 'This browser couldn’t read the link, so you’re seeing the sample instead. The shared link is still in the address bar, and editing will replace it.'
+                : 'Type, paste or drop a .md file here. Copy link puts the whole document in the URL (nothing is uploaded).'}
             </div>
           </section>
 

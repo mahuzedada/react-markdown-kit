@@ -19,25 +19,25 @@ export const GROUPS = [
   {
     heading: 'Renderer',
     pages: [
-      { to: '/react-markdown-alternative', label: 'react-markdown alternative', what: 'What matches, the three differences, the codemod, and when to stay on react-markdown.' },
+      { to: '/react-markdown-alternative', label: 'react-markdown alternative', what: 'What matches, the three differences, the codemod, and when you should stay on react-markdown.' },
       { to: '/compare/react-markdown', label: 'React Markdown Kit vs react-markdown', what: 'Install size, GFM, security defaults, streaming, server rendering, plugins and migration.' },
-      { to: '/compare/markdown-to-jsx', label: 'React Markdown Kit vs markdown-to-jsx', what: 'The same rows against the smallest import in the table.' },
-      { to: '/compare/streamdown', label: 'React Markdown Kit vs Streamdown', what: 'The same rows for an AI chat UI that renders Markdown while it streams.' },
+      { to: '/compare/markdown-to-jsx', label: 'React Markdown Kit vs markdown-to-jsx', what: 'Same sections, against the smallest import in the table.' },
+      { to: '/compare/streamdown', label: 'React Markdown Kit vs Streamdown', what: 'Same sections, for an AI chat UI that renders Markdown while it streams.' },
     ],
   },
   {
     heading: 'Editor',
     pages: [
-      { to: '/compare/mdxeditor', label: 'React Markdown Kit Editor vs MDXEditor', what: 'Two Lexical editors: editing model, output format, round trip, bundle and migration.' },
-      { to: '/compare/milkdown', label: 'React Markdown Kit Editor vs Milkdown', what: 'Lexical against ProseMirror on the same rows.' },
+      { to: '/compare/mdxeditor', label: 'React Markdown Kit Editor vs MDXEditor', what: 'Both are Lexical editors. Covers editing model, output format, round trip, bundle and migration.' },
+      { to: '/compare/milkdown', label: 'React Markdown Kit Editor vs Milkdown', what: 'Lexical against ProseMirror, same sections.' },
     ],
   },
   {
     heading: 'Templates, diagrams and slides',
     pages: [
-      { to: '/compare/handlebars', label: 'Markdown templating vs Handlebars', what: 'String interpolation before parsing, against placeholders resolved inside the parser.' },
-      { to: '/mermaid-live-editor-alternative', label: 'Mermaid Live Editor alternative', what: 'A visual canvas next to the text, compared with mermaid.live. Flowcharts and sequence diagrams on the canvas, saved as plain Mermaid.' },
-      { to: '/marp-alternative', label: 'Marp and Slidev alternative', what: 'Decks rendered inside a React app, against tools that export PDF and PPTX.' },
+      { to: '/compare/handlebars', label: 'Markdown templating vs Handlebars', what: 'Replacing placeholders in the string before parsing, compared with resolving them inside the parser.' },
+      { to: '/mermaid-live-editor-alternative', label: 'Mermaid Live Editor alternative', what: 'A visual canvas next to the text, compared with mermaid.live. The canvas handles flowcharts and sequence diagrams and saves plain Mermaid.' },
+      { to: '/marp-alternative', label: 'Marp and Slidev alternative', what: 'Decks rendered inside a React app, compared with tools that export PDF and PPTX.' },
     ],
   },
 ]
@@ -65,8 +65,8 @@ export const GROUPS = [
 
 # React Markdown library comparisons
 
-Each page compares React Markdown Kit with one library, section by section, and says
-where the other library is the better pick. Sizes come from
+Each page compares React Markdown Kit with one library, section by section, and points
+out where the other library is the better choice. Sizes come from
 `scripts/compare-bundles.mjs`, performance from `benchmarks/run.mjs`, and behaviour from
 tests linked on each page.
 

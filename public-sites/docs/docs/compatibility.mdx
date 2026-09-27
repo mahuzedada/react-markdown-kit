@@ -6,15 +6,15 @@ description: "How the renderer compares with react-markdown 10.1.0, prop by prop
 
 # Compatibility
 
-This renderer is not a drop-in replacement for `react-markdown`. It is a
-different package with a compatible surface for the props people actually
-migrate. Same prop names, same meanings, same default URL policy. Where
-behaviour differs, the difference is listed rather than smoothed over.
+This renderer isn't a drop-in replacement for `react-markdown`. It's a
+different package, but the props people usually migrate have the same names,
+the same meanings and the same default URL policy. Where the behaviour does
+differ, it's listed below.
 
 The numbers below come from a test that renders identical input through both
 packages and compares normalized HTML. It regenerates
 [`docs/COMPATIBILITY.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/COMPATIBILITY.md)
-on every run, so that file is the authority and this page is the summary.
+on every run, so treat that file as the source of truth. This page summarizes it.
 
 ## Result
 
@@ -55,24 +55,24 @@ escaped text. Neither executes raw HTML without an explicit `rehype-raw` opt-in.
 `className` prop either, and TypeScript rejects it, but at runtime it is
 ignored rather than thrown.
 
-JavaScript code that still passes `className` loses the wrapper silently
-instead of failing loudly. Use `components` or the opt-in `classNames` hooks
-described in [styling](/docs/styling).
+So JavaScript code that still passes `className` will quietly lose the wrapper
+instead of throwing. Use `components` or the opt-in `classNames` hooks
+described in [styling](/docs/styling) instead.
 
 ### `MarkdownAsync` and `MarkdownHooks` are not supported yet
 
 `react-markdown` 10 exports both for plugins that need async work. This
-renderer is synchronous only. There is no equivalent export, and an async
-remark or rehype plugin will not run.
+renderer is synchronous only, so there's no equivalent export and an async
+remark or rehype plugin won't run.
 
 ### `remarkPlugins` on a precompiled document has a documented change
 
 `react-markdown` only ever takes a string, so every plugin runs at parse time.
 This renderer also accepts an already-compiled `MarkdownDocument`.
 
-A plugin that changes the dialect, such as `remark-gfm`, cannot apply to text
-that was already parsed. Tree-transforming plugins still run. Compile with the
-same extensions you render with, or pass the string.
+A plugin that changes the dialect, such as `remark-gfm`, can't apply to text
+that was already parsed. Plugins that transform the tree still run. You'll want
+to compile with the same extensions you render with, or just pass the string.
 
 ```tsx
 // The plugin cannot add table syntax to text that is already a tree.
@@ -82,13 +82,13 @@ const document = compileMarkdown(source, { preset: gfmPreset })
 
 ## What is not covered
 
-Everything outside the prop surface has no `react-markdown` equivalent, so it
-is not a compatibility question. That includes bundle size, the
+Anything outside the prop surface doesn't have a `react-markdown` equivalent,
+so it isn't really a compatibility question. That includes bundle size, the
 `MarkdownDocument` input, presets, extensions, the editor and the template
 engine.
 
 ## Migrating
 
 The [migration guide](/migrate-from-react-markdown) walks through the codemod
-and the manual steps. The claims on this page are generated from tests, so
-check the matrix for your pinned version before you plan a migration.
+and the manual steps. Since the claims on this page are generated from tests,
+I'd check the matrix for your pinned version before planning a migration.

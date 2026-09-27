@@ -16,16 +16,17 @@ import RenderExample from '@site/src/components/RenderExample'
 .rmk-document h1 { font-size: 2rem; }
 ```
 
-React Markdown Kit ships no styling dependency. No design system, no Tailwind,
-no CSS-in-JS runtime, no theme provider. The only peer dependencies are `react`
-and `react-dom`. A packaging test fails the build if that ever changes.
+React Markdown Kit doesn't ship a styling dependency. There's no design system,
+Tailwind, CSS-in-JS runtime or theme provider to install. The only peer
+dependencies are `react` and `react-dom`, and a packaging test fails the build if
+that ever changes.
 
-With no CSS imported, the renderer emits plain semantic HTML. Nothing has a
-colour, a font, a radius or a shadow until you ask for one.
+If you don't import any CSS, the renderer outputs plain semantic HTML. It won't
+have any colours, fonts, radii or shadows until you add them.
 
 ## Four approaches
 
-Every one of these works without patching the library.
+All of these work without patching the library.
 
 | Approach | What it needs |
 | --- | --- |
@@ -36,8 +37,8 @@ Every one of these works without patching the library.
 
 ### 1. Bring your own CSS
 
-The default DOM is the same semantic HTML `react-markdown` emits, with no
-kit-specific classes on it. Style it with element selectors under a class of
+The default DOM is the same semantic HTML `react-markdown` outputs, without any
+kit-specific classes. You can style it with element selectors under a class of
 your own.
 
 <RenderExample
@@ -68,8 +69,9 @@ import '@react-markdown-kit/renderer/styles.css'
 </div>
 ```
 
-Every colour, space, radius and font in that file reads a `--rmk-*` custom
-property. Override the property on any ancestor and the whole thing retints.
+Every colour, spacing value, radius and font in that file reads a `--rmk-*`
+custom property. If you override a property on any ancestor, everything below it
+picks up the change.
 
 ```css
 .rmk-document {
@@ -119,14 +121,14 @@ The renderer's properties:
 | `--rmk-radius` | `4px` |
 
 The editor stylesheet reads the same names plus `--rmk-focus`,
-`--rmk-surface-active` and `--rmk-content-min-height`. Because the defaults are
-`currentColor` and `color-mix`, the theme follows your dark mode without a
-second theme block.
+`--rmk-surface-active` and `--rmk-content-min-height`. The defaults are built
+from `currentColor` and `color-mix`, so the theme follows your dark mode and you
+don't need a second theme block.
 
 ### 3. Utility classes
 
-Pass your own classes per part. Tailwind, CSS Modules, BEM and Infima all work
-the same way.
+You can pass your own classes for each part. Tailwind, CSS Modules, BEM and
+Infima all work the same way.
 
 ```tsx
 <Markdown
@@ -139,9 +141,9 @@ the same way.
 </Markdown>
 ```
 
-A class you supply replaces the kit's default for that part rather than merging
-with it. There is nothing to `!important` away, and no specificity to out-rank.
-Passing an empty string removes the class entirely.
+A class you pass replaces the kit's default for that part (the two don't get
+merged), so you won't need `!important` or have to fight specificity. Passing an
+empty string removes the class entirely.
 
 <RenderExample
   title="classNames, using this site's own utility classes"
@@ -157,8 +159,8 @@ Ships **today**. See the [changelog](https://example.com/changelog).
     },
   }}
 >
-  Those three classes come from Docusaurus. Swap them for Tailwind utilities and
-  nothing else about the call changes.
+  Those three classes come from Docusaurus. If you swapped them for Tailwind
+  utilities, the rest of the call would stay the same.
 </RenderExample>
 
 Renderer parts: `root`, `paragraph`, `heading`, `link`, `image`, `list`,
@@ -186,9 +188,9 @@ Editor parts: `root`, `toolbar`, `toolbarGroup`, `toolbarButton`,
 
 ### 4. Your own components
 
-`components` maps any element to a component of yours. This is the escape hatch
-that always works, and it is how a design system gets adopted, by choice, from
-the application.
+`components` maps any element to one of your own components. This always works
+as a fallback, and it's how you'd bring in a design system from your
+application if you want one.
 
 export function AppLink({ href, children }) {
   return (
@@ -222,13 +224,13 @@ Call \`compileMarkdown\` once, then render the document.
 </Markdown>
 ```
 
-Swap those for ZUI, shadcn/ui or MUI components and nothing else in the call
-changes. The library never imports them.
+You could swap those for ZUI, shadcn/ui or MUI components and the rest of the
+call stays the same. The library never imports them itself.
 
 ## The contract
 
-These rules are binding, and `scripts/check-css-scope.mjs` enforces the CSS half
-of them on every build.
+We hold the packages to these rules, and `scripts/check-css-scope.mjs` checks
+the CSS-related ones on every build.
 
 1. No styling runtime dependency in any package.
 2. Unstyled by default, with inline style used only for function and never for
@@ -243,24 +245,25 @@ of them on every build.
 7. Class names are replaceable through `classNames`.
 8. Components are replaceable through `components`.
 
-The optional CSS is deliberately small. `renderer/styles.css` is typography
-only: measure, heading scale, list indentation, code and table defaults.
-`editor/styles.css` is chrome only: the content box, toolbar layout, focus ring,
-placeholder, and the editing affordances that have no semantic HTML equivalent.
+The optional CSS is kept small on purpose. `renderer/styles.css` only covers
+typography (measure, heading scale, list indentation, code and table defaults).
+`editor/styles.css` only covers the editor chrome, meaning the content box,
+toolbar layout, focus ring, placeholder, and the editing affordances that don't
+have a semantic HTML equivalent.
 
 ## Editor chrome
 
-The default editor ships a toolbar so `<MarkdownEditor value onChange />` is
-useful on its own. It uses `<button type="button">` with accessible names, and
-its icons are inline SVG in the package rather than an icon font or an icon
+The default editor comes with a toolbar so `<MarkdownEditor value onChange />`
+is usable on its own. It uses `<button type="button">` with accessible names, and
+the icons are inline SVGs in the package, so there's no icon font or icon
 dependency.
 
 ```tsx
 <MarkdownEditor value={value} onChange={setValue} toolbar={false} />
 ```
 
-`toolbar={false}` removes it. A function replaces it. For full control, use the
-headless parts and bring your own chrome:
+`toolbar={false}` removes it, and passing a function replaces it. If you want
+full control, use the headless parts and build your own chrome:
 
 ```tsx
 const editor = useMarkdownEditor({ value, onChange })
@@ -271,10 +274,10 @@ const editor = useMarkdownEditor({ value, onChange })
 </MarkdownEditorProvider>
 ```
 
-Nothing about the editor's behaviour depends on its own CSS. With
-`@react-markdown-kit/editor/styles.css` absent, the editor is unstyled and fully
-functional: typing, shortcuts, mode switching and serialization all work. A
-packaging test asserts exactly that.
+The editor's behaviour doesn't depend on its own CSS. Without
+`@react-markdown-kit/editor/styles.css`, the editor is unstyled but still works
+(typing, shortcuts, mode switching and serialization). A packaging test checks
+this.
 
 ## See also
 

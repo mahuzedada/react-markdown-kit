@@ -23,22 +23,22 @@ export const FAQ = [
   {
     question: 'Can I use Handlebars to template a Markdown file?',
     answer:
-      'Yes, and it works while you write both the template and the data. Handlebars replaces the placeholder in the source string and the result is then parsed as Markdown, so a value can add a heading, a list, a table row or a link. That is fine for values you control and a hazard for values a user typed.',
+      'Yes, and it works fine as long as you write both the template and the data. Handlebars replaces the placeholder in the source string and the result is then parsed as Markdown, so a value can add a heading, a list, a table row or a link. That\'s fine for values you control, but risky for values a user typed.',
   },
   {
     question: 'Does Handlebars escaping protect a Markdown document?',
     answer:
-      'Only against HTML. Handlebars and Mustache escape the HTML metacharacters by default, which stops a script tag, but asterisks, hashes, pipes, brackets and parentheses are untouched, and those are the characters that carry Markdown structure.',
+      'Only against HTML. Handlebars and Mustache escape the HTML metacharacters by default, which stops a script tag, but they leave asterisks, hashes, pipes, brackets and parentheses alone, and those are the characters Markdown structure is made of.',
   },
   {
     question: 'What does React Markdown Kit do differently?',
     answer:
-      'It parses the document first and then places values into the syntax tree as text nodes, so a value is never source. The document keeps its shape whatever the data says, which 152 test cases assert, including after the result is serialized back to Markdown and re-parsed.',
+      'It parses the document first and then places values into the syntax tree as text nodes, so a value never becomes source. The document keeps its shape no matter what the data contains, which 152 test cases check, including after the result is serialized back to Markdown and re-parsed.',
   },
   {
     question: 'Does the template plugin have loops and conditionals?',
     answer:
-      'No. It resolves dotted paths with optional formatters, and nothing else: no sections, no helpers, no expressions. If a document needs iteration or branching, Handlebars has it and this plugin does not.',
+      'No. It only resolves dotted paths with optional formatters (there are no sections, helpers or expressions). If a document needs iteration or branching, Handlebars has that and this plugin doesn\'t.',
   },
 ]
 
@@ -84,11 +84,11 @@ Handlebars and Mustache are string templating engines. They take a string with
 `{{placeholders}}`, put values in, and hand back a string. When that string is
 Markdown, the values are part of the Markdown source before anything parses it.
 
-`@react-markdown-kit/template` is not a templating engine. It is an extension
-to a Markdown parser. The document is parsed first, and values are placed into
-the syntax tree afterwards, as text nodes.
+`@react-markdown-kit/template` works differently. It's an extension to a
+Markdown parser, so the document is parsed first, and values are placed into
+the syntax tree afterwards as text nodes.
 
-That single difference decides everything below.
+Most of this page follows from that one difference.
 
 ## The same template, the same data, two results
 
@@ -105,11 +105,11 @@ Thanks for being with us.
 
 ### String interpolation, then parse
 
-The pane below is the real output of replacing the placeholders in the source
+The pane below is the actual output of replacing the placeholders in the source
 and parsing the result, with the value escaped the way Handlebars escapes it by
 default ([HTML escaping](https://handlebarsjs.com/guide/#html-escaping):
-`&`, `<`, `>`, `"`, `'`, `` ` `` and `=`). The substitution runs on this page;
-the left pane is its result, and you can edit it to see how the parser reads it.
+`&`, `<`, `>`, `"`, `'`, `` ` `` and `=`). The substitution runs on this page.
+The left pane is its result, and you can edit it to see how the parser reads it.
 
 <RenderExample
   title="Value spliced into the source, then parsed"
@@ -118,9 +118,9 @@ the left pane is its result, and you can edit it to see how the parser reads it.
   markdown={interpolate(source, hostile)}
 >
   The paragraph the author wrote was closed halfway through, a heading the
-  author did not write appeared, and a link to another host was added under it.
-  No HTML was involved, so HTML escaping did nothing: `#`, `[`, `]`, `(` and
-  `)` are not in the escape set, because Handlebars escapes for HTML and this
+  author didn't write appeared, and a link to another host was added under it.
+  No HTML was involved, so HTML escaping didn't help. `#`, `[`, `]`, `(` and
+  `)` aren't in the escape set, because Handlebars escapes for HTML and this
   document is Markdown.
 </RenderExample>
 
@@ -137,31 +137,31 @@ Same template, same data, `@react-markdown-kit/template`.
     { label: 'The same hostile contact', data: hostile },
   ]}
 >
-  Three blocks stay three blocks. Every character of the value is rendered, as
-  characters, inside the paragraph the author wrote.
+  The three blocks stay three blocks. Every character of the value is rendered as
+  plain text inside the paragraph the author wrote.
 </TemplateExample>
 
 ## Why escaping does not close the gap
 
-The obvious repair is to escape the value for Markdown before handing it to
-Handlebars. It is harder than it looks, and the reason is worth stating.
+The obvious fix is to escape the value for Markdown before handing it to
+Handlebars. That's harder than it looks, for a few reasons.
 
 - The characters that matter depend on **position**. A `#` is a heading only at
   the start of a line, `-` is a list only at line start, `|` is a table only
   inside a table row, and `---` under a line of text is a setext heading. An
-  escaper that does not know where the value lands cannot know what to escape.
+  escaper that doesn't know where the value lands can't know what to escape.
 - **A newline is enough.** Any construct above needs only line-start position,
   so a value containing `\n` can reach it from the middle of a paragraph. The
   plugin turns every newline in a value into a space for exactly this reason
   (<Link href={blob('plugins/template/tests/injection.test.ts#L60')}>test</Link>).
 - **Escaping twice is visible.** Escape every `*` and a customer named
   `A*Star` becomes `A\*Star` in the emailed Markdown that someone re-parses
-  downstream, or `A\*Star` on screen if the escape does not survive.
-- The dialect is not fixed. Tables, footnotes and strikethrough exist with
+  downstream, or `A\*Star` on screen if the escape doesn't survive.
+- The dialect isn't fixed. Tables, footnotes and strikethrough exist with
   GFM and not with CommonMark, so the escape set changes with the preset.
 
-Resolving inside the parser sidesteps the whole problem: the value is never
-source, so there is nothing to escape, and the serializer re-escapes on the way
+Resolving inside the parser avoids the problem. The value never becomes
+source, so there's nothing to escape, and the serializer re-escapes on the way
 out because at that point it knows the context
 (<Link href={blob('plugins/template/tests/to-markdown.test.ts#L13')}>serializer tests</Link>).
 
@@ -183,7 +183,7 @@ out because at that point it knows the context
 | Prototype-chain paths | Handlebars ships [runtime options to control prototype access](https://handlebarsjs.com/api-reference/runtime-options.html#options-to-control-prototype-access) | Refused at parse and again at lookup (<Link href={blob('plugins/template/tests/paths.test.ts#L41')}>18 prototype-path cases</Link> in a 33-case file) |
 | Output | A string you still have to render | A compiled document, or Markdown text through `documentToMarkdown` |
 
-The evidence column runs as one command:
+You can run everything in the evidence column with one command.
 
 ```bash
 pnpm test -- plugins/template/tests/ tests/template-table-formatters.test.ts \
@@ -196,31 +196,31 @@ That run is 324 cases across 15 files, of which 152 are injection cases.
 
 Mustache's `{{name}}` is HTML-escaped and `{{{name}}}` is not
 ([mustache(5)](https://mustache.github.io/mustache.5.html)), which is the same
-escape boundary Handlebars draws. Mustache has sections rather than block
-helpers and no helper functions, so it does less than Handlebars and behaves
-identically for the purpose of this page: values are spliced into the source
-string, and Markdown structure inside a value becomes Markdown structure.
+escape boundary Handlebars draws. Mustache has sections instead of block
+helpers and no helper functions, so it does less than Handlebars, but for the
+purposes of this page it behaves the same way. Values are spliced into the
+source string, and Markdown structure inside a value becomes Markdown structure.
 
 ## When to stay on Handlebars
 
-This is not a replacement for Handlebars. Stay with it if any of these apply.
+The plugin doesn't replace Handlebars in general. I'd stay with Handlebars if any of these apply.
 
 - **The document needs iteration or branching.** A table with one row per line
   item, or a paragraph that only appears for trial accounts, needs
-  `{{#each}}` and `{{#if}}`. The plugin has neither: a placeholder is a dotted
+  `{{#each}}` and `{{#if}}`. The plugin has neither, since a placeholder is a dotted
   path with an optional formatter, and `a()`, `a[0]`, `a b` and `1 + 1` are all
   rejected as paths
   (<Link href={blob('plugins/template/tests/paths.test.ts#L127')}>parser tests</Link>).
   In React the usual answer is to loop in the component and render one
   `<Markdown>` per item, but that moves the loop out of the document.
-- **You are templating something that is not Markdown**, such as an HTML
+- **You're templating something that isn't Markdown**, such as an HTML
   email, a YAML file or a subject line.
 - **Non-developers already write Handlebars** in your product and the syntax is
   part of the contract.
 - **You need helpers with arbitrary logic.** The plugin's formatters take one
-  value and return a string; there is no `{{#compare}}`.
+  value and return a string, and there's no `{{#compare}}`.
 
-The two coexist. A common arrangement is Handlebars for the surrounding
+You can use both. A common setup is Handlebars for the surrounding
 machinery, such as the subject line and the HTML wrapper, and the plugin for
 the Markdown body, where the untrusted values are.
 
@@ -229,11 +229,11 @@ the Markdown body, where the untrusted values are.
 The placeholder syntax matches, so most templates move unchanged.
 
 1. `{{customer.name}}` stays `{{customer.name}}`.
-2. `{{{customer.name}}}` becomes `{{customer.name}}`. There is no unescaped
-   form, because nothing is escaped: the value is never source.
+2. `{{{customer.name}}}` becomes `{{customer.name}}`. There's no unescaped
+   form, because nothing gets escaped in the first place (the value never becomes source).
 3. Handlebars helpers become formatters:
    `{{formatCurrency amount}}` becomes `{{amount | currency:"USD"}}`, with the
-   code explicit because a locale never implies a currency
+   currency code spelled out because a locale never implies a currency
    (<Link href={blob('plugins/template/tests/formatters.test.ts#L22')}>test</Link>).
 4. `{{#each}}` and `{{#if}}` have no equivalent. Either keep those documents on
    Handlebars or move the branch into the code that picks the template.
@@ -248,9 +248,9 @@ import { template } from '@react-markdown-kit/template'
 const document = compileMarkdown(source, { preset: gfmPreset, extensions: [template({ data })] })
 ```
 
-Placeholders you wrote about rather than with, inside code fences, stop being
-replaced, which is usually the fix for a documentation page that Handlebars
-kept eating
+Placeholders inside code fences (where you're writing about the syntax, not
+using it) stop being replaced, which usually fixes documentation pages that
+Handlebars kept mangling
 (<Link href={blob('plugins/template/tests/literal-contexts.test.ts#L15')}>literal-context tests</Link>).
 
 ## FAQ

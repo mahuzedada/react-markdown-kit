@@ -46,7 +46,7 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
       <DialogPanel className={cn(styles.dialog)}>
       <DialogHeader>
         <DialogTitle>Shareable links</DialogTitle>
-        <DialogDescription>Share your diagram with others. The diagram lives in the link itself; nothing is uploaded.</DialogDescription>
+        <DialogDescription>The diagram is stored in the link itself, so nothing gets uploaded.</DialogDescription>
       </DialogHeader>
       <DialogBody className={cn(styles.body)}>
         <section className={styles.section}>
@@ -55,7 +55,7 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
             <Input ref={linkField} track="share-link-field" size="sm" fullWidth inputClassName={cn(styles.mono)} readOnly value={link ?? ''} aria-label="Link to this diagram" onFocus={(event) => event.target.select()} />
             {copyButton('link', link ?? '', linkField.current)}
           </div>
-          <p className={styles.note}>The source, layout comment included, is compressed into the URL hash. Opening the link restores the drawing on the canvas.</p>
+          <p className={styles.note}>The source (layout comment included) is compressed into the URL hash. Opening the link puts the same drawing back on the canvas.</p>
         </section>
 
         <section className={styles.section}>
@@ -71,7 +71,7 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
 
         <section className={styles.section}>
           <h3 className={styles.heading}>Embed</h3>
-          <p className={styles.note}>Embed the live editor in your own website or blog. The site chrome is hidden.</p>
+          <p className={styles.note}>Puts the live editor on your own site or blog, with the site chrome hidden.</p>
           <div className={styles.sizes}>
             <label className={styles.size}>
               <span>Width</span>
@@ -96,7 +96,7 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
               Open in mermaid.live
             </Button>
           </div>
-          <p className={styles.note}>The same source in the Mermaid project&rsquo;s editor. A flowchart&rsquo;s layout comment travels along and is ignored there.</p>
+          <p className={styles.note}>Opens the same source in the Mermaid project&rsquo;s editor. A flowchart&rsquo;s layout comment goes along with it, and mermaid.live ignores it.</p>
         </section>
       </DialogBody>
       </DialogPanel>

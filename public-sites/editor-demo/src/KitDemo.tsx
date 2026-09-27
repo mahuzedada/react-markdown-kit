@@ -135,13 +135,13 @@ export default function KitDemo(): ReactNode {
             </div>
             {copied === 'blocked' ? (
               <p className={styles.note}>
-                This browser would not write to the clipboard. The address bar holds the same link.
+                This browser blocked the clipboard, but the same link is in the address bar.
               </p>
             ) : null}
             {unreadable ? (
               <p className={styles.note}>
-                This link could not be read in this browser, so the example document is shown. The address bar still
-                holds the shared link; editing replaces it.
+                This browser couldn&rsquo;t read the link, so you&rsquo;re seeing the example document instead. The
+                shared link is still in the address bar, and editing will replace it.
               </p>
             ) : null}
           </div>

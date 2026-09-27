@@ -9,15 +9,15 @@ import TemplateExample from '@site/src/components/TemplateExample'
 
 # Security
 
-There are two surfaces. The renderer takes Markdown that an author wrote. The
-template engine also takes data that a runtime produced. They have different
-threat models, so they are documented separately.
+There are two separate things to think about here. The renderer takes Markdown
+that an author wrote, and the template engine also takes data produced at
+runtime. Their threat models are different, so they're covered separately below.
 
 ## Renderer
 
 ### Raw HTML is not executed
 
-The default is to render raw HTML as visible escaped text. Nothing runs.
+By default, raw HTML renders as visible escaped text and nothing in it runs.
 
 <RenderExample
   title="Hostile source, default settings"
@@ -28,27 +28,27 @@ The default is to render raw HTML as visible escaped text. Nothing runs.
 [Click me](javascript:alert(1))
 `}
 >
-  The tags appear as text. The `javascript:` destination is emptied, so the
-  link has nothing to navigate to.
+  The tags show up as text. The `javascript:` destination gets emptied, so the
+  link doesn't go anywhere.
 </RenderExample>
 
-`skipHtml` controls presentation, not safety.
+`skipHtml` only changes how raw HTML is presented. It doesn't affect safety.
 
 | `skipHtml` | Result |
 | --- | --- |
 | `false` (default) | Raw HTML becomes visible text |
 | `true` | Raw HTML is removed |
 
-Neither executes it. The default matches `react-markdown`, because removing
-content the author wrote is silent data loss, and both options are equally
-safe.
+Neither option executes it. The default matches `react-markdown`. Both options
+are equally safe, and removing content the author wrote would be silent data
+loss, so we kept the visible-text behaviour as the default.
 
 ### URL policy
 
-Every URL-bearing attribute passes through `urlTransform` before rendering. The
-default algorithm allows `http`, `https`, `irc`, `ircs`, `mailto` and `xmpp`,
-and empties everything else. A colon appearing after the first `/`, `?` or `#`
-is part of a path, so relative URLs are untouched.
+Every attribute that holds a URL goes through `urlTransform` before rendering.
+The default algorithm allows `http`, `https`, `irc`, `ircs`, `mailto` and `xmpp`,
+and empties everything else. A colon that shows up after the first `/`, `?` or
+`#` counts as part of a path, so relative URLs are left alone.
 
 ```tsx
 import { defaultUrlTransform } from '@react-markdown-kit/renderer'
@@ -62,8 +62,8 @@ import { defaultUrlTransform } from '@react-markdown-kit/renderer'
 </Markdown>
 ```
 
-The policy runs after every plugin, so a plugin cannot inject markup that skips
-it.
+The policy runs after every plugin, so a plugin can't inject markup that gets
+around it.
 
 ### Element policy
 
@@ -72,14 +72,14 @@ it.
 <Markdown disallowedElements={['img']} unwrapDisallowed>{source}</Markdown>
 ```
 
-Use one of `allowedElements` or `disallowedElements`, never both. `allowElement`
-takes a predicate for anything more specific. `unwrapDisallowed` keeps the
-children of a removed element instead of dropping them.
+Pick either `allowedElements` or `disallowedElements` (don't use both). For
+anything more specific, `allowElement` takes a predicate. `unwrapDisallowed`
+keeps the children of a removed element instead of dropping them.
 
 ### Allowing raw HTML on purpose
 
-Some content genuinely needs HTML. Opt in explicitly, and sanitize in the same
-breath.
+Some content really does need HTML. In that case, opt in explicitly and add a
+sanitizer at the same time.
 
 ```tsx
 import rehypeRaw from 'rehype-raw'
@@ -90,31 +90,32 @@ import rehypeSanitize from 'rehype-sanitize'
 </Markdown>
 ```
 
-Order matters. `rehype-raw` parses the HTML into real nodes, and
-`rehype-sanitize` then strips what its schema forbids. Running them the other
-way round sanitizes nothing.
+The order matters. `rehype-raw` parses the HTML into real nodes, and then
+`rehype-sanitize` strips whatever its schema forbids. If you run them the other
+way round, nothing gets sanitized.
 
 ### Plugins and components are trusted code
 
-A remark plugin, a rehype plugin and a component you pass to `components` are
-application code. They are not sandboxed, and the kit does not audit what they
+Remark plugins, rehype plugins and anything you pass to `components` count as
+application code. They aren't sandboxed, and the kit doesn't audit what they
 produce. The content policy runs after plugins, so it still filters their
-output, but a component that renders `dangerouslySetInnerHTML` is entirely your
-decision.
+output, but if one of your components renders `dangerouslySetInnerHTML`, that's
+on you.
 
-The kit makes no claim beyond that. It is not a sanitizer, and it is not a
-substitute for a Content Security Policy.
+The kit doesn't claim anything beyond that. It isn't a sanitizer, and you
+should still have a Content Security Policy.
 
 ## Templates
 
-Template data is the harder problem, because an author's Markdown and a
-runtime's data meet in the same document.
+Template data is harder to get right, since an author's Markdown and data from
+your runtime end up in the same document.
 
-### Values are placed, never substituted
+### Values go into the parsed tree
 
-Resolution is not string replacement followed by parsing. The source is parsed
-first, and values are placed structurally into the parsed tree. A value is
-always a text node, so its Markdown punctuation is characters.
+Resolving a template doesn't do string replacement and then parse the result.
+The source gets parsed first, and values are placed into the parsed tree. A
+value is always a text node, so any Markdown punctuation in it stays as plain
+characters.
 
 <TemplateExample
   title="Data that tries to be structure"
@@ -141,37 +142,36 @@ Reviewer note: {{note}}
   ]}
 >
   The third dataset renders as one line of text inside the paragraph. No table
-  appears, in this document or in a re-parse of its serialized Markdown.
+  shows up, either in this document or if you re-parse its serialized Markdown.
 </TemplateExample>
 
-No value can create a heading, a table row, a list item, a link destination, an
-HTML tag or a code fence.
+A value can't create a heading, a table row, a list item, a link destination,
+an HTML tag or a code fence.
 
 ### Every newline in a value becomes a space
 
-This is a security boundary, not formatting. A placeholder always sits in inline
-context, but a serializer will happily write a value's newline as a real line
-break. Every dangerous block construct needs only line-start position to form. A
-table row, a list bullet, an ATX heading, a fence and a thematic break all
-qualify, and none of them needs a blank line.
+This rule is about security. A placeholder
+always sits in inline context, but a serializer will happily write a value's
+newline out as a real line break. Every dangerous block construct only needs to
+be at the start of a line to form. A table row, a list bullet, an ATX heading,
+a fence and a thematic break all qualify, and none of them needs a blank line.
 
-So a value containing `\n| x | y |\n| --- | --- |` once resolved to a safe
-single-paragraph document, serialized with those breaks intact, and then
-re-parsed as a real table. The attacker's table materialized one hop
-downstream, in exactly the persist-then-render pipeline this package exists to
-serve.
+At one point, a value containing `\n| x | y |\n| --- | --- |` resolved
+to a safe single-paragraph document, got serialized with those breaks intact,
+and then re-parsed as a real table. The attacker's table showed up one step
+later, in the persist-then-render pipeline this package is meant for.
 
-Flattening closes that. Every character of the value survives and only newlines
-become spaces, so no character of a value can reach column one. A value that
-genuinely needs line structure is a block-level feature, not something inline
-data should smuggle through. The rule is implemented in
+Flattening newlines fixes that. Every character of the value is kept and only
+newlines turn into spaces, so nothing in a value can reach column one. If a
+value really needs line structure, that should be a block-level feature instead
+of something inline data sneaks through. The rule is implemented in
 `packages/renderer/src/template/interpolate.ts` and pinned by
 `tests/template-serialization-safety.test.ts`.
 
 ### Code contexts and escaped delimiters stay literal
 
-A placeholder inside inline code or a fenced block is never resolved. It is
-documentation of the template, so it renders as itself.
+A placeholder inside inline code or a fenced block is never resolved. It's
+treated as documentation of the template, so it renders as written.
 
 ````md
 `{{user.name}}`
@@ -181,29 +181,29 @@ documentation of the template, so it renders as itself.
 ```
 ````
 
-A backslash escape does the same in prose:
+A backslash escape does the same thing in prose:
 
 ```md
 \{{user.name}}
 ```
 
 Raw HTML is a literal context too. A placeholder inside an HTML block stays
-unresolved and reports `TEMPLATE_PLACEHOLDER_IN_HTML`, so data can never fill an
+unresolved and reports `TEMPLATE_PLACEHOLDER_IN_HTML`, so data can't end up in an
 attribute.
 
 ### Paths cannot reach the prototype chain
 
-A path segment of `__proto__`, `constructor` or `prototype` is rejected with
-`TEMPLATE_UNSAFE_PATH` and never traversed. Lookup reads own enumerable
-properties only, so no inherited getter is ever invoked.
+A path segment of `__proto__`, `constructor` or `prototype` gets rejected with
+`TEMPLATE_UNSAFE_PATH` and is never traversed. Lookup only reads own enumerable
+properties, so inherited getters never get called.
 
-There is no expression language. No method calls, no function calls, no `eval`,
-no `new Function`, and no access to application services. Runtime data never
-gains template-language privileges.
+There's no expression language. Templates can't call methods or functions, use
+`eval` or `new Function`, or reach application services, and runtime data
+never gets template-language privileges.
 
 ### URLs are bound whole
 
-A destination binds a complete URL and nothing less.
+A destination has to bind a complete URL.
 
 ```md
 [Open account]({{links.accountUrl}})
@@ -211,20 +211,20 @@ A destination binds a complete URL and nothing less.
 ![{{brand.logoAlt}}]({{brand.logoUrl}})
 ```
 
-Half a URL is refused with `TEMPLATE_PARTIAL_URL`, because correct encoding of a
-fragment cannot be guaranteed. Build the URL in your application and bind the
-result.
+Binding part of a URL is refused with `TEMPLATE_PARTIAL_URL`, because there's no
+way to guarantee a fragment gets encoded correctly. Build the URL in your
+application and bind the result instead.
 
 ```ts
 const data = { links: { accountUrl: buildAccountUrl(customer) } }
 ```
 
-A bound destination is checked against the safe-protocol list, and whitespace
-or control characters reject it outright. That check is `isSafeDestination`, and
-it is exported. The renderer then applies its own URL policy again on the way to
-HTML.
+A bound destination is checked against the safe-protocol list, and any
+whitespace or control characters get it rejected outright. That check is
+`isSafeDestination`, which is exported. The renderer then applies its own URL
+policy again on the way to HTML.
 
-### Diagnostics carry paths, not values
+### Diagnostics leave out values
 
 ```text
 TEMPLATE_REQUIRED_VALUE
@@ -232,42 +232,42 @@ Missing required variable: customer.accountNumber
 ```
 
 Messages name the variable path and the source position. They never include the
-runtime value, so a diagnostic is safe to log and safe to show a support agent.
+runtime value, so it's safe to log a diagnostic or show it to a support agent.
 
 ## Caching resolved output
 
-Resolution is per customer. Caching it wrongly is how one tenant's document
-reaches another.
+Resolved output is per customer. If you cache it wrong, one tenant's document
+can end up in front of another tenant.
 
-Safe to cache by template identity alone:
+These are safe to cache by template identity alone:
 
 - the parsed template;
 - the compiled grammar;
 - the static source tree.
 
-`template()` already does this internally, and the renderer parses a fresh tree for every
-resolution, so nothing derived from one caller's data survives into another's.
+`template()` already does this internally, and the renderer parses a fresh tree
+for every resolution, so nothing from one caller's data carries over to another's.
 
-Resolved output is different. Key it by everything that produced it, or keep it
-request-local.
+Resolved output needs more care. Either key it by everything that went into
+producing it, or keep it request-local.
 
 ```ts
 const key = [template.id, template.version, tenantId, dataVersion, locale, timeZone].join('|')
 ```
 
-Never do this:
+Don't do this:
 
 ```text
 report template ID → resolved Acme document
 ```
 
-The next request may be for another customer. If a correct key is hard to
-build, do not cache the output. Cache the template and resolve per request,
-which is the cheap half of the work anyway.
+The next request could be for a different customer. If a correct key is hard to
+build, I'd skip caching the output. Cache the template and resolve per request
+(that's the cheap part of the work anyway).
 
 ## Reporting
 
-Security issues go to the repository's security contact rather than a public
-issue. Test coverage for these behaviours lives in `tests/` and in
+Please send security issues to the repository's security contact instead of
+opening a public issue. Test coverage for these behaviours lives in `tests/` and in
 `packages/renderer/tests/template/`, including protocol obfuscation, event attributes,
 plugin-generated HTML, DOM clobbering and serialization round trips.

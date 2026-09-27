@@ -24,7 +24,7 @@ export const FAQ = [
   {
     question: 'Which is smaller, react-markdown or React Markdown Kit?',
     answer:
-      'react-markdown. One import of react-markdown 10.1.0 is smaller gzipped than one import of @react-markdown-kit/renderer 0.1.0, and the gap is about the same with GFM on both sides. Both parse with micromark; the difference is the kit document contract and policy layer. The numbers are in docs/data/bundle-sizes.json.',
+      'react-markdown is. One import of react-markdown 10.1.0 is smaller gzipped than one import of @react-markdown-kit/renderer 0.1.0, and the gap is about the same with GFM on both sides. Both parse with micromark, so the extra size is the kit\'s document contract and policy layer. The numbers are in docs/data/bundle-sizes.json.',
   },
   {
     question: 'Do both render raw HTML safely by default?',
@@ -34,7 +34,7 @@ export const FAQ = [
   {
     question: 'Can I switch from react-markdown without rewriting my props?',
     answer:
-      'The prop names and meanings match, and npx rmk-migrate rewrites the import statements only. Three things still differ: className is ignored rather than rejected, MarkdownAsync and MarkdownHooks do not exist, and a dialect plugin cannot apply to a document compiled without it. This is not a drop-in replacement.',
+      'For the most part. The prop names and meanings match, and npx rmk-migrate only rewrites the import statements. Three things still differ: className is ignored instead of throwing, MarkdownAsync and MarkdownHooks don\'t exist, and a dialect plugin can\'t apply to a document that was compiled without it. So I wouldn\'t treat it as a drop-in replacement.',
   },
 ]
 
@@ -52,21 +52,21 @@ export const gfmSource = `| Package | Gzipped |
 
 # React Markdown Kit vs react-markdown
 
-Both turn a Markdown string into React elements, both parse with micromark, and both
-refuse to use `dangerouslySetInnerHTML`. `react-markdown` is the one almost everyone
-already has. This page compares them section by section, in the same order used on every
-comparison page here: install size, GFM, security defaults, streaming, server rendering,
-plugins, migration.
+Both turn a Markdown string into React elements, both parse with micromark, and neither
+uses `dangerouslySetInnerHTML`. `react-markdown` is the one most projects already have.
+This page goes through them section by section, in the same order as the other comparison
+pages (install size, GFM, security defaults, streaming, server rendering, plugins,
+migration).
 
 Facts about `react-markdown` come from its repository,
 <Link href={theirs}>remarkjs/react-markdown</Link>, at version 10.1.0. Facts about the
 kit link to the test or the generated table that produced them.
 
-The short version: stay on `react-markdown` if it works and you care about the last
-kilobyte. Look here if you stream Markdown from a model, render the same document more
-than once, or want the editor and the plugins to read what the renderer reads. Read
-<Link to="/react-markdown-alternative">the alternative page</Link> for the three
-differences in full.
+If `react-markdown` works for you and you care about the last kilobyte, I'd stay on it.
+The kit is probably worth a look if you stream Markdown from a model, render the same
+document more than once, or want the editor and plugins to read the same document the
+renderer reads. <Link to="/react-markdown-alternative">The alternative page</Link> covers
+the three differences in full.
 
 ## Install size
 
@@ -83,15 +83,15 @@ committed to
   licenses
 />
 
-`react-markdown` wins this section. It is
+`react-markdown` is smaller here. It is
 {' '}{gzipDifference('kit-renderer', 'react-markdown')} smaller gzipped on CommonMark and
 {' '}{gzipDifference('kit-renderer-gfm', 'react-markdown-gfm')} smaller with GFM on both
-sides. Size is not a reason to switch renderers.
+sides, so size isn't a reason to switch.
 
 ## GFM
 
 `react-markdown` parses GitHub Flavored Markdown when you pass the `remark-gfm` plugin,
-which its readme documents. The kit has the same route and a native extension.
+which its readme documents. The kit supports that same plugin and also has a native extension.
 
 ```tsx
 // react-markdown
@@ -110,7 +110,7 @@ const preset = defineMarkdownPreset({ extensions: [gfm()] })
 <Markdown preset={preset}>{content}</Markdown>
 ```
 
-Both routes are asserted to agree.
+Tests check that both routes agree.
 <Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link> runs 68 cases derived
 from the GFM spec three ways: through the native `gfm()` extension, through
 `remarkPlugins={[remarkGfm]}`, and through plain CommonMark. The first two must agree
@@ -129,11 +129,11 @@ compares `remark-gfm` output between the two packages directly, and the four
   gfm
 />
 
-Even. The extension saves a dependency; the plugin route is there if you prefer it.
+About even. The extension saves you a dependency, and the plugin route still works if you'd rather use it.
 
 ## Security defaults
 
-The defaults are the same, and that is the measured result rather than a claim.
+The defaults are the same, and the tests below are what that's based on.
 
 | Default | react-markdown 10.1.0 | React Markdown Kit |
 | --- | --- | --- |
@@ -146,23 +146,23 @@ Evidence on this side:
 <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>the renderer security tests</Link>
 cover raw HTML, script tags, `javascript:` URLs, obfuscated protocols, image sources,
 relative URLs, `allowedElements`, and the policy applying to a precompiled document so it
-cannot be bypassed. The `urlTransform` and `skipHtml` rows of
+can't be bypassed. The `urlTransform` and `skipHtml` rows of
 <Link href={blob('docs/COMPATIBILITY.md')}>`docs/COMPATIBILITY.md`</Link> are the
 cross-package proof: 4 of 4 and 4 of 4 identical. The policy is described in
 <Link to="/docs/security">the security model</Link>.
 
 Both readmes say the same thing about plugins: a remark plugin, a rehype plugin or a
-component you pass in is your code, and `rehype-sanitize` is the answer when the content
-is not yours.
+component you pass in is your code, and you should add `rehype-sanitize` when the content
+isn't yours.
 
-Even.
+About even.
 
 ## Streaming
 
 A model writes Markdown a token at a time, so a chat UI hands the renderer a new prefix
 on every token and most prefixes are not valid Markdown.
 
-**React Markdown Kit passes.**
+React Markdown Kit has tests for this.
 <Link href={blob('packages/renderer/tests/streaming.test.tsx')}>`packages/renderer/tests/streaming.test.tsx`</Link>
 is 59 tests that feed seven documents token by token and assert four properties on every
 prefix: no prefix throws, the HTML of the closed prefix is byte-identical at every later
@@ -173,17 +173,17 @@ and through a mounted React root that grows token by token.
 The cases are an unclosed code fence, half-written emphasis and strong, a table mid-row,
 a list mid-item, a heading with no trailing newline, a link with an unclosed bracket, and
 a fenced block that closes late. Half-written constructs render as the characters typed
-so far: `**str` is the text `**str`, not a broken element. Two prefixes legitimately
-rewrite output that already rendered, and both are pinned by tests rather than hidden: a
+so far, so `**str` shows up as the text `**str` instead of a broken element. Two prefixes
+do rewrite output that already rendered, and both are pinned by tests: a
 paragraph becomes a heading when a setext underline arrives, and a GFM autolink points at
-the truncated host while the URL is still being typed. Both are CommonMark and GFM
-behaving correctly.
+the truncated host while the URL is still being typed. Both are correct CommonMark and GFM
+behaviour.
 
 This repository runs no streaming tests against `react-markdown`, and its readme
-documents no streaming-specific behaviour, so nothing is claimed here about how it
-behaves under partial input. If it matters to you, run the same corpus yourself.
+documents no streaming-specific behaviour, so this page doesn't claim anything about how
+it handles partial input. If that matters to you, run the same corpus against it yourself.
 
-Kit, on the evidence in this repository.
+Based on what this repository tests, the kit has the edge here.
 
 ## Server rendering
 
@@ -206,7 +206,7 @@ renders without parsing again. On the reference machine in
 takes 16.80 ms from a string and 5.99 ms from a precompiled document, 2.8x faster,
 because parsing is about two thirds of the work.
 
-Speed on one render is the other way round. Both sides parsing GFM, same process, median
+For a single render it goes the other way. Both sides parsing GFM, same process, median
 after five warm-up calls: **1 KB is 1.21x slower** than `react-markdown` (2.69 ms against
 2.23 ms), 10 KB is at parity (16.22 ms against 16.25 ms), and 100 KB is 0.89x (206.96 ms
 against 233.36 ms). The 1 KB row is an open regression: it is fixed per-render cost, and
@@ -214,7 +214,7 @@ the fix, caching the processor per resolved configuration, is tracked in
 <Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link> and not done.
 Reproduce with `pnpm bench`.
 
-`react-markdown` for async plugins. Kit for repeated renders of the same document.
+Use `react-markdown` if you need async plugins, and the kit if you render the same document repeatedly.
 
 ## Plugins
 
@@ -227,18 +227,18 @@ handlers and editor behaviour together, so the same declaration serves the rende
 editor and a server that only compiles the document
 (<Link to="/docs/extensions">extensions</Link>). `@react-markdown-kit/mermaid`,
 `@react-markdown-kit/slides` and `@react-markdown-kit/template` are built this way.
-`react-markdown` has no equivalent, because it has no editor to share with.
+`react-markdown` doesn't have an equivalent, since it has no editor to share with.
 
-One warning applies to both and is easy to miss: a plugin that changes the dialect cannot
+One thing that applies to both and is easy to miss is that a plugin that changes the dialect cannot
 apply to a document that was already compiled without it. Compile with the extensions you
 render with, or pass the string
 (<Link to="/docs/renderer/compiling">compiling a document</Link>).
 
-Kit, if you need an editor or a diagram plugin. Even otherwise.
+The kit is ahead if you need an editor or a diagram plugin. Otherwise it's about even.
 
 ## Migration
 
-Two commands, both local, both shipped in the renderer package.
+There are two commands for this. Both run locally and ship in the renderer package.
 
 ```bash
 npx rmk-compare 'content/**/*.md' --gfm   # diff your own corpus through both
@@ -247,17 +247,17 @@ npx rmk-migrate 'src/**/*.tsx' --write    # apply
 ```
 
 `rmk-migrate` edits import statements and nothing else, preserves your alias and quote
-style, and refuses to touch `MarkdownAsync`, `MarkdownHooks` and
+style, and won't touch `MarkdownAsync`, `MarkdownHooks` and
 `react-markdown/lib/*`. It flags `rehype-raw` without a sanitizer instead of carrying
 that setup across. Every refusal is a test in
 <Link href={blob('tests/codemod.test.ts')}>`tests/codemod.test.ts`</Link>, and
 `rmk-compare` exits non-zero on a difference
 (<Link href={blob('tests/compare-runner.test.ts')}>`tests/compare-runner.test.ts`</Link>).
 
-Three things the codemod cannot fix are listed in
-<Link to="/react-markdown-alternative">the alternative page</Link> and step by step in
-<Link to="/migrate-from-react-markdown">the migration guide</Link>. This is not a
-drop-in replacement.
+There are three things the codemod can't fix. They're listed on
+<Link to="/react-markdown-alternative">the alternative page</Link> and covered step by step in
+<Link to="/migrate-from-react-markdown">the migration guide</Link>, which is why we don't
+call this a drop-in replacement.
 
 ## FAQ
 

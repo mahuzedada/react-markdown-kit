@@ -32,12 +32,12 @@ export const FAQ = [
   {
     question: 'Is there an alternative to MDXEditor for React?',
     answer:
-      `Yes. @react-markdown-kit/editor is a rich, source and preview Markdown editor for React, also built on Lexical. It edits CommonMark and GFM, not MDX, and it asserts byte identity for ${cases} audited documents opened and saved without an edit.`,
+      `Yes. @react-markdown-kit/editor is a rich, source and preview Markdown editor for React, also built on Lexical. It edits CommonMark and GFM (no MDX), and its tests check byte identity for ${cases} audited documents opened and saved without an edit.`,
   },
   {
     question: 'Does React Markdown Kit edit MDX and JSX components?',
     answer:
-      'No. It edits Markdown. MDXEditor parses and edits MDX, including JSX components and imports, which is what its name and its JSX plugin are for. If your content is MDX, that is a reason to stay with MDXEditor.',
+      'No, it only edits Markdown. MDXEditor parses and edits MDX, including JSX components and imports (that\'s what its JSX plugin is for). If your content is MDX, I\'d stay with MDXEditor.',
   },
   {
     question: 'Which editor bundle is smaller?',
@@ -47,7 +47,7 @@ export const FAQ = [
   {
     question: 'Can either editor render on the server?',
     answer:
-      'Neither rich editing surface renders on a server, because both need a DOM for selection and keyboard handling. React Markdown Kit splits the packages, so a server-rendered page that only displays Markdown imports the renderer and never loads editor code or Lexical.',
+      'Neither rich editing surface renders on a server, since both need a DOM for selection and keyboard handling. React Markdown Kit ships the renderer and editor as separate packages, so a server-rendered page that only displays Markdown imports the renderer and never loads editor code or Lexical.',
   },
 ]
 
@@ -66,12 +66,12 @@ Both editors edit this visually. Only one of them also reads **MDX**.
 # React Markdown Kit editor vs MDXEditor
 
 [MDXEditor](https://mdxeditor.dev/) is a React component for editing Markdown and MDX,
-built on Lexical, MIT licensed, with a plugin for every feature. This page compares it
+built on Lexical and MIT licensed, where each feature is a plugin. This page compares it
 with `@react-markdown-kit/editor`, which is also built on Lexical and edits Markdown
 only.
 
-The short version: if your content is MDX with JSX components in it, use MDXEditor. If
-your content is Markdown and the files must come back unchanged, read on.
+If your content is MDX with JSX components in it, you should probably use MDXEditor. If
+it's Markdown and you need the files to come back unchanged, the rest of this page is for you.
 
 Facts about MDXEditor come from its [documentation](https://mdxeditor.dev/editor/docs/getting-started)
 and its [repository](https://github.com/mdx-editor/editor). Facts about this editor link
@@ -94,15 +94,15 @@ Both editors put a Lexical surface in front of the user, and both keep the docum
 Markdown in your state.
 
 MDXEditor composes features as plugins: `headingsPlugin()`, `listsPlugin()`,
-`tablePlugin()`, `jsxPlugin()` and so on, passed in a `plugins` array. Nothing is on
-until you turn it on, and the toolbar is itself a plugin.
+`tablePlugin()`, `jsxPlugin()` and so on, passed in a `plugins` array. Everything is off
+until you turn it on, and the toolbar is a plugin too.
 
 ```tsx
 <MDXEditor markdown={value} onChange={setValue} plugins={[headingsPlugin(), listsPlugin()]} />
 ```
 
-React Markdown Kit composes the **dialect** instead, in a preset that the renderer and
-the editor share, so the editor writes exactly what your pages read.
+React Markdown Kit configures the **dialect** instead, in a preset the renderer and the
+editor share, so the editor writes the same Markdown your pages read.
 
 ```tsx
 import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
@@ -112,12 +112,12 @@ const appMarkdown = defineMarkdownPreset({ extensions: [gfm()] })
 <MarkdownEditor preset={appMarkdown} value={value} onChange={setValue} />
 ```
 
-The editing surface then follows the dialect. There is no list of features to keep in
-sync with the renderer, because there is one preset and one parser for both.
+The editing surface follows from the dialect. You don't have a list of features to keep
+in sync with the renderer, since both use the same preset and parser.
 
-The practical difference: MDXEditor gives you finer control over which editing features
-exist; this kit gives you a guarantee that preview and production render the same way,
-since preview delegates to `@react-markdown-kit/renderer` rather than a second renderer.
+In practice, MDXEditor gives you finer control over which editing features exist, and this
+kit makes sure preview and production render the same way, because preview uses
+`@react-markdown-kit/renderer` instead of a second renderer.
 
 <EditorExample
   title="The kit's editor, on this page"
@@ -129,21 +129,21 @@ since preview delegates to `@react-markdown-kit/renderer` rather than a second r
 
 Both hand back a Markdown string, so neither locks your content into editor JSON.
 
-The difference is what counts as valid content. MDXEditor accepts MDX: JSX elements,
+Where they differ is what counts as valid content. MDXEditor accepts MDX: JSX elements,
 `import` and `export` statements, and expressions, with JSX handled by its JSX plugin
-and described by a component descriptor you supply. This kit has no MDX support and no
-plan for one. A JSX element in the source is not a component here; it is an HTML block,
-preserved as an opaque node and written back as the bytes it came from.
+and described by a component descriptor you supply. This kit doesn't support MDX and there's no
+plan to. A JSX element in the source is treated as an HTML block, kept as an opaque node and
+written back as the bytes it came from.
 
-If your documents are `.mdx` files with components inside them, that is the deciding
-line and MDXEditor is the right tool.
+If your documents are `.mdx` files with components inside them, that pretty much decides it
+and MDXEditor is the right tool.
 
 ## Round trip
 
-This is the section the kit exists for.
+This is the main reason the kit's editor exists.
 
-Open a document, switch modes, close it without typing. The file must be identical.
-The kit keeps the original source and the byte span of every top-level block, and writes
+If you open a document, switch modes and close it without typing, the file should be
+identical. The kit keeps the original source and the byte span of every top-level block, and writes
 unchanged blocks back from those bytes instead of re-serializing them.
 
 The corpus is {cases} documents that a line-oriented editor damaged on save, from
@@ -155,8 +155,8 @@ The corpus is {cases} documents that a line-oriented editor damaged on save, fro
   14 of {cases}, because that path canonicalizes on purpose
   (<Link href={blob('tests/roundtrip.test.ts')}>`tests/roundtrip.test.ts`</Link>).
 
-We found no equivalent published corpus for MDXEditor, so this table says "not found",
-not "fails". The fixture is plain JSON with a `cases` array of `{ name, source, why }`,
+We couldn't find an equivalent published corpus for MDXEditor, so the table says "not
+found" (we're not saying it fails). The fixture is plain JSON with a `cases` array of `{ name, source, why }`,
 and nothing in it is specific to this package, so you can run it against MDXEditor in an
 afternoon and publish the result.
 <Link to="/markdown-round-trip">How to run the suite on your own documents</Link>
@@ -194,14 +194,13 @@ external. 1 KB is 1024 bytes.
   </tbody>
 </table>
 
-That is {delta} less gzipped JavaScript for the kit's entry. Two caveats keep the number
-honest. The kit's row includes `@react-markdown-kit/renderer`, which is bundled in
-because the editor imports it. Neither row includes CSS: both packages ship an optional
+That's {delta} less gzipped JavaScript for the kit's entry, with two caveats. The kit's row includes `@react-markdown-kit/renderer`, which is bundled in
+because the editor imports it. And neither row includes CSS, since both packages ship an optional
 stylesheet that the measured entry does not import, and the generator records CSS
 separately when a bundle emits any.
 
-The row that matters more for most applications is the one that is not here. A page that
-only displays Markdown imports the renderer and never loads the editor:
+For most applications the more relevant number isn't in this table. A page that only
+displays Markdown imports the renderer and never loads the editor, which is
 {kb(row('kit-renderer').gzipBytes)} gzipped for CommonMark,
 {kb(row('kit-renderer-gfm').gzipBytes)} with the GFM preset.
 <Link to="/react-markdown-renderer">The renderer</Link>
@@ -218,7 +217,7 @@ page imports `@react-markdown-kit/renderer`, carries no `"use client"` boundary,
 pulls no Lexical into the server bundle.
 <Link to="/docs/server-rendering">Server rendering</Link>
 
-There is also a Node path for the editor itself, with no DOM at all:
+The editor also has a Node path that needs no DOM at all.
 
 ```ts
 import { createMarkdownBridge } from '@react-markdown-kit/editor'
@@ -228,13 +227,13 @@ bridge.load(source)
 const saved = bridge.getMarkdown()
 ```
 
-That is the pipeline the React editor runs, on `@lexical/headless`. It is how the round
-trip is tested, and it is available for a migration script or a content check in CI.
+That's the same pipeline the React editor runs, on `@lexical/headless`. The round-trip
+tests use it, and you can use it for a migration script or a content check in CI.
 
 ## Lexical versus Lexical
 
-Both editors chose the same engine, so the engine is not the difference. Two things
-about how each wraps it are.
+Both editors use the same engine, so the differences are in how each one wraps it. There
+are two worth knowing about.
 
 **Where Markdown is parsed.** This kit parses with micromark into mdast, the same
 pipeline the renderer uses, and keeps mdast as the document representation.
@@ -247,14 +246,14 @@ or `@lexical/*`
 (<Link href={blob('packages/editor/tests/styling.test.tsx')}>test</Link>). The opt-in
 `@react-markdown-kit/editor/lexical` entry is the exception, for extension authors. The
 single escape hatch, `editor.getNativeEditor()`, returns
-`unknown`, so you cast it yourself and the engine never leaks into your types by
-accident. That keeps the door open to replacing the engine later without a breaking
-change to the rest of the API.
+`unknown`, so you cast it yourself and the engine doesn't end up in your types by
+accident. That should let us replace the engine later without a breaking change to the
+rest of the API.
 <Link to="/docs/guides/lexical-markdown-editor">How the kit wraps Lexical</Link>
 
 ## Migration
 
-The component boundary is small, so the swap is mostly mechanical.
+The component API is small, so the swap is mostly mechanical.
 
 ```tsx
 // before
@@ -278,7 +277,7 @@ const appMarkdown = defineMarkdownPreset({ extensions: [gfm()] })
 Four things to check before you commit:
 
 1. **MDX content.** If any document contains a JSX element you expect to keep editing as
-   a component, stop here. It will be preserved as an opaque block, not edited.
+   a component, stop here. It'll be kept as an opaque block and you won't be able to edit it.
 2. **Plugins to preset.** The feature plugins have no one-to-one mapping. Decide the
    dialect instead: CommonMark, or CommonMark plus `gfm()`, plus any extension you
    render with. <Link to="/docs/renderer/presets">Presets</Link>
@@ -286,10 +285,10 @@ Four things to check before you commit:
    and a render prop keeps the command items while you supply the markup.
    <Link to="/docs/editor/basics">Editor basics</Link>
 4. **Image uploads.** `onUploadImage(file, { signal, documentKey })` resolves with
-   `{ src, alt, title }`. Your storage, your endpoint.
+   `{ src, alt, title }`, using whatever storage and endpoint you already have.
    <Link to="/docs/editor/images">Images</Link>
 
-Run the round-trip script over your content directory first. It tells you in one pass
+I'd run the round-trip script over your content directory first. It tells you in one pass
 whether the new dialect reads everything you already have.
 <Link to="/markdown-round-trip">The script</Link>
 
@@ -309,7 +308,7 @@ whether the new dialect reads everything you already have.
   dialect.
 - You want the editor package out of the server bundle and out of the pages that only
   display content.
-- You want the round trip to be a test you can run, not a promise.
+- You want the round trip backed by a test you can run yourself.
 
 ## FAQ
 

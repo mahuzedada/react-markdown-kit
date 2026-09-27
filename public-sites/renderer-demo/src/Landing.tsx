@@ -41,19 +41,19 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'How do I render Markdown in React?',
     answer:
-      'Install @react-markdown-kit/renderer and pass the string as children to the Markdown component. There is no provider, stylesheet or configuration to add.',
+      'Install @react-markdown-kit/renderer and pass the string as children to the Markdown component. You don’t need to add a provider, a stylesheet or any configuration.',
     more: { href: docsUrl('/docs/getting-started'), label: 'Getting started.' },
   },
   {
     question: 'Is it safe to render Markdown written by users?',
     answer:
-      'Raw HTML is shown as text and never executed, and unsafe URL schemes are emptied, with nothing to configure. The security page lists the tests behind that.',
+      'For the most part, yes. Raw HTML is shown as text and never executed, and unsafe URL schemes are emptied, without you having to configure anything. The security page lists the tests that cover this.',
     more: { href: docsUrl('/docs/security'), label: 'The security model.' },
   },
   {
     question: 'Is React Markdown Kit a react-markdown alternative?',
     answer:
-      'Its prop surface matches react-markdown 10: 39 of 39 tested prop comparisons render identical markup, three differences are documented, and a codemod migrates the rest. It is not a drop-in replacement.',
+      'Mostly. Its props match react-markdown 10, and 39 of 39 tested prop comparisons render identical markup. There are three documented differences and a codemod that migrates the rest, so it isn’t quite a drop-in replacement.',
     more: { href: docsUrl('/migrate-from-react-markdown'), label: 'The migration guide.' },
   },
   {
@@ -71,7 +71,7 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'Can I share the Markdown I am testing?',
     answer:
-      'Yes. Copy link compresses the whole document into the URL hash, so the link opens this playground with your Markdown already in the source pane. Nothing is uploaded.',
+      'Yes. Copy link compresses the whole document into the URL hash, and whoever opens the link gets this playground with your Markdown already in the source pane. Nothing gets uploaded.',
   },
   {
     question: 'How fast is it?',
@@ -85,12 +85,12 @@ export default function Landing(): ReactNode {
   return (
     <article className="site-landing">
       <header className="site-hero">
-        <span className="site-eyebrow">Free, open source, runs in your browser</span>
+        <span className="site-eyebrow">Free and open source, runs in your browser</span>
         <h1>{TITLE}</h1>
         <p className="site-lede">
-          Paste Markdown, switch every option of the React Markdown Kit renderer, and copy the
-          exact code that produced the output. Safe by default, unstyled by default, and the same
-          props as react-markdown.
+          Paste some Markdown, try the React Markdown Kit renderer&rsquo;s options, and copy the
+          code that produced the output. The renderer is safe and unstyled by default, and it takes
+          the same props as react-markdown.
         </p>
         <p className="site-hero-links">
           <a href={docsUrl('/react-markdown-renderer')}>Renderer docs</a>
@@ -103,86 +103,87 @@ export default function Landing(): ReactNode {
       <ul className="site-features">
         <li>
           <strong>Safe by default</strong>
-          Raw HTML is shown as text, never run, and unsafe URL schemes are emptied, with nothing
-          to configure.
+          Raw HTML is shown as text and never run, and unsafe URL schemes are emptied. You don&rsquo;t
+          have to configure anything for this.
         </li>
         <li>
-          <strong>The props you know</strong>
-          The prop surface matches react-markdown 10 across 39 tested comparisons, with three
-          documented differences and a codemod.
+          <strong>Same props as react-markdown</strong>
+          The props match react-markdown 10 across 39 tested comparisons. There are three
+          documented differences, and a codemod for them.
         </li>
         <li>
-          <strong>Server-ready</strong>
-          No <code>use client</code> directive. Render in server components and static builds, or
-          precompile once and re-render 2.8x faster.
+          <strong>Works on the server</strong>
+          There&rsquo;s no <code>use client</code> directive, so you can render in server components
+          and static builds. You can also precompile once and re-render 2.8x faster.
         </li>
       </ul>
 
       <div className="site-prose">
         <span className="site-eyebrow">Install</span>
-        <h2>One package, one component</h2>
+        <h2>Install the package</h2>
         <CopyCode code="npm install @react-markdown-kit/renderer" />
         <p>
-          React 18 or newer. No provider, no stylesheet, no configuration, and no design system.
-          The package has no <code>use client</code> directive, so it works in server components,
-          during server rendering and in static builds.
+          It needs React 18 or newer. You don&rsquo;t need a provider, stylesheet, config or design
+          system to get going. The package has no <code>use client</code> directive, so it works in
+          server components, during server rendering and in static builds.
         </p>
 
         <span className="site-eyebrow">How to</span>
         <h2>Render Markdown in three steps</h2>
         <ol className="site-steps">
           <li>
-            <strong>Render a string.</strong> Raw HTML is shown as text, never run, and unsafe URL
-            schemes are emptied, with nothing to configure.
+            <strong>Render a string.</strong> Raw HTML is shown as text and never run, and unsafe URL
+            schemes are emptied (no config needed).
             <CopyCode code={RENDER} />
           </li>
           <li>
             <strong>Turn on GitHub Flavored Markdown</strong> for tables, task lists,
-            strikethrough, autolinks and footnotes. A preset is your application&rsquo;s answer to
-            &ldquo;what does Markdown mean here?&rdquo;, defined once and reused everywhere.
+            strikethrough, autolinks and footnotes. A preset is where your app decides which
+            Markdown features it supports. You define it once and reuse it everywhere.
             <CopyCode code={GFM} />
           </li>
           <li>
-            <strong>Style it your way.</strong> Opt into the shipped typography, pass your own
-            components per element, or leave the plain semantic HTML and bring your own CSS. The
-            playground above uses a component for every element; its Code tab has the source.
+            <strong>Style it.</strong> You can opt into the shipped typography, pass your own
+            components per element, or keep the plain semantic HTML and write your own CSS. The
+            playground above uses a component for every element, and its Code tab has the source.
             <CopyCode code={STYLE} />
           </li>
         </ol>
 
         <div className="site-deeper">
           <p>
-            <strong>Go deeper.</strong> The <a href={docsUrl('/docs/getting-started')}>getting started guide</a>{' '}
+            <strong>More docs.</strong> The <a href={docsUrl('/docs/getting-started')}>getting started guide</a>{' '}
             covers every prop, <a href={docsUrl('/docs/renderer/components')}>components</a> and{' '}
             <a href={docsUrl('/docs/styling')}>styling</a> have live examples for each approach, and the{' '}
-            <a href={docsUrl('/docs/compatibility')}>compatibility matrix</a> lists every difference from{' '}
-            <code>react-markdown</code> with the test that proves it.
+            <a href={docsUrl('/docs/compatibility')}>compatibility matrix</a> lists each difference from{' '}
+            <code>react-markdown</code> along with the test that checks it.
           </p>
         </div>
 
         <h2>About this playground</h2>
         <ul>
           <li>
-            <strong>Rendered</strong> is a live <code>&lt;Markdown&gt;</code>. Edit the source and it
-            follows. <strong>HTML</strong> is the static markup a server would send.{' '}
-            <strong>Tree</strong> is the parsed document that <code>compileMarkdown</code> returns,
-            plain JSON you can cache or hand to the{' '}
+            <strong>Rendered</strong> is a live <code>&lt;Markdown&gt;</code> that updates as you edit
+            the source. <strong>HTML</strong> is the static markup a server would send.{' '}
+            <strong>Tree</strong> is the parsed document that <code>compileMarkdown</code> returns. It&rsquo;s
+            plain JSON, so you can cache it or hand it to the{' '}
             <a href={docsUrl('/markdown-template-engine')}>template plugin</a>. <strong>Code</strong> is
-            the exact JSX behind the render.
+            the JSX behind the render.
           </li>
           <li>
-            The status strip measures parse and render medians in your browser. They show one thing,
-            that rendering a precompiled document skips the parse, and they are not a benchmark. The{' '}
+            The status strip measures parse and render medians in your browser. They&rsquo;re only
+            there to show that rendering a precompiled document skips the parse, so don&rsquo;t read
+            them as a benchmark. The{' '}
             <a href={`${sites.github}/tree/main/benchmarks`}>benchmark methodology</a> explains how the
             kit is actually compared.
           </li>
           <li>
             <strong>Copy link</strong> above the source pane compresses the document into the URL
-            hash and copies the address, so a colleague opens this page with your exact Markdown
-            already loaded and nothing is uploaded.
+            hash and copies the address. Whoever opens it gets this page with your Markdown already
+            loaded, and nothing is uploaded.
           </li>
           <li>
-            Want to edit as well as render? Open the <a href={sites.editorDemo}>editor demo</a>.
+            If you want to edit as well as render, try the <a href={sites.editorDemo}>editor demo</a>.
           </li>
         </ul>
 

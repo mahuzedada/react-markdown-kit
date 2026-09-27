@@ -176,8 +176,8 @@ export default function RoundTrip(): ReactNode {
           <a href={ROUNDTRIP_TEST} data-zui-tag="roundtrip-test-link">
             <code>packages/editor/tests/roundtrip.test.ts</code>
           </a>
-          , with the same GFM preset. That suite runs 22 audited documents in CI and requires every one
-          back byte for byte. Everything here runs in this page; nothing is uploaded.
+          , with the same GFM preset. That suite runs 22 audited documents in CI and expects every one of
+          them back byte for byte. Everything here runs in the page, and nothing is uploaded.
         </p>
       </div>
     </ActivityScope>

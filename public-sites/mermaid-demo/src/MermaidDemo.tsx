@@ -251,7 +251,7 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
     async (key: string, work: (svg: string) => Promise<void>): Promise<void> => {
       const image = svg()
       if (image === undefined) {
-        setExportProblem('Nothing to export: this diagram type is shown as source, so there is no SVG to save.')
+        setExportProblem('There’s nothing to export. This diagram type is shown as source, so there’s no SVG to save.')
         return
       }
       try {
@@ -369,8 +369,8 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
               <CodePane value={code} onChange={setCode} label="Mermaid source" kind={status.kind} />
               {unreadable ? (
                 <p className={cn(styles.problem)}>
-                  This link could not be read in this browser, so the default diagram is shown. The address bar still holds the shared link; editing
-                  replaces it.
+                  This browser couldn&rsquo;t read the link, so you&rsquo;re seeing the default diagram instead. The shared link is still in the address
+                  bar, and editing will replace it.
                 </p>
               ) : null}
               {status.message === undefined ? null : <p className={cn(styles.problem)}>{status.message}</p>}

@@ -23,17 +23,17 @@ export const FAQ = [
   {
     question: 'Can I render Markdown in a Next.js server component?',
     answer:
-      'Yes. @react-markdown-kit/renderer has no use client directive and touches no browser global, so the Markdown component renders inside an async server component that reads the file with node:fs, and no JavaScript ships for the Markdown itself.',
+      'Yes. @react-markdown-kit/renderer doesn\'t have a use client directive and doesn\'t touch any browser globals, so the Markdown component renders inside an async server component that reads the file with node:fs. No JavaScript ships for the Markdown itself.',
   },
   {
     question: 'Do I need dynamic import or a client wrapper for Markdown in Next.js?',
     answer:
-      'No. Rendering is synchronous and needs no DOM, so there is no dynamic import, no ssr:false wrapper and no useEffect. Only the editor package is a client component, because it is interactive.',
+      'No. Rendering is synchronous and doesn\'t need a DOM, so you don\'t need a dynamic import, an ssr:false wrapper or a useEffect. Only the editor package is a client component, since it\'s interactive.',
   },
   {
     question: 'How do I make repeat requests skip the Markdown parse?',
     answer:
-      'Call compileMarkdown once at module scope and pass the resulting document to the renderer. Parsing is about two thirds of the work, so re-rendering from a compiled document is about 2.8 times faster in benchmarks/run.mjs.',
+      'Call compileMarkdown once at module scope and pass the resulting document to the renderer. Parsing is roughly two thirds of the work, so re-rendering from a compiled document comes out about 2.8 times faster in benchmarks/run.mjs.',
   },
 ]
 
@@ -45,13 +45,13 @@ export const example = `## Release notes\n\nShipped **today**, rendered on the s
 
 # Markdown in Next.js
 
-The renderer is a server component. It reads files, runs during a static build,
-and ships no JavaScript to the browser for the Markdown itself.
+The renderer works as a server component. It can read files and run during a static
+build, and it doesn't ship any JavaScript to the browser for the Markdown itself.
 
 ## A server component in the App Router
 
-There is no `use client` in this file or in the renderer entry, so React keeps
-it on the server.
+There's no `use client` in this file or in the renderer entry, so React keeps it
+on the server.
 
 ```tsx
 // app/posts/[slug]/page.tsx
@@ -80,32 +80,32 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
 }
 ```
 
-Three things make that work.
+A few things make that work.
 
 - **No `use client`.** React treats the directive as a module boundary, so a
   module without one stays on the server side of the graph.
-- **No browser global.** Reading from `node:fs` in the same component is safe,
-  and the same code runs in a static export with no DOM.
-- **Synchronous rendering.** No `dynamic()`, no `ssr: false`, no `useEffect`.
-  There is also no `MarkdownAsync` and no `MarkdownHooks`, so an async remark
-  or rehype plugin will not run
+- **No browser globals.** It's safe to read from `node:fs` in the same
+  component, and the same code runs in a static export where there's no DOM.
+- **Synchronous rendering.** You don't need `dynamic()`, `ssr: false` or a
+  `useEffect`. There's also no `MarkdownAsync` or `MarkdownHooks`, which means
+  async remark or rehype plugins won't run
   (<Link to="/docs/compatibility">compatibility</Link>).
 
 The `rmk-document` class is optional. It scopes the shipped stylesheet, which
-you import once in the root layout if you want the typography:
-<Link to="/docs/styling">styling</Link>.
+you'd import once in the root layout if you want the typography (see
+<Link to="/docs/styling">styling</Link>).
 
 <RenderExample
   gfm
-  title="What that page renders, live on this page"
+  title="What that page renders (running live here)"
   markdown={example}
 />
 
 ## Precompile what does not change
 
-Parsing is about two thirds of the work. Hoist it out of the request path and
-re-render from the compiled document, which is about 2.8 times faster in the
-benchmark (<Link href={blob('benchmarks/README.md')}>results</Link>,
+Parsing is roughly two thirds of the work. If you move it out of the request
+path and re-render from the compiled document, it comes out about 2.8 times
+faster in the benchmark (<Link href={blob('benchmarks/README.md')}>results</Link>,
 <Link href={blob('benchmarks/run.mjs')}>`benchmarks/run.mjs`</Link>).
 
 ```tsx
@@ -120,19 +120,19 @@ export default function Page() {
 }
 ```
 
-A compiled document is plain JSON. It survives a cache, a queue and an HTTP
-boundary, so it can also come from a build step, from `unstable_cache`, or from
-a CMS webhook that compiles on publish. The content policy runs again on the
-way to HTML, so compiling early is not a way around it
+A compiled document is plain JSON. It can go through a cache, a queue or an
+HTTP boundary, so it could also come from a build step, from `unstable_cache`,
+or from a CMS webhook that compiles on publish. The content policy runs again
+on the way to HTML, so compiling early doesn't let anything skip it
 (<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L107')}>test</Link>).
 
 <Link to="/docs/renderer/compiling">Compiling documents</Link>
 
 ## Route handlers and metadata
 
-The same import works outside a page. A route handler can compile Markdown and
-return the document as JSON, and `generateMetadata` can read the front matter
-your own loader parsed, since the renderer takes the body as a string.
+The same import works outside a page too. A route handler can compile Markdown
+and return the document as JSON. For `generateMetadata`, read the front matter
+your own loader parsed (the renderer only takes the body as a string).
 
 ```tsx
 // app/api/doc/[slug]/route.ts
@@ -147,31 +147,31 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
 
 ## Markdown from users
 
-Raw HTML is rendered as visible escaped text rather than executed, and URL
-schemes outside `http`, `https`, `irc`, `ircs`, `mailto` and `xmpp` are
+Raw HTML shows up as visible escaped text instead of being executed, and URL
+schemes outside `http`, `https`, `irc`, `ircs`, `mailto` and `xmpp` get
 emptied. Both defaults are asserted in
 <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>`packages/renderer/tests/render.dom.test.tsx`</Link>,
-and they apply to a server component exactly as they do in the browser.
-<Link to="/docs/security">The security model</Link>.
+and they apply the same way in a server component as in the browser. More in
+<Link to="/docs/security">the security model</Link>.
 
 ## Streaming a model's answer
 
-A Next.js chat route streams tokens to a client component. Hand the renderer
-the longer string on every token; every prefix renders, and the finished blocks
-stay byte-identical while the next one is written
+A Next.js chat route streams tokens to a client component. Pass the renderer
+the longer string on each token. Every prefix renders, and blocks that are
+already finished stay byte-identical while the next one is being written
 (<Link href={blob('packages/renderer/tests/streaming.test.tsx')}>streaming tests</Link>).
 
 <Link to="/streaming-markdown">Streaming Markdown in React for AI chat</Link>
 
-## The editor is the other case
+## The editor is a client component
 
-The editor is interactive, so it is a client component. That is precisely why
-it is a separate package: installing the renderer never drags editor code into
-a server bundle, and a packaging test asserts it against the renderer's own
-modules
+The editor is interactive, so it has to be a client component. That's the main
+reason it's a separate package. Installing the renderer doesn't pull editor code
+into a server bundle, and a packaging test checks this against the renderer's
+own modules
 (<Link href={blob('tests/packaging.test.ts#L205')}>`tests/packaging.test.ts`</Link>).
 <Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link> packs
-the real npm tarballs and installs them into clean consumer fixtures in CI.
+the actual npm tarballs and installs them into clean consumer fixtures in CI.
 
 ```tsx
 'use client'

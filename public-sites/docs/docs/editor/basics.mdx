@@ -25,7 +25,7 @@ export function Notes() {
 }
 ```
 
-`value` is a Markdown string. `onChange` gives you back a Markdown string. Your application stores Markdown, not editor JSON.
+`value` is a Markdown string and `onChange` gives you a Markdown string back, so what your app stores is plain Markdown (there's no editor JSON to keep around).
 
 <EditorExample
   title="The default editor"
@@ -33,13 +33,13 @@ export function Notes() {
   markdown={'# Notes\n\nType here. The saved Markdown appears underneath.\n\n- [ ] Try the toolbar\n- [ ] Switch to source mode with the buttons on the right\n'}
 />
 
-The stylesheet is optional. Without it the editor is unstyled and fully functional. See [Styling](/docs/styling).
+The stylesheet is optional. Without it the editor is unstyled but still works fine. See [Styling](/docs/styling).
 
-The editor needs a DOM, so it carries `"use client"`. The renderer does not. See [Server rendering](/docs/server-rendering).
+The editor needs a DOM, so it carries `"use client"`. The renderer doesn't. See [Server rendering](/docs/server-rendering).
 
 ## Controlled and uncontrolled
 
-Controlled, when the value lives in your state:
+Controlled, when the value lives in your own state:
 
 ```tsx
 <MarkdownEditor value={value} onChange={setValue} />
@@ -57,13 +57,13 @@ With neither, the editor starts empty:
 <MarkdownEditor />
 ```
 
-Pick one for the lifetime of the component. Switching between them logs an error in development.
+Pick one and stick with it for the lifetime of the component. Switching between them logs an error in development.
 
-In controlled mode the parent normally echoes back the value it has received. An echoed value is recognised and ignored, so it never resets your selection or your undo history.
+In controlled mode the parent usually passes back the same value it just got. The editor recognises that echo and ignores it, so it won't reset your selection or undo history.
 
-A value that did not come from the editor is treated as a genuine external change, and replaces the content.
+A value that didn't come from the editor is treated as an external change and replaces the content.
 
-Debounce persistence outside the editor. `onChange` fires per edit, and that is the right granularity for the component.
+If you need to debounce saving, do it outside the editor. `onChange` fires on every edit, which is the right granularity for the component itself.
 
 ## Three modes
 
@@ -73,7 +73,7 @@ type MarkdownEditorMode = 'rich' | 'source' | 'preview'
 
 `rich` is WYSIWYG editing. `source` is the Markdown text. `preview` is read-only rendered output.
 
-All three project the same document, so switching modes never loses anything.
+All three are views of the same document, so switching modes doesn't lose anything.
 
 Controlled:
 
@@ -94,11 +94,11 @@ Uncontrolled:
   markdown={'## Source mode\n\nEdit the Markdown directly, then switch to rich mode.\n\n| Mode | Editable |\n| --- | --- |\n| rich | yes |\n| source | yes |\n| preview | no |\n'}
 />
 
-Preview delegates to `@react-markdown-kit/renderer`. There is no second renderer inside the editor, so preview and your published page agree.
+Preview uses `@react-markdown-kit/renderer`. There's no separate renderer inside the editor, so preview should match your published page.
 
 ## The preset
 
-Pass the same preset the renderer uses, and the editor writes the dialect your application reads.
+Pass the editor the same preset your renderer uses and it'll write the same Markdown dialect your app reads.
 
 ```tsx
 import { appMarkdown } from './markdown'
@@ -108,11 +108,11 @@ import { appMarkdown } from './markdown'
 
 Without a preset the editor is CommonMark. With `gfm()` it edits tables, task lists, strikethrough, autolinks and footnotes. See [Presets](../renderer/presets.mdx).
 
-Extensions resolve on every render, so changing the dialect at runtime works.
+Extensions are resolved on every render, so you can change the dialect at runtime.
 
 ## Document identity
 
-`onChange` echoes are ordinary. Loading a different document is not.
+Echoing `onChange` back is the normal case. Loading a different document is a separate thing, and you tell the editor about it with `documentKey`.
 
 ```tsx
 <MarkdownEditor
@@ -122,9 +122,9 @@ Extensions resolve on every render, so changing the dialect at runtime works.
 />
 ```
 
-Changing `documentKey` is a deliberate document replacement. The editor reloads the content and clears undo history, so the reader cannot undo their way into the previous note.
+Changing `documentKey` tells the editor you've swapped documents. It reloads the content and clears undo history, so nobody can undo their way back into the previous note.
 
-Leave `documentKey` alone and an edit is an edit, whatever the value does.
+If `documentKey` stays the same, a new value is treated as an edit, whatever it looks like.
 
 ## The toolbar
 
@@ -154,7 +154,7 @@ Replace it with a render prop:
 />
 ```
 
-Each item has `id`, `label`, `icon`, `active`, `disabled`, `group` and `run()`. Labels come from `labels`, so editor chrome can be localized independently of the document.
+Each item has `id`, `label`, `icon`, `active`, `disabled`, `group` and `run()`. Labels come from the `labels` prop, so you can localize the editor chrome separately from the document.
 
 <EditorExample
   title="No toolbar, keyboard only"
@@ -163,7 +163,7 @@ Each item has `id`, `label`, `icon`, `active`, `disabled`, `group` and `run()`. 
   markdown={'Bold with Ctrl or Cmd and B.\n\nA list still starts with `- `.\n'}
 />
 
-For a toolbar built entirely from your own components, see [Headless editing](./headless.mdx).
+If you want a toolbar built entirely from your own components, see [Headless editing](./headless.mdx).
 
 ## Other props
 
@@ -180,9 +180,9 @@ For a toolbar built entirely from your own components, see [Headless editing](./
 
 ## Related
 
-Editing is only safe to offer if saving does not damage the file. See [Round-trip preservation](./round-trip.mdx).
+Editing is only safe to offer if saving doesn't damage the file. See [Round-trip preservation](./round-trip.mdx).
 
-Images need somewhere to live. See [Images](./images.mdx).
+For uploads and where images get stored, see [Images](./images.mdx).
 
 ## Read next
 

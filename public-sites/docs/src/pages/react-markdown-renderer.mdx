@@ -27,22 +27,22 @@ export const FAQ = [
   {
     question: 'What is the best React Markdown renderer for React 19?',
     answer:
-      '@react-markdown-kit/renderer renders Markdown as React elements with one component, executes no raw HTML, needs no client JavaScript and matches the react-markdown prop surface on 39 of 39 compared cases. It is not a drop-in replacement: className, MarkdownAsync and MarkdownHooks differ, and the differences are listed in the migration guide.',
+      '@react-markdown-kit/renderer renders Markdown as React elements with one component. It doesn\'t execute raw HTML, doesn\'t need client JavaScript, and matches the react-markdown props on 39 of 39 compared cases. It isn\'t a drop-in replacement, though. className, MarkdownAsync and MarkdownHooks behave differently, and the migration guide lists the differences.',
   },
   {
     question: 'Does the React Markdown renderer work in a server component?',
     answer:
-      'Yes. The entry carries no use client directive and touches no browser global, so it renders in React Server Components, during SSR and in a static build, shipping no JavaScript for the Markdown itself.',
+      'Yes. The entry doesn\'t have a use client directive or touch any browser globals, so it renders in React Server Components, during SSR and in a static build without shipping any JavaScript for the Markdown itself.',
   },
   {
     question: 'How do I enable tables and task lists?',
     answer:
-      'Tables, task lists, strikethrough, autolinks and footnotes come from GitHub Flavored Markdown. Pass a preset built with defineMarkdownPreset({ extensions: [gfm()] }), or keep using remark-gfm in remarkPlugins; both are fixture-tested to produce the same output.',
+      'Tables, task lists, strikethrough, autolinks and footnotes come from GitHub Flavored Markdown. Pass a preset built with defineMarkdownPreset({ extensions: [gfm()] }), or keep using remark-gfm in remarkPlugins. Fixture tests check that both give the same output.',
   },
   {
     question: 'Is the renderer safe for Markdown written by users?',
     answer:
-      'Raw HTML is rendered as visible escaped text rather than executed, and URL schemes outside http, https, irc, ircs, mailto and xmpp are emptied by the same algorithm react-markdown uses. Both defaults are asserted in packages/renderer/tests/render.dom.test.tsx, including on precompiled documents.',
+      'Raw HTML shows up as visible escaped text instead of being executed, and URL schemes outside http, https, irc, ircs, mailto and xmpp get emptied using the same algorithm react-markdown uses. Both defaults are asserted in packages/renderer/tests/render.dom.test.tsx, including for precompiled documents.',
   },
 ]
 
@@ -66,36 +66,36 @@ export function Post({ content }: { content: string }) {
 }
 ```
 
-That is the whole first-use experience. No provider, no stylesheet, no account,
-no design system, no configuration.
+You don't need a provider, a stylesheet or any configuration to get started.
 
 <RenderExample
   markdown={`## Changelog\n\nShipped **today**.\n\n- Faster cold render\n- Smaller bundle\n\n> Upgrade at your leisure.`}
   editable
-  title="Edit the Markdown and watch the output follow"
+  title="Edit the Markdown to update the output"
 />
 
 ## What you get by default
 
-**CommonMark**, parsed with micromark rather than regular expressions. 554 of
-the 652 official examples match exactly, and 96% do once the raw-HTML examples
-the security policy intentionally drops are counted separately
+**CommonMark**, parsed with micromark instead of regular expressions. 554 of
+the 652 official examples match exactly, and 96% do if you count separately the
+raw-HTML examples the security policy drops on purpose
 (<Link href={blob('tests/commonmark.test.ts')}>`tests/commonmark.test.ts`</Link>).
 
-**Safe rendering.** Raw HTML is not executed and unsafe URL schemes are
+**Safe rendering.** Raw HTML doesn't get executed and unsafe URL schemes are
 blocked, using the same algorithm `react-markdown` uses
 (<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>security tests</Link>).
 
-**Plain semantic HTML.** No classes, no inline styles, nothing to override
+**Plain semantic HTML.** The output has no classes or inline styles, so there's
+nothing to override
 (<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L122')}>"emits no kit classes by default"</Link>).
 
-**Server rendering.** No `use client` directive, so it works in server
+**Server rendering.** There's no `use client` directive, so it works in server
 components, during SSR and in static builds.
 
 ## Custom components
 
-Map any element to your own component. Each override receives the usual props
-and the source node.
+You can map any element to your own component. Each override gets the usual
+props plus the source node.
 
 ```tsx
 <Markdown components={{ a: AppLink, img: AppImage, code: CodeBlock }}>
@@ -103,15 +103,15 @@ and the source node.
 </Markdown>
 ```
 
-Define that object at module scope. A new object on every render remounts every
-overridden element. <Link to="/docs/renderer/components">Components
+Define that object at module scope. If you create a new object on every render,
+every overridden element remounts. <Link to="/docs/renderer/components">Components
 reference</Link>.
 
 ## GitHub Flavored Markdown
 
-Tables, task lists, strikethrough, autolinks and footnotes, through a native
-extension or the familiar plugin. Both are fixture-tested to produce the same
-output (<Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link>).
+Tables, task lists, strikethrough, autolinks and footnotes are available through
+a native extension or through `remark-gfm`. Fixture tests check that both give
+the same output (<Link href={blob('tests/gfm.test.ts')}>`tests/gfm.test.ts`</Link>).
 
 ```tsx
 import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
@@ -132,9 +132,10 @@ const preset = defineMarkdownPreset({ extensions: [gfm()] })
 
 ## Presets
 
-A preset is the dialect, decided once and shared. It holds the extensions, the
-plugins and the options, so every call site renders the same Markdown the same
-way, and `compileMarkdown` and the editor can be handed the same object.
+A preset is your Markdown dialect, defined once and shared. It holds the
+extensions, the plugins and the options, so every call site renders the same
+Markdown the same way, and you can hand the same object to `compileMarkdown` and
+the editor.
 
 ```tsx
 import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
@@ -146,12 +147,12 @@ export const contentPreset = defineMarkdownPreset({
 })
 ```
 
-Build it at module scope. A preset built inside a component is a new dialect on
-every render. <Link to="/docs/renderer/presets">Presets reference</Link>.
+Build it at module scope. A preset built inside a component counts as a new
+dialect on every render. <Link to="/docs/renderer/presets">Presets reference</Link>.
 
 ## Security defaults
 
-Two defaults carry the weight, and both are asserted in
+Most of this comes down to two defaults, and both are asserted in
 <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>`packages/renderer/tests/render.dom.test.tsx`</Link>.
 
 | Default | Behaviour | Test |
@@ -161,23 +162,23 @@ Two defaults carry the weight, and both are asserted in
 | `skipHtml` | Removes raw HTML instead of showing it; neither option executes it | <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L77')}>"removes raw HTML entirely when skipHtml is set"</Link> |
 | URL schemes | `http`, `https`, `irc`, `ircs`, `mailto`, `xmpp` pass; everything else is emptied | <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L82')}>"blocks javascript: urls"</Link>, <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L87')}>obfuscated protocols</Link> |
 | Relative URLs | Untouched, because a colon after the first `/`, `?` or `#` is part of a path | <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L103')}>"keeps relative and anchor urls"</Link> |
-| Precompiled documents | The same policy runs, so compiling is not a bypass | <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L107')}>"applies policy to a precompiled document too"</Link> |
+| Precompiled documents | The same policy runs, so compiling first doesn't skip it | <Link href={blob('packages/renderer/tests/render.dom.test.tsx#L107')}>"applies policy to a precompiled document too"</Link> |
 
 <RenderExample
   title="Hostile source, default settings"
   markdown={`Hello <img src=x onerror="alert(1)"> world.\n\n<script>alert('nope')</script>\n\n[Click me](javascript:alert(1))`}
 >
-  Rendered live on this page with no options set. The kit is not a sanitizer
-  and not a substitute for a Content Security Policy: plugins and components
-  you pass are your own trusted code.
+  Rendered live on this page with no options set. The kit isn't a sanitizer and
+  doesn't replace a Content Security Policy. Plugins and components you pass in
+  are treated as your own trusted code.
   <Link to="/docs/security">The security model</Link>.
 </RenderExample>
 
 ## Server rendering
 
-The entry has no `use client` directive and touches no browser global, so the
-same component renders in a React server component, during SSR and in a static
-build, with no JavaScript shipped for the Markdown itself.
+The entry doesn't have a `use client` directive or touch any browser globals, so
+the same component renders in a React server component, during SSR and in a
+static build, without shipping JavaScript for the Markdown itself.
 
 ```tsx
 // app/posts/[slug]/page.tsx
@@ -190,10 +191,10 @@ export default async function Page({ params }) {
 }
 ```
 
-Parsing is about two thirds of the work, so a document that does not change should
-be parsed once. `compileMarkdown` returns plain JSON that survives a cache, a
-queue or an HTTP boundary, and re-rendering from it is about 2.8 times faster
-in the benchmark (<Link href={blob('benchmarks/README.md')}>results</Link>).
+Parsing is roughly two thirds of the work, so a document that doesn't change
+should only be parsed once. `compileMarkdown` returns plain JSON that can go
+through a cache, a queue or an HTTP boundary, and re-rendering from it is about
+2.8 times faster in the benchmark (<Link href={blob('benchmarks/README.md')}>results</Link>).
 
 <Link to="/docs/server-rendering">Server rendering</Link> ·{' '}
 <Link to="/nextjs-markdown">Markdown in Next.js</Link> ·{' '}
@@ -201,23 +202,24 @@ in the benchmark (<Link href={blob('benchmarks/README.md')}>results</Link>).
 
 ## Streaming input
 
-Hand the component a longer string on every token and every prefix renders:
-unclosed fences, half-written emphasis, a table mid-row. The finished blocks
-above stay byte-identical while the next one is written
+Pass the component a longer string on each token and every prefix renders,
+including unclosed fences, half-written emphasis and a table cut off mid-row.
+Blocks that are already finished stay byte-identical while the next one is
+being written
 (<Link href={blob('packages/renderer/tests/streaming.test.tsx')}>streaming tests</Link>).
-Two constructs legitimately rewrite themselves, and both are named on the
-page below.
+Two constructs do rewrite themselves as more text arrives, and the page below
+covers both.
 
 <Link to="/streaming-markdown">Streaming Markdown in React</Link>
 
 ## Coming from react-markdown
 
-The prop surface is deliberately familiar: `children`, `components`,
+The props are the same ones you already know: `children`, `components`,
 `remarkPlugins`, `rehypePlugins`, `remarkRehypeOptions`, `allowedElements`,
 `disallowedElements`, `allowElement`, `skipHtml`, `unwrapDisallowed` and
 `urlTransform`.
 
-All 39 prop comparisons against a pinned `react-markdown@10.1.0` produce
+All 39 prop comparisons against a pinned `react-markdown@10.1.0` give
 identical markup
 (<Link href={blob('tests/compatibility.test.tsx')}>`tests/compatibility.test.tsx`</Link>,
 which regenerates
@@ -228,11 +230,11 @@ every run).
 | --- | ---: | --- |
 | Compatible | 11 | The props listed above |
 | Intentionally different | 1 | `className` is ignored at runtime instead of throwing |
-| Not supported yet | 1 | `MarkdownAsync` and `MarkdownHooks` do not exist |
-| Compatible with a documented change | 1 | A dialect plugin cannot apply to an already compiled document |
+| Not supported yet | 1 | `MarkdownAsync` and `MarkdownHooks` don't exist |
+| Compatible with a documented change | 1 | A dialect plugin can't apply to an already compiled document |
 
-We still do not call it a drop-in replacement, because those three rows differ
-and you should see them before deciding.
+We still don't call it a drop-in replacement, because of those three rows. It's
+worth reading them before you decide.
 
 <Link className="button button--primary" to="/migrate-from-react-markdown">See the migration guide</Link>
 
@@ -241,9 +243,9 @@ and you should see them before deciding.
 
 ## Compared with the other renderers
 
-Three pages put this renderer next to one other library each, on install size,
-GFM, security defaults, streaming, server rendering, plugins and migration.
-Every number on them comes from
+There are three pages that compare this renderer with one other library each,
+covering install size, GFM, security defaults, streaming, server rendering,
+plugins and migration. All the numbers on them come from
 <Link href={blob('docs/data/bundle-sizes.json')}>`docs/data/bundle-sizes.json`</Link>.
 
 <Link to="/compare/react-markdown">vs react-markdown</Link> ·{' '}
@@ -252,7 +254,7 @@ Every number on them comes from
 
 ## Size and speed, measured
 
-Bytes are what a browser downloads for one import, generated by
+Bytes are what a browser downloads for one import. They're generated by
 <Link href={blob('scripts/compare-bundles.mjs')}>`scripts/compare-bundles.mjs`</Link>
 into <Link href={blob('docs/data/bundle-sizes.json')}>`docs/data/bundle-sizes.json`</Link>
 on {bundles.measuredOn}. React and React DOM are external in every row. 1 KB is
@@ -282,13 +284,13 @@ on {bundles.measuredOn}. React and React DOM are external in every row. 1 KB is
 The kit is {kb(sizes['kit-renderer'].gzipBytes - sizes['react-markdown'].gzipBytes)} larger
 than `react-markdown` gzipped, and
 {' '}{kb(sizes['kit-renderer-gfm'].gzipBytes - sizes['react-markdown-gfm'].gzipBytes)} larger
-with GFM on both sides. `markdown-to-jsx` is smaller than both and parses with
-its own rules rather than micromark.
+with GFM on both sides. `markdown-to-jsx` is smaller than both, and it parses
+with its own rules instead of micromark.
 
 Speed is measured by <Link href={blob('benchmarks/run.mjs')}>`benchmarks/run.mjs`</Link>
 against the built package, with GFM on both sides, and recorded in
 <Link href={blob('benchmarks/README.md')}>`benchmarks/README.md`</Link>. Ratios
-are kit divided by `react-markdown@10.1.0`, so below 1.00 is faster.
+are kit divided by `react-markdown@10.1.0`, so anything below 1.00 is faster.
 
 | Document | Kit median | Baseline median | Ratio |
 | --- | ---: | ---: | ---: |
@@ -296,16 +298,16 @@ are kit divided by `react-markdown@10.1.0`, so below 1.00 is faster.
 | 10 KB | 16.22 ms | 16.25 ms | 1.00x |
 | 100 KB | 206.96 ms | 233.36 ms | 0.89x |
 
-The 1 KB row is a known open item, not a rounding error: fixed per-render cost
-dominates a small document, and it is 21% slower there. Parity arrives at
-10 KB and the kit is 11% faster at 100 KB. Both numbers come from the same run
-on the same machine.
+The 1 KB row is a known open issue. Fixed per-render cost dominates on a small
+document, so the kit is 21% slower there. It reaches parity at 10 KB and is 11%
+faster at 100 KB. All of these come from the same run on the same machine.
 
 ## Styling
 
-The package ships no styling dependency. Style the output with plain CSS, opt
-into the shipped typography and retint it with custom properties, pass your own
-utility classes per part, or replace elements with components from any library.
+The package doesn't ship a styling dependency. You can style the output with
+plain CSS, opt into the shipped typography and retint it with custom properties,
+pass your own utility classes per part, or replace elements with components from
+any library.
 
 <Link to="/docs/styling">All four approaches, with live examples</Link>
 

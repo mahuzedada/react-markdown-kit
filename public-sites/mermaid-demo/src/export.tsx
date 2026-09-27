@@ -54,7 +54,7 @@ export function svgToPng(svg: string, scale = 2, background = '#ffffff'): Promis
       context.drawImage(image, 0, 0, canvas.width, canvas.height)
       canvas.toBlob((blob) => (blob === null ? reject(new Error('PNG encoding failed')) : resolve(blob)), 'image/png')
     }
-    image.onerror = () => reject(new Error('The SVG could not be drawn'))
+    image.onerror = () => reject(new Error('Couldn’t draw the SVG'))
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
   })
 }
@@ -74,7 +74,7 @@ export function download(blob: Blob, name: string): void {
 /** Puts a PNG on the clipboard. Rejects where the browser has no image clipboard. */
 export async function copyImage(png: Blob): Promise<void> {
   if (typeof ClipboardItem !== 'function' || typeof navigator.clipboard?.write !== 'function') {
-    throw new Error('This browser cannot copy images')
+    throw new Error('This browser can’t copy images')
   }
   await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })])
 }

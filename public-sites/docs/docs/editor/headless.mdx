@@ -30,9 +30,9 @@ export function Composer({ value, onChange }) {
 }
 ```
 
-`<MarkdownEditor>` is a thin component over exactly these pieces. The default chrome has no private powers, so anything it does you can do.
+`<MarkdownEditor>` is a thin component built from these same pieces. The default chrome doesn't use anything private, so anything it does you can do too.
 
-Use this when the editor has to sit inside your own layout. A CMS, a report builder, a chat composer, an admin tool, a panel in a larger page.
+Use this when the editor has to sit inside your own layout, for example in a CMS, a report builder, a chat composer or a panel in a bigger admin page.
 
 ## The four exports
 
@@ -42,9 +42,9 @@ It takes the same options as `<MarkdownEditor>` minus the chrome: `value`, `defa
 
 `MarkdownEditorProvider` puts the instance in context.
 
-`MarkdownEditorContent` renders the surface for the active mode. It accepts `aria-label`, `aria-labelledby` and `aria-describedby`, and an `editor` prop if you would rather skip the provider.
+`MarkdownEditorContent` renders the surface for the active mode. It accepts `aria-label`, `aria-labelledby` and `aria-describedby`, plus an `editor` prop if you'd rather skip the provider.
 
-`useMarkdownEditorContext()` reads the instance from context. It throws a named error outside a provider, rather than returning null for you to check. `useOptionalMarkdownEditorContext()` returns null there instead, for chrome that takes an `editor` prop as well, the way `<MarkdownEditorContent>` does.
+`useMarkdownEditorContext()` reads the instance from context. Outside a provider it throws a named error instead of returning null. `useOptionalMarkdownEditorContext()` returns null there instead, for chrome that takes an `editor` prop as well, the way `<MarkdownEditorContent>` does.
 
 ## The editor instance
 
@@ -65,11 +65,11 @@ interface MarkdownEditorInstance {
 }
 ```
 
-`getMarkdown()` is the current source. `getDocument()` is the compiled `MarkdownDocument`, which you can hand straight to the renderer.
+`getMarkdown()` returns the current source. `getDocument()` returns the compiled `MarkdownDocument`, which you can pass straight to the renderer.
 
 ## Commands
 
-Every default toolbar button is one of these verbs.
+Every button in the default toolbar calls one of these.
 
 ```ts
 interface MarkdownEditorCommands {
@@ -88,7 +88,7 @@ interface MarkdownEditorCommands {
 }
 ```
 
-`insertMarkdown` parses with the active preset and inserts at the selection. It is how a slash command or a snippet menu inserts a table.
+`insertMarkdown` parses with the active preset and inserts at the selection. That's what you'd use for a slash command or a snippet menu that inserts a table.
 
 `setMarkdown` replaces the whole document.
 
@@ -120,7 +120,7 @@ function MyToolbar() {
 }
 ```
 
-Nothing here is editor chrome from this package. Use whatever component library you already have.
+None of these components come from this package, so use whatever component library you already have.
 
 <EditorExample
   title="The content surface with no toolbar at all"
@@ -131,9 +131,9 @@ Nothing here is editor chrome from this package. Use whatever component library 
 
 ### Active state
 
-A custom toolbar built on `commands` can run every verb, but it does not get button highlighting for free.
+A custom toolbar built on `commands` can run every command, but you don't get active-button highlighting with it.
 
-For highlighting without writing your own selection listener, use the `toolbar` render prop on `<MarkdownEditor>`. Each item arrives with `active`, `disabled`, `label`, `icon`, `group` and `run()`, and you supply the markup.
+If you want highlighting without writing your own selection listener, use the `toolbar` render prop on `<MarkdownEditor>`. Each item comes with `active`, `disabled`, `label`, `icon`, `group` and `run()`, and you supply the markup.
 
 ```tsx
 <MarkdownEditor
@@ -150,7 +150,7 @@ For highlighting without writing your own selection listener, use the `toolbar` 
 />
 ```
 
-That keeps your markup and loses only the default container.
+You keep your own markup and only lose the default container.
 
 ## A status bar
 
@@ -166,31 +166,31 @@ function MyStatusBar() {
 }
 ```
 
-`getDocument()` gives you the tree, so a table of contents is a walk over `document.tree.children` looking for `heading` nodes.
+`getDocument()` gives you the tree, so building a table of contents is mostly a walk over `document.tree.children` looking for `heading` nodes.
 
 ## No Lexical types required
 
-Lexical is how the rich surface is implemented. It is not the contract.
+Lexical is what the rich surface uses internally, but it isn't part of the public API.
 
-Nothing this package exports requires a Lexical type to use. You can type every prop, every handler and the whole instance without `lexical` in your type path.
+Nothing this package exports needs a Lexical type. You can type every prop, handler and the instance itself without `lexical` in your type path.
 
 A test asserts that `src/index.ts` and `src/types.ts` import nothing from `lexical` or `@lexical/*` ([`packages/editor/tests/styling.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/packages/editor/tests/styling.test.tsx)). The opt-in `@react-markdown-kit/editor/lexical` entry is the exception, for extension authors.
 
-The one escape hatch is deliberate:
+There's one escape hatch, on purpose:
 
 ```ts
 const native = editor.getNativeEditor()
 ```
 
-It returns `unknown`, so Lexical never leaks into your types by accident. You cast it yourself.
+It returns `unknown` so Lexical doesn't leak into your types by accident. You cast it yourself.
 
-`getNativeEditor()` carries weaker stability guarantees than everything else on the instance. The editing engine may be replaced in a future major version without that counting as a breaking change to the rest of the API.
+`getNativeEditor()` has weaker stability guarantees than the rest of the instance. We might replace the editing engine in a future major version, and that wouldn't count as a breaking change to the rest of the API.
 
-Use it for something the public commands genuinely cannot do, and expect to revisit it on a major upgrade. If you find yourself needing it often, that is worth reporting as a gap in `commands`.
+Only use it for things the public commands can't do, and expect to revisit that code on a major upgrade. If you find you need it a lot, please report it as a gap in `commands`.
 
 ## Headless without React
 
-There is a lower level again, with no React and no DOM.
+There's also a lower level with no React and no DOM.
 
 ```ts
 import { createMarkdownBridge } from '@react-markdown-kit/editor'
@@ -200,13 +200,13 @@ bridge.load(source)
 const out = bridge.getMarkdown()
 ```
 
-This is the exact pipeline the React editor runs. It is useful on a server, in a worker and in tests. A round trip proved here holds in the browser, which is how the preservation gate is tested. See [Round-trip preservation](./round-trip.mdx).
+This is the same pipeline the React editor runs, which makes it handy on a server, in a worker or in tests. A round trip that passes here also holds in the browser, and that's how the preservation gate is tested. See [Round-trip preservation](./round-trip.mdx).
 
 ## Related
 
-The batteries-included component and its props are in [Editor basics](./basics.mdx).
+The ready-made component and its props are covered in [Editor basics](./basics.mdx).
 
-Styling the surface and your own chrome is in [Styling](/docs/styling).
+Styling the surface and your own chrome is covered in [Styling](/docs/styling).
 
 ## Read next
 
