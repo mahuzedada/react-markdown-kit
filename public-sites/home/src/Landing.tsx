@@ -6,13 +6,7 @@ import { docsUrl, sites } from '../../shared/Shell'
 import { Faq, JsonLd, npmUrl, softwareSourceCode, type FaqItem } from '../../shared/Seo'
 import size from '../../../docs/data/mermaid-size.json'
 
-/*
- * The hub (docs/SEO_WORKPLAN.md, milestone A item 9): every package funnel,
- * every demo, every comparison page and every npm page, linked from static
- * HTML. The built index.html carries it before the app mounts.
- */
-
-export const TITLE = 'React Markdown Kit: renderer, editor, Mermaid and slides for React'
+export const TITLE = 'React Markdown Kit'
 
 /** Also the meta description in index.html; tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
@@ -66,19 +60,6 @@ const PACKAGES: readonly Package[] = [
   },
 ]
 
-interface Demo {
-  readonly href: string
-  readonly label: string
-  readonly what: string
-}
-
-const DEMOS: readonly Demo[] = [
-  { href: sites.rendererDemo, label: 'Renderer playground', what: 'Paste some Markdown, flip the options and copy the code it generates.' },
-  { href: sites.editorDemo, label: 'Online Markdown editor', what: 'The editor in rich, source and preview modes, with templates and diagrams turned on.' },
-  { href: sites.mermaidDemo, label: 'Mermaid visual editor', what: 'Drag a flowchart around on a canvas and copy plain Mermaid back out.' },
-  { href: sites.slidesDemo, label: 'Markdown slides editor', what: 'Write a deck in Markdown and present it, with a separate presenter window if you want one.' },
-]
-
 interface Evidence {
   readonly href: string
   readonly label: string
@@ -104,7 +85,7 @@ const EVIDENCE: readonly Evidence[] = [
   {
     href: docsUrl('/docs/security'),
     label: 'Security model',
-    what: 'Raw HTML is shown as text, unsafe URLs are emptied, and template values can’t inject markup.',
+    what: 'Raw HTML is shown as text, unsafe URLs are emptied and template values can’t inject markup.',
   },
   {
     href: docsUrl('/nextjs-markdown'),
@@ -273,12 +254,13 @@ export default function Landing(): ReactNode {
   return (
     <main className="home">
       <header className="home-hero">
-        <img className="home-logo" src="/logo.svg" alt="" width={40} height={40} />
-        <h1>{TITLE}</h1>
+        <div className="flex">
+          <img className="home-logo" src="/logo.svg" alt="" width={40} height={40} />
+          <h1>{TITLE}</h1>
+        </div>
         <p className="home-lede">
-          Packages for rendering and editing Markdown in a React app you already have, plus plugins
-          for diagrams and slides. Documents stay plain Markdown the whole way through, so you can
-          get back to working on your own product.
+          Packages for rendering, streaming and editing markdown in react.{' '}
+          <span className="home-lede-note">Plus plugins for diagrams, slides and variables.</span>
         </p>
         <ActivityScope feature="hero" as="div" className="home-actions">
           <Button as="a" href={docsUrl('/docs/getting-started')} track="get-started">
@@ -325,18 +307,6 @@ export default function Landing(): ReactNode {
           Every package reads and writes plain Markdown. If you start with the renderer and later
           want editing, templates or slides, the documents you already have should work as they are.
         </p>
-      </section>
-
-      <section className="home-section" aria-labelledby="home-demos">
-        <h2 id="home-demos">Try it in the browser</h2>
-        <ul className="home-list">
-          {DEMOS.map((demo) => (
-            <li key={demo.href}>
-              <a href={demo.href}>{demo.label}</a>
-              <span>{demo.what}</span>
-            </li>
-          ))}
-        </ul>
       </section>
 
       <section className="home-section" aria-labelledby="home-renderer-guides">

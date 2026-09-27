@@ -17,7 +17,7 @@ export const TITLE = 'Free Online Markdown Editor for React'
 
 /** Also the meta description in index.html; tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
-  'Free online Markdown editor for React with rich, source and preview modes. It saves plain Markdown, needs no account, and supports templates and diagrams.'
+  'Free online Markdown editor for React with rich, source and preview modes. It saves plain Markdown, needs no account and supports templates and diagrams.'
 
 const EDITOR = `'use client'
 

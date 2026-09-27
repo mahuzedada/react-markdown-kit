@@ -4,7 +4,7 @@ import { Markdown, compileMarkdown, type MarkdownPreset } from '@react-markdown-
 
 /*
  * The diagram as a file: the same static SVG the renderer draws for the
- * fence, as text, as a PNG, or on the clipboard. Everything runs in the
+ * fence, as text, as a PNG or on the clipboard. Everything runs in the
  * browser; nothing is uploaded.
  */
 

@@ -2,6 +2,8 @@
 
 Six sites, each deployed on its own. None is a published package.
 
+Before writing or editing any copy on these sites, read [docs/writing-rules.md](../docs/writing-rules.md).
+
 | Directory | Site | Stack | Filter |
 | --- | --- | --- | --- |
 | `home/` | The home page at the apex: what the kit is, install, the packages | Vite | `react-markdown-kit-home` |

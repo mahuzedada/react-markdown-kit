@@ -14,7 +14,7 @@ export const TITLE = 'React Markdown Renderer Playground'
 
 /** Also the meta description in index.html; tests/seo-surface.test.ts keeps them equal. */
 export const DESCRIPTION =
-  'Try the React Markdown renderer in the browser: paste Markdown, turn on GFM and safety policies, override components, and copy the code behind the output.'
+  'Try the React Markdown renderer in the browser: paste Markdown, turn on GFM and safety policies, override components and copy the code behind the output.'
 
 const RENDER = `import Markdown from '@react-markdown-kit/renderer'
 

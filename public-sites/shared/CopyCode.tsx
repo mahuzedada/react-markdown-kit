@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
-/**
- * A code block with a Copy button: every install command and snippet on the
- * home page and the demos, so each one pastes into a terminal or an editor
- * as it stands. Without a clipboard (an insecure origin, an old browser) the
- * button selects the code instead, ready for Cmd/Ctrl+C.
- */
 export function CopyCode({ code, label = 'Copy' }: { readonly code: string; readonly label?: string }): ReactNode {
   const ref = useRef<HTMLElement>(null)
   const [copied, setCopied] = useState(false)

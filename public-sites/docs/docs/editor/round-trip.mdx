@@ -8,7 +8,7 @@ import EditorExample from '@site/src/components/EditorExample'
 
 # Round-trip preservation
 
-If you open a document in the editor, switch between rich, source and preview, and close it, the file on disk is byte-for-byte the same as before.
+If you open a document in the editor, switch between rich, source and preview and then close it, the file on disk is byte-for-byte the same as before.
 
 This page covers that guarantee and the related ones. It's the reason the editor is safe to point at Markdown you already have.
 
@@ -56,7 +56,7 @@ If you edit one paragraph in a long document, only that paragraph's bytes change
 
 ### Unsupported syntax becomes an opaque node
 
-Some Markdown can't be edited in rich mode, such as raw HTML, link definitions, footnote definitions, front matter, math, or a node from a third-party extension.
+Some Markdown can't be edited in rich mode, such as raw HTML, link definitions, footnote definitions, front matter, math or a node from a third-party extension.
 
 None of it gets turned into prose. Each one becomes an opaque node, which keeps both the parsed subtree and the exact source slice it came from.
 

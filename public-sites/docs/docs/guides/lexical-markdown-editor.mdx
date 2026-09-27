@@ -113,7 +113,7 @@ or build your own.
   reconciles the DOM from it. A Markdown editor has to map its document onto that state,
   and that's a lot easier when the state isn't the DOM.
 - **Custom nodes are well supported.** Every Markdown construct that isn't plain text is
-  a node class (heading, list, table, code block, image, and the opaque block that holds
+  a node class (heading, list, table, code block, image and the opaque block that holds
   syntax the editor doesn't model). Extensions can add their own.
 - **It runs without a browser.** `@lexical/headless` builds an editor with no DOM
   reconciliation. That's what makes the round trip testable, and it lets a migration

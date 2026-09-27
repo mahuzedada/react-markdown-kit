@@ -27,10 +27,25 @@
 
 .home-lede {
   max-width: 34rem;
-  margin: 0 0 1.5rem;
-  font-size: 1.125rem;
-  line-height: 1.5;
-  color: var(--muted-foreground);
+  margin: 0 0 2rem;
+  font-size: 1.3rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+  color: var(--foreground);
+}
+
+.home-lede-note {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75em;
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .home-lede {
+    font-size: 1.15rem;
+  }
 }
 
 .home-actions {

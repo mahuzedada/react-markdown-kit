@@ -17,7 +17,7 @@ export const crumbs = [
   { name: 'AI-generated Mermaid: fix the layout' },
 ]
 
-{/* A flowchart of the kind a model writes: a decision, a branch, and a return edge. */}
+{/* A flowchart of the kind a model writes: a decision, a branch and a return edge. */}
 export const before = `\`\`\`mermaid
 flowchart TD
     A[Receive order] --> B{Stock available?}
@@ -226,7 +226,7 @@ mermaid.live uses, so there's no server involved and nothing is stored
 anywhere. Opening the link puts the drawing back on the canvas so you can keep
 dragging.
 
-**Share** opens a panel with the same link, a README badge, and an `<iframe>`
+**Share** opens a panel with the same link, a README badge and an `<iframe>`
 snippet that embeds the editor with the diagram already loaded.
 
 ```md

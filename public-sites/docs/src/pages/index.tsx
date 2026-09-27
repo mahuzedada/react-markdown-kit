@@ -123,7 +123,7 @@ const COMPARISONS: readonly PageLink[] = [
 ]
 
 const DESCRIPTION =
-  'Render Markdown as React, add rich editing, and personalize the same document with typed variables. The packages all share one Markdown model.'
+  'Render Markdown as React, add rich editing and personalize the same document with typed variables. The packages all share one Markdown model.'
 
 export default function Home(): ReactNode {
   return (

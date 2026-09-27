@@ -76,7 +76,7 @@ const FAQ: readonly FaqItem[] = [
   {
     question: 'Can I make slides from Markdown?',
     answer:
-      'Yes. Separate slides with --- between blank lines and the file becomes a deck. It’s still a normal document on GitHub, in a diff, and in any editor that doesn’t know about the plugin.',
+      'Yes. Separate slides with --- between blank lines and the file becomes a deck. It’s still a normal document on GitHub, in a diff and in any editor that doesn’t know about the plugin.',
     more: { href: docsUrl('/docs/slides'), label: 'The dialect.' },
   },
   {

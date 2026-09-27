@@ -176,7 +176,7 @@ const preset = defineMarkdownPreset({ extensions: [slides()] })
 ```
 
 You can try it in the <a href={sites.slidesDemo}>slides demo</a>. The editor
-is on the left, the deck is on the right, and Present is in the control bar. Add
+is on the left, the deck is on the right and Present is in the control bar. Add
 <a href={`${sites.slidesDemo}/?embed=1`}><code>?embed=1</code></a> to drop the page chrome,
 which is the URL you'd use for an `iframe` in a blog post or your own docs.
 
@@ -186,7 +186,7 @@ mode, then the editor commands.
 ## A deck is Markdown
 
 A deck is a CommonMark or GFM file whose slides are separated by `---`
-between blank lines, and that's all it needs. GitHub, a diff, or an editor
+between blank lines, and that's all it needs. GitHub, a diff or an editor
 that doesn't know about the plugin will show the same file as a document with
 horizontal rules in it. `slides()` is the whole API for the package. It reads
 the parsed tree a second way, and the renderer draws one
