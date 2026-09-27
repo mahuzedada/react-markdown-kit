@@ -88,7 +88,7 @@ internal/             Build-time shared contracts, not a fifth package
 fixtures/             CommonMark, GFM, compatibility, round-trip, security corpora
 examples/             Runnable applications
 docs/                 Specification, styling contract, audit, compatibility matrix
-public-sites/         The home page, the documentation site and the renderer, editor, Mermaid and slides demos
+site/                 reactmarkdownkit.com: the docs, the guide and comparison pages, and the four demos
 ```
 
 `packages/` holds the two cores and `plugins/` the packages that only work
@@ -145,7 +145,7 @@ pnpm test              # full suite
 pnpm build             # build all five packages
 pnpm pack:check        # install real tarballs into clean consumers
 node scripts/check-css-scope.mjs   # enforce the styling contract
-pnpm -r --filter './public-sites/*' build   # the docs site and the four demo sites
+pnpm build:site        # reactmarkdownkit.com, into site/build/
 ```
 
 ## Releasing

@@ -3,7 +3,7 @@
  * One table row per built page of the public site: host, path, title
  * with its length, description length, h1 and JSON-LD types
  * (docs/SEO_WORKPLAN.md, milestone E item 4). Reads build output only, so
- * run `pnpm build:sites` first. Every site that is not built counts as one
+ * run `pnpm build:site` first. The site, if it is not built, counts as one
  * problem, and so does every value outside the workplan's rules (title 50 to
  * 60, description 140 to 155, exactly one h1, at least one JSON-LD type);
  * the script exits 1 when there is any, so the section 6 acceptance checks
@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
 const SITES = [
-  { host: 'reactmarkdownkit.com', dir: 'public-sites/site/build' },
+  { host: 'reactmarkdownkit.com', dir: 'site/build' },
 ]
 
 const TITLE = [50, 60]
@@ -82,7 +82,7 @@ let unbuilt = 0
 for (const site of SITES) {
   const dir = join(root, site.dir)
   if (!existsSync(join(dir, 'index.html'))) {
-    console.warn(`problem: ${site.host} is not built (${site.dir}); run pnpm build:sites`)
+    console.warn(`problem: ${site.host} is not built (${site.dir}); run pnpm build:site`)
     unbuilt += 1
     failures += 1
     continue
@@ -116,7 +116,7 @@ function printTable(table) {
 }
 
 if (rows.length === 0) {
-  console.error('no built site found; run pnpm build:sites')
+  console.error('no built site found; run pnpm build:site')
   process.exit(1)
 }
 printTable(rows)

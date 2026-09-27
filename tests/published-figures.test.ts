@@ -25,9 +25,9 @@ const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
 /** Everything a visitor, an npm reader or a model reads. */
 const PUBLISHED = [
-  'public-sites/*/src/*',
-  'public-sites/site/docs/*',
-  'public-sites/shared/llms/*',
+  'site/src/*',
+  'site/docs/*',
+  'site/static/*',
   'packages/*/README.md',
   'plugins/*/README.md',
   'examples/*/README.md',
@@ -99,8 +99,8 @@ describe('published figures', () => {
   const files = publishedFiles()
 
   it('scans the public surface', () => {
-    expect(files).toContain('public-sites/shared/llms/llms.txt')
-    expect(files).toContain('public-sites/site/src/pages/index.tsx')
+    expect(files).toContain('site/static/llms.txt')
+    expect(files).toContain('site/src/pages/index.tsx')
     expect(files.length).toBeGreaterThan(50)
   })
 
@@ -129,7 +129,7 @@ describe('llms.txt', () => {
   }
 
   for (const file of ['llms.txt', 'llms-full.txt']) {
-    const text = readFileSync(join(root, 'public-sites/shared/llms', file), 'utf8')
+    const text = readFileSync(join(root, 'site/static', file), 'utf8')
 
     it(`${file} names the competitor versions that were measured`, () => {
       const named = [...text.matchAll(/^- Against (\S+) (\d+\.\d+\.\d+):/gm)]

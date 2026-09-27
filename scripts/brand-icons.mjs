@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Writes every logo and favicon file of the public site from the one
- * master drawing, `public-sites/shared/brand/logo.svg`. Run again after
+ * master drawing, `site/brand/logo.svg`. Run again after
  * changing that file: `node scripts/brand-icons.mjs`, then
  * `node scripts/social-cards.mjs`, whose cards draw the same logo.
  *
@@ -15,12 +15,12 @@ import { fileURLToPath } from 'node:url'
 import { Resvg } from '@resvg/resvg-js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const logo = readFileSync(join(root, 'public-sites/shared/brand/logo.svg'), 'utf8')
+const logo = readFileSync(join(root, 'site/brand/logo.svg'), 'utf8')
 
 // `dir` is the site's static root; `svgDir` is where logo.svg and favicon.svg
 // live (the docs site keeps them under img/ for Docusaurus).
 const SITES = [
-  { dir: 'public-sites/site/static', svgDir: 'img', name: 'React Markdown Kit docs', shortName: 'RMK docs' },
+  { dir: 'site/static', svgDir: 'img', name: 'React Markdown Kit docs', shortName: 'RMK docs' },
 ]
 
 function png(size, { background, padding = 0 } = {}) {

@@ -53,7 +53,7 @@ jobs:
   # TemplateExample and the demo pages' landing copy server-render with the
   # actual packages, so a renderer or a plugin that reached for a browser
   # global would fail here.
-  public-sites:
+  site:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,15 +65,15 @@ jobs:
       - run: pnpm --filter react-markdown-kit-site build
       - name: Live examples must have server-rendered
         run: |
-          grep -q "<table>" public-sites/site/build/index.html
-          grep -q "Acme Industrial" public-sites/site/build/index.html
+          grep -q "<table>" site/build/index.html
+          grep -q "Acme Industrial" site/build/index.html
       # The slides page renders a deck on the server (a second <section> proves
       # the split) and imports the plugin stylesheet, which must reach the
       # built CSS: RenderExample loads no plugin CSS on its own.
       - name: The slides page server-rendered a deck with its stylesheet
         run: |
-          grep -q 'data-rmk-slide="2"' public-sites/site/build/docs/slides/index.html
-          grep -q 'data-rmk-slide-body' public-sites/site/build/assets/css/*.css
+          grep -q 'data-rmk-slide="2"' site/build/docs/slides/index.html
+          grep -q 'data-rmk-slide-body' site/build/assets/css/*.css
       # The SEO surface of the built site: one h1, title and description
       # lengths, canonical, Open Graph with a PNG, structured data, FAQPage
       # where there is an FAQ, robots, sitemap, llms.txt; then every href and

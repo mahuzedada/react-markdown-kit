@@ -1,5 +1,5 @@
 /**
- * The public sites' analytics seam (public-sites/shared/Activity.tsx) reaches
+ * The public sites' analytics seam (site/src/lib/Activity.tsx) reaches
  * the primitives: a click on a tracked Button and a Tabs change arrive at the
  * adapter tagged with their feature and the site. @zuilib/primitives 0.3.0
  * shipped one telemetry context per entry file, so a provider never reached a

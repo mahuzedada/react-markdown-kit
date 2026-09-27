@@ -1,6 +1,6 @@
 /**
  * The share codec every demo links with (docs/SEO_WORKPLAN.md, milestone D
- * item 2, `public-sites/shared/share.ts`): a document round-trips through the
+ * item 2, `site/src/lib/share.ts`): a document round-trips through the
  * URL hash, compressed when the streams API exists and as plain base64url
  * when it does not; a hash that carries no document yields nothing rather
  * than an exception; and an in-page anchor is never mistaken for one.
@@ -14,7 +14,7 @@ import {
   encodeShareHash,
   isShareHash,
   shareUrl,
-} from '../public-sites/shared/share'
+} from '../site/src/lib/share'
 
 const MARKDOWN = `# Release notes
 

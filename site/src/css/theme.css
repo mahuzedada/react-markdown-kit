@@ -1,0 +1,645 @@
+/*
+ * The site's one stylesheet. zui is the default: the
+ * components and Tailwind's token utilities come from @zuilib/primitives,
+ * and everything below the imports only overrides variables.
+ *
+ *   1. Foundry: the zui token values (Palantir Blueprint palette), light
+ *      on :root and dark on [data-theme='dark'], .dark and .navbar--dark.
+ *   2. The kit: --rmk-* properties of the renderer, diagram and slides
+ *      stylesheets, mapped onto the tokens.
+ *   3. Docusaurus: Infima's --ifm-* variables, mapped onto the tokens.
+ *   4. Base: the few resets the prebuilt no-preflight setup leaves to the app.
+ *
+ * Layout and type go in Tailwind classes and zui primitives in the markup,
+ * not in CSS. Colours live only in section 1. Run
+ * `pnpm --filter react-markdown-kit-site check-theme` after changing them.
+ *
+ * No preflight: rendered Markdown on the demos and in the docs keeps the
+ * browser's (or the kit's) defaults, which is what the renderer promises.
+ */
+
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "@zuilib/primitives/tailwind.css";
+
+/* The site's source: pages, components, layouts and demos. */
+@source "../";
+
+/* 1. Foundry */
+
+:root {
+  --zui-theme-version: "1.0.0";
+
+  /* Core */
+  --background: #ffffff;
+  --foreground: #1c2127;
+
+  /* Border & input: Blueprint's divider-black hairlines */
+  --border: rgba(17, 20, 24, 0.15);
+  --input: rgba(17, 20, 24, 0.2);
+  --input-unsaved: #fdf6e6;
+  --ring: #2d72d2;
+
+  /* Primary: intent blue (blue3 surface, blue2 as text) */
+  --primary: #2d72d2;
+  --primary-foreground: #ffffff;
+  --primary-text: #215db0;
+  --primary-border: #b7d0f5;
+  --primary-glow: rgba(45, 114, 210, 0.3);
+
+  /* Secondary */
+  --secondary: #f6f7f9;
+  --secondary-foreground: #1c2127;
+
+  /* Danger: red3 surface, red2 text */
+  --danger: #cd4246;
+  --danger-foreground: #ffffff;
+  --danger-text: #ac2f33;
+  --danger-border: #f0c4c5;
+
+  /* Muted: light-gray5 surface, gray1 text */
+  --muted: #f6f7f9;
+  --muted-foreground: #5f6b7c;
+
+  /* Accent: light-gray4 */
+  --accent: #edeff2;
+  --accent-foreground: #1c2127;
+  --accent-glow: rgba(237, 239, 242, 0.6);
+
+  /* Popover & card: flat white, separated by elevation rings */
+  --popover: #ffffff;
+  --popover-foreground: #1c2127;
+  --card: #ffffff;
+  --card-foreground: #1c2127;
+
+  /* Success: green3 surface, green2 text */
+  --success: #238551;
+  --success-foreground: #ffffff;
+  --success-text: #1c6e42;
+  --success-border: #b6dcc6;
+
+  /* Warning: orange2 surface (orange3 fails AA under white), orange1 text */
+  --warning: #935610;
+  --warning-foreground: #ffffff;
+  --warning-text: #77450d;
+  --warning-border: #efd2b2;
+
+  /* Info */
+  --info: #f6f7f9;
+  --info-foreground: #1c2127;
+  --info-text: var(--info-foreground);
+  --info-border: rgba(17, 20, 24, 0.15);
+
+  /* Sidebar: light-gray5 rail with a hairline */
+  --sidebar: #f6f7f9;
+  --sidebar-foreground: #1c2127;
+  --sidebar-primary: #2d72d2;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e5e8eb;
+  --sidebar-accent-foreground: #1c2127;
+  --sidebar-border: rgba(17, 20, 24, 0.15);
+  --sidebar-ring: #2d72d2;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #4c90f0 0%, #2d72d2 100%);
+  --gradient-subtle: linear-gradient(180deg, #ffffff 0%, #f6f7f9 100%);
+  --gradient-card: linear-gradient(135deg, rgba(45, 114, 210, 0.05) 0%, rgba(45, 114, 210, 0.02) 100%);
+  --gradient-hero: linear-gradient(135deg, #184a90 0%, #2d72d2 100%);
+
+  /* Shadows: Blueprint elevations 0 to 4. Elevation 0 is a 1px ring, which
+     is what separates every flat surface in Foundry. */
+  --shadow-1: 0 0 0 1px rgba(17, 20, 24, 0.15);
+  --shadow-2: 0 0 0 1px rgba(17, 20, 24, 0.1), 0 1px 1px rgba(17, 20, 24, 0.2);
+  --shadow-3: 0 0 0 1px rgba(17, 20, 24, 0.1), 0 2px 4px rgba(17, 20, 24, 0.2), 0 8px 24px rgba(17, 20, 24, 0.2);
+  --shadow-4: 0 0 0 1px rgba(17, 20, 24, 0.1), 0 4px 8px rgba(17, 20, 24, 0.2), 0 18px 46px 6px rgba(17, 20, 24, 0.2);
+  --shadow-card: var(--shadow-1);
+  --shadow-glow: 0 0 0 3px rgba(45, 114, 210, 0.3);
+
+  /* Shape: near-square corners */
+  --radius: 3px;
+
+  /* Type: Blueprint's system stack */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --font-mono: "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", Monaco, "Courier New", monospace;
+
+  /* Control density: 24 / 30 / 40px controls */
+  --control-height-sm: 1.5rem;
+  --control-height-md: 1.875rem;
+  --control-height-lg: 2.5rem;
+  --control-padding-x-sm: 0.5rem;
+  --control-padding-x-md: 0.625rem;
+  --control-padding-x-lg: 0.75rem;
+  --button-padding-x-sm: 0.5rem;
+  --button-padding-x-md: 0.625rem;
+  --button-padding-x-lg: 1rem;
+
+  /* Motion: Blueprint transitions are quick */
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-slow: 250ms;
+}
+
+[data-theme='dark'],
+.dark,
+.navbar--dark {
+  color-scheme: dark;
+
+  /* Core: dark-gray1 canvas, light-gray5 text */
+  --background: #1c2127;
+  --foreground: #f6f7f9;
+
+  /* Border & input: divider-white hairlines */
+  --border: rgba(255, 255, 255, 0.2);
+  --input: rgba(255, 255, 255, 0.2);
+  --input-unsaved: #2b2718;
+  --ring: #4c90f0;
+
+  /* Primary: blue3 surface, blue5 text */
+  --primary: #2d72d2;
+  --primary-foreground: #ffffff;
+  --primary-text: #8abbff;
+  --primary-border: #184a90;
+  --primary-glow: rgba(76, 144, 240, 0.4);
+
+  /* Secondary: dark-gray3 */
+  --secondary: #2f343c;
+  --secondary-foreground: #f6f7f9;
+
+  /* Danger: red3 surface, red5 text */
+  --danger: #cd4246;
+  --danger-foreground: #ffffff;
+  --danger-text: #fa999c;
+  --danger-border: #8e292c;
+
+  /* Muted: dark-gray3 surface, gray4 text */
+  --muted: #2f343c;
+  --muted-foreground: #abb3bf;
+
+  /* Accent: dark-gray4 */
+  --accent: #383e47;
+  --accent-foreground: #f6f7f9;
+  --accent-glow: rgba(56, 62, 71, 0.7);
+
+  /* Popover & card: dark-gray2 panels on the dark-gray1 canvas */
+  --popover: #252a31;
+  --popover-foreground: #f6f7f9;
+  --card: #252a31;
+  --card-foreground: #f6f7f9;
+
+  /* Success: green3 surface, green5 text */
+  --success: #238551;
+  --success-foreground: #ffffff;
+  --success-text: #72ca9b;
+  --success-border: #165a36;
+
+  /* Warning: orange2 surface, orange5 text */
+  --warning: #935610;
+  --warning-foreground: #ffffff;
+  --warning-text: #fbb360;
+  --warning-border: #77450d;
+
+  /* Info */
+  --info: #252a31;
+  --info-foreground: #f6f7f9;
+  --info-text: var(--info-foreground);
+  --info-border: rgba(255, 255, 255, 0.2);
+
+  /* Sidebar: dark-gray2 rail */
+  --sidebar: #252a31;
+  --sidebar-foreground: #f6f7f9;
+  --sidebar-primary: #2d72d2;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #383e47;
+  --sidebar-accent-foreground: #f6f7f9;
+  --sidebar-border: rgba(255, 255, 255, 0.15);
+  --sidebar-ring: #4c90f0;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #4c90f0 0%, #215db0 100%);
+  --gradient-subtle: linear-gradient(180deg, #1c2127 0%, #252a31 100%);
+  --gradient-card: linear-gradient(135deg, rgba(76, 144, 240, 0.08) 0%, rgba(76, 144, 240, 0.03) 100%);
+  --gradient-hero: linear-gradient(135deg, #111418 0%, #184a90 100%);
+
+  /* Shadows: a light ring separates surfaces; the drops are deep */
+  --shadow-1: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --shadow-2: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 1px 1px rgba(17, 20, 24, 0.4);
+  --shadow-3: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(17, 20, 24, 0.4), 0 8px 24px rgba(17, 20, 24, 0.4);
+  --shadow-4: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 8px rgba(17, 20, 24, 0.4), 0 18px 46px 6px rgba(17, 20, 24, 0.4);
+  --shadow-card: var(--shadow-1);
+  --shadow-glow: 0 0 0 3px rgba(76, 144, 240, 0.4);
+}
+
+/* 2. The kit */
+
+/*
+ * Diagram canvas. The editor declares every `--rmk-diagram-*` property on
+ * `.rmk-editor`; the `html` prefix outranks that declaration whatever the
+ * bundle order. The drawing surface stays white by the kit's contract (shape
+ * colours are content), so dark mode inverts the surface, swatches and
+ * inline text input together through the filter the kit provides, and the
+ * static renderer figure gets the same treatment on its SVG.
+ */
+html .rmk-editor {
+  --rmk-diagram-accent: var(--primary);
+  --rmk-diagram-foreground: var(--foreground);
+  --rmk-diagram-muted-foreground: var(--muted-foreground);
+  --rmk-diagram-border: var(--border);
+  --rmk-diagram-divider: var(--border);
+  --rmk-diagram-chrome: var(--card);
+  --rmk-diagram-popover: var(--popover);
+  --rmk-diagram-popover-foreground: var(--popover-foreground);
+  --rmk-diagram-danger: var(--danger);
+  --rmk-diagram-success: var(--success);
+  --rmk-diagram-radius: var(--radius);
+  --rmk-diagram-control-radius: var(--radius);
+  --rmk-diagram-shadow: var(--shadow-3);
+  --rmk-diagram-font: var(--font-sans);
+  --rmk-diagram-hover: var(--accent);
+  --rmk-diagram-active: color-mix(in oklab, var(--primary) 14%, transparent);
+  --rmk-diagram-swatch-border: var(--input);
+  --rmk-diagram-resize-hover: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --rmk-diagram-grid: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+html[data-theme='dark'] .rmk-editor {
+  --rmk-diagram-dark-filter: invert(93%) hue-rotate(180deg);
+}
+
+html .rmk-document {
+  --rmk-diagram-grid: color-mix(in oklab, var(--foreground) 12%, transparent);
+}
+
+html[data-theme='dark'] .rmk-document {
+  --rmk-diagram-surface: color-mix(in oklab, var(--background), black 30%);
+}
+
+html[data-theme='dark'] .rmk-document [data-rmk-diagram-kind='flowchart'] svg {
+  filter: invert(93%) hue-rotate(180deg);
+}
+
+/*
+ * Slides. The plugin declares every `--rmk-slide-*` and `--rmk-deck-*`
+ * property on `.rmk-document`; the `html` prefix outranks that declaration
+ * whatever the bundle order. A slide is a card in the theme's colours and an
+ * `inverse` slide swaps them, so both read in light and dark. Present mode
+ * keeps a dark backdrop in both modes, as a projector wants, and draws the
+ * control bar in the theme's chrome.
+ */
+html .rmk-document {
+  --rmk-slide-surface: var(--card);
+  --rmk-slide-text: var(--foreground);
+  --rmk-slide-inverse-surface: var(--foreground);
+  --rmk-slide-inverse-text: var(--background);
+  --rmk-slide-radius: var(--radius);
+  --rmk-slide-shadow: var(--shadow-3);
+  --rmk-deck-backdrop: color-mix(in oklab, var(--foreground) 92%, black);
+  --rmk-deck-chrome: color-mix(in oklab, var(--foreground) 82%, black);
+  --rmk-deck-chrome-text: var(--background);
+}
+
+html[data-theme='dark'] .rmk-document {
+  --rmk-deck-backdrop: color-mix(in oklab, var(--background), black 30%);
+  --rmk-deck-chrome: var(--card);
+  --rmk-deck-chrome-text: var(--foreground);
+}
+
+/*
+ * The docs' slide examples (`<div className="slides-examples">` in
+ * docs/slides.mdx and marp-alternative.mdx). A slide in a half-width example
+ * pane is a thumbnail, so the stack raises the plugin's 1.72cqw (22px on a
+ * 1280px slide) to keep it readable. Present and presenter mode keep the
+ * shipped default, which is what a consumer gets without this rule.
+ */
+.slides-examples .rmk-document [data-rmk-deck]:not([data-rmk-deck-mode='present']):not([data-rmk-deck-mode='presenter']) {
+  --rmk-slide-font-size: 2.5cqw;
+}
+
+/*
+ * Diagram colour tokens. Kinds without payload colours (the sequence
+ * diagram) take fills, strokes and text from these; the plugin's own
+ * stylesheet declares no colour for them, only the Mermaid fallbacks
+ * inline in the SVG. Mapped here so the diagram reads in the Foundry
+ * palette in both modes. The dark-mode invert filter above is for the
+ * flowchart's white surface only, so these tokens are real dark colours,
+ * not light ones seen through a filter.
+ */
+html .rmk-document {
+  --rmk-diagram-actor-fill: var(--secondary);
+  --rmk-diagram-actor-stroke: var(--primary);
+  --rmk-diagram-actor-text: var(--foreground);
+  --rmk-diagram-line: var(--muted-foreground);
+  --rmk-diagram-signal: var(--foreground);
+  --rmk-diagram-signal-text: var(--foreground);
+  --rmk-diagram-label-fill: var(--accent);
+  --rmk-diagram-label-stroke: var(--primary-border);
+  --rmk-diagram-label-text: var(--foreground);
+  --rmk-diagram-note-fill: var(--input-unsaved);
+  --rmk-diagram-note-stroke: var(--warning-border);
+  --rmk-diagram-note-text: var(--foreground);
+  --rmk-diagram-activation-fill: var(--muted);
+  --rmk-diagram-activation-stroke: var(--muted-foreground);
+  --rmk-diagram-number-text: var(--background);
+}
+
+/*
+ * The editor's block previews a flowchart switched to text with the same
+ * SVG, and the sequence canvas draws that SVG as its picture, so the editor
+ * takes the same tokens. The preview and the sequence viewport follow the
+ * document's surface in dark mode, with the flowchart preview inverted as
+ * the document's flowchart is; the flowchart canvas keeps its white surface
+ * and filter untouched.
+ */
+html .rmk-editor {
+  --rmk-diagram-actor-fill: var(--secondary);
+  --rmk-diagram-actor-stroke: var(--primary);
+  --rmk-diagram-actor-text: var(--foreground);
+  --rmk-diagram-line: var(--muted-foreground);
+  --rmk-diagram-signal: var(--foreground);
+  --rmk-diagram-signal-text: var(--foreground);
+  --rmk-diagram-label-fill: var(--accent);
+  --rmk-diagram-label-stroke: var(--primary-border);
+  --rmk-diagram-label-text: var(--foreground);
+  --rmk-diagram-note-fill: var(--input-unsaved);
+  --rmk-diagram-note-stroke: var(--warning-border);
+  --rmk-diagram-note-text: var(--foreground);
+  --rmk-diagram-activation-fill: var(--muted);
+  --rmk-diagram-activation-stroke: var(--muted-foreground);
+  --rmk-diagram-number-text: var(--background);
+}
+
+html[data-theme='dark'] .rmk-editor .rmk-diagram-preview {
+  background-color: color-mix(in oklab, var(--background), black 30%);
+}
+
+html[data-theme='dark'] .rmk-editor .rmk-sequence-viewport {
+  --rmk-diagram-surface: color-mix(in oklab, var(--background), black 30%);
+}
+
+html[data-theme='dark'] .rmk-editor [data-rmk-diagram-kind='flowchart'] .rmk-diagram-preview svg {
+  filter: invert(93%) hue-rotate(180deg);
+}
+
+html[data-theme='dark'] .rmk-document,
+html[data-theme='dark'] .rmk-editor {
+  --rmk-diagram-actor-fill: var(--card);
+  --rmk-diagram-actor-stroke: var(--primary-text);
+  --rmk-diagram-actor-text: var(--foreground);
+  --rmk-diagram-line: var(--muted-foreground);
+  --rmk-diagram-signal: var(--foreground);
+  --rmk-diagram-signal-text: var(--foreground);
+  --rmk-diagram-label-fill: var(--accent);
+  --rmk-diagram-label-stroke: var(--primary-border);
+  --rmk-diagram-label-text: var(--foreground);
+  --rmk-diagram-note-fill: var(--input-unsaved);
+  --rmk-diagram-note-stroke: var(--warning-border);
+  --rmk-diagram-note-text: var(--foreground);
+  --rmk-diagram-activation-fill: var(--secondary);
+  --rmk-diagram-activation-stroke: var(--muted-foreground);
+  --rmk-diagram-number-text: var(--background);
+}
+
+/* 3. Docusaurus */
+
+/*
+ * Infima reads its `--ifm-*` variables where they are declared, so the map is
+ * declared on every element that carries its own token values: the root in
+ * both modes, the tokens' `.dark` subtree class, and the always-dark navbar.
+ */
+:root,
+html[data-theme='dark'],
+.dark,
+.navbar--dark {
+  --ifm-color-scheme: light;
+
+  /* Brand */
+  --ifm-color-primary: var(--primary);
+  --ifm-color-primary-dark: color-mix(in oklab, var(--primary), black 8%);
+  --ifm-color-primary-darker: color-mix(in oklab, var(--primary), black 12%);
+  --ifm-color-primary-darkest: color-mix(in oklab, var(--primary), black 22%);
+  --ifm-color-primary-light: color-mix(in oklab, var(--primary), white 8%);
+  --ifm-color-primary-lighter: color-mix(in oklab, var(--primary), white 12%);
+  --ifm-color-primary-lightest: color-mix(in oklab, var(--primary), white 22%);
+  --ifm-color-primary-contrast-background: color-mix(in oklab, var(--primary) 10%, var(--background));
+  --ifm-color-primary-contrast-foreground: var(--primary-text);
+
+  /* Secondary (Infima's neutral: `button--secondary`, `:::note`) */
+  --ifm-color-secondary: var(--secondary);
+  --ifm-color-secondary-dark: color-mix(in oklab, var(--foreground) 8%, var(--secondary));
+  --ifm-color-secondary-darker: color-mix(in oklab, var(--foreground) 14%, var(--secondary));
+  --ifm-color-secondary-darkest: var(--muted-foreground);
+  --ifm-color-secondary-light: var(--secondary);
+  --ifm-color-secondary-lighter: var(--secondary);
+  --ifm-color-secondary-lightest: var(--background);
+  --ifm-color-secondary-contrast-background: var(--muted);
+  --ifm-color-secondary-contrast-foreground: var(--foreground);
+
+  /* Intents */
+  --ifm-color-success: var(--success);
+  --ifm-color-success-dark: color-mix(in oklab, var(--success), black 8%);
+  --ifm-color-success-darker: color-mix(in oklab, var(--success), black 12%);
+  --ifm-color-success-darkest: var(--success-text);
+  --ifm-color-success-light: color-mix(in oklab, var(--success), white 8%);
+  --ifm-color-success-lighter: color-mix(in oklab, var(--success), white 12%);
+  --ifm-color-success-lightest: color-mix(in oklab, var(--success), white 22%);
+  --ifm-color-success-contrast-background: color-mix(in oklab, var(--success) 12%, var(--background));
+  --ifm-color-success-contrast-foreground: var(--success-text);
+
+  --ifm-color-info: var(--primary);
+  --ifm-color-info-dark: color-mix(in oklab, var(--primary), black 8%);
+  --ifm-color-info-darker: color-mix(in oklab, var(--primary), black 12%);
+  --ifm-color-info-darkest: var(--primary-text);
+  --ifm-color-info-light: color-mix(in oklab, var(--primary), white 8%);
+  --ifm-color-info-lighter: color-mix(in oklab, var(--primary), white 12%);
+  --ifm-color-info-lightest: color-mix(in oklab, var(--primary), white 22%);
+  --ifm-color-info-contrast-background: color-mix(in oklab, var(--primary) 10%, var(--background));
+  --ifm-color-info-contrast-foreground: var(--primary-text);
+
+  --ifm-color-warning: var(--warning);
+  --ifm-color-warning-dark: color-mix(in oklab, var(--warning), black 8%);
+  --ifm-color-warning-darker: color-mix(in oklab, var(--warning), black 12%);
+  --ifm-color-warning-darkest: var(--warning-text);
+  --ifm-color-warning-light: color-mix(in oklab, var(--warning), white 8%);
+  --ifm-color-warning-lighter: color-mix(in oklab, var(--warning), white 12%);
+  --ifm-color-warning-lightest: color-mix(in oklab, var(--warning), white 22%);
+  --ifm-color-warning-contrast-background: color-mix(in oklab, var(--warning) 12%, var(--background));
+  --ifm-color-warning-contrast-foreground: var(--warning-text);
+
+  --ifm-color-danger: var(--danger);
+  --ifm-color-danger-dark: color-mix(in oklab, var(--danger), black 8%);
+  --ifm-color-danger-darker: color-mix(in oklab, var(--danger), black 12%);
+  --ifm-color-danger-darkest: var(--danger-text);
+  --ifm-color-danger-light: color-mix(in oklab, var(--danger), white 8%);
+  --ifm-color-danger-lighter: color-mix(in oklab, var(--danger), white 12%);
+  --ifm-color-danger-lightest: color-mix(in oklab, var(--danger), white 22%);
+  --ifm-color-danger-contrast-background: color-mix(in oklab, var(--danger) 12%, var(--background));
+  --ifm-color-danger-contrast-foreground: var(--danger-text);
+
+  /* Surfaces and text */
+  --ifm-background-color: var(--background);
+  --ifm-background-surface-color: var(--card);
+  --ifm-font-color-base: var(--foreground);
+  --ifm-font-color-base-inverse: var(--background);
+  --ifm-font-color-secondary: var(--muted-foreground);
+  --ifm-color-content: var(--foreground);
+  --ifm-color-content-secondary: var(--muted-foreground);
+  --ifm-color-content-inverse: var(--background);
+  --ifm-heading-color: var(--foreground);
+  --ifm-link-color: var(--primary-text);
+  --ifm-link-hover-color: var(--primary-text);
+  --ifm-hover-overlay: color-mix(in oklab, var(--foreground) 6%, transparent);
+
+  /* The emphasis ramp: two tokens, mixed. It flips with the mode by itself. */
+  --ifm-color-emphasis-0: var(--background);
+  --ifm-color-emphasis-100: var(--muted);
+  --ifm-color-emphasis-200: color-mix(in oklab, var(--foreground) 8%, var(--background));
+  --ifm-color-emphasis-300: color-mix(in oklab, var(--foreground) 15%, var(--background));
+  --ifm-color-emphasis-400: color-mix(in oklab, var(--foreground) 22%, var(--background));
+  --ifm-color-emphasis-500: color-mix(in oklab, var(--foreground) 35%, var(--background));
+  --ifm-color-emphasis-600: color-mix(in oklab, var(--foreground) 48%, var(--background));
+  --ifm-color-emphasis-700: var(--muted-foreground);
+  --ifm-color-emphasis-800: color-mix(in oklab, var(--foreground) 80%, var(--background));
+  --ifm-color-emphasis-900: color-mix(in oklab, var(--foreground) 92%, var(--background));
+  --ifm-color-emphasis-1000: var(--foreground);
+
+  /* Type */
+  --ifm-font-family-base: var(--font-sans);
+  --ifm-font-family-monospace: var(--font-mono);
+  --ifm-font-size-base: 15px;
+  --ifm-line-height-base: 1.55;
+  --ifm-font-weight-semibold: var(--font-weight-semibold);
+  --ifm-font-weight-bold: var(--font-weight-bold);
+  --ifm-heading-font-weight: var(--font-weight-semibold);
+  --ifm-h1-font-size: 2rem;
+  --ifm-h2-font-size: 1.5rem;
+  --ifm-h3-font-size: 1.2rem;
+  --ifm-h4-font-size: 1rem;
+  --ifm-code-font-size: 90%;
+  --ifm-code-background: var(--muted);
+
+  /* Shape */
+  --ifm-global-radius: var(--radius);
+  --ifm-button-border-radius: var(--radius-button);
+  --ifm-code-border-radius: var(--radius-sm);
+  --ifm-pre-border-radius: var(--radius);
+  --ifm-alert-border-radius: var(--radius);
+  --ifm-card-border-radius: var(--radius-lg);
+  --ifm-badge-border-radius: var(--radius-sm);
+  --ifm-breadcrumb-border-radius: var(--radius);
+  --ifm-pagination-border-radius: var(--radius);
+  --ifm-pagination-nav-border-radius: var(--radius);
+
+  /* Elevation and lines */
+  --ifm-global-shadow-lw: var(--shadow-1);
+  --ifm-global-shadow-md: var(--shadow-3);
+  --ifm-global-shadow-tl: var(--shadow-4);
+  --ifm-toc-border-color: var(--border);
+  --ifm-hr-background-color: var(--border);
+  --ifm-table-border-color: var(--border);
+  --ifm-table-stripe-background: var(--muted);
+  --ifm-blockquote-border-color: var(--border);
+  --ifm-blockquote-color: var(--muted-foreground);
+
+  /* Motion */
+  --ifm-transition-fast: var(--duration-fast);
+  --ifm-transition-slow: var(--duration-slow);
+  --ifm-transition-timing-default: var(--ease-standard);
+
+  /* Buttons */
+  --ifm-button-font-weight: var(--font-weight-medium);
+
+  /* Navbar: reads the dark token set through `.navbar--dark` */
+  --ifm-navbar-height: 3.25rem;
+  --ifm-navbar-background-color: var(--background);
+  --ifm-navbar-link-color: var(--muted-foreground);
+  --ifm-navbar-link-hover-color: var(--foreground);
+  --ifm-navbar-link-active-color: var(--foreground);
+  --ifm-navbar-shadow: inset 0 -1px 0 var(--border);
+  --ifm-navbar-search-input-background-color: var(--muted);
+  --ifm-navbar-search-input-color: var(--foreground);
+  --ifm-navbar-search-input-placeholder-color: var(--muted-foreground);
+
+  /* Docs sidebar menu */
+  --ifm-menu-color: var(--sidebar-foreground);
+  --ifm-menu-color-active: var(--primary-text);
+  --ifm-menu-color-background-active: color-mix(in oklab, var(--sidebar-primary) 12%, transparent);
+  --ifm-menu-color-background-hover: var(--sidebar-accent);
+  --ifm-menu-link-padding-vertical: 0.35rem;
+  --ifm-menu-link-padding-horizontal: 0.6rem;
+
+  /* Table of contents, tabs, breadcrumbs, pagination, dropdowns */
+  --ifm-toc-link-color: var(--muted-foreground);
+  --ifm-tabs-color: var(--muted-foreground);
+  --ifm-tabs-color-active: var(--primary-text);
+  --ifm-tabs-color-active-border: var(--primary);
+  --ifm-breadcrumb-color-active: var(--primary-text);
+  --ifm-breadcrumb-item-background-active: color-mix(in oklab, var(--primary) 12%, transparent);
+  --ifm-pagination-nav-color-hover: var(--primary);
+  --ifm-dropdown-background-color: var(--popover);
+  --ifm-dropdown-link-color: var(--popover-foreground);
+  --ifm-dropdown-hover-background-color: var(--accent);
+
+  /* Footer */
+  --ifm-footer-background-color: var(--sidebar);
+  --ifm-footer-color: var(--muted-foreground);
+  --ifm-footer-link-color: var(--sidebar-foreground);
+  --ifm-footer-link-hover-color: var(--primary-text);
+  --ifm-footer-title-color: var(--muted-foreground);
+
+  /* Scrollbars */
+  --ifm-scrollbar-track-background-color: var(--muted);
+  --ifm-scrollbar-thumb-background-color: color-mix(in oklab, var(--foreground) 25%, transparent);
+  --ifm-scrollbar-thumb-hover-background-color: color-mix(in oklab, var(--foreground) 40%, transparent);
+
+  /* Docusaurus theme-classic */
+  --docusaurus-highlighted-code-line-bg: color-mix(in oklab, var(--primary) 18%, transparent);
+  --docusaurus-collapse-button-bg: transparent;
+  --docusaurus-collapse-button-bg-hover: var(--sidebar-accent);
+}
+
+html[data-theme='dark'],
+.dark,
+.navbar--dark {
+  --ifm-color-scheme: dark;
+}
+
+/* 4. Base */
+
+html {
+  color-scheme: light;
+  background: var(--background);
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+}
+
+/* zui parts are border-box; only the parts, never what they contain. */
+[data-slot],
+[data-slot]::before,
+[data-slot]::after {
+  box-sizing: border-box;
+}
+
+a[data-slot='button'] {
+  text-decoration: none;
+}
+
+/* The kit's typography takes the width of whatever column it sits in. */
+.rmk-document {
+  --rmk-measure: none;
+}
+
+/* The slides demo prints one slide per 16in x 9in page; `print:[page:rmk-slides]` opts in, other sites keep the default page. */
+@page rmk-slides {
+  size: 16in 9in;
+  margin: 0;
+}
+
+.rmk-document > *:first-child {
+  margin-block-start: 0;
+}

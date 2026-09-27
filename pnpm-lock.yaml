@@ -241,7 +241,7 @@ importers:
         specifier: ^0.35.0
         version: 0.35.0
 
-  public-sites/site:
+  site:
     dependencies:
       '@docusaurus/core':
         specifier: 3.10.0
@@ -263,19 +263,19 @@ importers:
         version: 3.1.1(@types/react@19.3.0)(react@19.3.0)
       '@react-markdown-kit/editor':
         specifier: workspace:*
-        version: link:../../packages/editor
+        version: link:../packages/editor
       '@react-markdown-kit/mermaid':
         specifier: workspace:*
-        version: link:../../plugins/mermaid
+        version: link:../plugins/mermaid
       '@react-markdown-kit/renderer':
         specifier: workspace:*
-        version: link:../../packages/renderer
+        version: link:../packages/renderer
       '@react-markdown-kit/slides':
         specifier: workspace:*
-        version: link:../../plugins/slides
+        version: link:../plugins/slides
       '@react-markdown-kit/template':
         specifier: workspace:*
-        version: link:../../plugins/template
+        version: link:../plugins/template
       '@zuilib/primitives':
         specifier: 0.4.0
         version: 0.4.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss@4.3.3)

@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.33.2",
   "scripts": {
     "build": "pnpm -r --filter './packages/*' --filter './plugins/*' build",
-    "build:sites": "pnpm -r --filter './public-sites/*' build",
+    "build:site": "pnpm --filter react-markdown-kit-site build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",

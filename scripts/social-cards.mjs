@@ -12,38 +12,38 @@ import { Resvg } from '@resvg/resvg-js'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 // The master logo from scripts/brand-icons.mjs, nested at the card's top left.
-const logo = readFileSync(join(root, 'public-sites/shared/brand/logo.svg'), 'utf8')
+const logo = readFileSync(join(root, 'site/brand/logo.svg'), 'utf8')
 const LOGO = logo
   .replace(/<svg [^>]*viewBox="([^"]+)"[^>]*>/, '<svg x="60" y="56" width="96" height="96" viewBox="$1">')
   .trim()
 
 const CARDS = [
   {
-    out: 'public-sites/site/static/img/social-card.png',
+    out: 'site/static/img/social-card.png',
     title: 'React Markdown Kit docs',
     lines: ['Renderer, editor, templates,', 'Mermaid and slides for React.'],
     host: 'reactmarkdownkit.com',
   },
   {
-    out: 'public-sites/site/static/img/social-card-renderer.png',
+    out: 'site/static/img/social-card-renderer.png',
     title: 'React Markdown Renderer',
     lines: ['Paste Markdown, switch every option,', 'copy the code that made the output.'],
     host: 'reactmarkdownkit.com/markdown-renderer',
   },
   {
-    out: 'public-sites/site/static/img/social-card-editor.png',
+    out: 'site/static/img/social-card-editor.png',
     title: 'Free Online Markdown Editor',
     lines: ['Rich, source and preview modes.', 'Plain Markdown in, plain Markdown out.'],
     host: 'reactmarkdownkit.com/markdown-editor',
   },
   {
-    out: 'public-sites/site/static/img/social-card-mermaid.png',
+    out: 'site/static/img/social-card-mermaid.png',
     title: 'Free Mermaid Visual Editor',
     lines: ['Flowcharts on a canvas, sequence diagrams as SVG.', 'Get plain Mermaid syntax back.'],
     host: 'reactmarkdownkit.com/mermaid-editor',
   },
   {
-    out: 'public-sites/site/static/img/social-card-slides.png',
+    out: 'site/static/img/social-card-slides.png',
     title: 'Markdown Slides Editor',
     lines: ['Write the deck as Markdown.', 'Present it from the browser.'],
     host: 'reactmarkdownkit.com/markdown-slides',

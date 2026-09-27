@@ -7,7 +7,7 @@
  * fetched, so the test runs offline.
  *
  * It reads build output, so a site that is not built is skipped locally. In
- * CI (`CI` set) a missing build is a failure, so the `public-sites` job cannot
+ * CI (`CI` set) a missing build is a failure, so the `site` job cannot
  * pass without inspecting the build.
  */
 import { describe, expect, it } from 'vitest'
@@ -23,7 +23,7 @@ interface Site {
   readonly url: string
 }
 
-const SITES: readonly Site[] = [{ name: 'site', dir: 'public-sites/site/build', url: 'https://reactmarkdownkit.com' }]
+const SITES: readonly Site[] = [{ name: 'site', dir: 'site/build', url: 'https://reactmarkdownkit.com' }]
 
 const READMES = [
   'packages/renderer/README.md',
@@ -108,7 +108,7 @@ function broken(urls: string[], from: Site, route: string): string[] {
   return missing
 }
 
-// The public-sites CI job builds the site and sets this; everywhere else an
+// The site CI job builds the site and sets this; everywhere else an
 // unbuilt host skips instead of failing, since `pnpm test` runs before builds.
 const sitesMustBeBuilt = process.env['RMK_SITES_BUILT'] === '1'
 

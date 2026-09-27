@@ -1,6 +1,6 @@
 {
   "name": "reactmarkdownkit",
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm build && pnpm build:sites",
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm build && pnpm build:site",
   "context": ".",
   "dockerfile": "Dockerfile",
   "composeFile": "compose.yml",

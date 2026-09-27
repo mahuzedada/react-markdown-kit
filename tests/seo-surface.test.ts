@@ -10,7 +10,7 @@
  * every other href and src, and the READMEs.
  *
  * It reads build output, so a site that is not built is skipped locally. In
- * CI (`CI` set) a missing build is a failure, so the `public-sites` job cannot
+ * CI (`CI` set) a missing build is a failure, so the `site` job cannot
  * pass without inspecting the build.
  */
 import { describe, expect, it } from 'vitest'
@@ -31,7 +31,7 @@ interface Site {
 const SITES: readonly Site[] = [
   {
     name: 'site',
-    dir: 'public-sites/site/build',
+    dir: 'site/build',
     url: 'https://reactmarkdownkit.com',
     landings: ['/markdown-renderer/', '/markdown-editor/', '/mermaid-editor/', '/markdown-slides/'],
   },
@@ -79,7 +79,7 @@ function resolves(dir: string, path: string): boolean {
   return [clean, `${clean}/index.html`, `${clean}.html`].some((candidate) => existsSync(join(dir, candidate)))
 }
 
-// The public-sites CI job builds the site and sets this; everywhere else an
+// The site CI job builds the site and sets this; everywhere else an
 // unbuilt host skips instead of failing, since `pnpm test` runs before builds.
 const sitesMustBeBuilt = process.env['RMK_SITES_BUILT'] === '1'
 
@@ -132,7 +132,7 @@ for (const site of SITES) {
 
     it('serves the shared llms.txt files', () => {
       for (const file of ['llms.txt', 'llms-full.txt']) {
-        const source = readFileSync(join(root, 'public-sites/shared/llms', file), 'utf8')
+        const source = readFileSync(join(root, 'site/static', file), 'utf8')
         expect(readFileSync(join(dir, file), 'utf8')).toBe(source)
       }
     })
@@ -259,7 +259,7 @@ describe('llms.txt Mermaid size figures', () => {
   const kb = (bytes: number): string => `${(bytes / 1024).toFixed(1)} KB`
   for (const file of ['llms.txt', 'llms-full.txt']) {
     it(`${file} states the measured plugin and Mermaid.js flowchart sizes`, () => {
-      const text = readFileSync(join(root, 'public-sites/shared/llms', file), 'utf8')
+      const text = readFileSync(join(root, 'site/static', file), 'utf8')
       const line = text.split('\n').find((candidate) => candidate.includes('/react-mermaid)'))
       expect(line).toBeDefined()
       expect(line).toContain(`${kb(size.plugin.gzipped)} gzipped against ${kb(size.mermaid.flowchart.gzipped)}`)

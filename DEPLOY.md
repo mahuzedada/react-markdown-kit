@@ -1,6 +1,6 @@
 # Deploying reactmarkdownkit
 
-One app, one site. The image holds the Docusaurus build of `public-sites/site`
+One app, one site. The image holds the Docusaurus build of `site`
 under `/usr/share/nginx/html/site`, served at the apex. Every old host answers
 with a permanent redirect to its new path on the apex: `docs.` and `www` to the
 same path, and the demo subdomains (`renderer.`, `editor.`, `mermaid.`,
@@ -12,7 +12,7 @@ certificates. One certificate (`docs.reactmarkdownkit.com`) covers the first six
 names; `slides.reactmarkdownkit.com` has its own, in its own `server` blocks at the
 end of `nginx.shipiru.conf`, because that is what Shipiru's `add_domain`
 writes. `make deploy` rebuilds the packages, the plugins and the site
-(`pnpm build:sites`), then ships one image.
+(`pnpm build:site`), then ships one image.
 
 This app is deployed to the `mahuzedada` VM with [Shipiru](../shipiru-diy/README.md) as a Docker Compose service. Nothing is built on the server.
 

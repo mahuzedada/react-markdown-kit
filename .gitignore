@@ -8,7 +8,7 @@ fixtures/commonmark/spec.json
 fixtures/vendor/
 
 # Site build output
-public-sites/*/build/
+site/build/
 .docusaurus/
 
 # Reference clones (read-only, not part of the kit)

@@ -1,5 +1,5 @@
 /**
- * The Mermaid demo's own pieces (public-sites/site/src/demos/mermaid): every sample
+ * The Mermaid demo's own pieces (site/src/demos/mermaid): every sample
  * compiles with no diagnostic and sits in one of the two groups, the status
  * chip reads the lifted node with the labels docs/MERMAID_PLATFORM.md section
  * 11 fixes, the block the demo's preset mounts on the right is the flowchart
@@ -17,12 +17,12 @@ import { MarkdownEditor, MarkdownEditorContent, MarkdownEditorProvider, useMarkd
 import { flowchart, sequenceDiagram, type DiagramKind } from '@react-markdown-kit/mermaid'
 import { DiagramToolbar } from '@react-markdown-kit/mermaid/editor'
 import { mount, type Mounted } from '../packages/editor/tests/helpers/mount.js'
-import { DEFAULT_CODE, SAMPLES, SAMPLE_GROUPS } from '../public-sites/site/src/demos/mermaid/samples'
-import { KINDS, preset } from '../public-sites/site/src/demos/mermaid/preset'
-import { tokenize, tokenizeLine } from '../public-sites/site/src/demos/mermaid/highlight'
-import { mermaidLiveUrl, sourceFromShared } from '../public-sites/site/src/demos/mermaid/share'
-import { diagramFileName, diagramSvg } from '../public-sites/site/src/demos/mermaid/export'
-import { diagramStatus, kindLabel } from '../public-sites/site/src/demos/mermaid/status'
+import { DEFAULT_CODE, SAMPLES, SAMPLE_GROUPS } from '../site/src/demos/mermaid/samples'
+import { KINDS, preset } from '../site/src/demos/mermaid/preset'
+import { tokenize, tokenizeLine } from '../site/src/demos/mermaid/highlight'
+import { mermaidLiveUrl, sourceFromShared } from '../site/src/demos/mermaid/share'
+import { diagramFileName, diagramSvg } from '../site/src/demos/mermaid/export'
+import { diagramStatus, kindLabel } from '../site/src/demos/mermaid/status'
 
 const kinds = KINDS
 const wrap = (code: string): string => `\`\`\`mermaid\n${code}\n\`\`\`\n`

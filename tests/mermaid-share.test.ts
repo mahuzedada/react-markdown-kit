@@ -19,7 +19,7 @@ import {
   embedHtml,
   encodeShareHash,
   shareUrl,
-} from '../public-sites/site/src/demos/mermaid/share'
+} from '../site/src/demos/mermaid/share'
 
 const THREE_NODES = `flowchart LR
     a[Start] --> b[Work]
