@@ -131,7 +131,7 @@ export default function Home(): ReactNode {
       {/* The root of every breadcrumb trail on this site. */}
       <BreadcrumbJsonLd trail={[{ name: 'React Markdown Kit' }]} />
       {/* Spec 13.1: open with the renderer, not with architecture. */}
-      <header className="dark border-b border-border bg-background bg-size-[40px_40px] bg-[linear-gradient(color-mix(in_oklab,var(--border)_45%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_oklab,var(--border)_45%,transparent)_1px,transparent_1px)] pt-16 pb-10 text-center text-foreground">
+      <header>
         <div className="container">
           {/* Infima's unlayered `h1` and `p` rules set size and margins, so those utilities carry `!`. */}
           <Heading as="h1" className="mb-2! text-[clamp(2rem,5vw,3rem)]! text-balance">
