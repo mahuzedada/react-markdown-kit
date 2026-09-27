@@ -1,5 +1,5 @@
 /**
- * Link checker for the six public sites and the five package READMEs
+ * Link checker for the public site and the five package READMEs
  * (docs/SEO_WORKPLAN.md, milestone E item 3): every `href` and `src` that
  * points inside a reactmarkdownkit.com host, or is a relative path, must
  * resolve to a built file or route. A README's relative link must resolve to
@@ -8,7 +8,7 @@
  *
  * It reads build output, so a site that is not built is skipped locally. In
  * CI (`CI` set) a missing build is a failure, so the `public-sites` job cannot
- * pass with a host it never inspected.
+ * pass without inspecting the build.
  */
 import { describe, expect, it } from 'vitest'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
@@ -23,13 +23,7 @@ interface Site {
   readonly url: string
 }
 
-const SITES: readonly Site[] = [
-  { name: 'docs', dir: 'public-sites/docs/build', url: 'https://reactmarkdownkit.com' },
-  { name: 'renderer', dir: 'public-sites/renderer-demo/build', url: 'https://renderer.reactmarkdownkit.com' },
-  { name: 'editor', dir: 'public-sites/editor-demo/build', url: 'https://editor.reactmarkdownkit.com' },
-  { name: 'mermaid', dir: 'public-sites/mermaid-demo/build', url: 'https://mermaid.reactmarkdownkit.com' },
-  { name: 'slides', dir: 'public-sites/slides-demo/build', url: 'https://slides.reactmarkdownkit.com' },
-]
+const SITES: readonly Site[] = [{ name: 'site', dir: 'public-sites/site/build', url: 'https://reactmarkdownkit.com' }]
 
 const READMES = [
   'packages/renderer/README.md',
@@ -114,7 +108,7 @@ function broken(urls: string[], from: Site, route: string): string[] {
   return missing
 }
 
-// The public-sites CI job builds all six hosts and sets this; everywhere else an
+// The public-sites CI job builds the site and sets this; everywhere else an
 // unbuilt host skips instead of failing, since `pnpm test` runs before builds.
 const sitesMustBeBuilt = process.env['RMK_SITES_BUILT'] === '1'
 

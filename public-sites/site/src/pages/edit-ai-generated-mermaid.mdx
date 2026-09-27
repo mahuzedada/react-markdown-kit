@@ -1,0 +1,279 @@
+---
+title: "AI-Generated Mermaid: Fix the Layout"
+description: "Paste AI-generated Mermaid into a free visual editor, fix the flowchart layout by dragging nodes, and copy Mermaid back with positions kept in a comment."
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+import Link from '@docusaurus/Link'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+import { mermaid } from '@react-markdown-kit/mermaid'
+
+export const PATH = '/edit-ai-generated-mermaid'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'Mermaid diagrams', path: '/docs/mermaid' },
+  { name: 'AI-generated Mermaid: fix the layout' },
+]
+
+{/* A flowchart of the kind a model writes: a decision, a branch and a return edge. */}
+export const before = `\`\`\`mermaid
+flowchart TD
+    A[Receive order] --> B{Stock available?}
+    B -->|yes| C[Reserve items]
+    B -->|no| D[Backorder]
+    C --> E{Payment ok?}
+    E -->|yes| F[Ship]
+    E -->|no| G[Notify customer]
+    G --> A
+    D --> G
+    F --> H[Close order]
+\`\`\`
+`
+
+{/* The same flowchart after dragging: the only change is the last line. */}
+export const after = `\`\`\`mermaid
+flowchart TD
+    A[Receive order] --> B{Stock available?}
+    B -->|yes| C[Reserve items]
+    B -->|no| D[Backorder]
+    C --> E{Payment ok?}
+    E -->|yes| F[Ship]
+    E -->|no| G[Notify customer]
+    G --> A
+    D --> G
+    F --> H[Close order]
+    %% rmk-layout v1 {"canvasHeight":780,"canvasWidth":600,"nodes":{"A":{"x":200,"y":20,"width":160,"height":70},"B":{"x":170,"y":140,"width":220,"height":90},"C":{"x":60,"y":290,"width":160,"height":70},"D":{"x":340,"y":290,"width":160,"height":70},"E":{"x":30,"y":410,"width":220,"height":90},"F":{"x":60,"y":560,"width":160,"height":70},"G":{"x":340,"y":560,"width":160,"height":70},"H":{"x":60,"y":680,"width":160,"height":70}},"edges":{"B->C":{"x":164,"y":185,"width":-24,"height":99,"waypoints":[{"x":140,"y":185}],"start":{"fixedPoint":[0,0.5]},"end":{"fixedPoint":[0.5,0]}},"B->D":{"x":396,"y":185,"width":24,"height":99,"waypoints":[{"x":420,"y":185}],"start":{"fixedPoint":[1,0.5]},"end":{"fixedPoint":[0.5,0]}},"E->G":{"x":256,"y":455,"width":78,"height":140,"waypoints":[{"x":290,"y":455},{"x":290,"y":595}],"start":{"fixedPoint":[1,0.5]},"end":{"fixedPoint":[0,0.5]}},"G->A":{"x":506,"y":595,"width":-140,"height":-540,"waypoints":[{"x":560,"y":595},{"x":560,"y":55}],"start":{"fixedPoint":[1,0.5]},"end":{"fixedPoint":[1,0.5]}}}}
+\`\`\`
+`
+
+export const FAQ = [
+  {
+    question: 'Why does my AI-generated Mermaid diagram look wrong?',
+    answer:
+      'Mermaid syntax has no positions. Every renderer lays the flowchart out by itself, so a return edge or a dense branch ends up wherever the algorithm puts it. In most cases the text is fine and only the layout needs fixing.',
+  },
+  {
+    question: 'Can I move nodes in a Mermaid flowchart?',
+    answer:
+      'Not in Mermaid syntax alone. In the visual editor at reactmarkdownkit.com/mermaid-editor you drag boxes and connectors, and the positions are written into one %% rmk-layout v1 comment on the last line. Other Mermaid renderers ignore the comment and lay the flowchart out as before.',
+  },
+  {
+    question: 'Will the fixed layout survive a round trip through the model?',
+    answer:
+      'The layout is one comment line inside the code block, so it travels with the text. Ask the model to keep the %% rmk-layout line when it edits the diagram. If the line is dropped or damaged, the flowchart still renders with automatic layout.',
+  },
+]
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+
+<BreadcrumbJsonLd trail={crumbs} />
+
+<FaqJsonLd items={FAQ} />
+
+# AI-generated Mermaid: fix the layout
+
+Models are pretty good at writing Mermaid flowcharts and pretty bad at laying
+them out. The syntax is usually fine, but the rendered picture often has a
+return edge cutting through a box, a branch on the wrong side, or a node order
+that buries the main path. Mermaid has no syntax for positions, so you can't
+fix any of that by editing the text.
+
+What you can do is paste the output into the
+<a href="/mermaid-editor">Mermaid visual editor</a>, drag the nodes and
+connectors where you want them, and copy the text back out. The editor writes
+the positions into one comment line that other Mermaid renderers ignore, so the
+diagram still renders on GitHub and you can still hand it back to the model.
+
+The canvas opens flowcharts (written as `flowchart` or `graph`) and sequence
+diagrams, which have their own canvas. It won't open class, Gantt or any other
+Mermaid diagram type. See
+[what to do with those](#when-the-model-emits-a-sequence-or-class-diagram) below.
+
+## Before: what a model gives you
+
+Here's the kind of order flow a model writes when you ask for one, and the
+syntax is fine. Both diagrams on this page are rendered live by the
+`@react-markdown-kit/mermaid` plugin (they aren't screenshots).
+
+<RenderExample
+  title="A model-style flowchart with automatic layout"
+  markdown={before}
+  rendererProps={{ extensions: [mermaid()] }}
+/>
+
+If you look at the render, the return edge from `Notify customer` to
+`Receive order` runs as one straight line through the middle of the diagram
+and across the `Backorder` box. The happy path from `Receive order` to
+`Close order` is hard to pick out.
+
+## After: the same diagram with a layout annotation
+
+This is the same ten lines of Mermaid with one comment added at the end. The
+nodes, edges and labels haven't changed. The return edge now goes around the
+outside, the `no` branch has its own column, and the main path runs straight
+down the left.
+
+<RenderExample
+  title="The same flowchart after dragging, positions kept in the last line"
+  markdown={after}
+  rendererProps={{ extensions: [mermaid()] }}
+/>
+
+That last line is what the editor writes when you drag. It holds the canvas
+size, a box per node and a route per edge, keyed by the Mermaid ids already in
+the text. It doesn't repeat anything the syntax already says. Nodes, edges,
+labels and colours stay in the Mermaid lines, and only the geometry goes in the
+comment.
+
+## How to fix a diagram in four steps
+
+1. Copy the `mermaid` code block from the chat, without the fence markers.
+2. Open <a href="/mermaid-editor">reactmarkdownkit.com/mermaid-editor</a> and
+   paste it into the code pane on the left. The canvas on the right re-parses
+   as you type.
+3. Drag boxes on the canvas. Drag a connector's line to add a bend, or select
+   it and toggle elbow routing. The code pane updates after every change, so
+   what's there is what you'll copy.
+4. Copy the code pane, or press **Copy as Mermaid** on the canvas toolbar.
+   Either way you get the original flowchart plus one `%% rmk-layout v1` line.
+   Paste it into your README, wiki page or Markdown file. If you'd rather
+   publish without the layout, delete the last line.
+
+Nothing gets uploaded. The page runs in your browser, you don't need an
+account, and the editor behind it is the MIT licensed
+[@react-markdown-kit/mermaid](https://www.npmjs.com/package/@react-markdown-kit/mermaid)
+package.
+
+## Why the layout survives
+
+`%%` starts a comment in Mermaid ([flowchart syntax, comments](https://mermaid.js.org/syntax/flowchart.html#comments)).
+Mermaid.js and the hosts that render `mermaid` fences with it, such as GitHub,
+skip the line, so the annotated diagram renders there the same as it would
+without it (each host's own documentation is listed in
+<Link to="/flowchart-to-mermaid#where-the-output-works">where the output works</Link>).
+The plugin reads the line back and redraws it the way you left it.
+
+The annotation is a versioned format with a written spec,
+[`LAYOUT_ANNOTATION.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/LAYOUT_ANNOTATION.md),
+shipped inside the package. For this use case, three parts of it matter.
+
+- **One line, placed last.** The line grammar is `%% rmk-layout v1 {…}` with a
+  single JSON object, and a fence can only have one.
+- **Lossless.** Writing the annotation for a drawing and reading it back gives
+  you the same drawing, and writing it again gives the same bytes.
+  [`layout-annotation.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/layout-annotation.test.ts)
+  and
+  [`mermaid-parse.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts)
+  cover both guarantees.
+- **Fails closed.** A damaged annotation is rejected as a whole, the flowchart
+  is auto-laid out, and the compile result carries a `DIAGRAM_LAYOUT_INVALID`
+  warning with the path of the first problem. So a broken comment can't make
+  the diagram unreadable.
+
+## Round-tripping through the model
+
+The layout is just text, so it goes wherever the text goes. You can paste the
+annotated block back into the chat and ask for a change. If the model edits the
+flowchart lines and leaves the comment alone, you get the diagram back with its
+positions intact. Entries are keyed by node id. If the model removes a node,
+its stale key is ignored (it isn't an error), and if it adds one, the new node
+has no entry and gets placed automatically until you drag it.
+
+In practice two things help:
+
+- Ask the model to keep the `%% rmk-layout` line unchanged. That's one
+  sentence in the prompt.
+- If the model rewrites node ids, you'll need to drag again. The flowchart
+  still renders, only the boxes you'd moved go back to automatic layout.
+
+This works the same way for a Markdown file in a repository. A layout fix shows
+up in the diff as one changed line at the end of the block, and the writer
+emits a canonical form (fixed member order, numbers to two decimals), so later
+fixes only diff what actually moved.
+
+## When the model emits a sequence or class diagram
+
+A `sequenceDiagram` opens on the sequence canvas, where you can drag and edit
+participants, messages, notes and frames in place. The text is written back as
+plain Mermaid with no layout comment, because a sequence diagram's layout is
+deterministic. There's no layout to fix by dragging. If the model got
+something wrong, it's usually the order of the messages, and you can reorder
+them on the canvas.
+`classDiagram`, `gantt`, `pie` and the other Mermaid diagram types are shown
+as source in the plugin. You edit them as text and the canvas never tries to
+open them. The parser is covered by
+[`mermaid-parse.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/mermaid-parse.test.ts),
+and the exact flowchart subset is listed in the
+<Link to="/docs/mermaid">plugin reference</Link>.
+
+For those diagram types I'd use
+[mermaid.live](https://mermaid.live), the Mermaid project's own editor. It
+renders every diagram type with Mermaid.js and shows syntax errors as you
+type. There's no drag and drop there, so fixing layout means editing the text,
+usually by reordering statements or adding `direction` and `subgraph` lines.
+
+If the model gave you what's really a flowchart as a sequence diagram (a
+linear list of steps with no decisions), ask it for a `flowchart TD` of the
+same steps and open that here instead.
+
+## Handing the fixed diagram to a teammate
+
+Press **Copy link** at the top of the code pane. The whole diagram, layout line
+included, gets compressed into the URL hash using the same `#pako:` form
+mermaid.live uses, so there's no server involved and nothing is stored
+anywhere. Opening the link puts the drawing back on the canvas so you can keep
+dragging.
+
+**Share** opens a panel with the same link, a README badge and an `<iframe>`
+snippet that embeds the editor with the diagram already loaded.
+
+```md
+[![Open in visual editor](https://reactmarkdownkit.com/badge.svg)](https://reactmarkdownkit.com/mermaid-editor#pako:<payload>)
+```
+
+The hash format and its fallback are tested in
+[`tests/mermaid-share.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/mermaid-share.test.ts):
+`pako:` carries zlib-deflated UTF-8 as base64url, `base64:` carries the plain
+text when a browser doesn't have the streams API, and a bad payload just reads
+as empty instead of throwing.
+
+## Rendering the result in React
+
+The same package renders the fence in a React app as static SVG. It doesn't
+load the Mermaid.js runtime, and the SVG has no script, event attribute,
+`foreignObject` or external reference
+([`extension.test.tsx`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/extension.test.tsx)
+checks this). It reads the layout line too, so your users see the layout you
+fixed.
+
+```tsx
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { mermaid } from '@react-markdown-kit/mermaid'
+const preset = defineMarkdownPreset({ extensions: [mermaid()] })
+
+<Markdown preset={preset}>{content}</Markdown>
+```
+
+<Link to="/react-mermaid">Mermaid in React Markdown, without Mermaid.js</Link>
+
+## FAQ
+
+<dl>
+  {FAQ.map((item) => (
+    <div key={item.question}>
+      <dt><strong>{item.question}</strong></dt>
+      <dd>{item.answer}</dd>
+    </div>
+  ))}
+</dl>
+
+## Next
+
+<a href="/mermaid-editor">Open the Mermaid visual editor</a> ·{' '}
+<a href="https://www.npmjs.com/package/@react-markdown-kit/mermaid">@react-markdown-kit/mermaid on npm</a> ·{' '}
+<Link to="/mermaid-live-editor-alternative">Mermaid Live Editor alternative</Link> ·{' '}
+<Link to="/react-mermaid">Mermaid in React Markdown</Link> ·{' '}
+<Link to="/flowchart-to-mermaid">Flowchart to Mermaid</Link> ·{' '}
+<Link to="/docs/mermaid">Plugin reference</Link>

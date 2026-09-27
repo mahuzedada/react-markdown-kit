@@ -1,17 +1,17 @@
 /**
- * The SEO surface of the six public sites (docs/SEO_WORKPLAN.md, milestone E
+ * The SEO surface of the public site (docs/SEO_WORKPLAN.md, milestone E
  * item 1): every built page has one h1, a title of 50 to 60 characters, a
  * description of 140 to 155, an absolute canonical, Open Graph and Twitter
  * tags with a PNG image that exists, structured data that parses and names a
- * type, and a FAQPage block wherever it shows an FAQ; every host serves
+ * type, and a FAQPage block wherever it shows an FAQ; the site serves
  * robots.txt, a sitemap with lastmod, the shared llms.txt and a 404.html
  * that the container nginx serves with a real 404 status (no soft 404s); and
- * no page links to a 404 on any of the six hosts. tests/seo-links.test.ts checks
+ * no page links to a 404 on the site. tests/seo-links.test.ts checks
  * every other href and src, and the READMEs.
  *
  * It reads build output, so a site that is not built is skipped locally. In
  * CI (`CI` set) a missing build is a failure, so the `public-sites` job cannot
- * pass with a host it never inspected.
+ * pass without inspecting the build.
  */
 import { describe, expect, it } from 'vitest'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
@@ -24,16 +24,17 @@ interface Site {
   readonly name: string
   readonly dir: string
   readonly url: string
-  /** A single landing page: canonical is the root and the structured data repeats the description. */
-  readonly landing: boolean
+  /** The demo pages: canonical is the route itself and the structured data repeats the description. */
+  readonly landings: readonly string[]
 }
 
 const SITES: readonly Site[] = [
-  { name: 'docs', dir: 'public-sites/docs/build', url: 'https://reactmarkdownkit.com', landing: false },
-  { name: 'renderer', dir: 'public-sites/renderer-demo/build', url: 'https://renderer.reactmarkdownkit.com', landing: true },
-  { name: 'editor', dir: 'public-sites/editor-demo/build', url: 'https://editor.reactmarkdownkit.com', landing: true },
-  { name: 'mermaid', dir: 'public-sites/mermaid-demo/build', url: 'https://mermaid.reactmarkdownkit.com', landing: true },
-  { name: 'slides', dir: 'public-sites/slides-demo/build', url: 'https://slides.reactmarkdownkit.com', landing: true },
+  {
+    name: 'site',
+    dir: 'public-sites/site/build',
+    url: 'https://reactmarkdownkit.com',
+    landings: ['/markdown-renderer/', '/markdown-editor/', '/mermaid-editor/', '/markdown-slides/'],
+  },
 ]
 
 const GOOGLE_SITE_VERIFICATION = 'OeinVf8DkV6qubXo57xz7nxQyV2n5RQWJ7xaf7E0JUY'
@@ -78,7 +79,7 @@ function resolves(dir: string, path: string): boolean {
   return [clean, `${clean}/index.html`, `${clean}.html`].some((candidate) => existsSync(join(dir, candidate)))
 }
 
-// The public-sites CI job builds all six hosts and sets this; everywhere else an
+// The public-sites CI job builds the site and sets this; everywhere else an
 // unbuilt host skips instead of failing, since `pnpm test` runs before builds.
 const sitesMustBeBuilt = process.env['RMK_SITES_BUILT'] === '1'
 
@@ -119,11 +120,10 @@ for (const site of SITES) {
     it('ships a 404.html that search engines will not index', () => {
       const html = readFileSync(join(dir, '404.html'), 'utf8')
       expect(html.match(/<h1[\s>]/g) ?? []).toHaveLength(1)
-      if (site.name !== 'docs') expect(html).toContain('<meta name="robots" content="noindex" />')
     })
 
     it('carries the Search Console and Bing Webmaster ownership tags on its root page', () => {
-      // One account-level token per engine verifies all six properties
+      // One account-level token per engine verifies every property
       // (docs/SEO_WORKPLAN.md section 8). Losing either unverifies the host.
       const html = readFileSync(join(dir, 'index.html'), 'utf8')
       expect(meta(html, 'name', 'google-site-verification')).toBe(GOOGLE_SITE_VERIFICATION)
@@ -139,6 +139,7 @@ for (const site of SITES) {
 
     for (const page of built(site) ? pages(dir) : []) {
       const route = '/' + relative(dir, page).replace(/index\.html$/, '')
+      const landing = site.landings.includes(route)
       describe(route, () => {
         const html = readFileSync(page, 'utf8')
 
@@ -163,7 +164,7 @@ for (const site of SITES) {
           const canonical = attribute(html, /<link[^>]*rel="canonical"[^>]*href="([^"]*)"/)
           expect(canonical).toBeDefined()
           expect(canonical?.startsWith(site.url)).toBe(true)
-          if (site.landing) expect(canonical).toBe(`${site.url}/`)
+          if (landing) expect(canonical).toBe(`${site.url}${route.replace(/\/$/, '')}`)
         })
 
         it('has Open Graph and Twitter tags with a PNG image that exists', () => {
@@ -197,7 +198,7 @@ for (const site of SITES) {
           })
         }
 
-        if (site.landing) {
+        if (landing) {
           it('describes itself the same way in the meta description and the structured data', () => {
             const description = decode(meta(html, 'name', 'description') ?? '')
             const main = jsonLd(html).find((block) => block['@type'] === 'WebApplication' || block['@type'] === 'SoftwareSourceCode')
@@ -205,7 +206,7 @@ for (const site of SITES) {
           })
         }
 
-        it('links to no 404 on the six hosts', () => {
+        it('links to no 404 on the site', () => {
           const hrefs = [...html.matchAll(/<a [^>]*href="([^"]*)"/g)].map((match) => decode(match[1]))
           const broken: string[] = []
           for (const href of hrefs) {

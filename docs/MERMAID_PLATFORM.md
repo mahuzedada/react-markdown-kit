@@ -498,7 +498,7 @@ Five sequence regression inputs accepted by Mermaid.js (`#` inside actors, `@{` 
 
 ## 12. Docs and package
 
-- `public-sites/docs/docs/mermaid.mdx`: the kinds table, support levels, the fallback entry, the theme tokens, the sequence subset, the problem codes, the sequence writer, the sequence canvas gestures, the `editors` option with the `DiagramKindEditor` contract. The docs' example canvas marks its root with `data-rmk-diagram-focus`.
+- `public-sites/site/docs/mermaid.mdx`: the kinds table, support levels, the fallback entry, the theme tokens, the sequence subset, the problem codes, the sequence writer, the sequence canvas gestures, the `editors` option with the `DiagramKindEditor` contract. The docs' example canvas marks its root with `data-rmk-diagram-focus`.
 - `plugins/mermaid/README.md`: replaces "Flowcharts only" with the kinds table. `README.md` at the repo root and `llms.txt` follow.
 - `plugins/mermaid/CHANGELOG.md`: an `Unreleased` section. `version` stays `0.1.0`.
 - `plugins/mermaid/package.json`: exports gain `./client` and, in 0.3.0, `./canvas`; `dependencies` gain `hast-util-to-jsx-runtime` at the renderer's range; `build` becomes the slides form.

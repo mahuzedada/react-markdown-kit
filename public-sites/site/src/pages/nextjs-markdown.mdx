@@ -1,0 +1,203 @@
+---
+title: "Markdown in Next.js server components"
+description: "Render Markdown in a Next.js server component with no client JavaScript, and precompile documents at module scope so repeat requests skip the parse."
+---
+
+import Link from '@docusaurus/Link'
+import RenderExample from '@site/src/components/RenderExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, FaqJsonLd } from '@site/src/components/JsonLd'
+
+export const PATH = '/nextjs-markdown'
+
+export const crumbs = [
+  { name: 'React Markdown Kit', path: '/' },
+  { name: 'React Markdown renderer', path: '/react-markdown-renderer' },
+  { name: 'Markdown in Next.js' },
+]
+
+export const npm = 'https://www.npmjs.com/package/@react-markdown-kit/renderer'
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const FAQ = [
+  {
+    question: 'Can I render Markdown in a Next.js server component?',
+    answer:
+      'Yes. @react-markdown-kit/renderer doesn\'t have a use client directive and doesn\'t touch any browser globals, so the Markdown component renders inside an async server component that reads the file with node:fs. No JavaScript ships for the Markdown itself.',
+  },
+  {
+    question: 'Do I need dynamic import or a client wrapper for Markdown in Next.js?',
+    answer:
+      'No. Rendering is synchronous and doesn\'t need a DOM, so you don\'t need a dynamic import, an ssr:false wrapper or a useEffect. Only the editor package is a client component, since it\'s interactive.',
+  },
+  {
+    question: 'How do I make repeat requests skip the Markdown parse?',
+    answer:
+      'Call compileMarkdown once at module scope and pass the resulting document to the renderer. Parsing is roughly two thirds of the work, so re-rendering from a compiled document comes out about 2.8 times faster in benchmarks/run.mjs.',
+  },
+]
+
+export const example = `## Release notes\n\nShipped **today**, rendered on the server.\n\n| Stage | Where it runs |\n| --- | --- |\n| Parse | Server |\n| Render | Server |\n| Hydrate | Nothing to hydrate |`
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path={PATH} />
+<BreadcrumbJsonLd trail={crumbs} />
+<FaqJsonLd items={FAQ} />
+
+# Markdown in Next.js
+
+The renderer works as a server component. It can read files and run during a static
+build, and it doesn't ship any JavaScript to the browser for the Markdown itself.
+
+## A server component in the App Router
+
+There's no `use client` in this file or in the renderer entry, so React keeps it
+on the server.
+
+```tsx
+// app/posts/[slug]/page.tsx
+import { readdir, readFile } from 'node:fs/promises'
+import Markdown, { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+
+// The dialect, decided once for the whole app.
+const preset = defineMarkdownPreset({ extensions: [gfm()] })
+
+export async function generateStaticParams() {
+  const files = await readdir('content')
+  return files
+    .filter((file) => file.endsWith('.md'))
+    .map((file) => ({ slug: file.replace(/\.md$/, '') }))
+}
+
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const content = await readFile(`content/${slug}.md`, 'utf8')
+
+  return (
+    <article className="rmk-document">
+      <Markdown preset={preset}>{content}</Markdown>
+    </article>
+  )
+}
+```
+
+A few things make that work.
+
+- **No `use client`.** React treats the directive as a module boundary, so a
+  module without one stays on the server side of the graph.
+- **No browser globals.** It's safe to read from `node:fs` in the same
+  component, and the same code runs in a static export where there's no DOM.
+- **Synchronous rendering.** You don't need `dynamic()`, `ssr: false` or a
+  `useEffect`. There's also no `MarkdownAsync` or `MarkdownHooks`, which means
+  async remark or rehype plugins won't run
+  (<Link to="/docs/compatibility">compatibility</Link>).
+
+The `rmk-document` class is optional. It scopes the shipped stylesheet, which
+you'd import once in the root layout if you want the typography (see
+<Link to="/docs/styling">styling</Link>).
+
+<RenderExample
+  gfm
+  title="What that page renders (running live here)"
+  markdown={example}
+/>
+
+## Precompile what does not change
+
+Parsing is roughly two thirds of the work. If you move it out of the request
+path and re-render from the compiled document, it comes out about 2.8 times
+faster in the benchmark (<Link href={blob('benchmarks/README.md')}>results</Link>,
+<Link href={blob('benchmarks/run.mjs')}>`benchmarks/run.mjs`</Link>).
+
+```tsx
+import { readFile } from 'node:fs/promises'
+import Markdown, { compileMarkdown } from '@react-markdown-kit/renderer'
+
+// Parsed once per process, not once per request.
+const TERMS = compileMarkdown(await readFile('content/terms.md', 'utf8'))
+
+export default function Page() {
+  return <Markdown document={TERMS} />
+}
+```
+
+A compiled document is plain JSON. It can go through a cache, a queue or an
+HTTP boundary, so it could also come from a build step, from `unstable_cache`,
+or from a CMS webhook that compiles on publish. The content policy runs again
+on the way to HTML, so compiling early doesn't let anything skip it
+(<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L107')}>test</Link>).
+
+<Link to="/docs/renderer/compiling">Compiling documents</Link>
+
+## Route handlers and metadata
+
+The same import works outside a page too. A route handler can compile Markdown
+and return the document as JSON. For `generateMetadata`, read the front matter
+your own loader parsed (the renderer only takes the body as a string).
+
+```tsx
+// app/api/doc/[slug]/route.ts
+import { NextResponse } from 'next/server'
+import { compileMarkdown } from '@react-markdown-kit/renderer'
+
+export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  return NextResponse.json(compileMarkdown(await load(slug)))
+}
+```
+
+## Markdown from users
+
+Raw HTML shows up as visible escaped text instead of being executed, and URL
+schemes outside `http`, `https`, `irc`, `ircs`, `mailto` and `xmpp` get
+emptied. Both defaults are asserted in
+<Link href={blob('packages/renderer/tests/render.dom.test.tsx#L56')}>`packages/renderer/tests/render.dom.test.tsx`</Link>,
+and they apply the same way in a server component as in the browser. More in
+<Link to="/docs/security">the security model</Link>.
+
+## Streaming a model's answer
+
+A Next.js chat route streams tokens to a client component. Pass the renderer
+the longer string on each token. Every prefix renders, and blocks that are
+already finished stay byte-identical while the next one is being written
+(<Link href={blob('packages/renderer/tests/streaming.test.tsx')}>streaming tests</Link>).
+
+<Link to="/streaming-markdown">Streaming Markdown in React for AI chat</Link>
+
+## The editor is a client component
+
+The editor is interactive, so it has to be a client component. That's the main
+reason it's a separate package. Installing the renderer doesn't pull editor code
+into a server bundle, and a packaging test checks this against the renderer's
+own modules
+(<Link href={blob('tests/packaging.test.ts#L205')}>`tests/packaging.test.ts`</Link>).
+<Link href={blob('scripts/pack-check.mjs')}>`scripts/pack-check.mjs`</Link> packs
+the actual npm tarballs and installs them into clean consumer fixtures in CI.
+
+```tsx
+'use client'
+
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+```
+
+## FAQ
+
+<dl>
+  {FAQ.map((item) => (
+    <div key={item.question}>
+      <dt><strong>{item.question}</strong></dt>
+      <dd>{item.answer}</dd>
+    </div>
+  ))}
+</dl>
+
+## Next
+
+<Link href="/markdown-renderer">Renderer demo</Link> ·{' '}
+<Link href={npm}>@react-markdown-kit/renderer on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
+
+<Link to="/docs/server-rendering">Server rendering in depth</Link> ·{' '}
+<Link to="/react-markdown-renderer">React Markdown renderer</Link> ·{' '}
+<Link to="/docs/guides/render-markdown-in-react">How to render Markdown in React</Link> ·{' '}
+<Link to="/streaming-markdown">Streaming Markdown in React</Link> ·{' '}
+<Link to="/migrate-from-react-markdown">Migrate from react-markdown</Link>

@@ -10,8 +10,8 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ActivityProvider, ActivityScope } from '@zuilib/primitives/activity'
 import { memoryAdapter, type MemoryAdapter } from '@zuilib/primitives/activity/testing'
+import Button from '@zuilib/primitives/button'
 import Tabs from '@zuilib/primitives/tabs'
-import { Shell } from '../public-sites/shared/Shell'
 
 let container: HTMLDivElement
 let root: Root
@@ -53,11 +53,13 @@ afterEach(() => {
 })
 
 describe('site activity', () => {
-  it('reports a footer link click with its feature, action and site', () => {
+  it('reports a link click with its feature, action and site', () => {
     render(
-      <Shell site="renderer">
-        <main />
-      </Shell>,
+      <ActivityScope feature="footer">
+        <Button as="a" href="https://github.com/mahuzedada/react-markdown-kit" track="github">
+          GitHub
+        </Button>
+      </ActivityScope>,
     )
     click(container.querySelector('a[data-zui-tag="github"]'))
 

@@ -26,7 +26,7 @@ const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 /** Everything a visitor, an npm reader or a model reads. */
 const PUBLISHED = [
   'public-sites/*/src/*',
-  'public-sites/docs/docs/*',
+  'public-sites/site/docs/*',
   'public-sites/shared/llms/*',
   'packages/*/README.md',
   'plugins/*/README.md',
@@ -100,7 +100,7 @@ describe('published figures', () => {
 
   it('scans the public surface', () => {
     expect(files).toContain('public-sites/shared/llms/llms.txt')
-    expect(files).toContain('public-sites/docs/src/pages/index.tsx')
+    expect(files).toContain('public-sites/site/src/pages/index.tsx')
     expect(files.length).toBeGreaterThan(50)
   })
 

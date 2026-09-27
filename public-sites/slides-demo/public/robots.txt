@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://slides.reactmarkdownkit.com/sitemap.xml

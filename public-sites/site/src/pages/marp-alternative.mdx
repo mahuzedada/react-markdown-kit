@@ -1,0 +1,216 @@
+---
+title: "Marp and Slidev Alternative for React"
+description: "A Marp and Slidev alternative for React: render Markdown decks inside your own app with present mode and speaker notes, and no PDF or PPTX export."
+---
+
+import Link from '@docusaurus/Link'
+import RenderExample from '@site/src/components/RenderExample'
+import sites from '@site/src/sites'
+import { ArticleJsonLd, BreadcrumbJsonLd, JsonLd } from '@site/src/components/JsonLd'
+import { slides as presentSlides } from '@react-markdown-kit/slides/present'
+import '@react-markdown-kit/slides/styles.css'
+
+{/* Built once per page load: an array created inside JSX would remount the deck.
+    The present entry binds a React component, and the docs site owns its own hashes. */}
+export const present = [presentSlides({ hashRouting: false })]
+
+{/* Links to the evidence for a claim, in the repository. */}
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const faq = [
+  {
+    q: 'Is there a Marp alternative that runs inside a React app?',
+    a: 'This plugin is one option. It adds slide rules to the Markdown renderer you already use, so a deck is a component in your own routes instead of a separate site or build step.',
+  },
+  {
+    q: 'Can I export a deck to PDF or PPTX?',
+    a: 'There is no export command. The shipped stylesheet gives each slide its own page under @media print, so you can print a deck to PDF from the browser. If you need PPTX, use Marp or Slidev.',
+  },
+  {
+    q: 'Does an existing Marp deck render unchanged?',
+    a: 'The slide breaks, prose and code fences should render unchanged. Marp directives, themes and its image sizing syntax won\'t; the mapping table on this page shows what to use for each one.',
+  },
+  {
+    q: 'Do I have to move my content out of my app?',
+    a: 'No. The deck is the same Markdown file the renderer already reads, so a document and a deck are one source and one pipeline.',
+  },
+]
+
+<ArticleJsonLd headline={frontMatter.title} description={frontMatter.description} path="/marp-alternative" />
+
+<BreadcrumbJsonLd
+  trail={[
+    { name: 'React Markdown Kit', path: '/' },
+    { name: 'Markdown presentations in React', path: '/docs/slides' },
+    { name: 'Marp and Slidev alternative' },
+  ]}
+/>
+
+<JsonLd
+  data={{
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  }}
+/>
+
+export const deck = `---
+title: Release review
+---
+
+## Release review
+
+One Markdown file. A document in the docs route, a deck in the talk route.
+
+---
+
+<!-- class: center, middle -->
+
+## No export step
+
+- The deck is a React component
+- The notes ship in the DOM, hidden
+
+???
+
+Say that the source is the same file the docs page renders.
+
+---
+
+## Ship it
+
+Questions?
+`
+
+# Marp and Slidev alternative inside a React app
+
+First, what this doesn't do. [Marp](https://marp.app) and [Slidev](https://sli.dev)
+export decks to PDF and PPTX from the command line, and
+[reveal.js](https://revealjs.com) prints to PDF from the browser.
+`@react-markdown-kit/slides` has no export command and can't write PPTX. If what you
+need at the end is a file to email, use one of those three.
+
+What it does is turn Markdown your React app already renders into a deck, on the same
+page and through the same `<Markdown>` component. You don't need a second toolchain or a
+second copy of the content, and there's no separate static site to deploy next to your
+app.
+
+```bash
+npm install @react-markdown-kit/renderer @react-markdown-kit/slides
+```
+
+```tsx
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { slides } from '@react-markdown-kit/slides/present'
+import '@react-markdown-kit/slides/styles.css'
+
+const preset = defineMarkdownPreset({ extensions: [slides()] })
+
+<div className="rmk-document">
+  <Markdown preset={preset}>{deck}</Markdown>
+</div>
+```
+
+## What each tool does
+
+| | [Marp](https://marpit.marp.app) | [Slidev](https://sli.dev/guide/) | [reveal.js](https://revealjs.com) | `@react-markdown-kit/slides` |
+| --- | --- | --- | --- | --- |
+| Runs as | a CLI, a VS Code extension, a bundled HTML file | a Vite dev server and a built single-page app | a page you host | a component in a React tree you already have |
+| Deck source | Markdown, `---` breaks, directives in HTML comments | Markdown, `---` breaks, per-slide front matter, Vue components | HTML sections, or Markdown through its plugin | the same Markdown file, `---` breaks, `???` notes, `--` fragments (<a href={blob('plugins/slides/DIALECT.md')}>DIALECT.md</a>) |
+| Export | HTML, PDF, PPTX, PNG ([Marp CLI](https://github.com/marp-team/marp-cli#readme)) | PDF, PNG, PPTX ([exporting](https://sli.dev/guide/exporting)) | print to PDF ([PDF export](https://revealjs.com/pdf-export/)) | browser print, one slide per page (<a href={blob('plugins/slides/src/styles.css')}>styles.css</a>); no PPTX |
+| Present mode | presenter view in the editor and the CLI preview | presenter mode with notes ([UI](https://sli.dev/guide/ui)) | speaker view plugin | present mode, presenter view, cross-window sync (<a href={blob('plugins/slides/tests/present.dom.test.tsx')}>present.dom.test.tsx</a>) |
+| Server rendering | a build step writes the HTML | a build step writes the HTML | the page ships the deck | the deck is built from the parsed tree, so a server component emits it (<a href={blob('plugins/slides/tests/present.dom.test.tsx')}>same suite</a>) |
+| Styling | a theme is a CSS file of Marp's classes | UnoCSS and Vue components | a theme is a CSS file of reveal's classes | data attributes and `--rmk-slide-*` properties, no class from the kit (<a href={blob('plugins/slides/tests/extension.test.tsx')}>extension.test.tsx</a>) |
+| Editing | your editor, with a preview | your editor, with hot reload | your editor | the same file, plus a rich editor with four deck commands (<a href={blob('plugins/slides/tests/editor-toolbar.test.tsx')}>editor-toolbar.test.tsx</a>) |
+
+Each entry in the last column links to the test or file it comes from.
+
+## The deck, rendered by the kit
+
+The deck below isn't a screenshot. It was rendered when this page was built, by the
+same renderer that draws this paragraph. Click Present and use the arrow keys to move
+through it.
+
+<div className="slides-examples">
+<RenderExample title="A three-slide deck, rendered in this page" markdown={deck} rendererProps={{ extensions: present }}>
+  The static stack shows every slide at once. Present mode takes over the viewport, and Escape gets you back to this page.
+</RenderExample>
+</div>
+
+## Coming from a Marp deck
+
+| Marp | Here |
+| --- | --- |
+| `---` between slides | the same, at the root of the document |
+| `<!-- _class: lead -->` on one slide | `<!-- class: center, middle -->`, one directive per comment |
+| `<!-- theme: gaia -->` | a stylesheet of yours, set through `--rmk-slide-*` properties |
+| notes in an HTML comment | a paragraph that is exactly `???`, then the notes |
+| fragments from the list marker, `*` for bullets and `)` for ordered lists ([fragmented list](https://marpit.marp.app/fragmented-list)) | a paragraph that is exactly `--` between the blocks to reveal |
+| background images through `![bg](…)` | `<!-- background: … -->`, run through the renderer's URL policy |
+| front matter for the whole deck | front matter for the whole deck: `title`, `aspect`, `class`, `background` |
+
+The dialect is written out in <a href={blob('plugins/slides/DIALECT.md')}>DIALECT.md</a>
+and on the <Link to="/docs/slides">slides page</Link>. If the plugin doesn't accept a
+construct, it reports a diagnostic with the source range instead of silently dropping it.
+
+## Stay with Marp or Slidev when
+
+- You need a file at the end. A PDF for a conference upload, or a PPTX for a colleague
+  who edits in PowerPoint, is what those tools are for, and this plugin doesn't do it.
+- The deck stands on its own with no app around it. A CLI is probably less work.
+- You want Vue components, UnoCSS or Monaco inside slides, which is how Slidev is built.
+- You want a theme you can install. Marp and reveal.js both have theme ecosystems. This
+  only has CSS custom properties, and there are no themes to install.
+
+## Use this plugin when
+
+- The content already lives in your React app and is already rendered as Markdown. In
+  that case a deck is one more preset rather than a second pipeline.
+- The deck has to sit behind your auth, your routing or your data. It's a component, so
+  you control the page around it.
+- The same file needs to stay readable as a document. A deck is CommonMark or GFM with a
+  few rules on top, so GitHub and a diff still show it as prose.
+- The deck has to render on the server. A root handler builds it from the parsed tree,
+  so a server component emits the full markup.
+- The people editing it don't write Markdown by hand. The editor entry adds New slide,
+  Speaker notes, Pause and Background as toolbar buttons, tested in
+  <a href={blob('plugins/slides/tests/editor-toolbar.test.tsx')}>editor-toolbar.test.tsx</a>.
+
+## What a CLI cannot give you
+
+- **One source.** The deck and the document are the same file, and if you load and save
+  a deck without editing it, it's written back byte for byte
+  (<a href={blob('plugins/slides/tests/round-trip.test.ts')}>round-trip.test.ts</a>).
+- **The renderer's security policy.** A `javascript:` background loses its `src` the
+  same as any other URL in the document
+  (<a href={blob('plugins/slides/tests/extension.test.tsx')}>extension.test.tsx</a>), under
+  the same <Link to="/docs/security">security model</Link> as the rest of your content.
+- **Markup you can style.** Apart from `slide-<name>` ids, the deck doesn't emit any
+  class, inline style or id, so your stylesheet doesn't need anything from the kit.
+- **No runtime for the static deck.** The root entry only loads the parser. React comes
+  in with the present entry, and Lexical only with the editor entry
+  (<a href={blob('tests/packaging.test.ts')}>packaging.test.ts</a>).
+
+## Questions
+
+<dl>
+  {faq.map((item) => (
+    <div key={item.q}>
+      <dt><strong>{item.q}</strong></dt>
+      <dd>{item.a}</dd>
+    </div>
+  ))}
+</dl>
+
+## Next
+
+<Link href="/markdown-slides">The slides demo</Link> ·{' '}
+<Link href="/markdown-slides?embed=1">The demo without its chrome, for an iframe</Link> ·{' '}
+<Link to="/docs/slides">Markdown presentations in React</Link> ·{' '}
+<Link href="https://www.npmjs.com/package/@react-markdown-kit/slides">@react-markdown-kit/slides on npm</Link> ·{' '}
+<Link to="/react-markdown-renderer">The renderer</Link> ·{' '}
+<Link to="/docs/security">Security model</Link>

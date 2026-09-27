@@ -40,7 +40,7 @@ resolves a template from the packed tarball with no Lexical installed.
 ## Links
 
 - Docs: [Markdown template engine](https://reactmarkdownkit.com/markdown-template-engine)
-- Editor demo with placeholder chips: [editor.reactmarkdownkit.com](https://editor.reactmarkdownkit.com)
+- Editor demo with placeholder chips: [reactmarkdownkit.com/markdown-editor](https://reactmarkdownkit.com/markdown-editor)
 - Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
 
 ## Data cannot inject Markdown structure

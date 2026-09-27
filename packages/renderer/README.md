@@ -28,7 +28,7 @@ no design system, no configuration.
 ## Links
 
 - Docs: [React Markdown renderer](https://reactmarkdownkit.com/react-markdown-renderer)
-- Demo: [renderer.reactmarkdownkit.com](https://renderer.reactmarkdownkit.com)
+- Demo: [reactmarkdownkit.com/markdown-renderer](https://reactmarkdownkit.com/markdown-renderer)
 - Compatibility with `react-markdown`: [the table](https://reactmarkdownkit.com/docs/compatibility),
   generated from [`docs/COMPATIBILITY.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/COMPATIBILITY.md)
 - Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)

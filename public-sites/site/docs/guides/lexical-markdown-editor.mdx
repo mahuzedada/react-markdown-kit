@@ -1,0 +1,314 @@
+---
+id: lexical-markdown-editor
+slug: /guides/lexical-markdown-editor
+title: "Lexical Markdown editor in React"
+sidebar_label: Lexical Markdown editor
+description: "Build a Lexical Markdown editor in React with working code: why Lexical, how @react-markdown-kit/editor wraps it, and when to drop to the headless API."
+---
+
+import Link from '@docusaurus/Link'
+import EditorExample from '@site/src/components/EditorExample'
+import sites from '@site/src/sites'
+import { FaqJsonLd } from '@site/src/components/JsonLd'
+
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+export const FAQ = [
+  {
+    question: 'How do I build a Markdown editor with Lexical?',
+    answer:
+      'Lexical gives you a rich text surface, and the Markdown part is up to you. You need a parser that turns Markdown into editor nodes, a serializer that turns editor nodes back into Markdown, node classes for every construct you support, and a toolbar. @react-markdown-kit/editor has those four parts already written, behind a component whose value is a Markdown string.',
+  },
+  {
+    question: 'Should I use @lexical/markdown?',
+    answer:
+      'Probably only for simple content. @lexical/markdown matches Markdown line by line with regular expressions, so anything it has no transformer for (reference links, for example) is never parsed, and it escapes text too eagerly, which can damage fences and Windows paths. This package parses with micromark into mdast instead.',
+  },
+  {
+    question: 'Does using this editor put Lexical in my types?',
+    answer:
+      'No. Nothing the root entry exports needs a Lexical type, and a test checks that src/index.ts and src/types.ts import nothing from lexical or @lexical/* (packages/editor/tests/styling.test.tsx). The exception is the opt-in @react-markdown-kit/editor/lexical entry, which is meant for extension authors. The escape hatch, editor.getNativeEditor(), returns unknown, so you cast it yourself.',
+  },
+  {
+    question: 'When should I go headless?',
+    answer:
+      'Go headless when you need your own chrome. useMarkdownEditor, MarkdownEditorProvider and MarkdownEditorContent keep the engine and drop the toolbar. If there is no browser at all, for example in a migration script or a test, go one level lower to createMarkdownBridge with headless true.',
+  },
+]
+
+export const doc = `# Release notes
+
+This surface is Lexical. The value your application holds is **Markdown**.
+
+- [x] parsed with micromark into mdast
+- [ ] serialized back block by block
+
+| Layer | Owns |
+| --- | --- |
+| Lexical | selection, undo, keyboard |
+| mdast | the document |
+`
+
+<FaqJsonLd items={FAQ} />
+
+# Build a Lexical Markdown editor in React
+
+[Lexical](https://lexical.dev/) is Meta's text editor framework. It gives you a document
+model, selection, undo history, keyboard handling and a React binding, but it isn't a
+Markdown editor. Everything between "the user pressed Ctrl and B" and "the file on disk
+says `**bold**`" is left for you to write.
+
+This guide starts with the shortest working version, then goes through the hard parts
+and how `@react-markdown-kit/editor` handles them.
+
+## The short version
+
+```bash
+npm install @react-markdown-kit/editor @react-markdown-kit/renderer
+```
+
+```tsx
+'use client'
+
+import { useState } from 'react'
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import '@react-markdown-kit/editor/styles.css'
+
+const appMarkdown = defineMarkdownPreset({ extensions: [gfm()] })
+
+export function NotesEditor({ initial }: { initial: string }) {
+  const [value, setValue] = useState(initial)
+
+  return (
+    <MarkdownEditor
+      preset={appMarkdown}
+      value={value}
+      onChange={setValue}
+      aria-label="Notes"
+    />
+  )
+}
+```
+
+That's a Lexical editor. You don't write a `LexicalComposer`, an `initialConfig`, a node
+list or a transformer array, because the package handles all of that. `value` is a
+Markdown string and `onChange` gives you back a Markdown string.
+
+<EditorExample
+  title="Lexical underneath, Markdown in your state"
+  markdown={doc}
+  height={340}
+/>
+
+The editor needs a DOM, so the component carries `"use client"`. The renderer doesn't,
+which is why they're separate packages. <Link to="/docs/server-rendering">Server rendering</Link>
+
+## Why Lexical
+
+We picked it for four reasons, and they're useful to know whether you use this package
+or build your own.
+
+- **The model is separate from the DOM.** Lexical keeps an immutable editor state and
+  reconciles the DOM from it. A Markdown editor has to map its document onto that state,
+  and that's a lot easier when the state isn't the DOM.
+- **Custom nodes are well supported.** Every Markdown construct that isn't plain text is
+  a node class (heading, list, table, code block, image and the opaque block that holds
+  syntax the editor doesn't model). Extensions can add their own.
+- **It runs without a browser.** `@lexical/headless` builds an editor with no DOM
+  reconciliation. That's what makes the round trip testable, and it lets a migration
+  script run in Node.
+- **It's small enough to hide.** The engine stays behind an adapter, so the public API
+  can stick to Markdown strings and commands without exposing Lexical types.
+
+What Lexical doesn't give you is Markdown. There's `@lexical/markdown`, which matches
+Markdown line by line with regular expressions. An audit of an editor built that way
+found 22 documents it changed on save, including reference links it never parsed at all
+and backslashes it doubled on every save
+(<Link href={blob('docs/AUDIT.md')}>`docs/AUDIT.md`</Link>). This package doesn't use
+that approach at all.
+
+## What the kit puts around it
+
+The whole engine sits behind one module,
+<Link href={blob('packages/editor/src/bridge/session.ts')}>`packages/editor/src/bridge/session.ts`</Link>.
+Everything above it works with Markdown strings and compiled documents, and everything
+below it works with Lexical nodes.
+
+**Parsing.** `compileMarkdown` from the renderer parses with micromark into mdast. The
+editor imports that tree into Lexical nodes. One parser handles the whole document, so a
+table cell is just a subtree (there's no second parse with a different dialect).
+
+**The dialect is a preset.** The same preset you render with configures the editor, so
+the editor writes what your pages read. Extensions are resolved on every render, so if
+you change the dialect at runtime the node set gets rebuilt (it isn't fixed at mount).
+
+**Serializing block by block.** On save the writer lines up the edited blocks against an
+index of the original source built at import time, which records the byte span of every
+top-level block. An unchanged block is copied from those bytes, and only blocks you
+actually edited get serialized. That's why a setext heading stays setext and a `~~~`
+fence stays tildes.
+
+**Opaque nodes.** Raw HTML, link definitions, footnote definitions and anything else the
+editing model can't hold keep their exact source slice, render as non-editable blocks,
+and are written back from the bytes they came in with. None of it gets turned into
+paragraph text.
+
+**Three modes over one document.** `rich`, `source` and `preview` are views of the same
+document, so switching can't lose something one of them wasn't able to show. Preview uses
+`@react-markdown-kit/renderer`.
+
+Put together, that gives you the main guarantee of the package. If you open a document,
+look around and close it, the file is unchanged, for 22 of 22 audited documents
+(<Link href={blob('packages/editor/tests/roundtrip.test.ts')}>`packages/editor/tests/roundtrip.test.ts`</Link>).
+<Link to="/markdown-round-trip">The round-trip suite</Link>
+
+## Lexical stays out of your types
+
+Nothing on the root entry mentions Lexical. A test checks that `src/index.ts` and
+`src/types.ts` import nothing from `lexical` or `@lexical/*`
+(<Link href={blob('packages/editor/tests/styling.test.tsx')}>`packages/editor/tests/styling.test.tsx`</Link>).
+The exception is the opt-in `@react-markdown-kit/editor/lexical` entry, which is for
+extension authors.
+
+If you really do need the engine:
+
+```ts
+const native = editor.getNativeEditor() // unknown
+```
+
+It returns `unknown`, so you cast it yourself and nothing leaks into your types by
+accident. It has weaker stability guarantees than the rest of the instance, since the
+editing engine may be replaced in a future major version without that counting as a
+breaking change elsewhere. If you find yourself using it a lot, please report it as a
+gap in `commands`.
+
+Extension authors get a typed entry instead of a cast,
+`@react-markdown-kit/editor/lexical`, which types the `editor` capability (node classes,
+block and inline adapters, plugins and toolbar commands).
+
+```ts
+import { lexicalAdapter } from '@react-markdown-kit/editor/lexical'
+
+const editorCapability = lexicalAdapter({
+  nodes: [DiagramNode],
+  blocks: [/* the plugin's diagram block adapter, built for its kind registry */],
+  commands: [/* one insert command per diagram kind */],
+})
+```
+
+A block adapter's `$export` returns the original `raw` bytes while the block is
+untouched and `null` once it's been edited. That's how a plugin keeps the same
+round-trip guarantee as the core.
+<Link to="/docs/extensions">Extensions</Link>
+
+## When to go headless
+
+There are three levels, and each one drops something the level above has.
+
+### 1. The component
+
+```tsx
+<MarkdownEditor preset={appMarkdown} value={value} onChange={setValue} />
+```
+
+Use it when the default toolbar is fine for you. `toolbar={false}` removes it, and
+`classNames` replaces the `rmk-` class on any part of the chrome.
+
+### 2. Headless React
+
+Use this when the editor has to live inside your own layout and design system, like a
+CMS, a chat composer or an admin panel.
+
+```tsx
+'use client'
+
+import {
+  useMarkdownEditor,
+  MarkdownEditorProvider,
+  MarkdownEditorContent,
+  useMarkdownEditorContext,
+} from '@react-markdown-kit/editor'
+
+function Toolbar() {
+  const editor = useMarkdownEditorContext()
+  const { commands } = editor
+  return (
+    <div>
+      <button type="button" onClick={() => commands.toggleMark('strong')}>Bold</button>
+      <button type="button" onClick={() => commands.setBlockType('heading2')}>Heading</button>
+      <button type="button" onClick={() => commands.insertMarkdown('\n| a | b |\n| - | - |\n')}>
+        Table
+      </button>
+      <button type="button" onClick={() => editor.setMode('source')}>Markdown</button>
+    </div>
+  )
+}
+
+export function Composer({ value, onChange }) {
+  const editor = useMarkdownEditor({ value, onChange, preset: appMarkdown })
+
+  return (
+    <MarkdownEditorProvider editor={editor}>
+      <Toolbar />
+      <MarkdownEditorContent aria-label="Message" />
+    </MarkdownEditorProvider>
+  )
+}
+```
+
+`<MarkdownEditor>` is a thin component built from these same pieces, so the default
+chrome doesn't use anything you can't. If you want button highlighting without writing a
+selection listener, use the `toolbar` render prop on the component instead. Each item
+comes with `active`, `disabled`, `label`, `icon`, `group` and `run()`.
+<Link to="/docs/editor/headless">The headless API</Link>
+
+### 3. No React at all
+
+Use this when there's no browser, for example in a migration script, a content check in
+CI or a server job that normalizes documents.
+
+```ts
+import { createMarkdownBridge } from '@react-markdown-kit/editor'
+
+const bridge = createMarkdownBridge({ preset: appMarkdown, headless: true })
+bridge.load(source)
+const saved = bridge.getMarkdown()
+```
+
+`headless: true` builds the editor with `createHeadlessEditor`, so there's no DOM
+reconciliation and no `document`. It's the same pipeline the React editor runs, which is
+why a round trip that passes here also holds in the browser.
+
+## Which level to pick
+
+| You need | Use |
+| --- | --- |
+| Editing, with a toolbar, today | `<MarkdownEditor>` |
+| Your own chrome, your own layout | `useMarkdownEditor` and `MarkdownEditorContent` |
+| Your own buttons but stock highlighting | the `toolbar` render prop |
+| Markdown in, Markdown out, no browser | `createMarkdownBridge({ headless: true })` |
+| A new block type in the rich surface | an extension with a `lexicalAdapter` capability |
+| Raw Lexical | `editor.getNativeEditor()`, cast at your own risk |
+
+## FAQ
+
+{FAQ.map((item) => (
+  <section key={item.question}>
+    <h3>{item.question}</h3>
+    <p>{item.answer}</p>
+  </section>
+))}
+
+## Related
+
+<Link href="/markdown-editor">Try the editor demo</Link> ·{' '}
+<Link href="https://www.npmjs.com/package/@react-markdown-kit/editor">`@react-markdown-kit/editor` on npm</Link> ·{' '}
+<Link href={sites.github}>Source on GitHub</Link>
+
+<Link to="/react-markdown-editor">React Markdown editor</Link> ·{' '}
+<Link to="/markdown-round-trip">Lossless Markdown editing</Link> ·{' '}
+<Link to="/docs/editor/basics">Editor basics</Link> ·{' '}
+<Link to="/docs/editor/headless">Headless editing</Link> ·{' '}
+<Link to="/compare/mdxeditor">Compared with MDXEditor</Link> ·{' '}
+<Link to="/compare/milkdown">Compared with Milkdown</Link>

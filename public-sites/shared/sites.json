@@ -1,9 +1,9 @@
 {
   "home": "https://reactmarkdownkit.com",
   "docs": "https://reactmarkdownkit.com",
-  "rendererDemo": "https://renderer.reactmarkdownkit.com",
-  "editorDemo": "https://editor.reactmarkdownkit.com",
-  "mermaidDemo": "https://mermaid.reactmarkdownkit.com",
-  "slidesDemo": "https://slides.reactmarkdownkit.com",
+  "rendererDemo": "https://reactmarkdownkit.com/markdown-renderer",
+  "editorDemo": "https://reactmarkdownkit.com/markdown-editor",
+  "mermaidDemo": "https://reactmarkdownkit.com/mermaid-editor",
+  "slidesDemo": "https://reactmarkdownkit.com/markdown-slides",
   "github": "https://github.com/mahuzedada/react-markdown-kit"
 }

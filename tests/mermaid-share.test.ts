@@ -19,7 +19,7 @@ import {
   embedHtml,
   encodeShareHash,
   shareUrl,
-} from '../public-sites/mermaid-demo/src/share'
+} from '../public-sites/site/src/demos/mermaid/share'
 
 const THREE_NODES = `flowchart LR
     a[Start] --> b[Work]
@@ -114,14 +114,14 @@ describe('the landing page example', () => {
 
   it('links the badge to the demo with the hash', () => {
     const link = shareUrl(EXAMPLE_HASH)
-    expect(link).toBe(`https://mermaid.reactmarkdownkit.com/#${EXAMPLE_HASH}`)
+    expect(link).toBe(`https://reactmarkdownkit.com/mermaid-editor#${EXAMPLE_HASH}`)
     expect(badgeMarkdown(link)).toBe(`[![Open in visual editor](${BADGE_URL})](${link})`)
-    expect(BADGE_URL).toBe('https://mermaid.reactmarkdownkit.com/badge.svg')
+    expect(BADGE_URL).toBe('https://reactmarkdownkit.com/badge.svg')
   })
 
   it('embeds with ?embed=1 before the hash', () => {
     const html = embedHtml(shareUrl(EXAMPLE_HASH))
-    expect(html).toContain(`src="https://mermaid.reactmarkdownkit.com/?embed=1#${EXAMPLE_HASH}"`)
+    expect(html).toContain(`src="https://reactmarkdownkit.com/mermaid-editor?embed=1#${EXAMPLE_HASH}"`)
     expect(html).toContain('<iframe ')
   })
 })

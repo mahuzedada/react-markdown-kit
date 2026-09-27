@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * One table row per built page of the six public sites: host, path, title
+ * One table row per built page of the public site: host, path, title
  * with its length, description length, h1 and JSON-LD types
  * (docs/SEO_WORKPLAN.md, milestone E item 4). Reads build output only, so
  * run `pnpm build:sites` first. Every site that is not built counts as one
@@ -16,11 +16,7 @@ import { fileURLToPath } from 'node:url'
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
 const SITES = [
-  { host: 'reactmarkdownkit.com', dir: 'public-sites/docs/build' },
-  { host: 'renderer.reactmarkdownkit.com', dir: 'public-sites/renderer-demo/build' },
-  { host: 'editor.reactmarkdownkit.com', dir: 'public-sites/editor-demo/build' },
-  { host: 'mermaid.reactmarkdownkit.com', dir: 'public-sites/mermaid-demo/build' },
-  { host: 'slides.reactmarkdownkit.com', dir: 'public-sites/slides-demo/build' },
+  { host: 'reactmarkdownkit.com', dir: 'public-sites/site/build' },
 ]
 
 const TITLE = [50, 60]

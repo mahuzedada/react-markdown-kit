@@ -36,7 +36,7 @@ flowchart LR
 ## Links
 
 - Docs: [Mermaid diagrams](https://reactmarkdownkit.com/docs/mermaid)
-- Demo: [mermaid.reactmarkdownkit.com](https://mermaid.reactmarkdownkit.com),
+- Demo: [reactmarkdownkit.com/mermaid-editor](https://reactmarkdownkit.com/mermaid-editor),
   the visual editor in the browser
 - Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
 

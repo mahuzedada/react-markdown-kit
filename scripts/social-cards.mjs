@@ -19,34 +19,34 @@ const LOGO = logo
 
 const CARDS = [
   {
-    out: 'public-sites/docs/static/img/social-card.png',
+    out: 'public-sites/site/static/img/social-card.png',
     title: 'React Markdown Kit docs',
     lines: ['Renderer, editor, templates,', 'Mermaid and slides for React.'],
     host: 'reactmarkdownkit.com',
   },
   {
-    out: 'public-sites/renderer-demo/public/social-card.png',
+    out: 'public-sites/site/static/img/social-card-renderer.png',
     title: 'React Markdown Renderer',
     lines: ['Paste Markdown, switch every option,', 'copy the code that made the output.'],
-    host: 'renderer.reactmarkdownkit.com',
+    host: 'reactmarkdownkit.com/markdown-renderer',
   },
   {
-    out: 'public-sites/editor-demo/public/social-card.png',
+    out: 'public-sites/site/static/img/social-card-editor.png',
     title: 'Free Online Markdown Editor',
     lines: ['Rich, source and preview modes.', 'Plain Markdown in, plain Markdown out.'],
-    host: 'editor.reactmarkdownkit.com',
+    host: 'reactmarkdownkit.com/markdown-editor',
   },
   {
-    out: 'public-sites/mermaid-demo/public/social-card.png',
+    out: 'public-sites/site/static/img/social-card-mermaid.png',
     title: 'Free Mermaid Visual Editor',
     lines: ['Flowcharts on a canvas, sequence diagrams as SVG.', 'Get plain Mermaid syntax back.'],
-    host: 'mermaid.reactmarkdownkit.com',
+    host: 'reactmarkdownkit.com/mermaid-editor',
   },
   {
-    out: 'public-sites/slides-demo/public/social-card.png',
+    out: 'public-sites/site/static/img/social-card-slides.png',
     title: 'Markdown Slides Editor',
     lines: ['Write the deck as Markdown.', 'Present it from the browser.'],
-    host: 'slides.reactmarkdownkit.com',
+    host: 'reactmarkdownkit.com/markdown-slides',
   },
 ]
 

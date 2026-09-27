@@ -1,16 +1,17 @@
 # Deploying reactmarkdownkit
 
-One app, five sites. The image holds the docs site and the four demos under
-`/usr/share/nginx/html/{docs,mermaid,slides,renderer,editor}`, and the
-container's nginx (`nginx.container.conf`) picks the directory from the `Host`
-header: the apex serves the docs, and `mermaid.`, `slides.`, `renderer.` and
-`editor.reactmarkdownkit.com` each get their own build. `docs.` (where the
-docs lived until 2026-09-27) and `www` answer with a permanent redirect to the
-same path on the apex; keep those redirects. One certificate
-(`docs.reactmarkdownkit.com`) covers the first six names, so `docs.` stays in
-it; `slides.reactmarkdownkit.com` has its own, in its own `server` blocks at the
+One app, one site. The image holds the Docusaurus build of `public-sites/site`
+under `/usr/share/nginx/html/site`, served at the apex. Every old host answers
+with a permanent redirect to its new path on the apex: `docs.` and `www` to the
+same path, and the demo subdomains (`renderer.`, `editor.`, `mermaid.`,
+`slides.`) from `/` to `/markdown-renderer`, `/markdown-editor`,
+`/mermaid-editor` and `/markdown-slides` (`nginx.container.conf` over HTTPS,
+`nginx.shipiru.conf` over plain HTTP). The Google and Bing ownership files stay
+reachable on every old host. Keep the redirects and the old names on their
+certificates. One certificate (`docs.reactmarkdownkit.com`) covers the first six
+names; `slides.reactmarkdownkit.com` has its own, in its own `server` blocks at the
 end of `nginx.shipiru.conf`, because that is what Shipiru's `add_domain`
-writes. `make deploy` rebuilds the packages, the plugins and every site
+writes. `make deploy` rebuilds the packages, the plugins and the site
 (`pnpm build:sites`), then ships one image.
 
 This app is deployed to the `mahuzedada` VM with [Shipiru](../shipiru-diy/README.md) as a Docker Compose service. Nothing is built on the server.

@@ -54,7 +54,7 @@ Pause before the second line.
 ## Links
 
 - Docs: [Slides from Markdown](https://reactmarkdownkit.com/docs/slides)
-- Demo: [slides.reactmarkdownkit.com](https://slides.reactmarkdownkit.com),
+- Demo: [reactmarkdownkit.com/markdown-slides](https://reactmarkdownkit.com/markdown-slides),
   with `/present` and `/editor`
 - Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
 

@@ -1,0 +1,704 @@
+---
+title: "Mermaid diagrams in Markdown for React"
+sidebar_label: Mermaid diagrams
+description: "Render Mermaid flowcharts and sequence diagrams as static SVG, edit both on a canvas that saves plain Mermaid back, and hand other types to a host."
+---
+
+import RenderExample from '@site/src/components/RenderExample'
+import sites from '@site/src/sites'
+import { mermaid } from '@react-markdown-kit/mermaid'
+
+export const flow = `\`\`\`mermaid
+flowchart LR
+    web["CLIENT<br/>Web App<br/>React"] -->|REST| api["SERVICE<br/>API<br/>Kotlin"]
+    api --> db[(Postgres)]
+    style web fill:#a5d8ff,stroke:#1971c2
+    style api fill:#b2f2bb,stroke:#2f9e44
+\`\`\`
+`
+
+export const decision = `\`\`\`mermaid
+flowchart TD
+    user((User)) --> check{Valid?}
+    check -->|yes| save[Save]
+    check -->|no| err>Show error]
+    style save fill:#b2f2bb,stroke:#2f9e44
+    style err fill:#ffc9c9,stroke:#e03131
+\`\`\`
+`
+
+export const sequence = `\`\`\`mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant A as API
+    B->>+A: POST /session
+    alt valid credentials
+        A-->>B: 200 token
+    else invalid
+        A-->>-B: 401
+    end
+    Note over B,A: The token lives in a cookie
+\`\`\`
+`
+
+export const withLayout = `\`\`\`mermaid
+flowchart LR
+    a["Markdown"]
+    b(["React"])
+    a -->|render| b
+    style a fill:#a5d8ff,stroke:#1971c2
+    style b fill:#b2f2bb,stroke:#2f9e44
+    %% rmk-layout v1 {"canvasHeight":180,"nodes":{"a":{"x":24,"y":40,"width":160,"height":90,"strokeWidth":2},"b":{"x":330,"y":40,"width":170,"height":90,"strokeWidth":2}},"edges":{"a->b":{"routing":"elbow","elbow":0.5}}}
+\`\`\`
+`
+
+# Mermaid diagrams
+
+```bash
+npm install @react-markdown-kit/mermaid
+```
+
+```tsx
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { mermaid } from '@react-markdown-kit/mermaid'
+import '@react-markdown-kit/mermaid/styles.css' // optional: surface, dot grid, border, canvas
+
+const preset = defineMarkdownPreset({ extensions: [mermaid()] })
+
+<Markdown preset={preset}>{content}</Markdown>
+```
+
+You can try it in the <a href="/mermaid-editor">Mermaid live editor</a>. The
+syntax is on the left and the canvas (or the preview) is on the right, and what
+it saves is plain Mermaid.
+
+A diagram is a fenced code block whose language is `mermaid`. The document
+stays plain Markdown with plain Mermaid in it, so GitHub, GitLab, Notion and
+Obsidian render the same fence. `mermaid()` is the package's API, and it turns
+every ```` ```mermaid ```` fence into a `diagram` node. The renderer draws
+flowcharts and sequence diagrams as static SVG with no Mermaid.js at runtime,
+shows every other Mermaid type as source, and lets a host render those with
+its own Mermaid.js through the [fallback entry](#host-fallback). The template
+plugin leaves the node literal. In the editor, flowcharts and sequence
+diagrams each get their own canvas, and every other kind opens in a source
+editor with a live preview.
+
+<RenderExample title="A three-box flow" markdown={flow} rendererProps={{ extensions: [mermaid()] }} />
+
+## Guides
+
+This page is the reference. If you're after one specific job, one of these
+guides is probably quicker:
+
+- [Mermaid in React, no Mermaid.js runtime](/react-mermaid): install, static SVG, the measured size against Mermaid.js, server rendering.
+- [Mermaid Live Editor alternative](/mermaid-live-editor-alternative): the canvas next to mermaid.live, feature by feature.
+- [Flowchart to Mermaid](/flowchart-to-mermaid): draw a flowchart on the canvas and copy the syntax it writes.
+- [Fix AI-generated Mermaid](/edit-ai-generated-mermaid): paste model output, drag the layout right, copy it back.
+
+## Diagram kinds
+
+The plugin reads the first word of the fence, after front matter, `%%{ … }%%`
+directives and `%%` comments, the way Mermaid's own `detectType` does. The
+word names the **kind**. If the plugin has that kind registered it renders
+it. Any other Mermaid keyword is still recognised, it just gets shown as
+source.
+
+| Kind | Header | Rendered | Edited |
+| --- | --- | --- | --- |
+| Flowchart | `flowchart`, `graph`, `flowchart-elk` | Static SVG | Canvas, or text |
+| Sequence diagram | `sequenceDiagram` | Static SVG | Canvas, or text |
+| Every other Mermaid type (`classDiagram`, `stateDiagram`, `erDiagram`, `gantt`, `pie`, `gitGraph`, `mindmap`, …) | its keyword | Source, or the [host fallback](#host-fallback) | Text |
+
+Each fence carries a **support level**: `static` when a registered kind
+parses and renders it, `source` otherwise. A fence that starts with no
+Mermaid keyword is kind `unknown`, support `source`. Keywords are
+case-sensitive, as in Mermaid; `SequenceDiagram` is `unknown`, and the
+diagnostic names the expected spelling.
+
+Kinds are configuration values, like `gfm()`. The default registry is
+`[flowchart(), sequenceDiagram()]`, tried in that order. You can pass your own
+list to trim the bundle or add a kind of your own:
+
+```tsx
+import { mermaid, flowchart } from '@react-markdown-kit/mermaid'
+
+const preset = defineMarkdownPreset({ extensions: [mermaid({ kinds: [flowchart()] })] })
+```
+
+Two kinds that share a name or a keyword make `mermaid()` throw
+`MarkdownConfigurationError` with code `DIAGRAM_KINDS_INVALID`.
+
+## The flowchart subset
+
+| Mermaid | Read as |
+| --- | --- |
+| `flowchart LR` / `graph TD`, any direction | Left-to-right or top-down auto layout |
+| `id[text]`, `id(text)` | Rectangle |
+| `id([text])`, `id((text))` | Ellipse |
+| `id{text}`, `id{{text}}` | Diamond |
+| `id[(text)]` | Cylinder |
+| `id[[text]]` | Queue |
+| `id>text]` | Note |
+| `-->`, `---`, `-.->`, `==>`, `<-->` | Arrow, line, arrow, arrow, bidirectional arrow |
+| `-->\|label\|`, `-- label -->` | Edge label |
+| `A-->B`, `A --> B` | The same edge, with or without spaces |
+| `A & B --> C`, `A --> B --> C`, `;` | Groups, chains, several statements per line |
+| `subgraph … end` | Read through; grouping is not drawn |
+| `style id fill:…,stroke:…` | Colours |
+| `---` front matter with `title:` | Accessible name and caption |
+| `%%` comments, `%%{ … }%%` directives, `classDef`, `class`, `click` | Retained lines: kept in the fence, written back unchanged |
+| `@{ … }` node config, `e1@` edge ids, `~~~` invisible links | Retained lines, reported as `FLOWCHART_SYNTAX_IGNORED` |
+| Anything else | Retained line, reported as `FLOWCHART_UNKNOWN_STATEMENT` |
+
+The flowchart parser reports anything Mermaid.js would reject, so you find
+out about the mistake before the fence ends up in GitHub or Azure DevOps.
+
+| Code | Severity | When |
+| --- | --- | --- |
+| `FLOWCHART_UNKNOWN_STATEMENT` | invalid | A statement the parser cannot read, including an `end` outside a subgraph. Retained. |
+| `FLOWCHART_LABEL_NEEDS_QUOTES` | invalid | An unquoted label holding `(`, `)`, `[`, `]`, `{`, `}`, `"` or `\|`. The node stays; the writer quotes it. |
+| `FLOWCHART_LABEL_EMPTY` | invalid | `A[]`, `A[""]`, `A()` or `\|\|`. The node stays with no text. |
+| `FLOWCHART_RESERVED_ID` | invalid | `end`, `subgraph`, `graph`, `flowchart`, `style`, `classDef`, `class`, `click` or `linkStyle` used as a node id. Retained. |
+| `FLOWCHART_TRAILING_COMMENT` | invalid | A `%%` comment after a statement on the same line. The statement is read; the comment moves to its own line. |
+| `FLOWCHART_LAYOUT_INVALID` | invalid | A rejected `%% rmk-layout` annotation, with the dotted path of the first bad member. |
+| `FLOWCHART_SYNTAX_IGNORED` | ignored | `@{ … }` config, `e1@` edge ids, `~~~` links, a `direction` after the first node, a `style` naming a node that never appears. Retained. |
+
+<RenderExample title="Direction down, a decision" markdown={decision} rendererProps={{ extensions: [mermaid()] }} />
+
+The parser is fairly forgiving. A statement it can't model becomes a
+**problem** and a **retained line**, and the rest of the fence carries on, so
+the diagram still draws and the line still gets written back. The only real
+parse error is a fence whose first statement isn't a flowchart header; that
+fence renders as source with `DIAGRAM_INVALID`. A rejected `%% rmk-layout`
+annotation shows up as problem `FLOWCHART_LAYOUT_INVALID` with the dotted path
+of the first bad member, and the diagram falls back to auto layout.
+
+## The sequence diagram subset
+
+<RenderExample title="A sign-in with alt/else, activation and a note" markdown={sequence} rendererProps={{ extensions: [mermaid()] }} />
+
+Statements are case-insensitive on the keyword and end at a newline or a
+`;`. A line is split at `;` before it is read, as Mermaid does, so write
+`#59;` for a semicolon in text.
+
+| Construct | Source | Notes |
+| --- | --- | --- |
+| Participant | `participant A`, `participant A as Label`, `actor A`, `actor A as Label` | declaration order; an undeclared id is appended on first use |
+| Box | `box [colour] [label]` … `end` | the colour stays in the label; a box holds participant statements only |
+| Message | `A->B: text` with `->`, `-->`, `->>`, `-->>`, `<<->>`, `<<-->>`, `-x`, `--x`, `-)`, `--)` | `+` or `-` after the arrow activates or deactivates |
+| Activation | `activate A`, `deactivate A` | an activation still open at the end is a problem |
+| Note | `Note left of A: t`, `Note right of A: t`, `Note over A: t`, `Note over A,B: t` | |
+| Frame | `loop t`, `alt t` / `else t`, `opt t`, `par t` / `and t`, `critical t` / `option t`, `break t`, `rect colour` … `end` | nested arbitrarily; a `rect` is drawn as a filled rectangle |
+| Autonumber | `autonumber`, `autonumber N`, `autonumber N M` | before the first message; later forms and `autonumber off` are retained and ignored |
+| Title | front matter `title:`, `title X`, `title: X` | caption and accessible name |
+| Text | `<br/>`, `#NN;`, `#quot;`, `#lt;`, `#gt;` | decoded |
+
+Layout is deterministic, so there's no annotation to worry about.
+Participants are columns in declaration order, each message, note and frame
+edge takes one row, a self message draws a loop, activations are bars on the
+lifeline, and frames span the participants they touch. Since the kind has a
+writer, the editor opens it on the [sequence canvas](#the-sequence-canvas)
+and writes every gesture back as plain Mermaid (see
+[what the sequence writer emits](#what-the-sequence-canvas-writes) below).
+
+The parser reports what it can't model. `invalid` problems are statements
+Mermaid.js itself rejects, and `ignored` problems are statements Mermaid.js
+accepts but the plugin doesn't draw. Every ignored statement is kept as a
+retained line.
+
+| Code | Severity | When |
+| --- | --- | --- |
+| `SEQUENCE_DIAGRAM_UNKNOWN_STATEMENT` | invalid | A statement that is not sequence diagram syntax. After a `;` the message names the entity codes to use instead of `;`, `&`, `<` and `>`. |
+| `SEQUENCE_DIAGRAM_DEACTIVATE_INACTIVE` | invalid | `deactivate` or a `-` arrow on a participant that is not active. |
+| `SEQUENCE_DIAGRAM_END_WITHOUT_OPENER` | invalid | An `end` with no open frame or box. |
+| `SEQUENCE_DIAGRAM_SECTION_OUTSIDE_FRAME` | invalid | `else`, `and` or `option` outside `alt`, `par` or `critical`. |
+| `SEQUENCE_DIAGRAM_FRAME_UNCLOSED` | invalid | A frame or box still open at the end. |
+| `SEQUENCE_DIAGRAM_RESERVED_ID` | invalid | A message end or note target named like a sequence keyword (`end`, `loop`, `note`, …), which Mermaid.js reads as the keyword. |
+| `SEQUENCE_DIAGRAM_ACTIVATION_UNCLOSED` | ignored | An activation still open at the end. Mermaid.js accepts it; the bar is drawn to the last item. |
+| `SEQUENCE_DIAGRAM_STATEMENT_IGNORED` | ignored | `link`, `links`, `properties`, `details`, `create`, `destroy`, `accTitle`, `accDescr`, half arrows, `()` connections, `@{ … }` participant config, `autonumber off`, a later `autonumber`. |
+
+Problems point at a line number, a keyword or an id, and don't quote your
+content. They reach the compiled document as diagnostics (listed under
+[Diagnostics](#diagnostics)), and the source editor shows them under the
+textarea with `invalid` first.
+
+## What the editor writes
+
+Mermaid doesn't have syntax for where a box sits, how big it is, how an edge
+bends, or free text on the canvas. So when you edit a flowchart, the canvas
+writes the graph as ordinary Mermaid and puts the geometry in one layout
+annotation, a `%% rmk-layout v1 {…}` comment on the last line. Other
+renderers ignore the comment and this plugin reads it back, which is how a
+drawing round-trips without loss. A hand-written flowchart with no annotation
+gets auto layout, and a fence you haven't touched is written back byte for
+byte.
+
+The writer emits, in order: one `---` block holding `title:` and the retained
+front-matter lines, the header, node lines, edge lines, `style` lines, the
+retained body lines in their original order, and the annotation last. Ids the
+parser accepted are written unchanged, `my-box` included; only an id that is
+not a valid Mermaid id is rewritten. Whatever the property bar sets is
+written as Mermaid: a rounded rectangle as `(text)` and a square one as `[text]`,
+a node's stroke width, dashes and text colour as `stroke-width`,
+`stroke-dasharray` and `color` on its `style` line, and an edge's style in
+its link token (`-.->` dotted, `==>` thick, `--o` and `--x` heads, `o--o`
+both ways). A canvas edit can lose things the canvas can't draw, like
+`subgraph`, invisible (`~~~`) and extra-long links, a link whose two heads
+differ, some bracket shapes, `linkStyle` and `style` properties other than
+the ones above. The parse lists these under `lossy`, and the editor shows
+them to you before the first edit.
+
+<RenderExample title="With a layout annotation: elbow routing and exact positions" markdown={withLayout} rendererProps={{ extensions: [mermaid()] }} />
+
+The annotation is a versioned format with a formal specification,
+`LAYOUT_ANNOTATION.md`, shipped with the package, and a JSON Schema,
+`LAYOUT_ANNOTATION_JSON_SCHEMA`, exported from the root. The payload is one
+JSON object: `nodes` keyed by Mermaid id with position, size, stroke width
+and text slots; `edges` keyed by endpoints (`a->b`, `a->b#2` for a second
+edge between the same nodes) with routing, waypoints and attach points;
+`texts` and `loose` for shapes Mermaid can't express. The Mermaid syntax is
+still the source of truth for the graph and colours, and the annotation
+doesn't repeat them.
+
+Reading is fail-closed. An annotation with a wrong type, an unknown version
+or a second annotation in the same fence is rejected as a whole, the diagram
+is auto-laid out, and the compile result carries a `DIAGRAM_LAYOUT_INVALID`
+warning with the dotted path of the first problem (`nodes.web.x`). Members
+the reader does not know are ignored, so a later minor revision can add
+fields without breaking older readers. The writer emits a canonical form
+(fixed member order, compact JSON, numbers to two decimals), so a diff
+shows only what moved. `readLayoutAnnotation` and `writeLayoutAnnotation`
+are the reference reader and writer.
+
+## What the sequence canvas writes
+
+A sequence diagram doesn't need an annotation since its layout is
+deterministic, so the writer emits plain Mermaid and nothing else. In order,
+that's one `---` block
+holding `title:` and the retained front-matter lines (omitted when both are
+empty), the header `sequenceDiagram`, `autonumber` when numbering is set,
+the participants in declaration order as `participant id` or `actor id`
+with ` as Label` when the label differs from the id (each `box … end` opens
+where its first participant sits), the retained body lines, then the items
+depth first at four spaces per level: a message as `A->>+B: text`, a note as
+`Note over A,B: text`, a frame as `alt label` … `else label` … `end`.
+
+Activation bars come from the model's `activations`. A bar whose messages
+carry `+` and `-` is written with those suffixes; any other bar is written
+as `activate A` and `deactivate A` statements after the items where it
+starts and ends. Text goes through the same escape as the flowchart writer
+plus `#59;` for `;`, since sequence text is unquoted: `#35;` for `#`,
+`#38;`, `#37;`, `#quot;`, `#lt;`, `#gt;` and `<br/>` for a line break.
+
+Retained lines are re-emitted verbatim: `link`, `links`, `properties`,
+`details`, `accTitle`, `accDescr`, `%%{ … }%%` directives and `%%`
+comments. `create` and `destroy` can't keep their position among the
+messages, so the parser lists `create-destroy` under `lossy` and the writer
+drops them. In that case the canvas mounts read-only behind a notice until
+you choose "Edit on canvas". An untouched fence is written back byte for
+byte. The written output is a fixed point (it parses back to the same
+model), and Mermaid.js accepts it for every documentation example in the corpus
+([`conformance.dom.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/plugins/mermaid/tests/conformance.dom.test.ts)).
+
+## What the renderer emits
+
+```html
+<figure data-rmk-diagram="mermaid" data-rmk-diagram-kind="sequenceDiagram" data-rmk-diagram-support="static">
+  <svg viewBox="0 0 640 260" role="img" aria-label="Diagram">…</svg>
+  <figcaption>title</figcaption>
+</figure>
+```
+
+`data-rmk-diagram` carries the fence format (`mermaid`, or the legacy
+`diagram` and `drawing`), `data-rmk-diagram-kind` the detected kind and
+`data-rmk-diagram-support` the support level. A fence shown as source keeps
+its body inside the figure:
+
+```html
+<figure data-rmk-diagram="mermaid" data-rmk-diagram-kind="classDiagram" data-rmk-diagram-support="source">
+  <pre><code class="language-mermaid">…</code></pre>
+</figure>
+```
+
+- **No script, `foreignObject` or external references.** Shapes are
+  `rect`, `ellipse`, `path` and `text`. Colours end up as attributes, and the
+  parser drops any value that isn't a colour.
+- **Server-renderable.** The SVG is hast, built without a DOM or React, so
+  it works in a server component and in static rendering.
+- **Only the optional stylesheet styles it.** `data-rmk-diagram` is the hook,
+  and the `classNames` prop's `diagram` part adds your own class to the figure.
+- **Unreadable input stays visible.** A fence a registered kind can't read
+  renders as source inside the figure with `data-rmk-diagram-error` set and a
+  `DIAGRAM_INVALID` diagnostic on the compiled document.
+
+## Host fallback
+
+The plugin doesn't depend on Mermaid.js at all. If you want class diagrams,
+Gantt charts or any other type drawn, the host can render them itself in the
+browser with `@react-markdown-kit/mermaid/client`:
+
+```tsx
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { mermaid } from '@react-markdown-kit/mermaid'
+import { diagramFallback } from '@react-markdown-kit/mermaid/client'
+
+// Host code: how the SVG is made is the host's choice. Mermaid.js here, but
+// Kroki or a server endpoint fit the same signature.
+async function render(source: string, kind: string): Promise<string> {
+  const { default: mermaidJs } = await import('mermaid')
+  const { svg } = await mermaidJs.render(`rmk-${kind}-${Date.now()}`, source)
+  return svg
+}
+
+const preset = defineMarkdownPreset({ extensions: [mermaid(), diagramFallback({ render })] })
+```
+
+`diagramFallback({ render })` is an extension named `mermaid-fallback` that
+registers one renderer component, the `figure`. It passes every figure
+through unchanged unless the figure carries `data-rmk-diagram-support="source"`
+or `data-rmk-diagram-error`. For those, the first client render is the
+server markup, so hydration agrees. After mount it calls `render` with the
+fence body and the kind, and a resolved string replaces the `pre` with
+`<div data-rmk-diagram-fallback>` holding the markup. The host picked the
+renderer, so the host owns that output, and the kit's policy doesn't run on
+it. A rejected or empty result keeps the source. The entry loads React and is
+built with the `'use client'` banner, so it has to go in a client component
+(the root entry stays headless).
+
+## Theme tokens
+
+The flowchart takes its colours from the fence. Sequence diagram syntax has
+no colours, so its renderer reads custom properties instead, each with a
+fallback from Mermaid's default theme. That way an unstyled document looks
+like Mermaid, and an exported SVG can inline the fallbacks. The attribute
+reads `fill="var(--rmk-diagram-note-fill, #fff5ad)"`. `styles.css` doesn't
+declare a colour for these tokens, so set them on `.rmk-document` for each
+colour mode.
+
+| Token | Mermaid variable | Fallback |
+| --- | --- | --- |
+| `--rmk-diagram-actor-fill` | actorBkg | `#ececff` |
+| `--rmk-diagram-actor-stroke` | actorBorder | `#9370db` |
+| `--rmk-diagram-actor-text` | actorTextColor | `#333333` |
+| `--rmk-diagram-line` | actorLineColor | `#9370db` |
+| `--rmk-diagram-signal` | signalColor | `#333333` |
+| `--rmk-diagram-signal-text` | signalTextColor | `#333333` |
+| `--rmk-diagram-label-fill` | labelBoxBkgColor | `#ececff` |
+| `--rmk-diagram-label-stroke` | labelBoxBorderColor | `#9370db` |
+| `--rmk-diagram-label-text` | labelTextColor | `#333333` |
+| `--rmk-diagram-note-fill` | noteBkgColor | `#fff5ad` |
+| `--rmk-diagram-note-stroke` | noteBorderColor | `#aaaa33` |
+| `--rmk-diagram-note-text` | noteTextColor | `#333333` |
+| `--rmk-diagram-activation-fill` | activationBkgColor | `#f4f4f4` |
+| `--rmk-diagram-activation-stroke` | activationBorderColor | `#666666` |
+| `--rmk-diagram-number-text` | sequenceNumberColor | `#ffffff` |
+
+The autonumber badge is filled with `--rmk-diagram-signal`. Tokens are named
+after their role rather than the diagram kind, so a kind added later can
+reuse them. Front-matter `config.theme` and `themeVariables` are kept as
+retained lines but aren't read.
+
+```css
+.rmk-document {
+  --rmk-diagram-actor-fill: var(--card);
+  --rmk-diagram-actor-stroke: var(--primary);
+  --rmk-diagram-note-fill: var(--input-unsaved);
+}
+```
+
+## Diagnostics
+
+`compileMarkdown` reports diagram problems on the document, with the range
+narrowed to the fence line the problem names. If you lint documents before
+saving, these are the codes to look for:
+
+| Code | Severity | When |
+| --- | --- | --- |
+| `DIAGRAM_INVALID` | warning | A registered kind could not read the fence. It is shown as source. |
+| `DIAGRAM_KIND_UNKNOWN` | warning | The fence does not start with a Mermaid keyword. A case slip names the expected spelling. |
+| `DIAGRAM_KIND_UNSUPPORTED` | info | A Mermaid keyword no registered kind renders. The fence is shown as source. |
+| `DIAGRAM_LAYOUT_INVALID` | warning | The `%% rmk-layout` annotation was rejected; `path` holds the first bad member. |
+| `DIAGRAM_SYNTAX_INVALID` | warning | One per `invalid` problem, at most 20 per fence: "Line N: …". Mermaid.js would reject the fence. |
+| `DIAGRAM_SYNTAX_IGNORED` | info | One per `ignored` problem, at most 20 per fence: "Line N: …". Mermaid.js accepts it; the plugin does not draw it. |
+
+A parse error's `error` string lives on the node and isn't copied into the
+diagnostic message, which keeps your content out of messages.
+
+## Templates
+
+Placeholders inside a diagram are never resolved. The node is literal, same
+as a code block, so runtime data can't reach a box's text, colour or
+geometry.
+
+## Editor
+
+`@react-markdown-kit/mermaid/editor` adds editing. It's the same extension
+under the same name with one more capability, so it replaces the renderer's
+`mermaid()` in a preset.
+
+```tsx
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { mermaid } from '@react-markdown-kit/mermaid/editor'
+
+const preset = defineMarkdownPreset({ extensions: [gfm(), mermaid()] })
+
+<MarkdownEditor preset={preset} value={value} onChange={setValue} />
+```
+
+A block shows its kind and support level in a header row. Flowcharts and
+sequence diagrams open on a canvas, with a Text toggle to switch to the
+source editor. Every other kind opens in the source editor, which is a
+textarea with a live preview above it (rendered by the kind) and the problems
+listed under it with line numbers, `invalid` first with the prefix "Mermaid
+rejects:". Source mode doesn't block keystrokes or rewrite your text. Undo
+goes through the editor's history.
+
+### The flowchart canvas
+
+You draw boxes, connectors and text by picking a tool and dragging.
+Connectors bind to the boxes they touch and follow them around. The property
+bar works like Excalidraw's. A colour swatch sets the fill, stroke and text
+colour in one click, and two custom pickers let you set any background or
+text colour. Stroke width (thin, medium, bold) and style (solid, dashed,
+dotted) apply to boxes and connectors, a rectangle can have sharp or round
+corners, and a connector can have an arrow, circle, cross or no head, elbow
+routing, and one or two directions. Cmd/Ctrl+D or **Duplicate** copies the
+selection. New rectangles are square (Mermaid's `[text]`). **Copy as Mermaid**
+copies the same text the fence saves, layout annotation included, so pasting
+it into another canvas keeps the positions while other renderers just ignore
+the comment. A flowchart with `lossy` features mounts read-only behind a
+notice that names them, and you pick "Edit on canvas" or "Edit as text" to
+carry on.
+
+To select several shapes, Shift+click them, drag a box around them on the
+background, or press Cmd/Ctrl+A. Selection works the way it does in
+Excalidraw, where every member gets a thin outline and the selection as a
+whole gets a dashed frame with handles. A corner handle scales the whole selection evenly from
+the opposite corner, a side handle stretches it along one axis, and Alt
+scales from the centre; positions, sizes and waypoints scale, text and
+stroke widths keep their size, and bound connectors follow their boxes.
+Dragging any member, or the empty space inside the frame, moves the
+selection; clicking one member without dragging narrows the selection to
+it; the arrow keys nudge it by 1px, 10px with Shift, as one undo step. The
+colour and connector settings apply to every selected shape, and a click
+that moves nothing writes nothing.
+
+### The sequence canvas
+
+You edit a sequence diagram directly on its rendered picture. Each gesture is
+one operation on the model, written back with the sequence writer and
+committed as one history entry. Inline typing merges into one entry under the
+same 300 ms rule as the source editor. Gestures that would make Mermaid.js
+reject the fence aren't offered. The lossy lock and the "Edit on canvas"
+notice work the same as for a flowchart.
+
+| Gesture | Result |
+| --- | --- |
+| Click, Escape | Select one participant, message, note or frame; clear the selection |
+| Delete, Backspace | Remove the selection. A participant takes its messages and notes; a frame unwraps its items |
+| Enter, double click | Edit the label inline. Enter or blur closes the field; Escape restores the text |
+| **Add participant**, **Add actor** | Append one with a fresh id and label, selected |
+| Drag a participant box sideways | Reorder the columns; a box moves as one unit |
+| Drag from a lifeline to a lifeline | Add a `->>` message at that row, a self message on the same lifeline; its text opens for editing |
+| Drag a message or note up or down | Reorder it among its siblings |
+| Property bar, participant | Participant or actor |
+| Property bar, message | Solid or dotted line; arrow, open, cross or no head; two-way; activation `+`, `-` or none; swap ends |
+| Hover a gap on a lifeline, click **+** | Add a note over that participant at that row |
+| Property bar, note | `left of`, `right of` or `over`, with a second participant for `over` |
+| **Wrap in**, with a message or note selected | Wrap it, or a Shift+click range of siblings, in `loop`, `alt`, `opt`, `par`, `critical`, `break` or `rect`; the label opens for editing |
+| Property bar, frame | Add a section (`else`, `and`, `option`) or unwrap the frame |
+| Drag a frame's bottom edge | Extend or shrink it over the following siblings |
+| **Autonumber** | Set or clear `autonumber` |
+| **Copy as Mermaid** | Copy the text a commit would save |
+
+Renaming a participant keeps its id, unless the label was the id, in which
+case the id follows a sanitised form of the new label. This way hand-written
+diagrams keep their ids. Read-only editors only show the picture. Every
+control's label comes from the `diagram.` label map.
+
+### Bringing your own canvas
+
+`mermaid({ editors })` maps a kind name to the component that edits it. The
+built-in map is `{ flowchart, sequenceDiagram }`. A name in your map
+replaces the built-in component, and that's also how a kind of your own gets
+a canvas. The block handles the mode, the lossy lock, undo history and the
+commit, and the component only has to draw the parse and hand source back.
+
+```ts
+interface DiagramKindEditorProps {
+  readonly nodeKey: NodeKey
+  readonly kind: DiagramKind
+  readonly source: string
+  readonly parse: DiagramParse<unknown>
+  /** True while the block locks the canvas behind the lossy notice (a lossy source not yet acknowledged). A read-only editor never mounts the component: the block renders the kind's output instead. */
+  readonly readOnly: boolean
+  /** Writes `source` to the node as one history entry. `merge` folds it into the previous commit under the 300 ms rule. */
+  readonly commit: (source: string, options?: { readonly merge?: boolean }) => void
+}
+type DiagramKindEditor = ComponentType<DiagramKindEditorProps>
+```
+
+```tsx
+import { mermaid, type DiagramKindEditorProps } from '@react-markdown-kit/mermaid/editor'
+
+function TimelineCanvas({ kind, parse, readOnly, commit }: DiagramKindEditorProps) {
+  const model = parse.model as TimelineModel
+  const save = (next: TimelineModel) => commit(kind.write!(next, { retained: parse.retained }))
+  // The root carries data-rmk-diagram-focus so the block can focus it after an insert.
+  return <div className="rmk-diagram-canvas" tabIndex={0} data-rmk-diagram-focus>…</div>
+}
+
+const preset = defineMarkdownPreset({
+  extensions: [gfm(), mermaid({ kinds: [flowchart(), sequenceDiagram(), timeline()], editors: { timeline: TimelineCanvas } })],
+})
+```
+
+A kind only edits on its component if it also has `write`. Without a writer
+the block stays in the source editor.
+
+The toolbar gets one insert button per registered kind: id `diagram` for the
+flowchart and `diagram-<kind>` for the others (`diagram-sequenceDiagram`),
+group `diagram`, icon from the kind. You can override a label through the
+editor's `labels` prop by that id. The `diagram.` prefix is reserved for the
+canvas labels (`DIAGRAM_LABELS`).
+
+### A detached tool row
+
+Each canvas draws its tool row (the shape tools, the property bar, Copy as
+Mermaid, the width presets; the participant tools and autonumber on the
+sequence canvas) along its own top edge. If you build your own chrome around
+the editor (the way [headless editing](/docs/editor/headless) lets you build
+your own formatting toolbar), you can move that row out of the block. Mount
+`<DiagramToolbar>` from the editor entry wherever you want the tools, inside
+`<MarkdownEditorProvider>` or with `editor={useMarkdownEditor(...)}`, and
+every canvas of that editor renders its tools there instead.
+
+```tsx
+import { MarkdownEditorContent, MarkdownEditorProvider, useMarkdownEditor } from '@react-markdown-kit/editor'
+import { DiagramToolbar, mermaid } from '@react-markdown-kit/mermaid/editor'
+
+function Composer({ value, onChange }) {
+  const editor = useMarkdownEditor({ value, onChange, extensions: [mermaid()] })
+  return (
+    <MarkdownEditorProvider editor={editor}>
+      <header className="app-bar">
+        <DiagramToolbar placeholder="Open a flowchart or a sequence diagram to draw" />
+      </header>
+      <div className="rmk-editor">
+        <MarkdownEditorContent aria-label="Document" />
+      </div>
+    </MarkdownEditorProvider>
+  )
+}
+```
+
+The slot shows one canvas's tools at a time. That's the canvas that last had
+focus, or the first one on the page if none has had focus yet. If that block
+is deleted or switched to text, the oldest remaining canvas takes over. The
+other canvases don't show a row of their own. Focus in the detached row
+keeps its canvas active, so the property bar and keyboard shortcuts behave
+the same as they do inline. `placeholder` renders while no canvas is on
+screen (the document has none, or every diagram is a kind edited as
+text). The slot's root carries `rmk-editor`, so the `--rmk-diagram-*`
+tokens you map on that class reach it wherever it sits, plus
+`rmk-diagram-toolbar-host` and `data-rmk-diagram-toolbar="filled"` or
+`"empty"` to style it by; the row inside keeps its inline look
+(`.rmk-diagram-toolbar.is-detached`) until you restyle it. If you don't
+mount a `<DiagramToolbar>`, nothing changes. The
+<a href="/mermaid-editor">live editor</a> uses this to put its row in the
+pill floating over the top-left corner of the canvas.
+
+The <a href="/mermaid-editor">live editor</a> shares diagrams by link. The
+source, annotation included, is deflated into the URL hash as
+`#pako:<base64url>` (the same zlib form mermaid.live uses, with a `#base64:`
+fallback), so nothing gets uploaded. Its **Share** panel gives you the link, an
+"Open in visual editor" badge for a README, and an `?embed=1` iframe snippet
+that hides the site chrome. The format is tested in
+[`tests/mermaid-share.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/mermaid-share.test.ts).
+
+Only the `/editor`, `/canvas` and `/client` entries load React. A Node
+service that renders or templates diagrams can import the root entry and
+skip installing React and Lexical.
+
+## Standalone canvas
+
+`@react-markdown-kit/mermaid/canvas` is the same canvas without a Markdown
+editor around it. You give it Mermaid source and it hands Mermaid source
+back. It fills whatever container you give it and floats its tools over the
+drawing, either down the left edge or along the top, similar to how
+Excalidraw lays out its canvas.
+
+```tsx
+import { MermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
+import '@react-markdown-kit/mermaid/styles.css'
+
+<div style={{ height: 600 }}>
+  <MermaidCanvas value={source} onChange={setSource} />
+</div>
+```
+
+```ts
+import { createMermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
+
+const canvas = createMermaidCanvas(document.getElementById('diagram')!, {
+  value: 'flowchart LR\n  a[Web] --> b[API]',
+  onChange: (source) => save(source),
+})
+canvas.update({ zoom: 1.5 })
+canvas.destroy()
+```
+
+Props: `value` / `defaultValue` / `onChange` (the Mermaid source, a
+flowchart's with its layout line), `toolbar` (`left`, the default, `top` or
+`none`), `zoom`, `drawingStyle` (`clean` or `ink`), `align` (`center`, the
+default, or `start`), `readOnly`, `labels` (UI strings by key), `kinds`,
+`editors`, `fallbackTitle`, `onFocusChange`, `className`, `style`, and
+`children`, which render over the surface if you want chrome of your own.
+The component keeps its own undo history (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z,
+Ctrl+Y), and a `value` changed from outside counts as one more entry in it.
+A kind without a canvas shows its static render or its source, and a
+flowchart with lossy features is locked behind the same notice the block
+shows. `createMermaidCanvas` returns `{ getValue, setValue, update, destroy }`.
+The entry loads React and ReactDOM but doesn't pull in Lexical or the editor
+package.
+`--rmk-mermaid-canvas-background` sets the page colour behind the grid and
+`--rmk-mermaid-tools-top` moves the tool island under chrome of your own.
+
+## Legacy JSON fences
+
+The ```` ```diagram ```` skeleton and ```` ```drawing ```` payload formats from
+`@zuilib/text-editor` are still read as flowcharts, so older documents
+render and open on the canvas. The first edit rewrites the block as
+```` ```mermaid ````.
+
+## Programmatic API
+
+There isn't a separate API beyond the plugin. The root entry exports `mermaid(options?)` with
+`fallbackTitle` (names an untitled diagram) and `kinds` (the registry), the
+kind factories `flowchart()` and `sequenceDiagram()`, `MERMAID_KEYWORDS`
+(every Mermaid type the detector recognises) and the types a kind of your
+own implements: `DiagramKind`, `DiagramParse`, `DiagramParseError`,
+`DiagramProblem`, `DiagramRenderOptions`, `DiagramWriteOptions`,
+`RetainedLine`. The parsers, renderers and writers aren't exported on their
+own.
+
+A kind is a plain object: a `name` and `keywords` for detection, a `label`,
+a `starter` for the insert button, `parse(source)` returning a model with
+`problems`, `retained` lines and `lossy` features, an optional
+`render(model, options)` returning hast (absent means support `source`), and
+an optional `write(model, options)` that re-emits the retained lines.
+
+On `/editor`, `mermaid()` also takes `style` (`clean` or hand-drawn `ink`),
+`newBlockWidth`, `sourceEditor` (`false` hides the textarea, so a block
+edited as text shows the preview and the problems only), `align` (`start`,
+the default, keeps a drawing at the top-left of its canvas, as a block sits
+in a document; `center` puts it in the middle of the room the canvas has,
+on both axes, and scales one taller than that room down to fit, the way a
+page-as-canvas editor shows a diagram, without moving its coordinates) and
+`editors` (the canvas component per kind name). The editor entry exports the types
+`DiagramKindEditor`, `DiagramKindEditorProps` and `DiagramKindEditors` for
+a canvas of your own, and `<DiagramToolbar>` (`DiagramToolbarProps`:
+`editor`, `className`, `placeholder`), the slot that takes the canvases'
+tool rows out of the blocks. The JSON Schemas for the layout annotation and the
+legacy payloads are exported for validating generated text.

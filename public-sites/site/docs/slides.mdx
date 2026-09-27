@@ -1,0 +1,485 @@
+---
+title: Markdown Presentations in React
+sidebar_label: Slides
+description: "Markdown presentations in React: slides split on ---, speaker notes after ???, fragments after --, present mode, and a deck editor in one plugin."
+---
+
+import Link from '@docusaurus/Link'
+import RenderExample from '@site/src/components/RenderExample'
+import EditorExample from '@site/src/components/EditorExample'
+import sites from '@site/src/sites'
+import { slides } from '@react-markdown-kit/slides'
+import { slides as presentSlides } from '@react-markdown-kit/slides/present'
+import { slides as slidesEditor } from '@react-markdown-kit/slides/editor'
+import '@react-markdown-kit/slides/styles.css'
+
+{/*
+  Built once per page load. The present and editor entries bind a React
+  component to each call, so an array created inside JSX would remount the
+  deck on every render.
+*/}
+export const headless = [slides()]
+export const present = [presentSlides({ hashRouting: false })]
+export const deckEditor = [slidesEditor()]
+
+export const deck = `---
+title: Q3 review
+---
+
+## Q3 review
+
+Three slides, one Markdown file.
+
+---
+
+## Numbers
+
+| Metric | Q2 | Q3 |
+| --- | ---: | ---: |
+| Revenue | 4.1 M | 4.8 M |
+| Churn | 3.2% | 2.6% |
+
+---
+
+## Next quarter
+
+- Ship the importer
+- Close both enterprise pilots
+`
+
+export const directives = `<!-- class: center, middle -->
+
+## A centred title
+
+Text and blocks centred on both axes.
+
+---
+
+<!-- class: inverse -->
+<!-- name: numbers -->
+
+## Inverse, and named
+
+This slide is \`#slide-numbers\`.
+
+---
+
+<!-- background: /img/social-card.svg -->
+<!-- class: inverse, bottom -->
+
+## A background image
+`
+
+export const notes = `## Roadmap
+
+First point.
+
+--
+
+Second point, revealed on the next keypress.
+
+--
+
+Third point.
+
+???
+
+Say the numbers slowly. The audience will ask about churn.
+`
+
+export const presentDeck = `---
+title: Present mode
+---
+
+## Present mode
+
+Click **Present**, then use the arrow keys.
+
+???
+
+Press \`p\` to see this note in the presenter view.
+
+---
+
+<!-- name: keys -->
+
+## Keys
+
+- Right, Down, Space, \`j\`: next fragment, then next slide
+- Left, Up, \`k\`: previous
+- \`p\` presenter view, \`f\` full screen, Escape exits
+
+---
+
+## Fragments
+
+One.
+
+--
+
+Two.
+
+--
+
+Three.
+
+---
+
+<!-- class: center, middle, inverse -->
+
+## The end
+`
+
+export const editorDeck = `## Draft deck
+
+Type \`---\` on its own line and press Enter to start a slide.
+
+---
+
+## Second slide
+
+- Speaker notes and pauses are toolbar buttons
+- Preview shows the deck
+`
+
+{/* Links to the evidence for a claim, in the repository. */}
+export const blob = (path) => `${sites.github}/blob/main/${path}`
+
+# Markdown presentations in React
+
+A deck is built from the same Markdown file the rest of your app renders as a
+document. `@react-markdown-kit/slides` is one plugin with three entries (the
+deck, the deck plus present mode, and the deck plus the editor commands). The
+slides run inside the app you already have, so there's nothing new to deploy,
+no export step, and you don't end up keeping a second copy of the content.
+
+It renders decks and doesn't write out files. If you need PDF or PPTX, Marp
+and Slidev handle that, and the
+<Link to="/marp-alternative">comparison with Marp, Slidev and reveal.js</Link> goes
+through which tool fits which job.
+
+```bash
+npm install @react-markdown-kit/slides
+```
+
+```tsx
+import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { slides } from '@react-markdown-kit/slides'
+import '@react-markdown-kit/slides/styles.css' // optional: scaling, class hooks, present mode
+
+const preset = defineMarkdownPreset({ extensions: [slides()] })
+
+<div className="rmk-document">
+  <Markdown preset={preset}>{deck}</Markdown>
+</div>
+```
+
+You can try it in the <a href="/markdown-slides">slides demo</a>. The editor
+is on the left, the deck is on the right and Present is in the control bar. Add
+<a href="/markdown-slides?embed=1"><code>?embed=1</code></a> to drop the page chrome,
+which is the URL you'd use for an `iframe` in a blog post or your own docs.
+
+The rest of this page is reference, covering the dialect first, then present
+mode, then the editor commands.
+
+## A deck is Markdown
+
+A deck is a CommonMark or GFM file whose slides are separated by `---`
+between blank lines, and that's all it needs. GitHub, a diff or an editor
+that doesn't know about the plugin will show the same file as a document with
+horizontal rules in it. `slides()` is the whole API for the package. It reads
+the parsed tree a second way, and the renderer draws one
+`<article data-rmk-deck>` made of `<section>`s. Headings, lists, a GFM table
+and code inside a slide are the same elements they'd be outside one, drawn by
+the renderer's own handlers.
+
+<div className="slides-examples">
+<RenderExample title="A three-slide deck with front matter" gfm markdown={deck} rendererProps={{ extensions: headless }} />
+</div>
+
+`---` front matter at the top of the file sets deck properties. It's read as
+flat `key: value` lines (there's no YAML parser involved):
+
+| Key | Value | Effect |
+| --- | --- | --- |
+| `title` | text | `data-rmk-deck-title`; the fallback is the first slide's title |
+| `aspect` | `16:9` (default) or `4:3` | `data-rmk-deck-aspect`, overriding the `aspect` option |
+| `class` | class tokens | Prepended to every slide's `data-rmk-slide-class` |
+| `background` | a URL | The background of every slide that sets none |
+
+A `---` inside a fenced code block, a block quote or a list item isn't at the
+root, so it doesn't split anything. `***` and `___` are rules inside a slide,
+drawn as `<hr>`. Front matter is detected in the source instead of by the
+parser, so a deck that opens with `---` followed by content is plain
+CommonMark. You get a leading break that doesn't open a slide, and the lists
+and quotes after it keep their shape. `DIALECT.md`, which ships with the
+package, has the full reference for every construct.
+
+## Directives
+
+A comment on its own lines, anywhere in a slide, sets that slide's
+properties. Each comment holds one directive.
+
+| Directive | Argument | Emitted as |
+| --- | --- | --- |
+| `<!-- class: … -->` | tokens of `[A-Za-z0-9_-]`, separated by spaces or commas; may repeat and accumulates | `data-rmk-slide-class="a b"`, never `class` |
+| `<!-- background: … -->` | one URL | `<img data-rmk-slide-background src alt="">` as the section's first child, so the renderer's URL policy sanitises it like any image |
+| `<!-- name: … -->` | `[A-Za-z0-9_-]+` | `id="slide-<name>"` and `data-rmk-slide-name`, so `#slide-numbers` deep-links to it |
+
+<div className="slides-examples">
+<RenderExample title="class, name and background" markdown={directives} rendererProps={{ extensions: headless }}>
+  The stylesheet knows seven class tokens: <code>left</code>, <code>center</code>, <code>right</code> for text alignment,
+  <code>top</code>, <code>middle</code>, <code>bottom</code> for vertical placement, and <code>inverse</code> for the dark surface.
+  Any other token lands in <code>data-rmk-slide-class</code> for your own CSS.
+</RenderExample>
+</div>
+
+If a known key gets an argument it doesn't accept, or the key isn't known at
+all, the comment is left as is and a diagnostic is reported. The comment then
+renders the way any comment renders in the kit, as visible escaped text, so
+you'll see the typo on the slide instead of it disappearing quietly.
+
+## Speaker notes and fragments
+
+A paragraph that's exactly `???` starts the speaker notes, and every block
+after it up to the next slide break is part of the notes. A paragraph that's
+exactly `--` is a pause. The blocks after the k-th pause form fragment group
+k, and present mode reveals them one keypress at a time.
+
+<div className="slides-examples">
+<RenderExample title="Two pauses and a note" markdown={notes} rendererProps={{ extensions: headless }}>
+  In the static stack every fragment is visible, and the notes are in the DOM as
+  <code>&lt;aside data-rmk-slide-notes hidden&gt;</code>. They stay hidden without any stylesheet
+  but are still there for the presenter view and for search. <code>slides({'{ notes: false }'})</code> leaves the aside out completely.
+</RenderExample>
+</div>
+
+A `???` written on the line right after a paragraph, with no blank line in
+between, is a lazy continuation of that paragraph in CommonMark, so the plugin
+reports `SLIDES_MARKER_ATTACHED` instead of trying to guess. A `--` in the
+same spot behaves differently. Two or more dashes right under a line of text
+make that line a setext heading, so the text turns into an `<h2>` and the
+plugin reports `SLIDES_SETEXT_HEADING`. Either way, adding a blank line
+before the marker fixes it.
+
+## Present mode
+
+`@react-markdown-kit/slides/present` is the same extension under the same
+name, plus one renderer component that turns the article from the static deck
+into an interactive one. The first render is the static markup and the
+controls mount in an effect, so server rendering and hydration see the same
+DOM.
+
+```tsx
+'use client'
+
+import { slides } from '@react-markdown-kit/slides/present'
+
+const preset = defineMarkdownPreset({ extensions: [slides({ hashRouting: true })] })
+```
+
+<div className="slides-examples">
+<RenderExample title="Click Present, then use the keyboard" markdown={presentDeck} rendererProps={{ extensions: present }}>
+  Present mode covers the viewport. Escape brings this page back. On a phone, tap the right or
+  left half of a slide, or swipe.
+</RenderExample>
+</div>
+
+- **Keys** are only listened for on the deck element while presenting, so a
+  deck sitting in a page won't grab the page's keystrokes. Right, Down, Page
+  Down, Space and `j` go to the next fragment, then the next slide; Left, Up,
+  Page Up, Shift+Space and `k` go back; Home and End jump; `f` toggles full
+  screen where the browser supports it; `p` toggles the presenter view;
+  Escape exits. Keys with a modifier, or typed into an input, are ignored.
+- **Presenter view** shows the current slide, a preview of the next one, the
+  notes with `hidden` lifted, and a clock. If you open the deck in a second
+  window with `sync: 'my-deck'`, both windows follow the same
+  `BroadcastChannel`. That's how you'd put the notes on the laptop and the
+  slides on the projector.
+- **Deep links** work with `hashRouting: true`. `#3`, `#name` and `#slide-name`
+  open present mode at that slide on load, and the hash follows the current
+  slide while presenting. It's off on this page because the docs site needs
+  its own hashes.
+- **Options**: `initialMode: 'present'` or `'presenter'` opens in that mode; `controls: false`
+  removes the bar; `labels` replaces every string (`SLIDES_LABELS` has the
+  defaults); `onSlideChange(index)` reports the zero-based slide.
+
+There's no standalone slideshow component. You get the deck through
+`<Markdown>` and a preset, same as every other feature of the kit, so one
+Markdown file can render as a document, a deck or a presentation depending on
+which preset it's given.
+
+## Scaling, print and styling
+
+The optional stylesheet handles scaling with CSS only. Each `<section>` is a size
+container with a fixed aspect ratio, and the slide body sets its font size
+in `cqw`: `1.72cqw` is 22px on a 1280px-wide slide, and the renderer's
+`em`-based headings, lists and code follow along. A browser without container
+units gets a fixed size. The examples on this page bump that token up in the
+stack so the half-width thumbnails stay readable, and present mode uses the
+default.
+
+| Token | Default |
+| --- | --- |
+| `--rmk-slide-surface` / `--rmk-slide-text` | `#fff` / `#1e1e1e` |
+| `--rmk-slide-inverse-surface` / `--rmk-slide-inverse-text` | `#1e1e1e` / `#fff` |
+| `--rmk-slide-font-size` | `1.72cqw` |
+| `--rmk-slide-padding` | `3.75cqw` |
+| `--rmk-slide-radius` / `--rmk-slide-shadow` / `--rmk-slide-gap` | `var(--rmk-radius)` / `none` / `var(--rmk-space)` |
+| `--rmk-deck-backdrop` / `--rmk-deck-chrome` / `--rmk-deck-chrome-text` | `#111` / `#222` / `#fff`, present mode |
+
+The `classNames` prop of `<Markdown>` gets three more parts, `deck`, `slide`
+and `slideNotes`, if you use utility classes. Everything else is a data
+attribute on a plain element, so your own stylesheet doesn't need any class
+from the kit.
+
+When printing, every section gets `break-after: page` and the controls are
+hidden. You set the page size yourself:
+
+```css
+@media print {
+  @page { size: 16in 9in; margin: 0; }
+}
+```
+
+## Diagnostics
+
+Content problems don't throw. Each one becomes a diagnostic on the compiled
+document with the node's source range, and all the codes are exported as
+`SLIDES_DIAGNOSTIC_CODES`.
+
+| Code | Severity | When |
+| --- | --- | --- |
+| `SLIDES_SETEXT_HEADING` | info | A depth-2 heading made by dashes right under text; a blank line before `---` makes it a break |
+| `SLIDES_SLIDE_EMPTY` | info | A slide with no content blocks; still rendered, because an author who just typed the break must see it |
+| `SLIDES_FRONT_MATTER_INVALID` | warning | `---` then `key: value` lines at the top with no closing `---` line, or a line that is neither blank nor `key: value` before it |
+| `SLIDES_DIRECTIVE_INVALID` | warning | A known directive or front matter key with a rejected value |
+| `SLIDES_DIRECTIVE_UNKNOWN` | warning | `<!-- key: value -->` with a key that is not a directive |
+| `SLIDES_NAME_DUPLICATE` | warning | Two slides with the same `name`; the later one gets no `id` |
+| `SLIDES_MARKER_MISPLACED` | warning | A second `???`, or a `--` after `???`; ignored |
+| `SLIDES_MARKER_ATTACHED` | warning | A `--` or `???` glued to the paragraph above |
+| `SLIDES_PROPERTY_BARE` | info | A slide opening with bare `key: value` lines, remark's syntax, which this dialect does not read |
+
+## What the renderer emits
+
+```html
+<section data-rmk-slide="2" data-rmk-slide-title="Numbers" aria-roledescription="slide" aria-label="Numbers" id="slide-numbers" data-rmk-slide-name="numbers" data-rmk-slide-class="center middle" data-rmk-slide-fragments="2"><img data-rmk-slide-background="" src="https://example.com/bg.jpg" alt=""/><div data-rmk-slide-body=""><h2>Numbers</h2><p>Intro.</p><div data-rmk-fragment="1"><p>One.</p></div><div data-rmk-fragment="2"><p>Two.</p></div></div><aside data-rmk-slide-notes="" hidden=""><p>say this</p></aside></section>
+```
+
+- **No script, class or inline style, and no id other than
+  `slide-<name>`.** Optional attributes only show up when set.
+  <a href={blob('plugins/slides/tests/extension.test.tsx')}>extension.test.tsx</a> checks
+  the markup for a three-slide deck character for character, attribute order included,
+  and the block above is slide 2 of it, copied from that expectation.
+- **Server-renderable.** The deck is built as hast by a handler for the mdast
+  `root`, so it works in a server component and in static rendering. The
+  decks on this page were rendered at site build time, and
+  <a href={blob('plugins/slides/tests/present.dom.test.tsx')}>present.dom.test.tsx</a>
+  renders the present entry on the server and hydrates it without a mismatch.
+- **Slide labels for screen readers.** Each section has `aria-roledescription="slide"`
+  and an `aria-label` from its first heading, falling back to `slideLabel` and the
+  slide number (`Slide 3`).
+- **The rest of the document is left alone.** GFM footnotes end up after the
+  article, and the content policy runs on the deck like it does on any other
+  output, which is why a `javascript:` background loses its `src`.
+
+## Editor
+
+`@react-markdown-kit/slides/editor` adds authoring. It's the present entry
+plus an `editor` capability under the same name, so it replaces the
+renderer's `slides()` in a preset.
+
+```tsx
+import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { slides } from '@react-markdown-kit/slides/editor'
+
+const preset = defineMarkdownPreset({ extensions: [gfm(), slides()] })
+
+<MarkdownEditor preset={preset} value={value} onChange={setValue} />
+```
+
+<EditorExample
+  title="A deck in the editor: slide breaks are numbered, notes and pauses are dividers"
+  height={360}
+  markdown={editorDeck}
+  extensions={deckEditor}
+  classNames={{ preview: 'rmk-preview rmk-document' }}
+/>
+
+- The toolbar gets four buttons in a `slides` group: **New slide**,
+  **Speaker notes**, **Pause** and **Background**. The first three insert
+  `---`, `???` and `--`. Background inserts a directive chip, and you type
+  its value into an inline field.
+- Typing `---`, `***`, `--` or `???` on a line of its own and pressing Enter
+  turns the paragraph into the matching node.
+- A `<!-- key: value -->` directive shows up as a chip. Click its value to
+  edit it in place. Enter commits and Escape cancels, and if the directive
+  rejects the value it's marked invalid and doesn't get written.
+- Preview mode goes through the renderer, so it shows the interactive deck,
+  Present button included. The deck stylesheet is scoped to `.rmk-document`,
+  so the example above gives the preview surface that class with
+  `classNames={{ preview: 'rmk-preview rmk-document' }}`.
+- Blocks you don't touch are written back from their original bytes, so a
+  deck loaded and saved without edits comes out byte for byte the same
+  (<a href={blob('plugins/slides/tests/round-trip.test.ts')}>round-trip.test.ts</a>).
+- Front matter is an opaque block in rich mode. Switch to source mode to edit it.
+- Labels: the editor's `labels` prop relabels the toolbar buttons by id
+  (`slide`, `slideNotes`, `slidePause`, `slideBackground`) and the node
+  captions under `slides.notes`, `slides.pause`, `slides.slideBreak` and
+  `slides.rule`. `slides({ editorLabels })` sets only the node strings per
+  preset (`notes`, `pause`, `slideBreak`, `rule`, `directive(key)`,
+  `directiveValue`). It can't rename a toolbar button, so button captions
+  always go through `labels`.
+
+The built-in horizontal-rule button still inserts the editor's own rule node,
+which stays unlabelled until the document is loaded again. For a deck editor
+you'll probably want to hide it through the `toolbar` render prop.
+
+## Templates
+
+With `@react-markdown-kit/template`, a `{{placeholder}}` in slide prose
+resolves like it does anywhere else. Markers and directives stay literal, so a
+placeholder inside `<!-- background: … -->` is never treated as data and
+runtime values can't set a slide's properties. List `slides()` before
+`template()`.
+
+## The three entries
+
+| Entry | Loads | Adds |
+| --- | --- | --- |
+| `@react-markdown-kit/slides` | nothing beyond the parser (<a href={blob('tests/packaging.test.ts')}>packaging.test.ts</a>) | the extension: dialect, diagnostics, the static deck, serialization |
+| `@react-markdown-kit/slides/present` | React | a client `article` component: present mode, keyboard and pointer navigation, fragments, presenter view, deep links, cross-window sync |
+| `@react-markdown-kit/slides/editor` | React and Lexical | the present entry plus editor nodes, the Enter shortcut and the four toolbar commands |
+
+All three return an extension named `slides`, so a later entry replaces an
+earlier one in a preset. A Node service that renders decks to HTML, or
+resolves templates in them, can import the root entry and skip installing
+React and Lexical.
+
+## Programmatic API
+
+There's intentionally nothing beyond the plugin. `slides(options?)` takes
+`aspect` (`'16:9'` or `'4:3'`), `notes`, `frontMatter` and `slideLabel`;
+`/present` adds `hashRouting`, `initialMode`, `controls`, `sync`, `labels`
+and `onSlideChange`; `/editor` adds `editorLabels`, the node captions only
+(toolbar buttons are relabelled through the editor's `labels` prop). The
+node type constants, type guards and diagnostic codes are exported in case
+you have tooling that walks a compiled document.
+
+## Marp, Slidev and reveal.js
+
+Those three export decks to files, either PDF and PPTX from a command line or
+print to PDF from the browser. This plugin doesn't do either. It renders a deck
+inside a React app from Markdown the app already renders, with present mode
+and speaker notes. The <Link to="/marp-alternative">comparison page</Link> puts
+the four side by side and maps the Marp directives onto this dialect.
+
+## Next
+
+<a href="/markdown-slides">The slides demo</a> ·{' '}
+<a href="/markdown-slides?embed=1">The demo in embed mode</a> ·{' '}
+<Link to="/marp-alternative">Marp and Slidev alternative</Link> ·{' '}
+<a href="https://www.npmjs.com/package/@react-markdown-kit/slides">@react-markdown-kit/slides on npm</a> ·{' '}
+<Link to="/docs/editor/basics">The editor</Link> ·{' '}
+<Link to="/docs/styling">Styling</Link> ·{' '}
+<Link to="/docs/security">Security model</Link>

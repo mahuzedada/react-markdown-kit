@@ -12,7 +12,7 @@
  *
  * Layout and type go in Tailwind classes and zui primitives in the markup,
  * not in CSS. Colours live only in section 1. Run
- * `pnpm --filter react-markdown-kit-docs check-theme` after changing them.
+ * `pnpm --filter react-markdown-kit-site check-theme` after changing them.
  *
  * No preflight: rendered Markdown on the demos and in the docs keeps the
  * browser's (or the kit's) defaults, which is what the renderer promises.

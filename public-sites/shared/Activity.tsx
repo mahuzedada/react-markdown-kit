@@ -3,7 +3,7 @@ import { ActivityProvider } from '@zuilib/primitives/activity'
 import { consoleAdapter } from '@zuilib/primitives/activity/adapters'
 import { loadUmami, umamiAdapter } from './umami'
 
-export type ActivitySite = 'home' | 'docs' | 'renderer' | 'editor' | 'mermaid' | 'slides'
+export type ActivitySite = 'docs'
 
 export interface SiteActivityProps {
   readonly site: ActivitySite

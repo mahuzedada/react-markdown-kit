@@ -118,13 +118,13 @@ describe('telling a share hash from an anchor', () => {
 describe('the link', () => {
   it('appends the hash to the base it is given', async () => {
     const hash = await encodeShareHash(MARKDOWN)
-    expect(shareUrl(hash, 'https://renderer.reactmarkdownkit.com/')).toBe(
-      `https://renderer.reactmarkdownkit.com/#${hash}`,
+    expect(shareUrl(hash, 'https://reactmarkdownkit.com/markdown-renderer')).toBe(
+      `https://reactmarkdownkit.com/markdown-renderer#${hash}`,
     )
   })
 
   it('round-trips through the URL the reader would paste', async () => {
-    const link = shareUrl(await encodeShareHash(UNICODE), 'https://renderer.reactmarkdownkit.com/')
+    const link = shareUrl(await encodeShareHash(UNICODE), 'https://reactmarkdownkit.com/markdown-renderer')
     expect(await decodeShareHash(new URL(link).hash)).toBe(UNICODE)
   })
 })

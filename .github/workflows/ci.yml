@@ -49,10 +49,10 @@ jobs:
       # records numbers rather than failing a PR over them.
       - run: node benchmarks/run.mjs
 
-  # The docs site build is also a real integration test: RenderExample and
-  # TemplateExample server-render with the actual packages, so a renderer or a
-  # template plugin that reached for a browser global would fail here. The
-  # home page and the four demo sites build after it, against the same packages.
+  # The site build is also a real integration test: RenderExample,
+  # TemplateExample and the demo pages' landing copy server-render with the
+  # actual packages, so a renderer or a plugin that reached for a browser
+  # global would fail here.
   public-sites:
     runs-on: ubuntu-latest
     steps:
@@ -62,28 +62,24 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm --filter react-markdown-kit-docs build
+      - run: pnpm --filter react-markdown-kit-site build
       - name: Live examples must have server-rendered
         run: |
-          grep -q "<table>" public-sites/docs/build/index.html
-          grep -q "Acme Industrial" public-sites/docs/build/index.html
+          grep -q "<table>" public-sites/site/build/index.html
+          grep -q "Acme Industrial" public-sites/site/build/index.html
       # The slides page renders a deck on the server (a second <section> proves
       # the split) and imports the plugin stylesheet, which must reach the
       # built CSS: RenderExample loads no plugin CSS on its own.
       - name: The slides page server-rendered a deck with its stylesheet
         run: |
-          grep -q 'data-rmk-slide="2"' public-sites/docs/build/docs/slides/index.html
-          grep -q 'data-rmk-slide-body' public-sites/docs/build/assets/css/*.css
-      - run: pnpm --filter react-markdown-kit-renderer-demo build
-      - run: pnpm --filter react-markdown-kit-editor-demo build
-      - run: pnpm --filter react-markdown-kit-mermaid-demo build
-      - run: pnpm --filter react-markdown-kit-slides-demo build
-      # The SEO surface of the six built sites: one h1, title and description
+          grep -q 'data-rmk-slide="2"' public-sites/site/build/docs/slides/index.html
+          grep -q 'data-rmk-slide-body' public-sites/site/build/assets/css/*.css
+      # The SEO surface of the built site: one h1, title and description
       # lengths, canonical, Open Graph with a PNG, structured data, FAQPage
       # where there is an FAQ, robots, sitemap, llms.txt; then every href and
-      # src inside the six hosts and in the package READMEs resolves.
+      # src inside the site and in the package READMEs resolves.
       - run: pnpm vitest run tests/seo-surface.test.ts tests/seo-links.test.ts
-        env: { RMK_SITES_BUILT: '1' }   # here every host must exist; elsewhere unbuilt hosts skip
+        env: { RMK_SITES_BUILT: '1' }   # here the site must be built; elsewhere an unbuilt site skips
       # One row per page (host, path, title, description length, h1, JSON-LD
       # types), so a reviewer can eyeball the deploy in the job log.
       - run: pnpm seo:report

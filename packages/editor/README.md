@@ -26,7 +26,7 @@ editor JSON or a proprietary format.
 ## Links
 
 - Docs: [React Markdown editor](https://reactmarkdownkit.com/react-markdown-editor)
-- Demo: [editor.reactmarkdownkit.com](https://editor.reactmarkdownkit.com)
+- Demo: [reactmarkdownkit.com/markdown-editor](https://reactmarkdownkit.com/markdown-editor)
 - Round-trip guarantee: [the docs page](https://reactmarkdownkit.com/docs/editor/round-trip),
   backed by [`packages/editor/tests/roundtrip.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/packages/editor/tests/roundtrip.test.ts)
   and [`tests/roundtrip.test.ts`](https://github.com/mahuzedada/react-markdown-kit/blob/main/tests/roundtrip.test.ts)

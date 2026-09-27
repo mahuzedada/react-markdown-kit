@@ -9,14 +9,13 @@ const UMAMI_SCRIPT = 'https://stats.reactmarkdownkit.com/s.js'
  */
 const UMAMI_RECORDER = 'https://stats.reactmarkdownkit.com/recorder.js'
 
-/** One Umami website per public site, created in the Umami dashboard. */
+/**
+ * The Umami website of the site, created in the Umami dashboard. Until
+ * 2026-09-27 the home page and each demo had a website of its own; their
+ * history stays in the dashboard, and the demo pages now report here.
+ */
 const UMAMI_WEBSITE_IDS: Record<ActivitySite, string> = {
-  home: '66f4e4a3-5d29-4d4f-bc0f-66d108b75919',
   docs: '08b11cd9-b165-4a46-8ec9-848fa4e8fcad',
-  renderer: '653aa964-df7b-4d25-bdd1-6a0960d10c1a',
-  editor: '9bde38fc-d0b8-4fcf-bf8d-9fca52da0dce',
-  mermaid: '6bb93db7-97d8-427d-a75f-96ccfd91b184',
-  slides: '297095b3-3074-4c7d-b4df-160d5c3aa8b8',
 }
 
 type UmamiData = Record<string, string | number | boolean>

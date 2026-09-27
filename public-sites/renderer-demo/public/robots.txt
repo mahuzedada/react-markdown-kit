@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://renderer.reactmarkdownkit.com/sitemap.xml
