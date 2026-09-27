@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CopyCode } from '../../components/landing/CopyCode'
+import CodeBlock from '@theme/CodeBlock'
 import { Callout, Feature, Features, Hero, LinkRow, Page, Prose, Steps } from '../../components/landing/Page'
 import { docsUrl, sites } from '../../sites'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../components/landing/Seo'
@@ -152,8 +152,8 @@ export default function Landing(): ReactNode {
 
       <Prose>
         <h2>Install the plugin, and the editor if you want to author decks</h2>
-        <CopyCode code="npm install @react-markdown-kit/renderer @react-markdown-kit/slides" />
-        <CopyCode code="npm install @react-markdown-kit/editor" />
+        <CodeBlock language="bash">npm install @react-markdown-kit/renderer @react-markdown-kit/slides</CodeBlock>
+        <CodeBlock language="bash">npm install @react-markdown-kit/editor</CodeBlock>
         <p>
           You only need the first line to render a deck. The root entry doesn&rsquo;t load React, so a
           server component or a static build gets the same <code>&lt;article&gt;</code> of{' '}
@@ -169,14 +169,14 @@ export default function Landing(): ReactNode {
             <code>&lt;!-- class | background | name: … --&gt;</code> comments set a slide&rsquo;s
             properties. The output is static HTML with no script, classes or inline styles, and the
             notes get the HTML <code>hidden</code> attribute.
-            <CopyCode code={RENDER} />
+            <CodeBlock language="tsx">{RENDER}</CodeBlock>
           </li>
           <li>
             <strong>Write plain Markdown.</strong> On GitHub, in a diff or in any other editor, the
             file shows up as a document with horizontal rules. A <code>---</code> inside a fence, a
             quote or a list doesn&rsquo;t split the slide, and front matter at the top sets the title,
             the aspect ratio and the defaults for every slide.
-            <CopyCode code={DECK} />
+            <CodeBlock language="markdown">{DECK}</CodeBlock>
           </li>
           <li>
             <strong>Present, then edit.</strong> The <code>/present</code> entry&rsquo;s{' '}
@@ -185,8 +185,8 @@ export default function Landing(): ReactNode {
             <code>BroadcastChannel</code> that keeps two windows on the same slide. The{' '}
             <code>/editor</code> entry adds the slide break, the markers and the directive chips to the
             editor, with four toolbar buttons.
-            <CopyCode code={PRESENT} />
-            <CopyCode code={EDIT} />
+            <CodeBlock language="tsx">{PRESENT}</CodeBlock>
+            <CodeBlock language="tsx">{EDIT}</CodeBlock>
           </li>
         </Steps>
 
@@ -209,7 +209,7 @@ export default function Landing(): ReactNode {
           <em>Open in React Markdown Kit</em> link in the corner that opens the full editor in a new
           tab with the same deck.
         </p>
-        <CopyCode code={EMBED} />
+        <CodeBlock language="html">{EMBED}</CodeBlock>
         <p>
           The <code>d</code> value is the whole deck, so the frame doesn&rsquo;t need to load anything
           from your server. Press Share on this page to copy a link with your deck in it, then add{' '}

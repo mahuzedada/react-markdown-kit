@@ -89,7 +89,7 @@ export function Prose({ children, className }: ChildrenProps): ReactNode {
   )
 }
 
-/** Numbered how-to steps; each step can hold a CopyCode. */
+/** Numbered how-to steps; each step can hold a CodeBlock. */
 export function Steps({ children }: { readonly children: ReactNode }): ReactNode {
   return <ol className="pl-5 [&>li]:mb-5 [&_[data-copy-code]]:mt-2 [&_[data-copy-code]]:mb-0">{children}</ol>
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CopyCode } from '../../components/landing/CopyCode'
+import CodeBlock from '@theme/CodeBlock'
 import { Callout, Feature, Features, Hero, LinkRow, Page, Prose, Steps } from '../../components/landing/Page'
 import { docsUrl, sites } from '../../sites'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../components/landing/Seo'
@@ -141,7 +141,7 @@ export default function Landing(): ReactNode {
 
       <Prose>
         <h2>Install</h2>
-        <CopyCode code="npm install @react-markdown-kit/mermaid" />
+        <CodeBlock language="bash">npm install @react-markdown-kit/mermaid</CodeBlock>
         <p>
           That&rsquo;s everything you need to render diagrams and use the canvas. npm installs the renderer for you. If
           you also want to edit diagrams inside a Markdown editor, step 3 below shows how.
@@ -154,9 +154,9 @@ export default function Landing(): ReactNode {
           Mermaid back (you don&rsquo;t need a Markdown editor for this). It fills whatever container you put it in.
         </p>
         <p>In a React app:</p>
-        <CopyCode code={STANDALONE} />
+        <CodeBlock language="tsx">{STANDALONE}</CodeBlock>
         <p>Or mount it into any element on the page:</p>
-        <CopyCode code={VANILLA} />
+        <CodeBlock language="ts">{VANILLA}</CodeBlock>
         <p>A few things to try on the canvas:</p>
         <ul>
           <li>Double-click a shape or an arrow to type in it. Press Enter for a new line.</li>
@@ -177,20 +177,20 @@ export default function Landing(): ReactNode {
           <li>
             <strong>Render your diagrams.</strong> Add <code>mermaid()</code> to your preset and every{' '}
             <code>```mermaid</code> block in your Markdown turns into an SVG.
-            <CopyCode code={RENDER} />
+            <CodeBlock language="tsx">{RENDER}</CodeBlock>
           </li>
           <li>
             <strong>Write regular Mermaid.</strong> Use the same syntax you&rsquo;d put in a GitHub README. If a
             flowchart has no layout saved yet, it gets laid out for you.
-            <CopyCode code={FENCE} />
+            <CodeBlock language="markdown">{FENCE}</CodeBlock>
           </li>
           <li>
             <strong>Edit them on a canvas.</strong> Install the editor, then use the <code>mermaid()</code> from the{' '}
             <code>/editor</code> entry in your editor&rsquo;s preset. When you drag a flowchart around, the plugin saves
             the positions in a <code>%% rmk-layout v1</code> comment at the end of the diagram. Other Mermaid tools
             ignore that comment, so nothing breaks. Sequence diagrams don&rsquo;t need it at all.
-            <CopyCode code="npm install @react-markdown-kit/editor" />
-            <CopyCode code={EDIT} />
+            <CodeBlock language="bash">npm install @react-markdown-kit/editor</CodeBlock>
+            <CodeBlock language="tsx">{EDIT}</CodeBlock>
           </li>
         </Steps>
 
@@ -231,17 +231,17 @@ export default function Landing(): ReactNode {
           and people can open your diagram with one click. To get the snippet for your own diagram, press{' '}
           <strong>Share</strong> in the editor above.
         </p>
-        <CopyCode code={BADGE} />
+        <CodeBlock language="markdown">{BADGE}</CodeBlock>
         <p>
           The badge image lives at <a href="/badge.svg">/badge.svg</a>. The link in the example above opens this
           flowchart:
         </p>
-        <CopyCode code={EXAMPLE_SOURCE} />
+        <CodeBlock language="mermaid">{EXAMPLE_SOURCE}</CodeBlock>
         <p>
           To put the editor inside a blog post or a docs page, add <code>?embed=1</code> to any link. That hides the
           rest of the site:
         </p>
-        <CopyCode code={EMBED} />
+        <CodeBlock language="html">{EMBED}</CodeBlock>
       </Prose>
 
       <Faq id="mermaid-faq" items={FAQ} />

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CopyCode } from '../../components/landing/CopyCode'
+import CodeBlock from '@theme/CodeBlock'
 import { Callout, Feature, Features, Hero, LinkRow, Page, Prose, Steps } from '../../components/landing/Page'
 import { docsUrl, sites } from '../../sites'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../components/landing/Seo'
@@ -121,7 +121,7 @@ export default function Landing(): ReactNode {
 
       <Prose>
         <h2>Install the package</h2>
-        <CopyCode code="npm install @react-markdown-kit/renderer" />
+        <CodeBlock language="bash">npm install @react-markdown-kit/renderer</CodeBlock>
         <p>
           It needs React 18 or newer. You don&rsquo;t need a provider, stylesheet, config or design
           system to get going. The package has no <code>use client</code> directive, so it works in
@@ -133,19 +133,19 @@ export default function Landing(): ReactNode {
           <li>
             <strong>Render a string.</strong> Raw HTML is shown as text and never run, and unsafe URL
             schemes are emptied (no config needed).
-            <CopyCode code={RENDER} />
+            <CodeBlock language="tsx">{RENDER}</CodeBlock>
           </li>
           <li>
             <strong>Turn on GitHub Flavored Markdown</strong> for tables, task lists,
             strikethrough, autolinks and footnotes. A preset is where your app decides which
             Markdown features it supports. You define it once and reuse it everywhere.
-            <CopyCode code={GFM} />
+            <CodeBlock language="tsx">{GFM}</CodeBlock>
           </li>
           <li>
             <strong>Style it.</strong> You can opt into the shipped typography, pass your own
             components per element, or keep the plain semantic HTML and write your own CSS. The
             playground above uses a component for every element, and its Code tab has the source.
-            <CopyCode code={STYLE} />
+            <CodeBlock language="tsx">{STYLE}</CodeBlock>
           </li>
         </Steps>
 

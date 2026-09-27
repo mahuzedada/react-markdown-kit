@@ -1,44 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import Link from '@docusaurus/Link'
 import Layout from '@theme/Layout'
+import CodeBlock from '@theme/CodeBlock'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
 import Heading from '@zuilib/primitives/heading'
 import Text from '@zuilib/primitives/text'
 import sites from '@site/src/sites'
 import { BreadcrumbJsonLd, JsonLd, ORGANIZATION } from '@site/src/components/JsonLd'
-
-function InstallCommand({ command }: { readonly command: string }): ReactNode {
-  const [copied, setCopied] = useState(false)
-  useEffect(() => {
-    if (!copied) return
-    const timer = setTimeout(() => setCopied(false), 1600)
-    return () => clearTimeout(timer)
-  }, [copied])
-  return (
-    <Button
-      variant="outline"
-      track="copy-install"
-      className="h-auto max-w-full justify-start gap-3 border-border bg-muted py-[0.55rem] pr-[0.55rem] pl-4 text-left font-mono text-sm font-normal text-foreground hover:border-foreground hover:bg-muted"
-      aria-label={copied ? 'Copied' : `Copy ${command}`}
-      onClick={() => {
-        navigator.clipboard?.writeText(command).then(() => setCopied(true), () => {})
-      }}
-    >
-      <code className="border-0! bg-transparent! p-0! text-[length:inherit]! wrap-anywhere">{command}</code>
-      <Text
-        as="span"
-        size="xs"
-        weight="medium"
-        muted
-        className="flex-none rounded-md border border-border bg-background px-2 py-0.5 font-sans"
-        aria-hidden="true"
-      >
-        {copied ? 'Copied' : 'Copy'}
-      </Text>
-    </Button>
-  )
-}
 
 interface PageLink {
   readonly to: string
@@ -145,7 +114,11 @@ export default function Home(): ReactNode {
               Try the renderer demo
             </Button>
           </ActivityScope>
-          <InstallCommand command="npm install @react-markdown-kit/renderer" />
+          <div className="mx-auto max-w-md text-left">
+            <CodeBlock language="bash">
+              npm install @react-markdown-kit/renderer
+            </CodeBlock>
+          </div>
         </div>
       </header>
 

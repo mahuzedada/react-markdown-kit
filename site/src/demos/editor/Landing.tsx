@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import useBrokenLinks from '@docusaurus/useBrokenLinks'
-import { CopyCode } from '../../components/landing/CopyCode'
+import CodeBlock from '@theme/CodeBlock'
 import { Callout, Feature, Features, Hero, LinkRow, Page, Prose, Steps } from '../../components/landing/Page'
 import { docsUrl, sites } from '../../sites'
 import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../components/landing/Seo'
@@ -152,8 +152,8 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
 
       <Prose>
         <h2>Install the editor and the two plugins this demo uses</h2>
-        <CopyCode code="npm install @react-markdown-kit/editor @react-markdown-kit/renderer" />
-        <CopyCode code="npm install @react-markdown-kit/template @react-markdown-kit/mermaid" />
+        <CodeBlock language="bash">npm install @react-markdown-kit/editor @react-markdown-kit/renderer</CodeBlock>
+        <CodeBlock language="bash">npm install @react-markdown-kit/template @react-markdown-kit/mermaid</CodeBlock>
         <p>
           The editor needs the renderer for its preview mode and its parser. The template and Mermaid
           packages are optional plugins, so you only need them if you want variables or diagrams.
@@ -165,19 +165,19 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
             <strong>Mount the editor.</strong> It takes Markdown and gives you Markdown back, so your
             app keeps storing plain strings, and opening and closing a document doesn&rsquo;t change
             it. The stylesheet is optional (the editor works without it).
-            <CopyCode code={EDITOR} />
+            <CodeBlock language="tsx">{EDITOR}</CodeBlock>
           </li>
           <li>
             <strong>Share a dialect.</strong> Define your Markdown features once in a preset and pass
             it to both the editor and the renderer. A <code>```mermaid</code> fence becomes a canvas in the
             editor and static SVG in the renderer.
-            <CopyCode code={PRESET} />
+            <CodeBlock language="tsx">{PRESET}</CodeBlock>
           </li>
           <li>
             <strong>Add variables.</strong> The template plugin shows placeholders as chips while you
             write and resolves them when rendering. Values go into the parsed tree, which means data
             can&rsquo;t inject Markdown.
-            <CopyCode code={TEMPLATE} />
+            <CodeBlock language="tsx">{TEMPLATE}</CodeBlock>
           </li>
         </Steps>
 
