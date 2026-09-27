@@ -50,7 +50,7 @@ const FAQ: readonly FaqItem[] = [
 
 export default function Landing(): ReactNode {
   return (
-    <Page>
+    <Page id="docs">
       <Hero
         kicker="Free and open source, runs in your browser"
         title={TITLE}

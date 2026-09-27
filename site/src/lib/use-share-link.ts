@@ -31,6 +31,8 @@ export interface ShareLinkInput {
 }
 
 export interface ShareLink {
+  /** The hash (without `#`) the document encodes to, once the debounce has run. */
+  readonly hash: string | undefined
   /** The link to this document, once the debounce has encoded it. */
   readonly link: string | undefined
   /** The page opened with a share hash it could not read here. */
@@ -89,5 +91,5 @@ export function useShareLink({ source, setSource, pristine }: ShareLinkInput): S
     }
   }, [source, restored, pristine, unreadable])
 
-  return { link: hash === undefined ? undefined : shareUrl(hash, pageBase()), unreadable }
+  return { hash, link: hash === undefined ? undefined : shareUrl(hash, pageBase()), unreadable }
 }

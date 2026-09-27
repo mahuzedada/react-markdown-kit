@@ -50,10 +50,19 @@ export default function CodePane({ value, onChange, label, kind = 'flowchart' }:
     pre.scrollLeft = event.currentTarget.scrollLeft
   }, [])
 
+  // Tab indents, as in a code editor; Escape first lets the next Tab move focus on.
+  const released = useRef(false)
+
   const onKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
       const field = event.currentTarget
-      if (event.key === 'Tab' && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      if (event.key === 'Escape') {
+        released.current = true
+        return
+      }
+      const release = released.current
+      released.current = false
+      if (event.key === 'Tab' && !release && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault()
         field.setRangeText(INDENT, field.selectionStart, field.selectionEnd, 'end')
         onChange(field.value)
@@ -108,6 +117,7 @@ export default function CodePane({ value, onChange, label, kind = 'flowchart' }:
         autoCorrect="off"
         wrap="off"
         aria-label={label}
+        aria-description="Tab indents. Press Escape, then Tab, to leave the editor."
         data-zui-tag="source"
       />
     </div>

@@ -186,6 +186,52 @@
   border: 1px solid var(--rmk-border);
 }
 
+/*
+ * GFM task items. The list item carries `data-rmk-task`, so the box is drawn
+ * in its marker's place: an outlined square, with a tick inside once
+ * checked. Both are currentColor, so they follow the text in any theme.
+ */
+.rmk-editor [data-rmk-task] {
+  position: relative;
+  list-style: none;
+}
+
+.rmk-editor [data-rmk-task]::before,
+.rmk-editor [data-rmk-task="checked"]::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.rmk-editor [data-rmk-task]::before {
+  inset-block-start: calc((1lh - 0.95em) / 2);
+  inset-inline-start: -1.45em;
+  inline-size: 0.95em;
+  block-size: 0.95em;
+  border: 1.5px solid var(--rmk-muted);
+  border-radius: calc(var(--rmk-radius) / 1.5);
+}
+
+.rmk-editor [data-rmk-task="checked"]::before {
+  border-color: currentColor;
+  background: var(--rmk-surface-active);
+}
+
+.rmk-editor [data-rmk-task="checked"]::after {
+  inset-block-start: calc((1lh - 0.95em) / 2 + 0.16em);
+  inset-inline-start: calc(-1.45em + 0.32em);
+  inline-size: 0.3em;
+  block-size: 0.55em;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.rmk-editor [data-rmk-task="checked"] {
+  color: var(--rmk-muted);
+}
+
 .rmk-editor img {
   max-inline-size: 100%;
   block-size: auto;

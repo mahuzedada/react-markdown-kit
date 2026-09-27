@@ -53,4 +53,4 @@ export function add(a: number, b: number): number {
 [^1]: Footnotes render at the end of the document with a back link.
 `
 
-export const SAMPLE = { source: TOUR, gfm: true } as const
+export const SAMPLE = TOUR

@@ -58,10 +58,12 @@ function SmartLink({ node: _node, href, children, ...props }: WithNode<Component
   const external = /^https?:\/\//.test(href ?? '')
   if (!external) return <a href={href} {...props} className="sc-link">{children}</a>
   const host = new URL(href!).hostname.replace(/^www\./, '')
+  // An autolink already shows its address, so it gets no host tag.
+  const autolink = textOf(children) === href
   return (
     <a href={href} target="_blank" rel="noreferrer" {...props} className="sc-link sc-link-external">
       {children}
-      <span className="sc-host" aria-hidden="true">{host} ↗</span>
+      {autolink ? null : <span className="sc-host" aria-hidden="true">{host} ↗</span>}
     </a>
   )
 }
@@ -240,7 +242,8 @@ function Heading({ node, children, ...props }) {
 function SmartLink({ href, children, ...props }) {
   if (!/^https?:/.test(href)) return <a href={href} {...props}>{children}</a>
   const host = new URL(href).hostname.replace(/^www\\./, '')
-  return <a href={href} target="_blank" rel="noreferrer" {...props}>{children} <small>{host} ↗</small></a>
+  const autolink = textOf(children) === href   // the text already shows the address
+  return <a href={href} target="_blank" rel="noreferrer" {...props}>{children} {autolink ? null : <small>{host} ↗</small>}</a>
 }
 
 function Callout({ children, ...props }) {

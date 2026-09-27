@@ -7,7 +7,9 @@ import Button from '@zuilib/primitives/button'
 import NativeSelect from '@zuilib/primitives/native-select'
 import Text from '@zuilib/primitives/text'
 import { cn } from '@zuilib/primitives/lib/cn'
+import { DocsLink, PaneSwitch, StatusStrip } from '../../components/DemoStrip'
 import { tokenize } from '../../components/StreamExample'
+import { useCopy } from '../../lib/use-copy'
 import { useShareLink } from '../../lib/use-share-link'
 import { SAMPLE } from './samples'
 
@@ -32,11 +34,16 @@ const CHUNKS = [
 const chunkSize = (size: number): number => (size === 0 ? 1 + Math.floor(Math.random() * 8) : size)
 
 type MobilePane = 'source' | 'output'
+const PANES: readonly (readonly [MobilePane, string])[] = [
+  ['source', 'Input'],
+  ['output', 'Output'],
+]
 
 /*
  * Demo chrome, the same as the renderer playground: hairlines, one accent,
  * tabular numbers. Below 900px the panes stack and a switch in the status
- * strip picks one.
+ * strip picks one, starting on the output, which is also where a stream
+ * sends the reader.
  */
 const PANE_HEAD =
   'flex min-h-[2.35rem] items-center justify-between gap-2 border-b border-border px-[0.8rem] py-[0.3rem]'
@@ -81,8 +88,8 @@ export default function StreamDemo(): ReactNode {
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState<number>(SPEEDS[1].ms)
   const [chunk, setChunk] = useState<number>(CHUNKS[2].size)
-  const [mobilePane, setMobilePane] = useState<MobilePane>('source')
-  const [copied, setCopied] = useState(false)
+  const [mobilePane, setMobilePane] = useState<MobilePane>('output')
+  const { copied, blocked, copy } = useCopy()
   const [renders, setRenders] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const output = useRef<HTMLDivElement>(null)
@@ -151,18 +158,8 @@ export default function StreamDemo(): ReactNode {
     setElapsed(0)
     pinned.current = true
     if (output.current !== null) output.current.scrollTop = 0
+    setMobilePane('output')
     setPlaying(true)
-  }
-
-  const copy = (): void => {
-    if (link === undefined || typeof navigator.clipboard?.writeText !== 'function') return
-    navigator.clipboard.writeText(link).then(
-      () => {
-        setCopied(true)
-        window.setTimeout(() => setCopied(false), 1400)
-      },
-      () => undefined,
-    )
   }
 
   return (
@@ -236,9 +233,9 @@ export default function StreamDemo(): ReactNode {
               track="copy-link"
               disabled={link === undefined}
               title="Copies a link with the Markdown in the URL hash. Nothing is uploaded."
-              onClick={copy}
+              onClick={() => link !== undefined && void copy('link', link)}
             >
-              {copied ? 'Link copied' : 'Copy link'}
+              {copied === 'link' ? 'Copied' : 'Copy link'}
             </Button>
           </span>
         </div>
@@ -262,7 +259,7 @@ export default function StreamDemo(): ReactNode {
                     restore(SAMPLE)
                   }}
                 >
-                  Reset sample
+                  Reset
                 </Button>
               )}
             </div>
@@ -282,6 +279,10 @@ export default function StreamDemo(): ReactNode {
               <Text as="div" size="sm" className="m-0 border-t border-border px-[0.9rem] py-[0.6rem]">
                 This browser couldn&rsquo;t read the link, so you&rsquo;re seeing the sample instead. The shared link is
                 still in the address bar, and editing will replace it.
+              </Text>
+            ) : blocked === 'link' ? (
+              <Text as="div" size="sm" className="m-0 border-t border-border px-[0.9rem] py-[0.6rem]">
+                This browser blocked the clipboard. The link is in the address bar once you edit the Markdown.
               </Text>
             ) : null}
           </section>
@@ -313,21 +314,8 @@ export default function StreamDemo(): ReactNode {
           </section>
         </div>
 
-        <div className="flex flex-wrap gap-x-[1.4rem] gap-y-[0.4rem] border-t border-border bg-muted px-[0.9rem] py-2 text-xs text-muted-foreground tabular-nums [&_b]:font-semibold [&_b]:text-foreground">
-          <div className="hidden items-center gap-1 max-[900px]:inline-flex" role="group" aria-label="Pane">
-            {(['source', 'output'] as const).map((pane) => (
-              <Button
-                key={pane}
-                variant={pane === mobilePane ? 'solid' : 'outline'}
-                size="sm"
-                track={`pane-${pane}`}
-                aria-pressed={pane === mobilePane}
-                onClick={() => setMobilePane(pane)}
-              >
-                {pane === 'source' ? 'Input' : 'Output'}
-              </Button>
-            ))}
-          </div>
+        <StatusStrip>
+          <PaneSwitch panes={PANES} value={mobilePane} onChange={setMobilePane} />
           <span>
             tokens <b>{shown}</b> / {total}
           </span>
@@ -341,7 +329,8 @@ export default function StreamDemo(): ReactNode {
             elapsed <b>{(elapsed / 1000).toFixed(1)} s</b>
           </span>
           <span className="ml-auto max-[900px]:ml-0">every chunk is a full parse and render of the prefix</span>
-        </div>
+          <DocsLink />
+        </StatusStrip>
       </div>
     </ActivityScope>
   )

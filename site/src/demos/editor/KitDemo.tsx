@@ -1,15 +1,17 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import Markdown, { compileMarkdown, defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
+import Markdown, { compileMarkdown, defineMarkdownPreset, gfm, type MarkdownDocument } from '@react-markdown-kit/renderer'
 import { variables } from '@react-markdown-kit/variables'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
 import { ActivityScope } from '@zuilib/primitives/activity'
-import Badge from '@zuilib/primitives/badge'
 import Button from '@zuilib/primitives/button'
+import Tabs from '@zuilib/primitives/tabs'
 import Text from '@zuilib/primitives/text'
 import { cn } from '@zuilib/primitives/lib/cn'
 import { mermaid } from '@react-markdown-kit/mermaid/editor'
 import { variableChips } from '@react-markdown-kit/variables/editor'
-import { useShareHash } from './use-share-hash'
+import { DocsLink, PaneSwitch, StatusStrip } from '../../components/DemoStrip'
+import { useCopy } from '../../lib/use-copy'
+import { useShareLink } from '../../lib/use-share-link'
 
 import '@react-markdown-kit/editor/styles.css'
 import '@react-markdown-kit/mermaid/styles.css'
@@ -18,118 +20,127 @@ import '@react-markdown-kit/variables/styles.css'
 // One dialect for the editor, the variables plugin and the renderer, Mermaid included.
 const preset = defineMarkdownPreset({ extensions: [gfm(), mermaid()] })
 
-const INITIAL = `![{{brand.logoAlt}}]({{brand.logoUrl}})
+const INITIAL = `# Launch plan: search v2
 
-# Account review for {{customer.name}}
+**Owner:** {{team.name}} · **Ships:** {{launch.date | date:"long"}}
 
-Hello {{contact.firstName}}, your plan renews on {{renewsAt | date:"long"}}.
+This is rich mode. The pane on the right shows the Markdown it saves, and the source mode button in the toolbar shows the same text here.
 
-| Line item | Amount |
-| --- | ---: |
-| Subscription | {{amounts.subscription \\| currency:"USD"}} |
-| Overage | {{amounts.overage \\| currency:"USD"}} |
+## Before launch
 
-Usage is at {{usage.ratio | percent}} of the included allowance.
+- [x] Load test the new index
+- [x] Write the migration guide
+- [ ] Turn the flag on for 10% of traffic
 
-## How your data flows
+## Rollout
+
+| Stage | Traffic | Watch |
+| --- | ---: | --- |
+| Canary | 1% | error rate |
+| Ramp | 10% | p95 latency |
+| Full | 100% | support tickets |
+
+> Roll back by turning the flag off. The old index stays warm for a week.
+
+\`\`\`ts
+export const searchV2 = flag('search-v2', { rollout: 0.1 })
+\`\`\`
+
+## How a query flows
 
 \`\`\`mermaid
 flowchart LR
-    site["SOURCE<br/>Your site"] -->|usage| kit["PIPELINE<br/>Report job"]
-    kit -->|PDF| inbox>Monthly email]
-    style site fill:#a5d8ff,stroke:#1971c2
-    style kit fill:#b2f2bb,stroke:#2f9e44
-    style inbox fill:#ffec99,stroke:#f08c00
+    ui["CLIENT<br/>Search box"] -->|query| api["API<br/>Search service"]
+    api -->|flag on| next[(New index)]
+    api -->|flag off| old[(Old index)]
+    style ui fill:#a5d8ff,stroke:#1971c2
+    style api fill:#b2f2bb,stroke:#2f9e44
+    style next fill:#d0bfff,stroke:#7048e8
+    style old fill:#e9ecef,stroke:#868e96
 \`\`\`
 `
 
-const CUSTOMER = {
-  label: 'Acme Industrial',
-  locale: 'en-US',
-  data: {
-    brand: { logoAlt: 'Acme Industrial', logoUrl: 'https://placehold.co/160x40/0f6f6b/fff?text=ACME' },
-    customer: { name: 'Acme Industrial' },
-    contact: { firstName: 'Dana' },
-    renewsAt: '2026-11-01',
-    amounts: { subscription: 4800, overage: 312.5 },
-    usage: { ratio: 0.78 },
-  },
+/** What the placeholders resolve to on the Rendered tab and preview as in the chips. */
+const DATA = {
+  team: { name: 'Search platform' },
+  launch: { date: '2026-11-03' },
 }
+const LOCALE = 'en-US'
 
-type CopyState = 'copied' | 'blocked' | undefined
+type OutputTab = 'markdown' | 'rendered'
+const TABS: readonly (readonly [OutputTab, string])[] = [
+  ['markdown', 'Saved Markdown'],
+  ['rendered', 'Rendered'],
+]
 
-/** How long the button reports the copy before going back to its label. */
-const COPIED_MS = 1500
+type MobilePane = 'editor' | 'output'
+const PANES: readonly (readonly [MobilePane, string])[] = [
+  ['editor', 'Editor'],
+  ['output', 'Output'],
+]
 
-/** One pane of the workbench, and the title bar across its top. */
-const COLUMN = 'flex min-h-0 min-w-0 flex-col'
-const COLUMN_HEAD = 'flex items-center justify-between gap-2 border-b border-border px-3 py-1.5'
+/** One pane of the workbench, and the title bar across its top. Below 900px one pane shows at a time. */
+const COLUMN = 'flex min-h-0 min-w-0 flex-col max-[900px]:data-[mobile-hidden]:hidden'
+const COLUMN_HEAD = 'flex min-h-[2.35rem] items-center justify-between gap-2 border-b border-border px-3 py-1'
+const FILL = 'flex min-h-0 flex-1 flex-col'
 
 /** A line under the editor about the share link. */
 const NOTE = 'm-0 border-t border-border px-3 py-1.5'
 
 /**
- * The editor, with both plugins, wired the way a real application would wire
- * them: the editor authors a document with placeholders as chips and a
- * diagram on a canvas, and the renderer shows the same document resolved for
- * one customer. Edit on the left and the right follows.
+ * The editor with both plugins, wired the way a real application would wire
+ * them: the editor writes a document with placeholders as chips and a
+ * diagram on a canvas. The right pane shows the Markdown the editor saves
+ * and the same document rendered, with the placeholders filled in.
  *
- * The document also lives in the URL hash (src/share.ts), so "Copy link"
- * hands over a link that carries it. Nothing is uploaded.
+ * The document also lives in the URL hash (src/lib/use-share-link.ts), so
+ * "Copy link" hands over a link that carries it. Nothing is uploaded.
  */
 export default function KitDemo(): ReactNode {
   const [source, setSource] = useState(INITIAL)
-  const [copied, setCopied] = useState<CopyState>(undefined)
-  const { link, unreadable } = useShareHash(source, setSource, INITIAL)
+  const [tab, setTab] = useState<OutputTab>('markdown')
+  const [mobilePane, setMobilePane] = useState<MobilePane>('editor')
+  const { copied, blocked, copy } = useCopy()
+  const pristine = source === INITIAL
+  const { link, unreadable } = useShareLink({ source, setSource, pristine })
 
-  const copyLink = useCallback(() => {
-    if (link === undefined) return
-    const report = (state: CopyState): void => {
-      setCopied(state)
-      setTimeout(() => setCopied((current) => (current === state ? undefined : current)), COPIED_MS)
-    }
-    if (typeof navigator.clipboard?.writeText !== 'function') {
-      report('blocked')
-      return
-    }
-    navigator.clipboard.writeText(link).then(
-      () => report('copied'),
-      () => report('blocked'),
-    )
-  }, [link])
-
-  // The source is recompiled as the author types, with the variables plugin
-  // filling it in for the customer.
+  // The source is recompiled as the author types, with the variables plugin filling it in.
   const result = useMemo(() => {
     const document = compileMarkdown(source, {
       preset,
-      extensions: [variables({ data: CUSTOMER.data, locale: CUSTOMER.locale })],
+      extensions: [variables({ data: DATA, locale: LOCALE })],
     })
     const diagnostics = document.diagnostics
     return { ok: !diagnostics.some((diagnostic) => diagnostic.severity === 'error'), document, diagnostics }
   }, [source])
 
-  // Chips in the editor preview the customer. Preview data is display only:
+  // The plugin never renders a half-filled document. While the author types
+  // a placeholder the data doesn't have, the tab keeps the last document
+  // that resolved and says what is wrong above it.
+  const lastGood = useRef<MarkdownDocument | undefined>(undefined)
+  if (result.ok) lastGood.current = result.document
+  const shown = result.ok ? result.document : lastGood.current
+
+  // Chips in the editor preview the data. Preview data is display only:
   // the saved source keeps its placeholders.
-  const editorExtensions = useMemo(
-    () => [variableChips({ previewData: CUSTOMER.data, previewLocale: CUSTOMER.locale })],
-    [],
-  )
+  const editorExtensions = useMemo(() => [variableChips({ previewData: DATA, previewLocale: LOCALE })], [])
 
   return (
     <ActivityScope feature="editor-workbench">
       {/* Full-bleed and exactly one viewport tall; the page scrolls past it. */}
       <div className="flex h-[var(--rmk-demo-height,100dvh)] flex-col overflow-hidden border-b border-border bg-card">
-        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className={COLUMN}>
+        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] max-[900px]:grid-cols-1">
+          <div className={COLUMN} data-mobile-hidden={mobilePane !== 'editor' ? '' : undefined}>
             <div className={COLUMN_HEAD}>
-              <Text as="span" size="sm" weight="semibold">
-                Authored source
+              <Text as="span" size="sm" weight="medium" muted>
+                Editor
               </Text>
-              <span className="flex min-w-0 items-center gap-1.5">
-                <Badge variant="subtle" tone="success" size="sm">
-                  saved as Markdown, placeholders and all
-                </Badge>
+              <span className="flex min-w-0 items-center gap-1">
+                {pristine ? null : (
+                  <Button variant="ghost" size="sm" track="reset" onClick={() => setSource(INITIAL)}>
+                    Reset
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   tone="primary"
@@ -137,16 +148,16 @@ export default function KitDemo(): ReactNode {
                   track="copy-link"
                   disabled={link === undefined}
                   title="Copies a link with this document in the URL hash. Nothing is uploaded."
-                  onClick={copyLink}
+                  onClick={() => link !== undefined && void copy('link', link)}
                 >
-                  {copied === 'copied' ? 'Copied' : 'Copy link'}
+                  {copied === 'link' ? 'Copied' : 'Copy link'}
                 </Button>
               </span>
             </div>
             {/* The editor fills its pane; its toolbar stays put and only the content scrolls. */}
             <div
               className={cn(
-                'flex min-h-0 flex-1 flex-col',
+                FILL,
                 // The kit's stylesheet is unlayered, so overrides of its own properties need `!`.
                 '[&>.rmk-editor]:min-h-0 [&>.rmk-editor]:flex-1 [&>.rmk-editor]:rounded-none! [&>.rmk-editor]:border-0!',
                 '[&_.rmk-editor_.rmk-content]:min-h-0! [&_.rmk-editor_.rmk-content]:flex-1 [&_.rmk-editor_.rmk-content]:overflow-auto',
@@ -155,9 +166,9 @@ export default function KitDemo(): ReactNode {
             >
               <MarkdownEditor preset={preset} extensions={editorExtensions} value={source} onChange={setSource} />
             </div>
-            {copied === 'blocked' ? (
+            {blocked === 'link' ? (
               <Text size="sm" className={NOTE}>
-                This browser blocked the clipboard, but the same link is in the address bar.
+                This browser blocked the clipboard. The link is in the address bar once you edit the document.
               </Text>
             ) : null}
             {unreadable ? (
@@ -168,32 +179,73 @@ export default function KitDemo(): ReactNode {
             ) : null}
           </div>
 
-          <div className={cn(COLUMN, 'border-l border-border max-[900px]:border-t max-[900px]:border-l-0')}>
-            <div className={COLUMN_HEAD}>
-              <Text as="span" size="sm" weight="semibold">
-                Resolved for {CUSTOMER.label}
-              </Text>
-              <Badge variant="subtle" tone="warning" size="sm">
-                follows every edit
-              </Badge>
-            </div>
-            {result.ok ? (
-              <div className="rmk-document min-h-0 flex-1 overflow-auto px-4.5 py-3.5">
-                <Markdown preset={preset} document={result.document} />
+          <div
+            className={cn(COLUMN, 'border-l border-border max-[900px]:border-l-0')}
+            data-mobile-hidden={mobilePane !== 'output' ? '' : undefined}
+          >
+            <Tabs
+              className={FILL}
+              variant="pills"
+              size="sm"
+              track="output"
+              selectedIndex={TABS.findIndex(([name]) => name === tab)}
+              onSelectedIndexChange={(index) => setTab(TABS[index]?.[0] ?? 'markdown')}
+            >
+              <div className={COLUMN_HEAD}>
+                <Tabs.List>
+                  {TABS.map(([name, label]) => (
+                    <Tabs.Tab key={name}>{label}</Tabs.Tab>
+                  ))}
+                </Tabs.List>
+                {tab === 'markdown' ? (
+                  <Button variant="ghost" size="sm" track="copy-markdown" onClick={() => void copy('markdown', source)}>
+                    {copied === 'markdown' ? 'Copied' : 'Copy'}
+                  </Button>
+                ) : null}
               </div>
-            ) : (
-              <ul className="m-0 py-3 pr-3 pl-7.5 text-sm text-danger-text">
-                {result.diagnostics.map((diagnostic, index) => (
-                  <li key={`${diagnostic.code}-${index}`}>
-                    <code>{diagnostic.code}</code>{' '}
-                    {diagnostic.path === undefined ? '' : <code>{diagnostic.path}</code>}{' '}
-                    {diagnostic.message}
-                  </li>
-                ))}
-              </ul>
-            )}
+              <Tabs.Panels className={cn(FILL, 'mt-0')}>
+                <Tabs.Panel className={FILL}>
+                  <pre className="m-0 flex-1 overflow-auto bg-transparent p-[0.9rem] font-mono text-[0.76rem] leading-[1.55] whitespace-pre-wrap text-foreground [word-break:break-word]">
+                    {source}
+                  </pre>
+                </Tabs.Panel>
+                <Tabs.Panel className="min-h-0 flex-1 overflow-auto">
+                  {result.ok ? null : (
+                    <div className="border-b border-border bg-danger/8 px-4 py-2 text-sm text-danger-text">
+                      <p className="m-0">Showing the last version that resolved. The current one doesn&rsquo;t:</p>
+                      <ul className="m-0 mt-1 pl-5">
+                        {result.diagnostics
+                          .filter((diagnostic) => diagnostic.severity === 'error')
+                          .map((diagnostic, index) => (
+                            <li key={`${diagnostic.code}-${index}`}>
+                              {diagnostic.path === undefined ? null : <code>{diagnostic.path}</code>} {diagnostic.message}
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
+                  {shown === undefined ? null : (
+                    <div className={cn('rmk-document px-4.5 py-3.5', !result.ok && 'opacity-60')}>
+                      <Markdown preset={preset} document={shown} />
+                    </div>
+                  )}
+                </Tabs.Panel>
+              </Tabs.Panels>
+            </Tabs>
           </div>
         </div>
+
+        <StatusStrip>
+          <PaneSwitch panes={PANES} value={mobilePane} onChange={setMobilePane} />
+          <span>
+            characters <b>{source.length}</b>
+          </span>
+          <span>
+            errors <b>{result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length}</b>
+          </span>
+          <span className="ml-auto max-[900px]:ml-0">edited in this browser, nothing is uploaded</span>
+          <DocsLink />
+        </StatusStrip>
       </div>
     </ActivityScope>
   )

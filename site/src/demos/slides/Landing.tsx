@@ -115,7 +115,7 @@ const FAQ: readonly FaqItem[] = [
 export default function Landing(): ReactNode {
   return (
     // Print is the deck alone: the landing copy and the footer after it stay off the page.
-    <Page className="print:hidden">
+    <Page id="docs" className="print:hidden">
       <Hero
         kicker="Free and open source, no account needed"
         title={TITLE}

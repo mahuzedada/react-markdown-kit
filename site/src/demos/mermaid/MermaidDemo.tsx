@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { scrollToDocs } from '../../components/DemoStrip'
+import { useCopy } from '../../lib/use-copy'
+import { useShareLink } from '../../lib/use-share-link'
 import { compileMarkdown } from '@react-markdown-kit/renderer'
 import { MermaidCanvas } from '@react-markdown-kit/mermaid/canvas'
 import mermaidPackage from '@react-markdown-kit/mermaid/package.json'
 import { docsUrl, sites } from '../../sites'
 import { useTheme } from '../../lib/useTheme'
-import { decodeShareHash, encodeShareHash, mermaidLiveUrl, shareUrl, sourceFromShared } from './share'
+import { mermaidLiveUrl, shareUrl, sourceFromShared } from './share'
 import { DEFAULT_CODE, SAMPLE_GROUPS } from './samples'
 import { KINDS, preset } from './preset'
 import { diagramStatus } from './status'
@@ -101,9 +104,6 @@ const CHIP = 'h-[1.875rem] rounded-[9px]! px-[0.7rem] text-[0.76rem] font-medium
 const ACTION_GRID = 'grid grid-cols-3 gap-[0.4rem] [&>*]:min-w-0'
 const CHEVRON = 'size-4 transition-transform duration-(--duration-normal)'
 
-/** How long after the last keystroke the URL hash follows the source. */
-const HASH_DEBOUNCE_MS = 300
-
 const ZOOM_STEP = 1.25
 const ZOOM_MIN = 0.25
 const ZOOM_MAX = 4
@@ -112,100 +112,7 @@ function wrap(code: string): string {
   return `\`\`\`mermaid\n${code}\n\`\`\`\n`
 }
 
-/** This page without its query, so a shared link opens the full site. */
-function pageBase(): string {
-  return `${location.origin}${location.pathname}`
-}
-
-interface ShareHash {
-  /** The hash the current source encodes to, for the share panel. */
-  readonly hash: string | undefined
-  /** The page opened with a hash it could not read (corrupt, or `#pako:` without the streams API). */
-  readonly unreadable: boolean
-}
-
-/**
- * The URL hash as the document: restored on load and on `hashchange`,
- * written back (debounced, `replaceState`) whenever the source changes. A
- * hash the page cannot read is left in the address bar untouched until the
- * user edits, so a link is never silently replaced by the default diagram.
- * A mermaid.live hash pointed at this host opens too (share.ts).
- */
-function useShareHash(code: string, setCode: (code: string) => void): ShareHash {
-  const [hash, setHash] = useState<string | undefined>(undefined)
-  // Nothing is written until the hash the page opened with has been read,
-  // so the default diagram never overwrites a shared one.
-  const [restored, setRestored] = useState(false)
-  const [unreadable, setUnreadable] = useState(false)
-  const written = useRef<string | undefined>(undefined)
-
-  useEffect(() => {
-    let cancelled = false
-    const restore = async (): Promise<void> => {
-      const current = location.hash
-      if (current !== '' && current.slice(1) !== written.current) {
-        const payload = await decodeShareHash(current)
-        if (cancelled) return
-        if (payload === undefined) setUnreadable(true)
-        else {
-          setUnreadable(false)
-          setCode(sourceFromShared(payload))
-        }
-      }
-      if (!cancelled) setRestored(true)
-    }
-    void restore()
-    addEventListener('hashchange', restore)
-    return () => {
-      cancelled = true
-      removeEventListener('hashchange', restore)
-    }
-  }, [setCode])
-
-  useEffect(() => {
-    if (!restored) return
-    let cancelled = false
-    const timer = setTimeout(async () => {
-      const next = await encodeShareHash(code)
-      if (cancelled) return
-      setHash(next)
-      // The plain URL stays plain until the default diagram is edited, and
-      // an unreadable hash stays until the user edits.
-      if (code === DEFAULT_CODE && (location.hash === '' || unreadable)) return
-      written.current = next
-      setUnreadable(false)
-      history.replaceState(null, '', `#${next}`)
-    }, HASH_DEBOUNCE_MS)
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [code, restored, unreadable])
-
-  return { hash, unreadable }
-}
-
 type Copy = (key: string, text: string, field?: HTMLInputElement | HTMLTextAreaElement | null) => void
-
-/** Copies `text` and reports it for a moment. Falls back to selecting the field. */
-function useCopy(): { readonly copied: string | undefined; readonly copy: Copy; readonly done: (key: string) => void } {
-  const [copied, setCopied] = useState<string | undefined>(undefined)
-  const done = useCallback((key: string): void => {
-    setCopied(key)
-    setTimeout(() => setCopied((current) => (current === key ? undefined : current)), 1500)
-  }, [])
-  const copy = useCallback<Copy>(
-    (key, text, field) => {
-      if (typeof navigator.clipboard?.writeText === 'function') {
-        navigator.clipboard.writeText(text).then(() => done(key), () => field?.select())
-      } else {
-        field?.select()
-      }
-    },
-    [done],
-  )
-  return { copied, copy, done }
-}
 
 /** The editor in the browser's fullscreen mode, with a fixed-position fallback where the API is missing. */
 function useFullscreen(target: React.RefObject<HTMLElement | null>): { readonly active: boolean; readonly toggle: () => void } {
@@ -277,8 +184,19 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
   const [pngScale, setPngScale] = useState(2)
   const [exportProblem, setExportProblem] = useState<string | undefined>(undefined)
   const [liveUrl, setLiveUrl] = useState<string | undefined>(undefined)
-  const { hash, unreadable } = useShareHash(code, setCode)
-  const { copied, copy, done } = useCopy()
+  // A mermaid.live hash pointed at this host opens too: its JSON state carries the code (share.ts).
+  const restore = useCallback((payload: string) => setCode(sourceFromShared(payload)), [])
+  const { hash, link, unreadable } = useShareLink({ source: code, setSource: restore, pristine: code === DEFAULT_CODE })
+  const { copied, copy: copyText, done } = useCopy()
+  // Where the clipboard is blocked, the field holding the text is selected for a manual copy.
+  const copy = useCallback<Copy>(
+    (key, text, field) => {
+      void copyText(key, text).then((ok) => {
+        if (!ok) field?.select()
+      })
+    },
+    [copyText],
+  )
   const { theme, toggle: toggleTheme } = useTheme()
   const stage = useRef<HTMLElement>(null)
   const fullscreen = useFullscreen(stage)
@@ -286,7 +204,6 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
   const markdown = useMemo(() => wrap(code), [code])
 
   // The share targets follow the debounced hash; before it exists the buttons wait.
-  const link = hash === undefined ? undefined : shareUrl(hash, pageBase())
   const fullEditor = hash === undefined ? sites.mermaidDemo : shareUrl(hash)
 
   useEffect(() => {
@@ -550,6 +467,7 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
                 'bottom-(--gap) left-1/2 -translate-x-1/2 gap-[0.4rem] px-[0.9rem] py-0 text-[0.8rem] font-medium whitespace-nowrap text-muted-foreground no-underline hover:text-foreground max-[900px]:hidden',
               )}
               href="#docs"
+              onClick={scrollToDocs}
               data-zui-tag="scroll-to-docs"
             >
               <ArrowDownIcon />
@@ -557,17 +475,31 @@ export default function MermaidDemo({ embed = false }: MermaidDemoProps): ReactN
             </a>
           )}
 
-          <div
-            className={cn(
-              ISLAND,
-              'bottom-(--gap) px-3 py-0',
-              panelOpen ? 'right-[calc(var(--panel-width)_+_2_*_var(--gap))] max-[900px]:hidden' : 'right-(--gap)',
-            )}
-          >
-            <a className="text-xs text-muted-foreground no-underline hover:text-foreground" href={docsUrl('/docs/mermaid')} data-zui-tag="version">
-              v{mermaidPackage.version}
-            </a>
-          </div>
+          {/* With the code panel closed its warnings can't be seen, so the corner says there is one. */}
+          {!panelOpen && (unreadable || status.tone !== 'ok') ? (
+            <Button
+              variant="outline"
+              size="sm"
+              track="show-problem"
+              className={cn(ISLAND, 'right-(--gap) bottom-(--gap) h-auto max-w-[calc(100%_-_2_*_var(--gap)_-_13rem)] rounded-(--island-radius)! px-3 text-warning-text')}
+              aria-controls="mermaid-code-panel"
+              onClick={() => setPanelOpen(true)}
+            >
+              <span className="truncate">{unreadable ? 'Couldn’t read the link' : status.label}</span>
+            </Button>
+          ) : (
+            <div
+              className={cn(
+                ISLAND,
+                'bottom-(--gap) px-3 py-0',
+                panelOpen ? 'right-[calc(var(--panel-width)_+_2_*_var(--gap))] max-[900px]:hidden' : 'right-(--gap)',
+              )}
+            >
+              <a className="text-xs text-muted-foreground no-underline hover:text-foreground" href={docsUrl('/docs/mermaid')} data-zui-tag="version">
+                v{mermaidPackage.version}
+              </a>
+            </div>
+          )}
         </MermaidCanvas>
       </section>
 

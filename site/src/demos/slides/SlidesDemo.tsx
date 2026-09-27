@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Markdown, compileMarkdown, defineMarkdownPreset, gfm, type MarkdownPreset } from '@react-markdown-kit/renderer'
 import { MarkdownEditor } from '@react-markdown-kit/editor'
 import { ActivityScope } from '@zuilib/primitives/activity'
@@ -8,6 +8,7 @@ import Button from '@zuilib/primitives/button'
 import Heading from '@zuilib/primitives/heading'
 import Text from '@zuilib/primitives/text'
 import { slides } from '@react-markdown-kit/slides/editor'
+import { DocsLink, PaneSwitch, StatusStrip } from '../../components/DemoStrip'
 import { SAMPLE_DECK } from './sample-deck'
 import { renderToolbar } from './toolbar'
 import {
@@ -31,6 +32,16 @@ const SYNC_CHANNEL = 'rmk-slides-demo'
 const PRESENTER_WINDOW = 'rmk-slides-presenter'
 const URL_DEBOUNCE_MS = 400
 const STATUS_MS = 3500
+/** Long enough to reach Undo after a reset. */
+const UNDO_MS = 8000
+/** Parser notes listed under the deck; the rest are counted. */
+const NOTES_SHOWN = 3
+
+type MobilePane = 'editor' | 'deck'
+const PANES: readonly (readonly [MobilePane, string])[] = [
+  ['editor', 'Editor'],
+  ['deck', 'Deck'],
+]
 
 /*
  * Chrome for the workbench: the header and the two panes. The editor, the
@@ -45,7 +56,8 @@ const STATUS_MS = 3500
  */
 const SHELL =
   'flex h-[var(--rmk-demo-height,100dvh)] flex-col overflow-hidden border-b border-border bg-card print:h-auto print:overflow-visible print:border-0 print:bg-transparent print:[page:rmk-slides]'
-const PANE = 'flex min-h-0 min-w-0 flex-col'
+/** Below 900px one pane shows at a time, the deck first. */
+const PANE = 'flex min-h-0 min-w-0 flex-col max-[900px]:data-[mobile-hidden]:hidden'
 const PANE_HEAD = 'flex items-center justify-between gap-2 border-b border-border px-3 py-2 print:hidden'
 const INLINE_CODE = '[&_code]:font-mono [&_code]:text-[0.9em]'
 
@@ -72,18 +84,24 @@ function createPreset(view: DemoView): MarkdownPreset {
 interface InitialSource {
   readonly source: string
   readonly notice?: string
+  /** The deck came from this browser's storage, not the link or the sample. */
+  readonly fromStorage: boolean
 }
 
 /** `?d=` first, then what this browser saved last time, then the sample. */
 async function loadInitialSource(): Promise<InitialSource> {
   const param = readSourceParam(location.search)
   const stored = readStoredSource()
-  if (param === null) return { source: stored ?? SAMPLE_DECK }
+  const fromStorage = stored !== undefined && stored !== SAMPLE_DECK
+  if (param === null) return { source: stored ?? SAMPLE_DECK, fromStorage }
   const decoded = await decodeSource(param)
-  if (decoded !== undefined) return { source: decoded }
+  if (decoded !== undefined) return { source: decoded, fromStorage: false }
   return {
     source: stored ?? SAMPLE_DECK,
-    notice: 'This browser couldn’t read the deck in the link (compressed links need the streams API), so you’re seeing the last deck you edited.',
+    fromStorage,
+    notice: fromStorage
+      ? 'This browser couldn’t read the deck in the link (compressed links need the streams API), so you’re seeing the last deck you edited.'
+      : 'This browser couldn’t read the deck in the link (compressed links need the streams API), so you’re seeing the sample deck.',
   }
 }
 
@@ -126,25 +144,40 @@ interface DeckMeta {
 function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
   const [source, setSource] = useState(initial.source)
   const [notice, setNotice] = useState(initial.notice)
+  const [restoredNotice, setRestoredNotice] = useState(initial.fromStorage && initial.notice === undefined)
   const [status, setStatus] = useState('')
+  // The deck a reset replaced, while Undo is on offer, and whether the reset cleared it from storage.
+  const [undo, setUndo] = useState<{ readonly source: string; readonly cleared: boolean } | undefined>(undefined)
   const [encoded, setEncoded] = useState<string | undefined>(undefined)
   const [meta, setMeta] = useState<DeckMeta>({ title: '', count: 0 })
+  const [mobilePane, setMobilePane] = useState<MobilePane>('deck')
   const deckRef = useRef<HTMLDivElement>(null)
 
   // Compiled once per change: the deck renders from it and the header reads its diagnostics.
   const document = useMemo(() => compileMarkdown(source, { preset }), [source, preset])
   const problems = document.diagnostics
 
-  // Persist: storage at once, the address bar after a pause (encoding is async).
+  // Storage follows the reader's own edits only, so opening someone's link
+  // never replaces the deck this browser was keeping.
+  const current = useRef(source)
+  current.current = source
+  const edit = useCallback((next: string): void => {
+    // The editor may echo the value it was given; only a change is an edit.
+    if (next === current.current) return
+    setSource(next)
+    storeSource(next)
+    setRestoredNotice(false)
+  }, [])
+
+  // The address bar follows after a pause (encoding is async). The sample keeps the plain URL.
   useEffect(() => {
-    storeSource(source)
     setEncoded(undefined)
     let cancelled = false
     const timer = setTimeout(() => {
       void encodeSource(source).then((value) => {
         if (cancelled) return
         setEncoded(value)
-        writeSourceParam(value)
+        writeSourceParam(source === SAMPLE_DECK ? undefined : value)
       })
     }, URL_DEBOUNCE_MS)
     return () => {
@@ -153,8 +186,8 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
     }
   }, [source])
 
-  // The header shows what the renderer decided: the deck's title and slide count.
-  useEffect(() => {
+  // The header shows what the renderer decided: the deck's title and slide count, before the first paint.
+  useLayoutEffect(() => {
     const article = deckRef.current?.querySelector('[data-rmk-deck]')
     setMeta({
       title: article?.getAttribute('data-rmk-deck-title') ?? '',
@@ -162,12 +195,18 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
     })
   }, [document])
 
-  // A short confirmation in the header, cleared on its own.
+  // A short confirmation in the header, cleared on its own; one with Undo stays longer.
   useEffect(() => {
     if (status === '') return
-    const timer = setTimeout(() => setStatus(''), STATUS_MS)
+    const timer = setTimeout(
+      () => {
+        setStatus('')
+        setUndo(undefined)
+      },
+      undo === undefined ? STATUS_MS : UNDO_MS,
+    )
     return () => clearTimeout(timer)
-  }, [status])
+  }, [status, undo])
 
   const encodedNow = useCallback(async (): Promise<string> => encoded ?? encodeSource(source), [encoded, source])
 
@@ -193,11 +232,24 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
   }, [encodedNow])
 
   const reset = useCallback((): void => {
-    clearStoredSource()
+    // Storage is cleared only when it holds the deck on screen: resetting a
+    // deck opened from someone's link leaves this browser's own deck alone.
+    const cleared = readStoredSource() === source
+    if (cleared) clearStoredSource()
+    setUndo(source === SAMPLE_DECK ? undefined : { source, cleared })
     setSource(SAMPLE_DECK)
     setNotice(undefined)
+    setRestoredNotice(false)
     setStatus('Sample deck restored.')
-  }, [])
+  }, [source])
+
+  const undoReset = useCallback((): void => {
+    if (undo === undefined) return
+    setSource(undo.source)
+    if (undo.cleared) storeSource(undo.source)
+    setUndo(undefined)
+    setStatus('Your deck is back.')
+  }, [undo])
 
   const worst = problems.some((problem) => problem.severity === 'error')
     ? 'error'
@@ -230,12 +282,17 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
             <Button variant="outline" size="sm" track="print" onClick={() => window.print()}>
               Print
             </Button>
-            <Button variant="ghost" size="sm" track="reset" onClick={reset}>
+            <Button variant="ghost" size="sm" track="reset" disabled={source === SAMPLE_DECK} onClick={reset}>
               Reset
             </Button>
           </div>
-          <output className="min-h-0 basis-full text-sm text-foreground empty:hidden" aria-live="polite">
+          <output className="flex min-h-0 basis-full items-center gap-2 text-sm text-foreground empty:hidden" aria-live="polite">
             {status}
+            {status !== '' && undo !== undefined ? (
+              <Button variant="link" size="sm" track="undo-reset" className="h-auto p-0" onClick={undoReset}>
+                Undo
+              </Button>
+            ) : null}
           </output>
         </header>
 
@@ -244,9 +301,17 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
             {notice}
           </Text>
         )}
+        {restoredNotice ? (
+          <Text size="sm" className="m-0 flex flex-wrap items-center gap-x-2 border-b border-border bg-muted px-4 py-2 print:hidden">
+            This is the deck you edited last time in this browser.
+            <Button variant="link" size="sm" track="open-sample" className="h-auto p-0" onClick={reset}>
+              Open the sample deck
+            </Button>
+          </Text>
+        ) : null}
 
-        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] print:block">
-          <div className={cn(PANE, 'print:hidden')}>
+        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] max-[900px]:grid-cols-1 print:block">
+          <div className={cn(PANE, 'print:hidden')} data-mobile-hidden={mobilePane !== 'editor' ? '' : undefined}>
             <div className={PANE_HEAD}>
               <Text as="span" size="sm" weight="medium">
                 Markdown
@@ -264,7 +329,7 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
                 '[&_.rmk-editor_.rmk-toolbar]:sticky [&_.rmk-editor_.rmk-toolbar]:top-0 [&_.rmk-editor_.rmk-toolbar]:z-1',
               )}
             >
-              <MarkdownEditor preset={preset} value={source} onChange={setSource} toolbar={renderToolbar} aria-label="Deck source" />
+              <MarkdownEditor preset={preset} value={source} onChange={edit} toolbar={renderToolbar} aria-label="Deck source" />
             </div>
             <Text size="sm" muted className={cn('m-0 border-t border-border px-[0.9rem] py-2', INLINE_CODE)}>
               Type <code>---</code>, <code>--</code> or <code>???</code> on a line and press Enter, or use the Slides buttons. Switch to
@@ -272,7 +337,10 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
             </Text>
           </div>
 
-          <div className={cn(PANE, 'border-l border-border max-[900px]:border-t max-[900px]:border-l-0 print:border-0')}>
+          <div
+            className={cn(PANE, 'border-l border-border max-[900px]:border-l-0 print:border-0')}
+            data-mobile-hidden={mobilePane !== 'deck' ? '' : undefined}
+          >
             <div className={PANE_HEAD}>
               <Text as="span" size="sm" weight="medium">
                 Deck
@@ -299,15 +367,22 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
                 )}
                 aria-label="Parser notes"
               >
-                {problems.slice(0, 3).map((problem, index) => (
+                {problems.slice(0, NOTES_SHOWN).map((problem, index) => (
                   <li key={`${problem.code}-${index}`}>
                     <code>{problem.code}</code> {problem.message}
                   </li>
                 ))}
+                {problems.length > NOTES_SHOWN ? <li>and {problems.length - NOTES_SHOWN} more</li> : null}
               </ul>
             )}
           </div>
         </div>
+
+        <StatusStrip>
+          <PaneSwitch panes={PANES} value={mobilePane} onChange={setMobilePane} />
+          <span className="ml-auto max-[900px]:ml-0">kept in this browser and in the link, nothing is uploaded</span>
+          <DocsLink />
+        </StatusStrip>
       </div>
     </ActivityScope>
   )

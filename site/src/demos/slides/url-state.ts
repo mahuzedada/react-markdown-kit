@@ -1,28 +1,23 @@
 /**
- * The deck in the address bar. `?d=` holds the source, deflated through
- * `CompressionStream` and written as base64url, so a whole deck fits in a
- * link. A browser without the streams API writes the UTF-8 bytes as plain
- * base64url instead; a one-letter prefix (`z` deflated, `u` plain) tells the
- * reader which it got. `?view=` picks the page's role: the editor, the
- * audience window or the presenter window. `?embed=1` drops both and renders
- * the deck alone, for an iframe in someone else's page.
+ * The deck in the address bar. `?d=` holds the source in the payload every
+ * demo shares (`pako:` or `base64:`, site/src/lib/share.ts). It sits in the
+ * query rather than the hash because present mode keeps the slide number in
+ * the hash. Links written before the shared codec (`z` deflate-raw, `u`
+ * plain, then base64url) still open. `?view=` picks the page's role: the
+ * editor, the audience window or the presenter window. `?embed=1` drops both
+ * and renders the deck alone, for an iframe in someone else's page.
  */
+import { decodeShareHash, encodeShareHash, isShareHash } from '../../lib/share'
+
 export type DemoView = 'edit' | 'present' | 'presenter'
 
 export const SOURCE_PARAM = 'd'
 export const VIEW_PARAM = 'view'
 export const EMBED_PARAM = 'embed'
 
-const DEFLATED = 'z'
-const PLAIN = 'u'
-
-function toBase64Url(bytes: Uint8Array): string {
-  let binary = ''
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000))
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
+/** The prefixes of links written before the shared codec. */
+const LEGACY_DEFLATED = 'z'
+const LEGACY_PLAIN = 'u'
 
 function fromBase64Url(text: string): Uint8Array {
   const base64 = text.replace(/-/g, '+').replace(/_/g, '/')
@@ -43,23 +38,18 @@ async function pipe(bytes: Uint8Array, transform: CompressionStream | Decompress
 }
 
 /** The `?d=` value for `source`. */
-export async function encodeSource(source: string): Promise<string> {
-  const bytes = new TextEncoder().encode(source)
-  if (!hasStreams()) return PLAIN + toBase64Url(bytes)
-  try {
-    return DEFLATED + toBase64Url(await pipe(bytes, new CompressionStream('deflate-raw')))
-  } catch {
-    return PLAIN + toBase64Url(bytes)
-  }
+export function encodeSource(source: string): Promise<string> {
+  return encodeShareHash(source)
 }
 
 /** The source a `?d=` value holds, or undefined when it cannot be read here. */
 export async function decodeSource(value: string): Promise<string | undefined> {
+  if (isShareHash(value)) return decodeShareHash(value)
   const prefix = value.charAt(0)
   const body = value.slice(1)
   try {
-    if (prefix === PLAIN) return new TextDecoder().decode(fromBase64Url(body))
-    if (prefix === DEFLATED && hasStreams()) {
+    if (prefix === LEGACY_PLAIN) return new TextDecoder().decode(fromBase64Url(body))
+    if (prefix === LEGACY_DEFLATED && hasStreams()) {
       return new TextDecoder().decode(await pipe(fromBase64Url(body), new DecompressionStream('deflate-raw')))
     }
   } catch {
@@ -101,11 +91,15 @@ export function linkFor(encoded: string, view: DemoView): string {
   return url.toString()
 }
 
-/** Writes `?d=` for the page as it is (same view, same hash) without a history entry. */
-export function writeSourceParam(encoded: string): void {
+/**
+ * Writes `?d=` for the page as it is (same view, same hash) without a
+ * history entry, or removes it for `undefined`, so the sample keeps the plain URL.
+ */
+export function writeSourceParam(encoded: string | undefined): void {
   const url = new URL(location.href)
-  if (url.searchParams.get(SOURCE_PARAM) === encoded) return
-  url.searchParams.set(SOURCE_PARAM, encoded)
+  if ((url.searchParams.get(SOURCE_PARAM) ?? undefined) === encoded) return
+  if (encoded === undefined) url.searchParams.delete(SOURCE_PARAM)
+  else url.searchParams.set(SOURCE_PARAM, encoded)
   try {
     history.replaceState(history.state, '', url.toString())
   } catch {

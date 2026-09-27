@@ -112,7 +112,7 @@ export interface LandingProps {
 
 export default function Landing({ roundTrip }: LandingProps): ReactNode {
   return (
-    <Page>
+    <Page id="docs">
       <Hero
         kicker="Free and open source, no account needed"
         title={TITLE}

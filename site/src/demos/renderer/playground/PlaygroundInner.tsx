@@ -16,14 +16,14 @@ import Checkbox from '@zuilib/primitives/checkbox'
 import { cn } from '@zuilib/primitives/lib/cn'
 import Tabs from '@zuilib/primitives/tabs'
 import Text from '@zuilib/primitives/text'
-import { buildProps } from './buildProps'
+import { CODE, PROPS } from './config'
 import { SHOWCASE_CLASS_NAME } from './showcase'
 import { formatBytes, formatMs, prettyHtml, timeMedian, treeJson, wordCount } from './measure'
 import { DEFAULT_STATE, type OutputTab, type PlaygroundState } from './state'
+import { DocsLink, PaneSwitch, StatusStrip } from '../../../components/DemoStrip'
+import { useCopy } from '../../../lib/use-copy'
 import { useShareLink } from '../../../lib/use-share-link'
 
-import '@react-markdown-kit/mermaid/styles.css'
-import './utility-demo.css'
 import './showcase.css'
 
 const TABS: readonly [OutputTab, string][] = [
@@ -35,12 +35,19 @@ const TABS: readonly [OutputTab, string][] = [
 
 const TREE_LIMIT = 20_000
 type MobilePane = 'source' | 'output'
+const PANES: readonly (readonly [MobilePane, string])[] = [
+  ['source', 'Source'],
+  ['output', 'Output'],
+]
+
+/** A dropped file is read as text only when it looks like text. */
+const TEXT_FILE = /\.(md|markdown|mdx|txt)$/i
 
 /*
  * Playground chrome: hairlines, one accent, tabular numbers. The rendered
- * Markdown itself is styled only by whatever the reader selected: nothing,
- * the kit's `.rmk-document` stylesheet, or the demo utility classes. Below
- * 900px the two panes stack and a switch in the status strip picks one.
+ * Markdown is styled by the showcase components and their stylesheet. Below
+ * 900px the two panes stack and a switch in the status strip picks one,
+ * starting on the output.
  */
 const PANE_HEAD =
   'flex min-h-[2.35rem] items-center justify-between gap-2 border-b border-border px-[0.8rem] py-[0.3rem]'
@@ -65,49 +72,29 @@ interface Timings {
  */
 export default function PlaygroundInner(): ReactNode {
   const [state, setState] = useState<PlaygroundState>(DEFAULT_STATE)
-  const [mobilePane, setMobilePane] = useState<MobilePane>('source')
+  const [mobilePane, setMobilePane] = useState<MobilePane>('output')
   const [keepPositions, setKeepPositions] = useState(false)
   const [dropping, setDropping] = useState(false)
-  const [copied, setCopied] = useState<string | undefined>(undefined)
   const [timings, setTimings] = useState<Timings | undefined>(undefined)
+  const { copied, blocked, copy } = useCopy()
 
   const source = useDeferredValue(state.source)
-  const built = useMemo(() => buildProps(state), [state])
+  const document = useMemo(() => compileMarkdown(source, { preset: PROPS.preset }), [source])
+  // One parse feeds the live output, the tree and the HTML; the HTML is only built while its tab is open.
+  const element = useMemo(() => <Markdown {...PROPS} document={document} />, [document])
+  const html = useMemo(() => (state.tab === 'html' ? renderToStaticMarkup(element) : ''), [element, state.tab])
 
-  const wrapperClassName =
-    state.styling === 'kit'
-      ? 'rmk-document'
-      : state.styling === 'utility'
-        ? 'pg-utility'
-        : state.styling === 'showcase'
-          ? SHOWCASE_CLASS_NAME
-          : ''
-
-  const element = useMemo(() => <Markdown {...built.props}>{source}</Markdown>, [built, source])
-  const html = useMemo(() => renderToStaticMarkup(element), [element])
-  const document = useMemo(
-    () => compileMarkdown(source, built.props.preset === undefined ? {} : { preset: built.props.preset }),
-    [source, built.props.preset],
-  )
-
-  // Timings run after paint, in the reader's browser, medians of a few runs.
+  // Timings run once typing pauses, in the reader's browser, medians of a few runs.
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      const runs = source.length > 30_000 ? 3 : 7
-      const options = built.props.preset === undefined ? {} : { preset: built.props.preset }
-      const parse = timeMedian(() => compileMarkdown(source, options), runs)
-      const renderFromSource = timeMedian(
-        () => renderToStaticMarkup(<Markdown {...built.props}>{source}</Markdown>),
-        runs,
-      )
-      const renderFromDocument = timeMedian(
-        () => renderToStaticMarkup(<Markdown {...built.props} document={document} />),
-        runs,
-      )
+      const runs = source.length > 30_000 ? 3 : 5
+      const parse = timeMedian(() => compileMarkdown(source, { preset: PROPS.preset }), runs)
+      const renderFromSource = timeMedian(() => renderToStaticMarkup(<Markdown {...PROPS}>{source}</Markdown>), runs)
+      const renderFromDocument = timeMedian(() => renderToStaticMarkup(<Markdown {...PROPS} document={document} />), runs)
       setTimings({ parse, renderFromSource, renderFromDocument })
-    }, 250)
+    }, 600)
     return () => window.clearTimeout(handle)
-  }, [source, built, document])
+  }, [source, document])
 
   const patch = useCallback((changes: Partial<PlaygroundState>) => {
     setState((current) => ({ ...current, ...changes }))
@@ -123,22 +110,19 @@ export default function PlaygroundInner(): ReactNode {
     pristine: state.source === DEFAULT_STATE.source,
   })
 
-  const copy = useCallback((label: string, text: string) => {
-    const done = (): void => {
-      setCopied(label)
-      window.setTimeout(() => setCopied((current) => (current === label ? undefined : current)), 1400)
-    }
-    if (typeof navigator.clipboard?.writeText !== 'function') return
-    navigator.clipboard.writeText(text).then(done, () => undefined)
-  }, [])
-
   const onDrop = (event: DragEvent<HTMLTextAreaElement>): void => {
     event.preventDefault()
     setDropping(false)
     const file = event.dataTransfer.files[0]
-    if (file === undefined) return
+    if (file === undefined || !(file.type.startsWith('text/') || TEXT_FILE.test(file.name))) return
     void file.text().then((text) => patch({ source: text }))
   }
+
+  const note = unreadable
+    ? 'This browser couldn’t read the link, so you’re seeing the sample instead. The shared link is still in the address bar, and editing will replace it.'
+    : blocked === undefined
+      ? 'Type, paste or drop a .md file here. Copy link puts the whole document in the URL (nothing is uploaded).'
+      : 'This browser blocked the clipboard. The link is in the address bar once you edit the document.'
 
   const onSourceChange = (event: ChangeEvent<HTMLTextAreaElement>): void => {
     patch({ source: event.target.value })
@@ -159,18 +143,24 @@ export default function PlaygroundInner(): ReactNode {
             <div className={PANE_HEAD}>
               <Text as="span" size="sm" weight="medium" muted>Markdown</Text>
               <span className={ACTIONS}>
-                <Button variant="ghost" size="sm" track="copy-markdown" onClick={() => copy('markdown', state.source)}>
+                {state.source === DEFAULT_STATE.source ? null : (
+                  <Button variant="ghost" size="sm" track="reset" onClick={() => setSource(DEFAULT_STATE.source)}>
+                    Reset
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" track="copy-markdown" onClick={() => void copy('markdown', state.source)}>
                   {copied === 'markdown' ? 'Copied' : 'Copy'}
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="outline"
+                  tone="primary"
                   size="sm"
                   track="copy-link"
                   disabled={link === undefined}
-                  title="Put this document in the address bar and copy the link"
-                  onClick={() => link !== undefined && copy('link', link)}
+                  title="Copies a link with this document in the URL hash. Nothing is uploaded."
+                  onClick={() => link !== undefined && void copy('link', link)}
                 >
-                  {copied === 'link' ? 'Link copied' : 'Copy link'}
+                  {copied === 'link' ? 'Copied' : 'Copy link'}
                 </Button>
               </span>
             </div>
@@ -192,9 +182,7 @@ export default function PlaygroundInner(): ReactNode {
               onDrop={onDrop}
             />
             <Text as="div" size="sm" className="m-0 border-t border-border px-[0.9rem] py-[0.6rem]">
-              {unreadable
-                ? 'This browser couldn’t read the link, so you’re seeing the sample instead. The shared link is still in the address bar, and editing will replace it.'
-                : 'Type, paste or drop a .md file here. Copy link puts the whole document in the URL (nothing is uploaded).'}
+              {note}
             </Text>
           </section>
 
@@ -214,12 +202,12 @@ export default function PlaygroundInner(): ReactNode {
                   ))}
                 </Tabs.List>
                 {state.tab === 'code' && (
-                  <Button variant="ghost" size="sm" track="copy-code" onClick={() => copy('code', built.code)}>
+                  <Button variant="ghost" size="sm" track="copy-code" onClick={() => void copy('code', CODE)}>
                     {copied === 'code' ? 'Copied' : 'Copy'}
                   </Button>
                 )}
                 {state.tab === 'html' && (
-                  <Button variant="ghost" size="sm" track="copy-html" onClick={() => copy('html', html)}>
+                  <Button variant="ghost" size="sm" track="copy-html" onClick={() => void copy('html', html)}>
                     {copied === 'html' ? 'Copied' : 'Copy'}
                   </Button>
                 )}
@@ -229,7 +217,7 @@ export default function PlaygroundInner(): ReactNode {
               </div>
 
               <Tabs.Panels className={cn(FILL, 'mt-0')}>
-                <Tabs.Panel className={cn('flex-1 overflow-auto px-[1.1rem] py-4 text-[0.94rem]', wrapperClassName)} style={built.wrapperStyle} data-zui-private="">
+                <Tabs.Panel className={cn('w-full min-w-0 flex-1 overflow-auto px-[1.1rem] py-4 text-[0.94rem]', SHOWCASE_CLASS_NAME)} data-zui-private="">
                   {element}
                 </Tabs.Panel>
                 <Tabs.Panel className={FILL}>
@@ -241,28 +229,15 @@ export default function PlaygroundInner(): ReactNode {
                   </pre>
                 </Tabs.Panel>
                 <Tabs.Panel className={FILL}>
-                  <pre className={SOURCE_VIEW}>{built.code}</pre>
+                  <pre className={SOURCE_VIEW}>{CODE}</pre>
                 </Tabs.Panel>
               </Tabs.Panels>
             </Tabs>
           </section>
         </div>
 
-        <div className="flex flex-wrap gap-x-[1.4rem] gap-y-[0.4rem] border-t border-border bg-muted px-[0.9rem] py-2 text-xs text-muted-foreground tabular-nums [&_b]:font-semibold [&_b]:text-foreground">
-          <div className={cn(ACTIONS, 'hidden max-[900px]:inline-flex')} role="group" aria-label="Pane">
-            {(['source', 'output'] as const).map((pane) => (
-              <Button
-                key={pane}
-                variant={pane === mobilePane ? 'solid' : 'outline'}
-                size="sm"
-                track={`pane-${pane}`}
-                aria-pressed={pane === mobilePane}
-                onClick={() => setMobilePane(pane)}
-              >
-                {pane === 'source' ? 'Source' : 'Output'}
-              </Button>
-            ))}
-          </div>
+        <StatusStrip>
+          <PaneSwitch panes={PANES} value={mobilePane} onChange={setMobilePane} />
           <span>
             <b>{formatBytes(state.source.length)}</b> · {wordCount(state.source)} words
           </span>
@@ -279,7 +254,8 @@ export default function PlaygroundInner(): ReactNode {
             diagnostics <b>{document.diagnostics.length}</b>
           </span>
           <span className="ml-auto max-[900px]:ml-0">medians, measured in this browser</span>
-        </div>
+          <DocsLink />
+        </StatusStrip>
       </div>
     </ActivityScope>
   )

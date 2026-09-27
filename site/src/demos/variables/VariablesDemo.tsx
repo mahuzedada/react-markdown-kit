@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Markdown, { compileMarkdown, defineMarkdownPreset, documentToMarkdown, gfm } from '@react-markdown-kit/renderer'
 import { variables } from '@react-markdown-kit/variables'
 import { ActivityScope } from '@zuilib/primitives/activity'
@@ -8,6 +8,8 @@ import NativeSelect from '@zuilib/primitives/native-select'
 import Tabs from '@zuilib/primitives/tabs'
 import Text from '@zuilib/primitives/text'
 import { cn } from '@zuilib/primitives/lib/cn'
+import { DocsLink, PaneSwitch, StatusStrip } from '../../components/DemoStrip'
+import { useCopy } from '../../lib/use-copy'
 import { useShareLink } from '../../lib/use-share-link'
 import { DATASETS, LOCALES, SOURCE } from './samples'
 
@@ -56,11 +58,15 @@ const PLACEHOLDER = /\{\{[^{}]*\}\}/g
 
 type OutputTab = 'rendered' | 'markdown' | 'diagnostics'
 type MobilePane = 'source' | 'output'
+const PANES: readonly (readonly [MobilePane, string])[] = [
+  ['source', 'Source and data'],
+  ['output', 'Output'],
+]
 
 /*
  * Demo chrome, the same as the renderer playground: hairlines, one accent,
  * tabular numbers. Below 900px the panes stack and a switch in the status
- * strip picks one.
+ * strip picks one, starting on the output.
  */
 const PANE_HEAD = 'flex min-h-[2.35rem] items-center justify-between gap-2 border-b border-border px-[0.8rem] py-[0.3rem]'
 const PANE = 'flex min-h-0 min-w-0 flex-col max-[900px]:data-[mobile-hidden]:hidden'
@@ -81,28 +87,39 @@ const CODE_VIEW =
 export default function VariablesDemo(): ReactNode {
   const [state, setState] = useState<DemoState>(INITIAL)
   const [tab, setTab] = useState<OutputTab>('rendered')
-  const [mobilePane, setMobilePane] = useState<MobilePane>('source')
-  const [copied, setCopied] = useState<string | undefined>(undefined)
+  const [mobilePane, setMobilePane] = useState<MobilePane>('output')
   const [markdown, setMarkdown] = useState<string | undefined>(undefined)
+  const { copied, blocked, copy } = useCopy()
 
   const deferred = useDeferredValue(state)
   const data = useMemo(() => parseData(deferred.data), [deferred.data])
+  // Half-typed JSON resolves against the last data that parsed, so one
+  // missing comma doesn't turn every placeholder into an error.
+  const lastValid = useRef<unknown>(DATASETS[0]?.data ?? {})
+  if (data.ok) lastValid.current = data.value
+  const resolveWith = data.ok ? data.value : lastValid.current
 
   const result = useMemo(() => {
     const document = compileMarkdown(deferred.source, {
       preset,
-      extensions: [variables({ data: data.ok ? data.value : {}, locale: deferred.locale })],
+      extensions: [variables({ data: resolveWith, locale: deferred.locale })],
     })
     const diagnostics = document.diagnostics
     return { ok: !diagnostics.some((diagnostic) => diagnostic.severity === 'error'), document, diagnostics }
-  }, [deferred.source, deferred.locale, data])
+  }, [deferred.source, deferred.locale, resolveWith])
 
   // Serializing loads the Markdown writer on demand, so it runs after render.
   useEffect(() => {
     let cancelled = false
-    void documentToMarkdown(result.document, { preset }).then((text) => {
-      if (!cancelled) setMarkdown(text)
-    })
+    setMarkdown(undefined)
+    documentToMarkdown(result.document, { preset }).then(
+      (text) => {
+        if (!cancelled) setMarkdown(text)
+      },
+      () => {
+        if (!cancelled) setMarkdown('The Markdown writer failed to load. Reload the page to try again.')
+      },
+    )
     return () => {
       cancelled = true
     }
@@ -113,17 +130,6 @@ export default function VariablesDemo(): ReactNode {
   const { link, unreadable } = useShareLink({ source: shared, setSource: restore, pristine: shared === INITIAL_SHARED })
 
   const patch = useCallback((changes: Partial<DemoState>) => setState((current) => ({ ...current, ...changes })), [])
-
-  const copy = useCallback((label: string, text: string) => {
-    if (typeof navigator.clipboard?.writeText !== 'function') return
-    navigator.clipboard.writeText(text).then(
-      () => {
-        setCopied(label)
-        window.setTimeout(() => setCopied((current) => (current === label ? undefined : current)), 1400)
-      },
-      () => undefined,
-    )
-  }, [])
 
   const activeDataset = DATASETS.findIndex(
     (dataset) => dataset.locale === state.locale && JSON.stringify(dataset.data, null, 2) === state.data,
@@ -155,6 +161,11 @@ export default function VariablesDemo(): ReactNode {
             </Button>
           ))}
           <span className="ml-auto flex items-center gap-1.5">
+            {shared === INITIAL_SHARED ? null : (
+              <Button variant="ghost" size="sm" track="reset" onClick={() => setState(INITIAL)}>
+                Reset
+              </Button>
+            )}
             <NativeSelect
               size="sm"
               track="locale"
@@ -175,9 +186,9 @@ export default function VariablesDemo(): ReactNode {
               track="copy-link"
               disabled={link === undefined}
               title="Copies a link with the document, the data and the locale in the URL hash. Nothing is uploaded."
-              onClick={() => link !== undefined && copy('link', link)}
+              onClick={() => link !== undefined && void copy('link', link)}
             >
-              {copied === 'link' ? 'Link copied' : 'Copy link'}
+              {copied === 'link' ? 'Copied' : 'Copy link'}
             </Button>
           </span>
         </div>
@@ -226,9 +237,11 @@ export default function VariablesDemo(): ReactNode {
             <Text as="div" size="sm" className="m-0 border-t border-border px-[0.9rem] py-[0.6rem]">
               {unreadable
                 ? 'This browser couldn’t read the link, so you’re seeing the sample instead. The shared link is still in the address bar, and editing will replace it.'
-                : data.ok
-                  ? 'Edit either side. Placeholders in code stay literal, and a value is always text.'
-                  : `The data isn’t valid JSON (${data.message}), so it resolves against an empty object.`}
+                : !data.ok
+                  ? `The data isn’t valid JSON (${data.message}), so the output uses the last data that was.`
+                  : blocked === 'link'
+                    ? 'This browser blocked the clipboard. The link is in the address bar once you edit.'
+                    : 'Edit either side. Placeholders in code stay literal, and a value is always text.'}
             </Text>
           </section>
 
@@ -248,7 +261,7 @@ export default function VariablesDemo(): ReactNode {
                   ))}
                 </Tabs.List>
                 {tab === 'markdown' && result.ok && markdown !== undefined ? (
-                  <Button variant="ghost" size="sm" track="copy-markdown" onClick={() => copy('markdown', markdown)}>
+                  <Button variant="ghost" size="sm" track="copy-markdown" onClick={() => void copy('markdown', markdown)}>
                     {copied === 'markdown' ? 'Copied' : 'Copy'}
                   </Button>
                 ) : (
@@ -264,10 +277,12 @@ export default function VariablesDemo(): ReactNode {
                       <Markdown preset={preset} document={result.document} />
                     </div>
                   ) : (
-                    <Text size="sm">
-                      Resolution failed, so nothing is rendered (the <code>fallback</code> option would show here). The
-                      Diagnostics tab says why.
-                    </Text>
+                    <>
+                      <Text size="sm">
+                        Resolution failed, so nothing is rendered (the <code>fallback</code> option would show here):
+                      </Text>
+                      <Diagnostics diagnostics={result.diagnostics} />
+                    </>
                   )}
                 </Tabs.Panel>
                 <Tabs.Panel className={FILL} data-zui-private="">
@@ -279,17 +294,7 @@ export default function VariablesDemo(): ReactNode {
                   {result.diagnostics.length === 0 ? (
                     <Text size="sm">No diagnostics. Every placeholder resolved.</Text>
                   ) : (
-                    <ul className="m-0 pl-[1.1rem] text-sm">
-                      {result.diagnostics.map((diagnostic, index) => (
-                        <li key={`${diagnostic.code}-${index}`} className="mb-2">
-                          <Badge variant="subtle" tone={diagnostic.severity === 'error' ? 'danger' : 'warning'} size="sm">
-                            {diagnostic.severity}
-                          </Badge>{' '}
-                          <code>{diagnostic.code}</code>{' '}
-                          {diagnostic.path === undefined ? null : <code>{diagnostic.path}</code>} {diagnostic.message}
-                        </li>
-                      ))}
-                    </ul>
+                    <Diagnostics diagnostics={result.diagnostics} />
                   )}
                 </Tabs.Panel>
               </Tabs.Panels>
@@ -297,21 +302,8 @@ export default function VariablesDemo(): ReactNode {
           </section>
         </div>
 
-        <div className="flex flex-wrap gap-x-[1.4rem] gap-y-[0.4rem] border-t border-border bg-muted px-[0.9rem] py-2 text-xs text-muted-foreground tabular-nums [&_b]:font-semibold [&_b]:text-foreground">
-          <div className="hidden items-center gap-1 max-[900px]:inline-flex" role="group" aria-label="Pane">
-            {(['source', 'output'] as const).map((pane) => (
-              <Button
-                key={pane}
-                variant={pane === mobilePane ? 'solid' : 'outline'}
-                size="sm"
-                track={`pane-${pane}`}
-                aria-pressed={pane === mobilePane}
-                onClick={() => setMobilePane(pane)}
-              >
-                {pane === 'source' ? 'Source and data' : 'Output'}
-              </Button>
-            ))}
-          </div>
+        <StatusStrip>
+          <PaneSwitch panes={PANES} value={mobilePane} onChange={setMobilePane} />
           <span>
             placeholders <b>{placeholders}</b>
           </span>
@@ -325,8 +317,25 @@ export default function VariablesDemo(): ReactNode {
             warnings <b>{result.diagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length}</b>
           </span>
           <span className="ml-auto max-[900px]:ml-0">resolved in this browser, nothing is uploaded</span>
-        </div>
+          <DocsLink />
+        </StatusStrip>
       </div>
     </ActivityScope>
+  )
+}
+
+function Diagnostics({ diagnostics }: { readonly diagnostics: ReturnType<typeof compileMarkdown>['diagnostics'] }): ReactNode {
+  return (
+    <ul className="m-0 mt-2 pl-[1.1rem] text-sm">
+      {diagnostics.map((diagnostic, index) => (
+        <li key={`${diagnostic.code}-${index}`} className="mb-2">
+          <Badge variant="subtle" tone={diagnostic.severity === 'error' ? 'danger' : 'warning'} size="sm">
+            {diagnostic.severity}
+          </Badge>{' '}
+          <code>{diagnostic.code}</code> {diagnostic.path === undefined ? null : <code>{diagnostic.path}</code>}{' '}
+          {diagnostic.message}
+        </li>
+      ))}
+    </ul>
   )
 }

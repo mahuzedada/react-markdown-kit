@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Dialog, DialogBody, DialogDescription, DialogHeader, DialogPanel, DialogTitle } from '@zuilib/primitives/dialog'
 import Button from '@zuilib/primitives/button'
 import Heading from '@zuilib/primitives/heading'
@@ -44,8 +44,9 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
   const badge = link === undefined ? '' : badgeMarkdown(link)
   const iframe = link === undefined ? '' : embedHtml(link, width.trim() || '100%', height.trim() || '520')
 
-  const copyButton = (key: string, text: string, field?: HTMLInputElement | HTMLTextAreaElement | null): ReactNode => (
-    <Button variant="outline" tone="primary" size="sm" track={`copy-${key}`} disabled={text === ''} onClick={() => copy(key, text, field)}>
+  // The field is read at click time: on the dialog's first render its ref is still empty.
+  const copyButton = (key: string, text: string, field: RefObject<HTMLInputElement | HTMLTextAreaElement | null>): ReactNode => (
+    <Button variant="outline" tone="primary" size="sm" track={`copy-${key}`} disabled={text === ''} onClick={() => copy(key, text, field.current)}>
       {copied === key ? <CheckIcon /> : <CopyIcon />}
       {copied === key ? 'Copied' : 'Copy'}
     </Button>
@@ -63,7 +64,7 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
           <Heading as="h3" size="md" className="m-0">Mermaid Visual Editor</Heading>
           <div className={ROW}>
             <Input ref={linkField} track="share-link-field" size="sm" fullWidth inputClassName={MONO} readOnly value={link ?? ''} aria-label="Link to this diagram" onFocus={(event) => event.target.select()} />
-            {copyButton('link', link ?? '', linkField.current)}
+            {copyButton('link', link ?? '', linkField)}
           </div>
           <Text className={NOTE}>The source (layout comment included) is compressed into the URL hash. Opening the link puts the same drawing back on the canvas.</Text>
         </section>
@@ -72,7 +73,7 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
           <Heading as="h3" size="md" className="m-0">README badge</Heading>
           <div className={ROW}>
             <Textarea ref={badgeField} track="share-badge-field" resize="none" fullWidth textareaClassName={MONO} readOnly rows={2} value={badge} aria-label="Badge Markdown for a README" onFocus={(event) => event.target.select()} />
-            {copyButton('badge', badge, badgeField.current)}
+            {copyButton('badge', badge, badgeField)}
           </div>
           <Text className={NOTE}>
             Paste it in a README: the <a href="/badge.svg">badge</a> opens this diagram on the canvas.
@@ -94,7 +95,7 @@ export default function ShareDialog({ open, onOpenChange, link, liveUrl, copied,
           </div>
           <div className={ROW}>
             <Textarea ref={embedField} track="share-embed-field" resize="none" fullWidth textareaClassName={MONO} readOnly rows={3} value={iframe} aria-label="Embed HTML for a page" onFocus={(event) => event.target.select()} />
-            {copyButton('embed', iframe, embedField.current)}
+            {copyButton('embed', iframe, embedField)}
           </div>
         </section>
 

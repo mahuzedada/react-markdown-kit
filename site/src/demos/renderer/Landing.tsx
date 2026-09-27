@@ -84,13 +84,13 @@ const FAQ: readonly FaqItem[] = [
 
 export default function Landing(): ReactNode {
   return (
-    <Page>
+    <Page id="docs">
       <Hero
         kicker="Free and open source, runs in your browser"
         title={TITLE}
         lede={
           <>
-            Paste some Markdown, try the React Markdown Kit renderer&rsquo;s options, and copy the
+            Paste some Markdown, see what the React Markdown Kit renderer makes of it, and copy the
             code that produced the output. The renderer is safe and unstyled by default, and it takes
             the same props as react-markdown.
           </>
