@@ -74,7 +74,6 @@ jobs:
         run: |
           grep -q 'data-rmk-slide="2"' public-sites/docs/build/docs/slides/index.html
           grep -q 'data-rmk-slide-body' public-sites/docs/build/assets/css/*.css
-      - run: pnpm --filter react-markdown-kit-home build
       - run: pnpm --filter react-markdown-kit-renderer-demo build
       - run: pnpm --filter react-markdown-kit-editor-demo build
       - run: pnpm --filter react-markdown-kit-mermaid-demo build

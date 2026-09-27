@@ -53,7 +53,7 @@ Pause before the second line.
 
 ## Links
 
-- Docs: [Slides from Markdown](https://docs.reactmarkdownkit.com/docs/slides)
+- Docs: [Slides from Markdown](https://reactmarkdownkit.com/docs/slides)
 - Demo: [slides.reactmarkdownkit.com](https://slides.reactmarkdownkit.com),
   with `/present` and `/editor`
 - Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)

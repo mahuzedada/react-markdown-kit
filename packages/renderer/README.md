@@ -27,9 +27,9 @@ no design system, no configuration.
 
 ## Links
 
-- Docs: [React Markdown renderer](https://docs.reactmarkdownkit.com/react-markdown-renderer)
+- Docs: [React Markdown renderer](https://reactmarkdownkit.com/react-markdown-renderer)
 - Demo: [renderer.reactmarkdownkit.com](https://renderer.reactmarkdownkit.com)
-- Compatibility with `react-markdown`: [the table](https://docs.reactmarkdownkit.com/docs/compatibility),
+- Compatibility with `react-markdown`: [the table](https://reactmarkdownkit.com/docs/compatibility),
   generated from [`docs/COMPATIBILITY.md`](https://github.com/mahuzedada/react-markdown-kit/blob/main/docs/COMPATIBILITY.md)
 - Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
 
@@ -225,7 +225,7 @@ which renders the same input through both packages and compares normalized
 HTML: 39 comparisons across 11 props, 39 identical. Every feature is classified
 `compatible`, `compatible with documented change`, `not supported yet` or
 `intentionally different`. The same table is published at
-[docs.reactmarkdownkit.com/docs/compatibility](https://docs.reactmarkdownkit.com/docs/compatibility).
+[reactmarkdownkit.com/docs/compatibility](https://reactmarkdownkit.com/docs/compatibility).
 
 Read the matrix and decide.
 

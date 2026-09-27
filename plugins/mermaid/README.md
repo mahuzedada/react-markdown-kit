@@ -35,7 +35,7 @@ flowchart LR
 
 ## Links
 
-- Docs: [Mermaid diagrams](https://docs.reactmarkdownkit.com/docs/mermaid)
+- Docs: [Mermaid diagrams](https://reactmarkdownkit.com/docs/mermaid)
 - Demo: [mermaid.reactmarkdownkit.com](https://mermaid.reactmarkdownkit.com),
   the visual editor in the browser
 - Source: [github.com/mahuzedada/react-markdown-kit](https://github.com/mahuzedada/react-markdown-kit)
@@ -62,7 +62,7 @@ boxes, the ten message arrows, activation, notes, `loop`, `alt`/`else`,
 `opt`, `par`/`and`, `critical`/`option`, `break`, `rect` and `autonumber`,
 with a deterministic layout that needs no annotation. Its writer emits the
 model as plain Mermaid, retained lines included. The
-[docs page](https://docs.reactmarkdownkit.com/docs/mermaid) lists both
+[docs page](https://reactmarkdownkit.com/docs/mermaid) lists both
 subsets and every problem code.
 
 ### Host fallback

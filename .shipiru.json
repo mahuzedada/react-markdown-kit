@@ -36,6 +36,15 @@
     {
       "url": "https://www.reactmarkdownkit.com/",
       "status": 200
+    },
+    {
+      "url": "https://reactmarkdownkit.com/docs/guides/markdown-template-variables",
+      "status": 200
+    },
+    {
+      "url": "https://docs.reactmarkdownkit.com/edit-ai-generated-mermaid",
+      "status": 200,
+      "contains": "https://reactmarkdownkit.com/edit-ai-generated-mermaid"
     }
   ]
 }

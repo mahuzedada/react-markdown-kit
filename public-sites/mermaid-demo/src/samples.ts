@@ -6,7 +6,7 @@
  * approval process and a data platform on the flowchart side; single
  * sign-on, a checkout and a nightly reconciliation on the sequence side.
  * Each one stays inside the subset the plugin parses
- * (docs.reactmarkdownkit.com/docs/mermaid) and compiles with no
+ * (reactmarkdownkit.com/docs/mermaid) and compiles with no
  * diagnostic, and none uses a feature the canvas flattens (subgraphs,
  * invisible or extra-long links, the hexagon and circle brackets), so
  * every sample opens editable at once. No

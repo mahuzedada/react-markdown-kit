@@ -2,7 +2,7 @@
   "name": "@react-markdown-kit/renderer",
   "version": "0.1.0",
   "description": "Render Markdown as React. Safe by default, unstyled by default, extensible.",
-  "homepage": "https://docs.reactmarkdownkit.com/react-markdown-renderer",
+  "homepage": "https://reactmarkdownkit.com/react-markdown-renderer",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mahuzedada/react-markdown-kit.git",

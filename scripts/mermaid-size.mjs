@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Size comparison behind docs.reactmarkdownkit.com/react-mermaid (claims
+ * Size comparison behind reactmarkdownkit.com/react-mermaid (claims
  * policy, docs/SEO_PLAN.md section 8): what a page pays to draw a Mermaid
  * flowchart with `@react-markdown-kit/mermaid`, next to what it pays to load
  * Mermaid.js. Both numbers are measured on real build output, never quoted.

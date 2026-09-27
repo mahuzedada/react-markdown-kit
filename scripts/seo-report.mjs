@@ -16,8 +16,7 @@ import { fileURLToPath } from 'node:url'
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
 const SITES = [
-  { host: 'reactmarkdownkit.com', dir: 'public-sites/home/build' },
-  { host: 'docs.reactmarkdownkit.com', dir: 'public-sites/docs/build' },
+  { host: 'reactmarkdownkit.com', dir: 'public-sites/docs/build' },
   { host: 'renderer.reactmarkdownkit.com', dir: 'public-sites/renderer-demo/build' },
   { host: 'editor.reactmarkdownkit.com', dir: 'public-sites/editor-demo/build' },
   { host: 'mermaid.reactmarkdownkit.com', dir: 'public-sites/mermaid-demo/build' },

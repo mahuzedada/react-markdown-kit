@@ -29,7 +29,7 @@ const config: Config = {
   // minimizer, which leaves quotes alone. Every other flag stays on.
   future: { v4: true, faster: { swcHtmlMinimizer: false } },
 
-  url: 'https://docs.reactmarkdownkit.com',
+  url: 'https://reactmarkdownkit.com',
   baseUrl: '/',
   // llms.txt and llms-full.txt have one source, served by all six hosts.
   staticDirectories: ['static', '../shared/llms'],
@@ -170,7 +170,6 @@ const config: Config = {
             { label: 'Compatibility matrix', to: '/docs/compatibility' },
             { label: 'Migrating', to: '/migrate-from-react-markdown' },
             { label: 'Lossless round trip', to: '/markdown-round-trip' },
-            { label: 'Home', href: sites.home },
             { label: 'GitHub', href: sites.github },
           ],
         },

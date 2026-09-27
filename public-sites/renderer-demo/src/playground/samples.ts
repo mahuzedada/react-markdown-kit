@@ -9,8 +9,8 @@ same \`<Markdown>\` component you would ship. Edit anything on the left.
 
 ## Inline
 
-Links to [the docs](https://docs.reactmarkdownkit.com/docs/getting-started), autolinks like
-https://docs.reactmarkdownkit.com, \`inline code\`, ~~strikethrough~~, and a
+Links to [the docs](https://reactmarkdownkit.com/docs/getting-started), autolinks like
+https://reactmarkdownkit.com, \`inline code\`, ~~strikethrough~~, and a
 footnote[^1]. Line breaks with two trailing spaces  
 become \`<br>\`.
 

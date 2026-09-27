@@ -120,12 +120,11 @@ export default function Home(): ReactNode {
         data={{
           '@context': 'https://schema.org',
           '@type': 'WebSite',
-          name: 'React Markdown Kit docs',
+          name: 'React Markdown Kit',
           url: sites.docs,
           description: DESCRIPTION,
           inLanguage: 'en',
           publisher: ORGANIZATION,
-          isPartOf: { '@type': 'WebSite', name: 'React Markdown Kit', url: sites.home },
         }}
       />
       <BreadcrumbJsonLd trail={[{ name: 'React Markdown Kit' }]} />

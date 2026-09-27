@@ -1,13 +1,14 @@
 # Deploying reactmarkdownkit
 
-One app, six sites. The image holds the home page, the docs site and the four
-demos under `/usr/share/nginx/html/{home,docs,mermaid,slides,renderer,editor}`,
-and the container's nginx (`nginx.container.conf`) picks the directory from the
-`Host` header, so `docs.`, `mermaid.`, `slides.`, `renderer.` and
-`editor.reactmarkdownkit.com` each get their own build while the apex and
-`www` serve the home page. One
-certificate (`docs.reactmarkdownkit.com`) covers the first six names;
-`slides.reactmarkdownkit.com` has its own, in its own `server` blocks at the
+One app, five sites. The image holds the docs site and the four demos under
+`/usr/share/nginx/html/{docs,mermaid,slides,renderer,editor}`, and the
+container's nginx (`nginx.container.conf`) picks the directory from the `Host`
+header: the apex serves the docs, and `mermaid.`, `slides.`, `renderer.` and
+`editor.reactmarkdownkit.com` each get their own build. `docs.` (where the
+docs lived until 2026-09-27) and `www` answer with a permanent redirect to the
+same path on the apex; keep those redirects. One certificate
+(`docs.reactmarkdownkit.com`) covers the first six names, so `docs.` stays in
+it; `slides.reactmarkdownkit.com` has its own, in its own `server` blocks at the
 end of `nginx.shipiru.conf`, because that is what Shipiru's `add_domain`
 writes. `make deploy` rebuilds the packages, the plugins and every site
 (`pnpm build:sites`), then ships one image.

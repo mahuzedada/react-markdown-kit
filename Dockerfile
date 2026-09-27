@@ -2,7 +2,6 @@
 # The sites are built on the Mac by the Shipiru build command; nothing builds here.
 FROM nginx:1.29-alpine
 COPY nginx.container.conf /etc/nginx/conf.d/default.conf
-COPY public-sites/home/build          /usr/share/nginx/html/home
 COPY public-sites/docs/build          /usr/share/nginx/html/docs
 COPY public-sites/mermaid-demo/build  /usr/share/nginx/html/mermaid
 COPY public-sites/slides-demo/build   /usr/share/nginx/html/slides

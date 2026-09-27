@@ -2,7 +2,7 @@
   "name": "@react-markdown-kit/slides",
   "version": "0.1.0",
   "description": "Slides from Markdown for React Markdown Kit, as a plugin: slides() reads a deck (slides split on ---, speaker notes after ???, fragments after --, <!-- key: value --> directives) and renders it as static sections; /present adds keyboard-driven present mode and /editor the authoring commands. No standalone API.",
-  "homepage": "https://docs.reactmarkdownkit.com/docs/slides",
+  "homepage": "https://reactmarkdownkit.com/docs/slides",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mahuzedada/react-markdown-kit.git",

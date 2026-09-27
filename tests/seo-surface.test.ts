@@ -29,8 +29,7 @@ interface Site {
 }
 
 const SITES: readonly Site[] = [
-  { name: 'home', dir: 'public-sites/home/build', url: 'https://reactmarkdownkit.com', landing: true },
-  { name: 'docs', dir: 'public-sites/docs/build', url: 'https://docs.reactmarkdownkit.com', landing: false },
+  { name: 'docs', dir: 'public-sites/docs/build', url: 'https://reactmarkdownkit.com', landing: false },
   { name: 'renderer', dir: 'public-sites/renderer-demo/build', url: 'https://renderer.reactmarkdownkit.com', landing: true },
   { name: 'editor', dir: 'public-sites/editor-demo/build', url: 'https://editor.reactmarkdownkit.com', landing: true },
   { name: 'mermaid', dir: 'public-sites/mermaid-demo/build', url: 'https://mermaid.reactmarkdownkit.com', landing: true },
@@ -223,8 +222,8 @@ for (const site of SITES) {
   })
 }
 
-describe.skipIf(!built(SITES[1]))('docs breadcrumbs', () => {
-  const dir = join(root, SITES[1].dir)
+describe.skipIf(!built(SITES[0]))('docs breadcrumbs', () => {
+  const dir = join(root, SITES[0].dir)
   const types = (route: string): unknown[] =>
     jsonLd(readFileSync(join(dir, route, 'index.html'), 'utf8')).map((block) => block['@type'])
   const trail = (route: string): unknown[] => {
@@ -240,7 +239,7 @@ describe.skipIf(!built(SITES[1]))('docs breadcrumbs', () => {
     const compare = readdirSync(join(dir, 'compare')).filter((entry) => statSync(join(dir, 'compare', entry)).isDirectory())
     expect(compare.length).toBeGreaterThan(0)
     expect(types('compare')).toContain('CollectionPage')
-    for (const entry of compare) expect(trail(`compare/${entry}`), entry).toContain(`${SITES[1].url}/compare`)
+    for (const entry of compare) expect(trail(`compare/${entry}`), entry).toContain(`${SITES[0].url}/compare`)
   })
 })
 
@@ -248,7 +247,7 @@ describe.skipIf(!built(SITES[1]))('docs breadcrumbs', () => {
  * The Mermaid size figures in the shared llms.txt files are copied by hand
  * from docs/data/mermaid-size.json (scripts/mermaid-size.mjs writes it), so a
  * rerun of the script that changes the JSON fails here until the text is
- * updated. docs/src/pages/react-mermaid.mdx and home/src/Landing.tsx read the
+ * updated. docs/src/pages/react-mermaid.mdx reads the
  * JSON at build time with the same formula.
  */
 describe('llms.txt Mermaid size figures', () => {

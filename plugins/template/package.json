@@ -2,7 +2,7 @@
   "name": "@react-markdown-kit/template",
   "version": "0.1.0",
   "description": "Markdown templating for React Markdown Kit, as plugins: template({ data }) resolves typed placeholders while the renderer parses; templateVariables() edits them as chips. No standalone API.",
-  "homepage": "https://docs.reactmarkdownkit.com/markdown-template-engine",
+  "homepage": "https://reactmarkdownkit.com/markdown-template-engine",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mahuzedada/react-markdown-kit.git",

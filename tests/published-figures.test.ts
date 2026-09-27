@@ -100,7 +100,7 @@ describe('published figures', () => {
 
   it('scans the public surface', () => {
     expect(files).toContain('public-sites/shared/llms/llms.txt')
-    expect(files).toContain('public-sites/home/src/Landing.tsx')
+    expect(files).toContain('public-sites/docs/src/pages/index.tsx')
     expect(files.length).toBeGreaterThan(50)
   })
 

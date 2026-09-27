@@ -19,16 +19,10 @@ const LOGO = logo
 
 const CARDS = [
   {
-    out: 'public-sites/home/public/social-card.png',
-    title: 'React Markdown Kit',
-    lines: ['Render Markdown. Add editing.', 'Mermaid diagrams and slides, in React.'],
-    host: 'reactmarkdownkit.com',
-  },
-  {
     out: 'public-sites/docs/static/img/social-card.png',
     title: 'React Markdown Kit docs',
     lines: ['Renderer, editor, templates,', 'Mermaid and slides for React.'],
-    host: 'docs.reactmarkdownkit.com',
+    host: 'reactmarkdownkit.com',
   },
   {
     out: 'public-sites/renderer-demo/public/social-card.png',

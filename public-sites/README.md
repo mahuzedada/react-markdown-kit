@@ -1,13 +1,12 @@
 # Public sites
 
-Six sites, each deployed on its own. None is a published package.
+Five sites, each deployed on its own. None is a published package.
 
 Before writing or editing any copy on these sites, read [docs/writing-rules.md](../docs/writing-rules.md).
 
 | Directory | Site | Stack | Filter |
 | --- | --- | --- | --- |
-| `home/` | The home page at the apex: what the kit is, install, the packages | Vite | `react-markdown-kit-home` |
-| `docs/` | Documentation, the discovery funnels, the reference | Docusaurus | `react-markdown-kit-docs` |
+| `docs/` | The apex site: documentation, the discovery funnels, the reference | Docusaurus | `react-markdown-kit-docs` |
 | `renderer-demo/` | One page: the renderer with every option, the HTML, the tree, the code, and a side-by-side with `react-markdown` | Vite | `react-markdown-kit-renderer-demo` |
 | `editor-demo/` | One page: the editor with the template and diagram plugins, resolved per customer | Vite | `react-markdown-kit-editor-demo` |
 | `mermaid-demo/` | One page: a Mermaid live editor, syntax on the left and the visual canvas on the right | Vite | `react-markdown-kit-mermaid-demo` |
@@ -16,7 +15,6 @@ Before writing or editing any copy on these sites, read [docs/writing-rules.md](
 
 ```bash
 pnpm build                                            # the packages and plugins first
-pnpm --filter react-markdown-kit-home start           # http://localhost:5173
 pnpm --filter react-markdown-kit-docs start           # http://localhost:3000
 pnpm --filter react-markdown-kit-renderer-demo start  # http://localhost:5173
 pnpm --filter react-markdown-kit-editor-demo start    # http://localhost:5173

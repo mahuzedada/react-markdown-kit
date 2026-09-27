@@ -20,7 +20,6 @@ const logo = readFileSync(join(root, 'public-sites/shared/brand/logo.svg'), 'utf
 // `dir` is the site's static root; `svgDir` is where logo.svg and favicon.svg
 // live (the docs site keeps them under img/ for Docusaurus).
 const SITES = [
-  { dir: 'public-sites/home/public', name: 'React Markdown Kit' },
   { dir: 'public-sites/docs/static', svgDir: 'img', name: 'React Markdown Kit docs', shortName: 'RMK docs' },
   { dir: 'public-sites/renderer-demo/public', name: 'React Markdown Renderer', shortName: 'Renderer' },
   { dir: 'public-sites/editor-demo/public', name: 'Markdown Editor', shortName: 'Editor' },

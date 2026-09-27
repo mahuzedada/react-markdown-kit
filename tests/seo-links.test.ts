@@ -24,8 +24,7 @@ interface Site {
 }
 
 const SITES: readonly Site[] = [
-  { name: 'home', dir: 'public-sites/home/build', url: 'https://reactmarkdownkit.com' },
-  { name: 'docs', dir: 'public-sites/docs/build', url: 'https://docs.reactmarkdownkit.com' },
+  { name: 'docs', dir: 'public-sites/docs/build', url: 'https://reactmarkdownkit.com' },
   { name: 'renderer', dir: 'public-sites/renderer-demo/build', url: 'https://renderer.reactmarkdownkit.com' },
   { name: 'editor', dir: 'public-sites/editor-demo/build', url: 'https://editor.reactmarkdownkit.com' },
   { name: 'mermaid', dir: 'public-sites/mermaid-demo/build', url: 'https://mermaid.reactmarkdownkit.com' },
@@ -88,7 +87,7 @@ function target(url: string, from: Site, route: string): Target {
 }
 
 describe('target()', () => {
-  const docs = SITES[1] as Site
+  const docs = SITES[0] as Site
   it('resolves a relative path against the page route like a browser', () => {
     // Independent of the build: the route is a directory, so the file sits inside it.
     const where = new URL('diagram.png', 'http://x/docs/mermaid/').pathname
