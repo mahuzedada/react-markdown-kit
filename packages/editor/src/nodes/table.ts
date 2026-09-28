@@ -51,6 +51,12 @@ export class TableNode extends ElementNode {
     return this.getLatest().__align
   }
 
+  setAlign(align: TableAlign[]): this {
+    const self = this.getWritable()
+    self.__align = align
+    return self
+  }
+
   override createDOM(config: EditorConfig): HTMLElement {
     const element = document.createElement('table')
     const className = themeClass(config, 'table')

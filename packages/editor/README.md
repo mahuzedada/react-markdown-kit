@@ -82,6 +82,30 @@ keeps it intact.
 Preview delegates to `@react-markdown-kit/renderer` rather than shipping a
 second renderer, so what you preview is what your application renders.
 
+## Typing Markdown in rich mode
+
+Markdown typed on the rich surface turns into the block or format it names.
+
+| Type | Result |
+|---|---|
+| `# ` to `###### ` | Heading |
+| `- `, `* `, `+ ` | Bullet list |
+| `1. ` | Ordered list, starting at the typed number |
+| `[ ] `, `[x] ` | Task item, also at the start of a bullet item |
+| `> ` | Blockquote |
+| ```` ```ts ```` then space or Enter | Code block with that language |
+| `---`, `***`, `___` then Enter | Thematic break |
+| `\| a \| b \|` then Enter | Table with that header; later row lines join it, and `\| :-- \| --: \|` sets alignment |
+| `**bold**`, `*em*`, `` `code` ``, `~~strike~~` | Inline formats, on the closing character |
+| `[text](url)`, `![alt](src)` | Link or image, on the closing `)` |
+
+Undo after a shortcut gives back the typed text. Only a typed character
+triggers one: loading, pasting, deleting or undoing never does. Nothing
+converts inside a code block, and tables, task items and `~~` stay as typed in a CommonMark
+document. In a list, Enter starts the next item, Enter on an empty item leaves
+the list, and Backspace at the start of an item removes its checkbox and then
+the bullet. In a blockquote, Enter on an empty last line leaves the quote.
+
 ## Controlled or uncontrolled
 
 ```tsx

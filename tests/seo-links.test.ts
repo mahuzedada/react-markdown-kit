@@ -129,9 +129,11 @@ for (const site of SITES) {
   })
 }
 
-/** Markdown links and images, plus inline HTML `href`/`src`, outside fenced code. */
+/** Markdown links and images, plus inline HTML `href`/`src`, outside fenced and inline code. */
 function readmeLinks(markdown: string): string[] {
-  const prose = markdown.replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, '')
+  const prose = markdown
+    .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, '')
+    .replace(/(`+)(?!`)[^\n]*?(?<!`)\1(?!`)/g, '')
   const inline = [...prose.matchAll(/!?\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[1])
   const reference = [...prose.matchAll(/^\[[^\]]+\]:\s*(\S+)/gm)].map((match) => match[1])
   const html = [...prose.matchAll(/<[a-z][^>]*\s(?:href|src)="([^"]*)"/gi)].map((match) => match[1])

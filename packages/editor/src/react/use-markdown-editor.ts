@@ -12,6 +12,7 @@ import { mergeRegister } from '@lexical/utils'
 import type { MarkdownDiagnostic } from '@internal/diagnostics/index.js'
 import { createMarkdownBridge, editorOf, type MarkdownBridge } from '../bridge/session.js'
 import { createCommands, redo, undo } from '../commands.js'
+import { registerShortcuts } from '../shortcuts/index.js'
 import type {
   MarkdownEditorCommands,
   MarkdownEditorInstance,
@@ -145,7 +146,8 @@ export function useMarkdownEditor(options: UseMarkdownEditorOptions = {}): Markd
   const live = useRef({ mode, commands, readOnly: options.readOnly === true, setMode })
   live.current = { mode, commands, readOnly: options.readOnly === true, setMode }
 
-  // Rich-text behaviour and undo history, registered once per editor.
+  // Rich-text behaviour, Markdown typing shortcuts and undo history,
+  // registered once per editor.
   useEffect(() => {
     // History captures the state *before* a change, and it has no "before" for
     // the very first one unless it is told where the document started. Without
@@ -154,6 +156,7 @@ export function useMarkdownEditor(options: UseMarkdownEditorOptions = {}): Markd
     historyState.current = { editor: editorOf(bridge), editorState: editorOf(bridge).getEditorState() }
     return mergeRegister(
       registerRichText(editorOf(bridge)),
+      registerShortcuts(bridge),
       registerHistory(editorOf(bridge), historyState, 300),
     )
   }, [bridge])

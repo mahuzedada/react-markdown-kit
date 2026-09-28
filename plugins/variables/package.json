@@ -47,7 +47,7 @@
   },
   "peerDependencies": {
     "@lexical/utils": "^0.35.0",
-    "@react-markdown-kit/editor": "^0.1.0",
+    "@react-markdown-kit/editor": "^0.2.0",
     "@react-markdown-kit/renderer": "^0.1.0",
     "lexical": "^0.35.0",
     "react": ">=18"
