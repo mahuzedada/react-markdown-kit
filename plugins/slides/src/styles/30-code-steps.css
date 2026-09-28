@@ -1,0 +1,11 @@
+/* ------------------------------------------------------------- code steps */
+/* ```ts {1|3-4}: lines outside the active step are dimmed. The static page  */
+/* shows the first step; present mode moves it one press at a time.          */
+
+.rmk-document [data-rmk-code-line] {
+  transition: opacity 0.25s ease;
+}
+
+.rmk-document [data-rmk-code-line-state='dim'] {
+  opacity: 0.32;
+}

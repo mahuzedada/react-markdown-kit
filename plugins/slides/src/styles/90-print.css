@@ -1,0 +1,45 @@
+/* ------------------------------------------------------------------ print */
+/* Last on purpose: these share specificity with the controls (display: flex)
+   and presenter (display: grid) rules above, so they win only by order.
+   Each slide prints on a page of its own aspect (named pages); a host that
+   sets its own @page size overrides it. With `printSteps`, the copies of a
+   slide at each reveal step print before the finished slide. */
+
+.rmk-document [data-rmk-slide-print-step] {
+  display: none;
+}
+
+@page rmk-slide-16x9 {
+  size: 16in 9in;
+  margin: 0;
+}
+
+@page rmk-slide-4x3 {
+  size: 12in 9in;
+  margin: 0;
+}
+
+@media print {
+  .rmk-document [data-rmk-deck] {
+    display: block;
+  }
+  .rmk-document [data-rmk-slide] {
+    page: rmk-slide-16x9;
+    break-after: page;
+    break-inside: avoid;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .rmk-document [data-rmk-deck-aspect='4:3'] [data-rmk-slide] {
+    page: rmk-slide-4x3;
+  }
+  .rmk-document [data-rmk-slide-print-step] {
+    display: block;
+  }
+  .rmk-document [data-rmk-deck-controls],
+  .rmk-document [data-rmk-deck-presenter],
+  .rmk-document [data-rmk-deck-progress],
+  .rmk-document [data-rmk-deck-help] {
+    display: none;
+  }
+}

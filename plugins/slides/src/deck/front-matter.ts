@@ -13,7 +13,9 @@
  * as CommonMark parsed it: a leading `---` is a break that opens no slide.
  *
  * Front matter itself is read as flat `key: value` lines. There is no YAML
- * parser: four scalar keys do not justify one.
+ * parser: scalar keys do not justify one. `title` and `aspect` belong to
+ * the deck; every other key is a directive's deck-wide default, applied by
+ * `read-front-matter-node.ts`.
  */
 import type { MarkdownNode, MarkdownRoot } from '@internal/document-contracts/index.js'
 import type { SlideAspect } from './model.js'
@@ -26,8 +28,8 @@ const CLOSING_FENCE = /^---[ \t]*$/
 export interface FrontMatter {
   readonly title?: string
   readonly aspect?: SlideAspect
-  readonly class?: string
-  readonly background?: string
+  /** Every other key, lower-cased, in source order. Directive keys set deck-wide defaults. */
+  readonly entries: ReadonlyMap<string, string>
   /** Known keys whose value was rejected. */
   readonly problems: readonly string[]
 }
@@ -45,17 +47,15 @@ export function parseFrontMatter(value: string): FrontMatter {
     if (match !== null) entries.set(match[1]!.toLowerCase(), unquote(match[2]!))
   }
   const problems: string[] = []
+  const title = entries.get('title')
   const aspect = entries.get('aspect')
   if (aspect !== undefined && aspect !== '16:9' && aspect !== '4:3') problems.push('`aspect` must be `16:9` or `4:3`.')
-  const background = entries.get('background')
-  if (background !== undefined && !/^\S+$/.test(background)) problems.push('`background` must be one URL with no spaces.')
-  const title = entries.get('title')
-  const classes = entries.get('class')
+  entries.delete('title')
+  entries.delete('aspect')
   return {
     ...(title === undefined || title === '' ? {} : { title }),
     ...(aspect === '16:9' || aspect === '4:3' ? { aspect } : {}),
-    ...(classes === undefined || classes === '' ? {} : { class: classes }),
-    ...(background === undefined || !/^\S+$/.test(background) ? {} : { background }),
+    entries,
     problems,
   }
 }
@@ -131,4 +131,20 @@ export function liftFrontMatter(tree: MarkdownRoot, block: FrontMatterBlock): Ma
     position: { start: { line: 1, column: 1, offset: 0 }, end: { ...block.end } },
   }
   return { ...tree, children: [yaml, ...rest] }
+}
+
+/**
+ * The source ends inside front matter that is still being written: it opens
+ * with `---`, and every line after it is blank or `key: value`, with the
+ * last one possibly cut short (`transi`). A streaming deck passes through
+ * this state; `pending.ts` explains what the transform does with it. A
+ * saved file that forgot its closing fence looks the same, which is why the
+ * transform still reports it.
+ */
+export function endsInsideFrontMatter(source: string): boolean {
+  const opening = OPENING_FENCE.exec(source)
+  if (opening === null) return false
+  const lines = source.slice(opening[0].length).split(/\r?\n/)
+  const last = lines.length - 1
+  return lines.every((line, index) => line.trim() === '' || KEY_HEAD.test(line) || (index === last && /^(?:[A-Za-z_][\w-]*|-{1,2})$/.test(line)))
 }

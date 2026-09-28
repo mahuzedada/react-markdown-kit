@@ -16,6 +16,8 @@ and is the reference for the reader, the serializer, and the editor commands.
 | Directive | `<!-- key: value -->` alone on its lines, at the root, anywhere in the slide | an `html` node matching `<!-- key: value -->` and nothing else | Re-typed to `slideDirective` |
 | Speaker notes | a paragraph that is exactly `???` | `slideMarker` of kind `notes` | Every block after it, up to the next break, is notes |
 | Pause | a paragraph that is exactly `--` | `slideMarker` of kind `pause` | Blocks after the k-th pause form fragment group k |
+| Column | a paragraph that is exactly `::right::` | `slideMarker` of kind `column` | Blocks after it go in the slide's second column |
+| Code steps | `{1\|3-4\|all}` after a fence's language | the `code` node's `meta` | One highlight step per `\|`; the first shows with the block |
 | Slide title | the slide's first heading | plain text of its `text` and `inlineCode` descendants | The slide's accessible name and `data-rmk-slide-title` |
 
 A `---` inside a fence, a block quote or a list item is not at the root and
@@ -33,8 +35,9 @@ value are removed. Unknown keys are ignored.
 | --- | --- | --- |
 | `title` | text | `data-rmk-deck-title`; the fallback is the first slide's title |
 | `aspect` | `16:9` (default) or `4:3` | `data-rmk-deck-aspect`, overriding the `aspect` option |
-| `class` | class tokens | Prepended to every slide's `data-rmk-slide-class` |
-| `background` | a URL | The background of every slide that sets none |
+| any directive key marked deck-wide below | what the directive accepts | The default for every slide. A slide's own directive wins; `class` accumulates after the deck's |
+
+A slide-only key (`name`, `image`, `src`) in the front matter is ignored.
 
 The parser knows no front matter construct: the deck is parsed as plain
 CommonMark, and the transform looks at byte 0 of `context.source` for an
@@ -59,11 +62,21 @@ three of indentation, which CommonMark keeps in the html block). A known key wit
 leaves the comment as it is (visible escaped text, as any comment renders)
 and reports a diagnostic.
 
-| Key | Argument | Emitted as |
-| --- | --- | --- |
-| `class` | tokens of `[A-Za-z0-9_-]`, separated by spaces or commas; may repeat and accumulates | `data-rmk-slide-class="a b"` (never `class`) |
-| `background` | one URL with no spaces | `<img data-rmk-slide-background src alt="">` as the section's first child, so the URL policy sanitises it |
-| `name` | `[A-Za-z0-9_-]+` | `id="slide-<name>"` and `data-rmk-slide-name`; a duplicate gets neither |
+| Key | Argument | Deck-wide | Emitted as |
+| --- | --- | --- | --- |
+| `class` | tokens of `[A-Za-z0-9_-]`, separated by spaces or commas; may repeat and accumulates | yes | `data-rmk-slide-class="a b"` (never `class`) |
+| `background` | one URL with no spaces | yes | `<img data-rmk-slide-background src alt="">` as the section's first child, so the URL policy sanitises it |
+| `name` | `[A-Za-z0-9_-]+` | no | `id="slide-<name>"` and `data-rmk-slide-name`; a duplicate gets neither |
+| `layout` | `default`, `cover`, `section`, `center`, `two-cols`, `image-left`, `image-right`, `quote`, `fact` | yes | `data-rmk-slide-layout` (absent for `default`) |
+| `image` | one URL with no spaces | no | `<img data-rmk-slide-image src alt="">` after the background; the stylesheet shows it only in `image-left` / `image-right` |
+| `transition` | `none`, `fade`, `slide`, `zoom` | yes | `data-rmk-slide-transition`; present mode eases the slide in with CSS |
+| `footer` | one line of text | yes | `<footer data-rmk-slide-footer><span data-rmk-slide-footer-text>` after the body |
+| `paginate` | `true` or `false` | yes | the slide number as `<span data-rmk-slide-number>` in the footer |
+| `incremental` | `true` or `false` | yes | each item of a root-level list gets its own reveal step (`<li data-rmk-fragment="n">`) |
+| `src` | a path | no | nothing; `includeDeckFiles` replaces it with the file before compiling, and one left over reports `SLIDES_INCLUDE_UNRESOLVED` |
+
+The keys live in `src/deck/directive-keys/`, one module each; a new key is a
+new module registered in `registry.ts`.
 
 Built-in classes the stylesheet knows: `left`, `center`, `right` (text
 alignment), `top`, `middle`, `bottom` (vertical placement), `inverse` (dark
@@ -72,12 +85,37 @@ surface). Any other token is the consumer's to style.
 ## Markers
 
 `???` starts the notes; a second one is ignored and reported. `--` after the
-notes started is ignored and reported. A `???` written on the line right
+notes started is ignored and reported. `::right::` starts the second column;
+a second one, or one after `???`, is ignored and reported. Fragment groups
+carry across it: blocks after a `--` on the left and before the next `--` on
+the right are one step. The markers live in `src/deck/marker-kinds/`. A `???` written on the line right
 after a paragraph is part of that paragraph (lazy continuation), also when
 that paragraph closes a list item or a block quote, and is reported as
 attached. A `--` right under text is different: CommonMark makes it a setext
 heading rather than a pause, and that is reported as `SLIDES_SETEXT_HEADING`.
 A blank line before the marker avoids both.
+
+## Reveal steps
+
+A slide's steps are numbered in reading order: each `--` group, each item of
+an incremental list, and each highlight step of a code fence after its first
+takes the next number. The total is `data-rmk-slide-fragments`. Groups and
+list items carry `data-rmk-fragment="n"`; a stepped fence is
+`<pre data-rmk-code-steps="a b c">` (the step each highlight starts at) whose
+code is one `<span data-rmk-code-line="n" data-rmk-code-focus="0 2">` per
+line, statically marked `data-rmk-code-line-state` for the first step. A
+fence whose braces are not line ranges renders plainly and reports
+`SLIDES_CODE_STEPS_INVALID`. Code another extension already split into
+elements (a syntax highlighter) is left alone.
+
+## Streaming
+
+A deck re-rendered at every prefix while it arrives never flashes half-written
+syntax: a comment at the very end that has no `-->` yet renders as nothing,
+and a source that ends inside front matter (`---` and `key: value` lines, the
+last possibly cut short, no closing fence yet) has those blocks marked pending
+(`data.rmkSlides.pending`), which the renderer skips and the serializer
+ignores.
 
 ## Serialization
 
@@ -106,12 +144,16 @@ All reported from the syntax transform with the node's source range.
 | `SLIDES_DIRECTIVE_INVALID` | warning | A known directive or front matter key with a rejected value |
 | `SLIDES_DIRECTIVE_UNKNOWN` | warning | `<!-- key: value -->` with a key that is not a directive |
 | `SLIDES_NAME_DUPLICATE` | warning | Two slides with the same `name`; reported at the later `name` directive |
-| `SLIDES_MARKER_MISPLACED` | warning | A second `???`, or a `--` after `???` |
-| `SLIDES_MARKER_ATTACHED` | warning | A `--` or `???` glued to the paragraph above |
+| `SLIDES_MARKER_MISPLACED` | warning | A second `???` or `::right::`, or a `--` or `::right::` after `???` |
+| `SLIDES_MARKER_ATTACHED` | warning | A marker glued to the paragraph above |
 | `SLIDES_PROPERTY_BARE` | info | A slide opening with bare `key: value` lines (remark's syntax) |
+| `SLIDES_INCLUDE_UNRESOLVED` | warning | A `<!-- src: … -->` that reached the renderer unexpanded |
+| `SLIDES_CODE_STEPS_INVALID` | warning | `{…}` after a fence's language that is not line ranges |
 
 ## Not in the dialect
 
 remark's bare `class: center` property lines, `.class[...]` content classes,
-`![:macro]`, `layout:` / `template:` inheritance, `count:` / `exclude:`,
-`<!-- break -->`, overlay fences, and any inline style.
+`![:macro]`, remark's `layout: true` / `template:` inheritance (front matter
+defaults cover the common case), `count:` / `exclude:`, `<!-- break -->`,
+Slidev's Vue components and `v-click` attributes, overlay fences, and any
+inline style.

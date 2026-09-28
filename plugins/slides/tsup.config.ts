@@ -2,7 +2,7 @@
  * Two builds, one package.
  *
  * `index` is the headless plugin: no React, no Lexical, safe in a server
- * component. `present` and `editor` are client entries and must start with
+ * component; `pptx` is the PowerPoint export, also free of React. `present` and `editor` are client entries and must start with
  * `'use client'`; tsup's code splitting drops a directive that lives in a
  * source file, so those two are built by a second config that prepends it as
  * a banner. Both configs leave `dist` alone (`clean: false`); the build
@@ -10,7 +10,7 @@
  * the first.
  */
 import { defineConfig, type Options } from 'tsup'
-import { cp } from 'node:fs/promises'
+import { readFile, readdir, writeFile } from 'node:fs/promises'
 
 const shared: Options = {
   format: ['esm'],
@@ -27,16 +27,24 @@ const shared: Options = {
     '@react-markdown-kit/editor',
     '@react-markdown-kit/editor/lexical',
     '@react-markdown-kit/renderer',
+    'pptxgenjs',
   ],
   tsconfig: 'tsconfig.json',
+}
+
+/** The shipped styles.css: every file of src/styles/, one per concern, joined in name order. */
+async function joinStyles(directory: string): Promise<string> {
+  const names = (await readdir(directory)).filter((name) => name.endsWith('.css')).sort()
+  const parts = await Promise.all(names.map((name) => readFile(`${directory}/${name}`, 'utf8')))
+  return parts.map((part) => part.trimEnd()).join('\n\n') + '\n'
 }
 
 export default defineConfig([
   {
     ...shared,
-    entry: { index: 'src/index.ts' },
+    entry: { index: 'src/index.ts', pptx: 'src/pptx.ts' },
     async onSuccess() {
-      await cp('src/styles.css', 'dist/styles.css')
+      await writeFile('dist/styles.css', await joinStyles('src/styles'))
     },
   },
   {

@@ -1,7 +1,8 @@
 /**
- * The Enter shortcut: a root-level paragraph that says exactly `---`, `--`
- * or `???` (or `***` / `___`, a rule) becomes the matching node when the
- * author presses Enter in it, with a fresh paragraph after it for the caret.
+ * The Enter shortcut: a root-level paragraph that says exactly `---`, a
+ * marker's spelling (`--`, `???`, `::right::`) or `***` / `___` (a rule)
+ * becomes the matching node when the author presses Enter in it, with a
+ * fresh paragraph after it for the caret.
  *
  * It is a command handler and not a node transform on purpose: a transform
  * would turn `--` into a pause marker while the author is still typing
@@ -21,24 +22,19 @@ import {
   type LexicalEditor,
   type LexicalNode,
 } from 'lexical'
+import type { BreakKind } from '../deck/breaks.js'
+import { markerOfSpelling } from '../deck/marker-kinds/registry.js'
 import { $createSlideBreakNode } from './slide-break-node.js'
 import { $createSlideMarkerNode } from './slide-marker-node.js'
 
-/** The node a finished line stands for, or undefined when it is prose. */
+const BREAKS: Readonly<Record<string, BreakKind>> = { '---': 'slide', '***': 'rule', '___': 'rule' }
+
+/** The node a finished line stands for, or undefined when it is prose. Markers come from the marker registry. */
 export function $nodeForLine(text: string): LexicalNode | undefined {
-  switch (text) {
-    case '---':
-      return $createSlideBreakNode('slide')
-    case '***':
-    case '___':
-      return $createSlideBreakNode('rule')
-    case '--':
-      return $createSlideMarkerNode('pause')
-    case '???':
-      return $createSlideMarkerNode('notes')
-    default:
-      return undefined
-  }
+  const breakKind = Object.hasOwn(BREAKS, text) ? BREAKS[text] : undefined
+  if (breakKind !== undefined) return $createSlideBreakNode(breakKind)
+  const marker = markerOfSpelling(text)
+  return marker === undefined ? undefined : $createSlideMarkerNode(marker)
 }
 
 export function registerEnterShortcut(editor: LexicalEditor): () => void {

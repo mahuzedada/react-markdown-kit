@@ -4,7 +4,7 @@
  * no global selectors, no `!important`, no hard-coded colour outside a
  * `--rmk-*` custom property declaration.
  */
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -15,7 +15,11 @@ const files = [
   'packages/editor/src/styles.css',
   'plugins/variables/src/styles.css',
   'plugins/mermaid/src/styles.css',
-  'plugins/slides/src/styles.css',
+  // The slides plugin keeps one file per concern; the build joins them.
+  ...readdirSync(join(root, 'plugins/slides/src/styles'))
+    .filter((name) => name.endsWith('.css'))
+    .sort()
+    .map((name) => `plugins/slides/src/styles/${name}`),
 ]
 
 const COLOR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|color-mix)\(/

@@ -1,0 +1,115 @@
+/* --------------------------------------------------------------- presenter */
+/* The current slide on the left; on the right the timers, the next step and  */
+/* the notes, which take whatever height is left and scroll.                  */
+
+.rmk-document [data-rmk-deck-mode='presenter'] {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+.rmk-document [data-rmk-deck-mode='presenter'] [data-rmk-slide][data-rmk-slide-state='current'] {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.rmk-document [data-rmk-deck-presenter] {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+  justify-self: stretch;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  min-height: 0;
+  overflow: hidden;
+  font-family: var(--rmk-font-body, inherit);
+}
+
+.rmk-document [data-rmk-deck-timers] {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rmk-document [data-rmk-deck-elapsed] {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.rmk-document [data-rmk-deck-clock] {
+  margin-inline-start: auto;
+  font-size: 1.25rem;
+  opacity: 0.8;
+}
+
+.rmk-document [data-rmk-deck-presenter] button {
+  font: inherit;
+  font-size: 0.8125rem;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: var(--rmk-slide-radius);
+  padding: 0.2em 0.6em;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.rmk-document [data-rmk-deck-presenter] button:hover,
+.rmk-document [data-rmk-deck-presenter] button:focus-visible {
+  opacity: 1;
+}
+
+.rmk-document [data-rmk-deck-preview] {
+  margin: 0;
+}
+
+.rmk-document [data-rmk-deck-preview] figcaption,
+.rmk-document [data-rmk-deck-notes-size] {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin-block-end: 0.4rem;
+}
+
+.rmk-document [data-rmk-deck-presenter] [data-rmk-slide-preview] {
+  width: 100%;
+}
+
+.rmk-document [data-rmk-deck-preview-end] {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 1px dashed currentColor;
+  border-radius: var(--rmk-slide-radius);
+  opacity: 0.6;
+}
+
+.rmk-document [data-rmk-deck-notes] {
+  overflow: auto;
+  font-size: calc(1.125rem * var(--rmk-deck-notes-scale, 1));
+  line-height: 1.5;
+}
+
+.rmk-document [data-rmk-deck-notes-size] {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+  text-transform: none;
+}
+
+.rmk-document [data-rmk-deck-notes-empty] {
+  margin: 0;
+  opacity: 0.6;
+}
+
+.rmk-document [data-rmk-deck-notes] [data-rmk-slide-notes],
+.rmk-document [data-rmk-deck-notes] [data-rmk-slide-notes][hidden] {
+  display: block;
+}
+
+.rmk-document [data-rmk-deck-notes] > * + *,
+.rmk-document [data-rmk-deck-notes] [data-rmk-slide-notes] > * + * {
+  margin-block-start: 0.75em;
+}

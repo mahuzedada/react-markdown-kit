@@ -4,8 +4,8 @@
  * without it; an application dispatches them on `getNativeEditor()`.
  */
 import { createCommand, type LexicalCommand } from 'lexical'
-import type { DirectiveKey } from '../deck/directives.js'
-import type { MarkerKind } from '../deck/markers.js'
+import type { DirectiveKey } from '../deck/directive-keys/registry.js'
+import type { MarkerKind } from '../deck/marker-kinds/registry.js'
 
 /** Insert a `---` slide break at the selection and put the caret on the new slide. */
 export const INSERT_SLIDE_COMMAND: LexicalCommand<undefined> = createCommand('INSERT_SLIDE_COMMAND')

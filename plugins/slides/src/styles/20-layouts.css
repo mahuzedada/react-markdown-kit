@@ -1,0 +1,122 @@
+/* ---------------------------------------------------------------- layouts */
+/* `<!-- layout: … -->` sets data-rmk-slide-layout; `::right::` gives the     */
+/* body two data-rmk-slide-column divs whatever the layout.                  */
+
+.rmk-document [data-rmk-slide-columns] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 2em;
+  align-content: start;
+}
+
+.rmk-document [data-rmk-slide-column] {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rmk-document [data-rmk-slide-column] > * + * {
+  margin-block-start: var(--rmk-space);
+}
+
+.rmk-document [data-rmk-slide-layout='cover'] [data-rmk-slide-body],
+.rmk-document [data-rmk-slide-layout='center'] [data-rmk-slide-body],
+.rmk-document [data-rmk-slide-layout='section'] [data-rmk-slide-body],
+.rmk-document [data-rmk-slide-layout='quote'] [data-rmk-slide-body],
+.rmk-document [data-rmk-slide-layout='fact'] [data-rmk-slide-body] {
+  justify-content: center;
+}
+
+.rmk-document [data-rmk-slide-layout='cover'] [data-rmk-slide-body],
+.rmk-document [data-rmk-slide-layout='center'] [data-rmk-slide-body],
+.rmk-document [data-rmk-slide-layout='fact'] [data-rmk-slide-body] {
+  text-align: center;
+  align-items: center;
+}
+
+.rmk-document [data-rmk-slide-layout='cover'] h1 {
+  font-size: 2.6em;
+}
+
+.rmk-document [data-rmk-slide-layout='section'] {
+  background: var(--rmk-slide-inverse-surface);
+  color: var(--rmk-slide-inverse-text);
+}
+
+.rmk-document [data-rmk-slide-layout='section'] h1,
+.rmk-document [data-rmk-slide-layout='section'] h2 {
+  font-size: 2.4em;
+}
+
+.rmk-document [data-rmk-slide-layout='quote'] blockquote {
+  font-size: 1.5em;
+  font-style: italic;
+  border-inline-start-width: 0.2em;
+}
+
+.rmk-document [data-rmk-slide-layout='fact'] h1,
+.rmk-document [data-rmk-slide-layout='fact'] h2 {
+  font-size: 4em;
+  line-height: 1;
+}
+
+/* image-left / image-right: the `image` directive's picture takes half the slide. */
+.rmk-document [data-rmk-slide-image] {
+  position: absolute;
+  inset-block: 0;
+  width: 50%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+}
+
+.rmk-document [data-rmk-slide-image]:not([src]) {
+  display: none;
+}
+
+.rmk-document [data-rmk-slide-layout='image-right'] [data-rmk-slide-image] {
+  inset-inline-end: 0;
+}
+
+.rmk-document [data-rmk-slide-layout='image-left'] [data-rmk-slide-image] {
+  inset-inline-start: 0;
+}
+
+.rmk-document [data-rmk-slide-layout='image-right'] [data-rmk-slide-body] {
+  inset-inline-end: 50%;
+  justify-content: center;
+}
+
+.rmk-document [data-rmk-slide-layout='image-left'] [data-rmk-slide-body] {
+  inset-inline-start: 50%;
+  justify-content: center;
+}
+
+/* Without an image layout the picture is not shown: it has no place to go. */
+.rmk-document [data-rmk-slide]:not([data-rmk-slide-layout='image-left']):not([data-rmk-slide-layout='image-right']) [data-rmk-slide-image] {
+  display: none;
+}
+
+/* ----------------------------------------------------------------- footer */
+
+.rmk-document [data-rmk-slide-footer] {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  gap: 1em;
+  align-items: baseline;
+  padding: calc(var(--rmk-slide-padding) / 2) var(--rmk-slide-padding);
+  font-size: calc(var(--rmk-slide-font-size) * 0.62);
+  line-height: 1.2;
+  opacity: 0.7;
+}
+
+.rmk-document [data-rmk-slide-number] {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.rmk-document [data-rmk-slide]:has(> [data-rmk-slide-footer]) [data-rmk-slide-body] {
+  padding-block-end: calc(var(--rmk-slide-padding) * 1.6);
+}

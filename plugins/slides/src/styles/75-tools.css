@@ -1,0 +1,45 @@
+/* ------------------------------------------------------------------- tools */
+/* Drawing (`d`) and the laser (`l`) sit over the current slide's content.    */
+/* A drawing stays visible when the tool is off, but only takes the pointer   */
+/* while it is on.                                                            */
+
+.rmk-document [data-rmk-deck-drawing] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.rmk-document [data-rmk-deck-drawing][data-rmk-deck-drawing-active] {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.rmk-document [data-rmk-deck-drawing] path {
+  fill: none;
+  stroke: var(--rmk-deck-ink);
+  stroke-width: 4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rmk-document [data-rmk-deck-laser] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: none;
+}
+
+.rmk-document [data-rmk-deck-laser-dot] {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: var(--rmk-deck-ink);
+  box-shadow: 0 0 12px 4px var(--rmk-deck-ink);
+  pointer-events: none;
+}

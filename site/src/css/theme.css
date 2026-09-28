@@ -495,9 +495,3 @@ a[data-slot='button'] {
 .rmk-document > *:first-child {
   margin-block-start: 0;
 }
-
-/* The slides demo prints one slide per 16in x 9in page; `print:[page:rmk-slides]` opts in, other sites keep the default page. */
-@page rmk-slides {
-  size: 16in 9in;
-  margin: 0;
-}

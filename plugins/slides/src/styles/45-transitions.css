@@ -1,0 +1,40 @@
+/* ------------------------------------------------------------ transitions */
+/* `transition: fade | slide | zoom` on a slide (or in the front matter):     */
+/* the slide eases in when it becomes current. @starting-style supplies the   */
+/* first frame, so no script and no keyframes; the direction of the move      */
+/* (data-rmk-deck-direction) picks the side a `slide` enters from.            */
+
+.rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide-state='current'][data-rmk-slide-transition='fade'],
+.rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide-state='current'][data-rmk-slide-transition='slide'],
+.rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide-state='current'][data-rmk-slide-transition='zoom'] {
+  transition:
+    opacity var(--rmk-deck-transition-duration) ease,
+    translate var(--rmk-deck-transition-duration) ease,
+    scale var(--rmk-deck-transition-duration) ease;
+}
+
+@starting-style {
+  .rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide-state='current'][data-rmk-slide-transition='fade'] {
+    opacity: 0;
+  }
+
+  .rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide-state='current'][data-rmk-slide-transition='slide'] {
+    opacity: 0;
+    translate: 6% 0;
+  }
+
+  .rmk-document [data-rmk-deck-mode='present'][data-rmk-deck-direction='backward'] [data-rmk-slide-state='current'][data-rmk-slide-transition='slide'] {
+    translate: -6% 0;
+  }
+
+  .rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide-state='current'][data-rmk-slide-transition='zoom'] {
+    opacity: 0;
+    scale: 0.94;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide-state='current'] {
+    transition: none;
+  }
+}

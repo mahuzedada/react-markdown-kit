@@ -38,7 +38,7 @@ const COMPARISONS: readonly PageLink[] = [
   { to: '/compare/mdxeditor', label: 'Editor vs MDXEditor', what: 'Editing model, output format, round trip, bundle size, server rendering.' },
   { to: '/compare/milkdown', label: 'Editor vs Milkdown', what: 'Editing model, output format, round trip, bundle size, ProseMirror.' },
   { to: '/compare/handlebars', label: 'Variables vs Handlebars', what: 'Replacing placeholders before parsing, compared with resolving them inside the parser.' },
-  { to: '/marp-alternative', label: 'Marp and Slidev alternative', what: 'A deck inside a React app, with no PDF or PPTX export.' },
+  { to: '/marp-alternative', label: 'Marp and Slidev alternative', what: 'A deck inside a React app, with PPTX export and browser print to PDF.' },
   { to: '/mermaid-live-editor-alternative', label: 'Mermaid Live Editor alternative', what: 'mermaid.live compared with the canvas on editing, sharing, price, licence and diagram types.' },
   { to: '/migrate-from-react-markdown', label: 'Migrate from react-markdown', what: 'The three differences, and a codemod that skips anything it can\'t safely convert.' },
 ]

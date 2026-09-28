@@ -1,0 +1,101 @@
+/* ---------------------------------------------------------------- controls */
+
+.rmk-document [data-rmk-deck-controls] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  font-family: var(--rmk-font-body, inherit);
+  font-size: 0.875rem;
+  line-height: 1.2;
+  background: var(--rmk-deck-chrome);
+  color: var(--rmk-deck-chrome-text);
+  border-radius: var(--rmk-slide-radius);
+}
+
+.rmk-document [data-rmk-deck-controls] button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: var(--rmk-slide-radius);
+  padding: 0.4em;
+  cursor: pointer;
+}
+
+/* The stack's Present button is the one text button. */
+.rmk-document [data-rmk-deck-controls] [data-rmk-deck-action='present'] {
+  border: 1px solid currentColor;
+  padding: 0.3em 0.75em;
+}
+
+.rmk-document [data-rmk-deck-controls] button:hover,
+.rmk-document [data-rmk-deck-controls] button:focus-visible {
+  background: var(--rmk-deck-chrome-text);
+  color: var(--rmk-deck-chrome);
+  outline: none;
+}
+
+.rmk-document [data-rmk-deck-controls] button[aria-pressed='true'] {
+  color: var(--rmk-deck-accent);
+}
+
+.rmk-document [data-rmk-deck-controls] button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* The label is the button's name for screen readers; the icon is what shows. */
+.rmk-document [data-rmk-deck-action-label] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.rmk-document [data-rmk-deck-counter],
+.rmk-document [data-rmk-deck-goto] {
+  font-variant-numeric: tabular-nums;
+  padding-inline: 0.5em;
+}
+
+.rmk-document [data-rmk-deck-goto] {
+  color: var(--rmk-deck-accent);
+}
+
+/* Present mode: a floating bar over the bottom of the slide. */
+.rmk-document [data-rmk-deck-mode='present'] [data-rmk-deck-controls] {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px var(--rmk-deck-scrim);
+  transition: opacity 0.3s ease;
+}
+
+/* Presenter mode: the bar is the grid's bottom row wherever it sits in the DOM. */
+.rmk-document [data-rmk-deck-mode='presenter'] [data-rmk-deck-controls] {
+  order: 1;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--rmk-deck-controls-height);
+  border-radius: 0;
+  justify-content: center;
+}
+
+/* The deck sets data-rmk-deck-idle after 2.5 s without pointer movement. */
+.rmk-document [data-rmk-deck-mode='present'][data-rmk-deck-idle] [data-rmk-deck-controls] {
+  opacity: 0;
+  pointer-events: none;
+}

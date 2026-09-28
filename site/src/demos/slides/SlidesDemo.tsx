@@ -1,120 +1,50 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Markdown, compileMarkdown, defineMarkdownPreset, gfm, type MarkdownPreset } from '@react-markdown-kit/renderer'
-import { MarkdownEditor } from '@react-markdown-kit/editor'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { compileMarkdown } from '@react-markdown-kit/renderer'
 import { ActivityScope } from '@zuilib/primitives/activity'
-import { cn } from '@zuilib/primitives/lib/cn'
-import Badge from '@zuilib/primitives/badge'
 import Button from '@zuilib/primitives/button'
-import Heading from '@zuilib/primitives/heading'
 import Text from '@zuilib/primitives/text'
-import { slides } from '@react-markdown-kit/slides/editor'
 import { DocsLink, PaneSwitch, StatusStrip } from '../../components/DemoStrip'
+import DeckHeader from './DeckHeader'
+import DeckPane from './DeckPane'
+import { downloadPptx } from './export-pptx'
+import { loadInitialSource, type InitialSource } from './initial-source'
+import { openPresenterWindow, shareDeck } from './link-actions'
+import { createDeckSetup, type DeckSetup } from './preset'
 import { SAMPLE_DECK } from './sample-deck'
-import { renderToolbar } from './toolbar'
-import {
-  clearStoredSource,
-  decodeSource,
-  encodeSource,
-  linkFor,
-  readSourceParam,
-  readStoredSource,
-  readView,
-  storeSource,
-  writeSourceParam,
-  type DemoView,
-} from './url-state'
+import SourcePane from './SourcePane'
+import { readView } from './url-state'
+import { useDeckSource } from './use-deck-source'
+import { useStreamReplay } from './use-stream-replay'
 
-import '@react-markdown-kit/editor/styles.css'
+import '@react-markdown-kit/mermaid/styles.css'
 import '@react-markdown-kit/slides/styles.css'
-
-/** Every window of this demo on one BroadcastChannel: the presenter drives the audience. */
-const SYNC_CHANNEL = 'rmk-slides-demo'
-const PRESENTER_WINDOW = 'rmk-slides-presenter'
-const URL_DEBOUNCE_MS = 400
-const STATUS_MS = 3500
-/** Long enough to reach Undo after a reset. */
-const UNDO_MS = 8000
-/** Parser notes listed under the deck; the rest are counted. */
-const NOTES_SHOWN = 3
 
 type MobilePane = 'editor' | 'deck'
 const PANES: readonly (readonly [MobilePane, string])[] = [
-  ['editor', 'Editor'],
+  ['editor', 'Source'],
   ['deck', 'Deck'],
 ]
 
 /*
- * Chrome for the workbench: the header and the two panes. The editor, the
- * deck and present mode are styled by the kit's own stylesheets. Kit rules
- * are unlayered and beat Tailwind's layered utilities, so a class that
- * overrides a property the kit sets carries `!`.
- *
- * Print is the deck alone: one slide per 16in x 9in page (the `rmk-slides`
- * page in src/css/theme.css), nothing else. Only the width is set, so the
- * plugin's aspect-ratio gives the height: a 16:9 slide fills the page, a 4:3
- * slide is 12in wide, centred, and still 9in tall.
+ * Chrome for the workbench: the header and the two panes. The deck and
+ * present mode are styled by the kit's own stylesheets. Print is the deck
+ * alone, one slide per page, sized by the plugin's stylesheet.
  */
 const SHELL =
-  'flex h-[var(--rmk-demo-height,100dvh)] flex-col overflow-hidden border-b border-border bg-card print:h-auto print:overflow-visible print:border-0 print:bg-transparent print:[page:rmk-slides]'
+  'flex h-[var(--rmk-demo-height,100dvh)] flex-col overflow-hidden border-b border-border bg-card print:h-auto print:overflow-visible print:border-0 print:bg-transparent'
 /** Below 900px one pane shows at a time, the deck first. */
 const PANE = 'flex min-h-0 min-w-0 flex-col max-[900px]:data-[mobile-hidden]:hidden'
 const PANE_HEAD = 'flex items-center justify-between gap-2 border-b border-border px-3 py-2 print:hidden'
-const INLINE_CODE = '[&_code]:font-mono [&_code]:text-[0.9em]'
 
 /**
- * One preset for both panes. The `/editor` entry's `slides()` carries the
- * authoring nodes, the present-mode article and the static handler, so the
- * editor and the renderer read the same object. `?view=present` and
- * `?view=presenter` open straight into that mode with deep links on.
- */
-function createPreset(view: DemoView): MarkdownPreset {
-  const presenting = view !== 'edit'
-  return defineMarkdownPreset({
-    extensions: [
-      gfm(),
-      slides({
-        sync: SYNC_CHANNEL,
-        hashRouting: presenting,
-        initialMode: view === 'edit' ? 'stack' : view,
-      }),
-    ],
-  })
-}
-
-interface InitialSource {
-  readonly source: string
-  readonly notice?: string
-  /** The deck came from this browser's storage, not the link or the sample. */
-  readonly fromStorage: boolean
-}
-
-/** `?d=` first, then what this browser saved last time, then the sample. */
-async function loadInitialSource(): Promise<InitialSource> {
-  const param = readSourceParam(location.search)
-  const stored = readStoredSource()
-  const fromStorage = stored !== undefined && stored !== SAMPLE_DECK
-  if (param === null) return { source: stored ?? SAMPLE_DECK, fromStorage }
-  const decoded = await decodeSource(param)
-  if (decoded !== undefined) return { source: decoded, fromStorage: false }
-  return {
-    source: stored ?? SAMPLE_DECK,
-    fromStorage,
-    notice: fromStorage
-      ? 'This browser couldn’t read the deck in the link (compressed links need the streams API), so you’re seeing the last deck you edited.'
-      : 'This browser couldn’t read the deck in the link (compressed links need the streams API), so you’re seeing the sample deck.',
-  }
-}
-
-/**
- * The slides workbench: a rich Markdown editor on the left, the deck it
- * describes on the right, and a header with the deck's title, its problems
- * and the actions that leave the page (a share link, the presenter window,
- * print). The source lives in React state and is mirrored to `?d=` and to
- * `localStorage`, so a reload, a bookmark or a pasted link all restore it.
+ * The slides workbench: the deck's Markdown as plain text on the left, the
+ * deck it describes on the right, and a header with the deck's title, its
+ * problems and the actions. The source lives in React state and is
+ * mirrored to `?d=` and to `localStorage`, so a reload, a bookmark or a
+ * pasted link all restore it.
  */
 export default function SlidesDemo(): ReactNode {
-  const [view] = useState(() => readView(location.search))
-  const [preset] = useState(() => createPreset(view))
+  const [setup] = useState(() => createDeckSetup(readView(location.search)))
   const [initial, setInitial] = useState<InitialSource | undefined>(undefined)
 
   useEffect(() => {
@@ -128,12 +58,7 @@ export default function SlidesDemo(): ReactNode {
   }, [])
 
   if (initial === undefined) return <div className={SHELL} aria-busy="true" />
-  return <Workbench preset={preset} initial={initial} />
-}
-
-interface WorkbenchProps {
-  readonly preset: MarkdownPreset
-  readonly initial: InitialSource
+  return <Workbench setup={setup} initial={initial} />
 }
 
 interface DeckMeta {
@@ -141,50 +66,19 @@ interface DeckMeta {
   readonly count: number
 }
 
-function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
-  const [source, setSource] = useState(initial.source)
-  const [notice, setNotice] = useState(initial.notice)
-  const [restoredNotice, setRestoredNotice] = useState(initial.fromStorage && initial.notice === undefined)
-  const [status, setStatus] = useState('')
-  // The deck a reset replaced, while Undo is on offer, and whether the reset cleared it from storage.
-  const [undo, setUndo] = useState<{ readonly source: string; readonly cleared: boolean } | undefined>(undefined)
-  const [encoded, setEncoded] = useState<string | undefined>(undefined)
+function Workbench({ setup, initial }: { readonly setup: DeckSetup; readonly initial: InitialSource }): ReactNode {
+  const { preset, controller } = setup
+  const deck = useDeckSource(initial)
+  const stream = useStreamReplay(deck.source, controller)
   const [meta, setMeta] = useState<DeckMeta>({ title: '', count: 0 })
   const [mobilePane, setMobilePane] = useState<MobilePane>('deck')
+  const [exporting, setExporting] = useState(false)
   const deckRef = useRef<HTMLDivElement>(null)
 
   // Compiled once per change: the deck renders from it and the header reads its diagnostics.
-  const document = useMemo(() => compileMarkdown(source, { preset }), [source, preset])
+  const shown = stream.shown ?? deck.source
+  const document = useMemo(() => compileMarkdown(shown, { preset }), [shown, preset])
   const problems = document.diagnostics
-
-  // Storage follows the reader's own edits only, so opening someone's link
-  // never replaces the deck this browser was keeping.
-  const current = useRef(source)
-  current.current = source
-  const edit = useCallback((next: string): void => {
-    // The editor may echo the value it was given; only a change is an edit.
-    if (next === current.current) return
-    setSource(next)
-    storeSource(next)
-    setRestoredNotice(false)
-  }, [])
-
-  // The address bar follows after a pause (encoding is async). The sample keeps the plain URL.
-  useEffect(() => {
-    setEncoded(undefined)
-    let cancelled = false
-    const timer = setTimeout(() => {
-      void encodeSource(source).then((value) => {
-        if (cancelled) return
-        setEncoded(value)
-        writeSourceParam(source === SAMPLE_DECK ? undefined : value)
-      })
-    }, URL_DEBOUNCE_MS)
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [source])
 
   // The header shows what the renderer decided: the deck's title and slide count, before the first paint.
   useLayoutEffect(() => {
@@ -195,187 +89,61 @@ function Workbench({ preset, initial }: WorkbenchProps): ReactNode {
     })
   }, [document])
 
-  // A short confirmation in the header, cleared on its own; one with Undo stays longer.
-  useEffect(() => {
-    if (status === '') return
-    const timer = setTimeout(
-      () => {
-        setStatus('')
-        setUndo(undefined)
-      },
-      undo === undefined ? STATUS_MS : UNDO_MS,
-    )
-    return () => clearTimeout(timer)
-  }, [status, undo])
-
-  const encodedNow = useCallback(async (): Promise<string> => encoded ?? encodeSource(source), [encoded, source])
-
-  const share = useCallback(async (): Promise<void> => {
-    const link = linkFor(await encodedNow(), 'present')
-    try {
-      await navigator.clipboard.writeText(link)
-      setStatus('Link copied. It opens this deck in present mode.')
-    } catch {
-      setStatus('Couldn’t copy the link. The deck is in the address bar, and you can add &view=present to open it in present mode.')
-    }
-  }, [encodedNow])
-
-  const openPresenter = useCallback(async (): Promise<void> => {
-    // Open first, navigate after encoding: a window opened after an await is popup-blocked.
-    const popup = window.open('', PRESENTER_WINDOW)
-    if (popup === null) {
-      setStatus('The browser blocked the presenter window.')
-      return
-    }
-    popup.location.href = linkFor(await encodedNow(), 'presenter')
-    setStatus('Presenter window is open. Press Present here, or open the share link on the projector, and the two windows will stay on the same slide.')
-  }, [encodedNow])
-
-  const reset = useCallback((): void => {
-    // Storage is cleared only when it holds the deck on screen: resetting a
-    // deck opened from someone's link leaves this browser's own deck alone.
-    const cleared = readStoredSource() === source
-    if (cleared) clearStoredSource()
-    setUndo(source === SAMPLE_DECK ? undefined : { source, cleared })
-    setSource(SAMPLE_DECK)
-    setNotice(undefined)
-    setRestoredNotice(false)
-    setStatus('Sample deck restored.')
-  }, [source])
-
-  const undoReset = useCallback((): void => {
-    if (undo === undefined) return
-    setSource(undo.source)
-    if (undo.cleared) storeSource(undo.source)
-    setUndo(undefined)
-    setStatus('Your deck is back.')
-  }, [undo])
-
-  const worst = problems.some((problem) => problem.severity === 'error')
-    ? 'error'
-    : problems.some((problem) => problem.severity === 'warning')
-      ? 'warning'
-      : problems.length > 0
-        ? 'info'
-        : 'ok'
+  const exportPptx = (): void => {
+    setExporting(true)
+    downloadPptx(deck.source, preset, meta.title)
+      .then(() => deck.setStatus('Exported. Fragments and code steps are shown whole in the file.'))
+      .catch(() => deck.setStatus('Couldn’t export this deck. A picture on another site may not allow downloads.'))
+      .finally(() => setExporting(false))
+  }
 
   return (
     <ActivityScope feature="slides-workbench">
       <div className={SHELL}>
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5 print:hidden">
-          <Heading as="h2" size="md" truncate className="m-0 mr-1 max-w-md min-w-0 leading-snug">
-            {meta.title === '' ? 'Untitled deck' : meta.title}
-          </Heading>
-          <Badge variant="subtle" tone="success" size="sm" className="whitespace-nowrap">
-            {meta.count} {meta.count === 1 ? 'slide' : 'slides'}
-          </Badge>
-          <Badge variant="subtle" tone={worst === 'ok' || worst === 'info' ? 'success' : 'warning'} size="sm" className="whitespace-nowrap">
-            {problems.length === 0 ? 'no problems' : `${problems.length} ${problems.length === 1 ? 'note' : 'notes'} from the parser`}
-          </Badge>
-          <div className="ml-auto flex flex-wrap gap-1.5" role="group" aria-label="Deck actions">
-            <Button variant="outline" size="sm" track="share" onClick={() => void share()}>
-              Share
-            </Button>
-            <Button variant="outline" size="sm" track="presenter-window" onClick={() => void openPresenter()}>
-              Presenter window
-            </Button>
-            <Button variant="outline" size="sm" track="print" onClick={() => window.print()}>
-              Print
-            </Button>
-            <Button variant="ghost" size="sm" track="reset" disabled={source === SAMPLE_DECK} onClick={reset}>
-              Reset
-            </Button>
-          </div>
-          <output className="flex min-h-0 basis-full items-center gap-2 text-sm text-foreground empty:hidden" aria-live="polite">
-            {status}
-            {status !== '' && undo !== undefined ? (
-              <Button variant="link" size="sm" track="undo-reset" className="h-auto p-0" onClick={undoReset}>
-                Undo
-              </Button>
-            ) : null}
-          </output>
-        </header>
+        <DeckHeader
+          title={meta.title}
+          count={meta.count}
+          problems={problems.length}
+          warning={problems.some((problem) => problem.severity !== 'info')}
+          status={deck.status}
+          canUndo={deck.canUndo}
+          canReset={deck.source !== SAMPLE_DECK}
+          streaming={stream.shown !== undefined}
+          exporting={exporting}
+          onPresent={() => controller.enter('present')}
+          onStream={stream.start}
+          onShare={() => void shareDeck(deck.encodedNow(), deck.setStatus)}
+          onPresenter={() => void openPresenterWindow(deck.encodedNow, deck.setStatus)}
+          onExport={exportPptx}
+          onReset={deck.reset}
+          onUndo={deck.undoReset}
+        />
 
-        {notice === undefined ? null : (
+        {deck.notice === undefined ? null : (
           <Text size="sm" tone="warning" className="m-0 border-b border-border bg-warning/10 px-4 py-2 print:hidden">
-            {notice}
+            {deck.notice}
           </Text>
         )}
-        {restoredNotice ? (
+        {deck.restoredNotice ? (
           <Text size="sm" className="m-0 flex flex-wrap items-center gap-x-2 border-b border-border bg-muted px-4 py-2 print:hidden">
             This is the deck you edited last time in this browser.
-            <Button variant="link" size="sm" track="open-sample" className="h-auto p-0" onClick={reset}>
+            <Button variant="link" size="sm" track="open-sample" className="h-auto p-0" onClick={deck.reset}>
               Open the sample deck
             </Button>
           </Text>
         ) : null}
 
         <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] max-[900px]:grid-cols-1 print:block">
-          <div className={cn(PANE, 'print:hidden')} data-mobile-hidden={mobilePane !== 'editor' ? '' : undefined}>
-            <div className={PANE_HEAD}>
-              <Text as="span" size="sm" weight="medium">
-                Markdown
-              </Text>
-              <Badge variant="subtle" tone="success" size="sm" className="whitespace-nowrap">
-                rich editor, writes the file back
-              </Badge>
-            </div>
-            <div
-              className={cn(
-                'flex min-h-0 flex-1 flex-col overflow-auto',
-                // The editor fills its pane. Its toolbar is the demo's own render prop (toolbar.tsx).
-                '[&>.rmk-editor]:min-h-0 [&>.rmk-editor]:flex-1 [&>.rmk-editor]:rounded-none! [&>.rmk-editor]:border-0!',
-                '[&_.rmk-editor_.rmk-content]:min-h-0! [&_.rmk-editor_.rmk-content]:flex-1 [&_.rmk-editor_.rmk-content]:overflow-auto [&_.rmk-editor_.rmk-content]:px-[1.1rem] [&_.rmk-editor_.rmk-content]:py-[0.85rem]',
-                '[&_.rmk-editor_.rmk-toolbar]:sticky [&_.rmk-editor_.rmk-toolbar]:top-0 [&_.rmk-editor_.rmk-toolbar]:z-1',
-              )}
-            >
-              <MarkdownEditor preset={preset} value={source} onChange={edit} toolbar={renderToolbar} aria-label="Deck source" />
-            </div>
-            <Text size="sm" muted className={cn('m-0 border-t border-border px-[0.9rem] py-2', INLINE_CODE)}>
-              Type <code>---</code>, <code>--</code> or <code>???</code> on a line and press Enter, or use the Slides buttons. Switch to
-              Markdown source to see the file.
-            </Text>
-          </div>
-
-          <div
-            className={cn(PANE, 'border-l border-border max-[900px]:border-l-0 print:border-0')}
-            data-mobile-hidden={mobilePane !== 'deck' ? '' : undefined}
-          >
-            <div className={PANE_HEAD}>
-              <Text as="span" size="sm" weight="medium">
-                Deck
-              </Text>
-              <Badge variant="subtle" tone="success" size="sm" className="whitespace-nowrap">
-                static sections until you press Present
-              </Badge>
-            </div>
-            <div className="min-h-0 flex-1 overflow-auto bg-muted p-4 print:overflow-visible print:bg-transparent print:p-0" ref={deckRef}>
-              <div
-                className={cn(
-                  'rmk-document mx-auto max-w-5xl print:m-0 print:max-w-none',
-                  "print:[&_[data-rmk-slide]]:mx-auto print:[&_[data-rmk-slide]]:w-[16in] print:[&_[data-rmk-deck-aspect='4:3']_[data-rmk-slide]]:w-[12in]",
-                )}
-              >
-                <Markdown preset={preset} document={document} />
-              </div>
-            </div>
-            {problems.length === 0 ? null : (
-              <ul
-                className={cn(
-                  'm-0 list-none border-t border-border bg-warning/10 px-[0.9rem] py-1.5 text-sm text-warning-text print:hidden [&>li+li]:mt-1',
-                  INLINE_CODE,
-                )}
-                aria-label="Parser notes"
-              >
-                {problems.slice(0, NOTES_SHOWN).map((problem, index) => (
-                  <li key={`${problem.code}-${index}`}>
-                    <code>{problem.code}</code> {problem.message}
-                  </li>
-                ))}
-                {problems.length > NOTES_SHOWN ? <li>and {problems.length - NOTES_SHOWN} more</li> : null}
-              </ul>
-            )}
-          </div>
+          <SourcePane value={deck.source} onChange={deck.edit} className={`${PANE} print:hidden`} head={PANE_HEAD} hidden={mobilePane !== 'editor'} />
+          <DeckPane
+            preset={preset}
+            document={document}
+            deckRef={deckRef}
+            className={PANE}
+            head={PANE_HEAD}
+            hidden={mobilePane !== 'deck'}
+            streaming={stream.shown !== undefined}
+          />
         </div>
 
         <StatusStrip>

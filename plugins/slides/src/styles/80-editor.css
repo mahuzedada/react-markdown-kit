@@ -1,0 +1,116 @@
+/* ================================================================== editor */
+/* `/editor` renders a slide break as a labelled divider that counts slides,  */
+/* a marker as a captioned divider and a directive as an editable chip.       */
+
+.rmk-editor [data-rmk-surface='rich'] {
+  counter-reset: rmk-slide 1;
+}
+
+.rmk-editor [data-rmk-slide-break] {
+  position: relative;
+  margin-block: var(--rmk-space, 1rem);
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--rmk-border, currentColor);
+}
+
+/* A slide break is a row: the dashed line, then the label. The line stops
+   where the label starts, so no background has to mask it (the editor's
+   --rmk-surface is translucent). */
+.rmk-editor [data-rmk-slide-break='slide'] {
+  counter-increment: rmk-slide;
+  display: flex;
+  align-items: center;
+  height: auto;
+  border-top: 0;
+}
+
+.rmk-editor [data-rmk-slide-break='slide']::before {
+  content: '';
+  flex: 1;
+  border-top: 2px dashed var(--rmk-border, currentColor);
+}
+
+.rmk-editor [data-rmk-slide-break='slide']::after {
+  content: 'Slide ' counter(rmk-slide);
+  flex: none;
+  padding-inline-start: 0.75em;
+  font-family: var(--rmk-font-body, inherit);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--rmk-muted, currentColor);
+  user-select: none;
+}
+
+.rmk-editor [data-rmk-slide-marker] {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  margin-block: var(--rmk-space, 1rem);
+  font-family: var(--rmk-font-body, inherit);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rmk-muted, currentColor);
+  user-select: none;
+}
+
+.rmk-editor [data-rmk-slide-marker]::before,
+.rmk-editor [data-rmk-slide-marker]::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dotted var(--rmk-border, currentColor);
+}
+
+.rmk-editor [data-rmk-slide-directive] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-block: calc(var(--rmk-space, 1rem) / 2);
+  padding: 0.15em 0.75em;
+  font-family: var(--rmk-font-mono, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--rmk-muted, currentColor);
+  background: var(--rmk-surface, transparent);
+  border: 1px solid var(--rmk-border, currentColor);
+  border-radius: 999px;
+  cursor: text;
+}
+
+.rmk-editor [data-rmk-slide-directive] input {
+  font: inherit;
+  color: var(--rmk-text, inherit);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  min-width: 8ch;
+  outline: none;
+}
+
+/* The value is a button (click to edit) that reads as the chip's text. */
+.rmk-editor [data-rmk-slide-directive] button {
+  font: inherit;
+  color: var(--rmk-text, inherit);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: text;
+}
+
+/* The <hr> is what an unstyled editor shows; here the divider draws the line. */
+.rmk-editor [data-rmk-slide-break] hr {
+  margin: 0;
+  border: 0;
+  height: 0;
+}
+
+.rmk-editor [data-rmk-slide-break]:focus-visible,
+.rmk-editor [data-rmk-slide-marker]:focus-visible,
+.rmk-editor [data-rmk-slide-directive]:focus-within {
+  outline: 2px solid var(--rmk-focus, currentColor);
+  outline-offset: 2px;
+}
+

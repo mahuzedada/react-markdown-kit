@@ -18,6 +18,8 @@ export interface SlidesEditorLabels {
   readonly notes: string
   /** Caption of the `--` divider. */
   readonly pause: string
+  /** Caption of the `::right::` divider. */
+  readonly column: string
   /** Accessible name of a `---` slide break. */
   readonly slideBreak: string
   /** Accessible name of a `***` rule inside a slide. */
@@ -31,6 +33,7 @@ export interface SlidesEditorLabels {
 export const SLIDES_EDITOR_LABELS: SlidesEditorLabels = {
   notes: 'Speaker notes',
   pause: 'Pause',
+  column: 'Right column',
   slideBreak: 'Slide break',
   rule: 'Rule',
   directive: (key) => `${key} directive`,

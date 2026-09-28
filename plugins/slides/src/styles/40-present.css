@@ -1,0 +1,79 @@
+/* ============================================================ present mode */
+/* `/present` sets data-rmk-deck-mode on the article, data-rmk-slide-state    */
+/* on each section and data-rmk-fragment-state on the current fragments; the  */
+/* controls bar, presenter panel, overlays and idle flag are its children.    */
+/*                                                                            */
+/* In present mode the slide fills the window: as wide as the article (100%,  */
+/* not 100vw, which counts the page scrollbar) or as tall as the window,      */
+/* whichever is smaller, and the control bar floats over its bottom edge,    */
+/* fading when the pointer rests. Presenter mode keeps a row for the bar.     */
+
+.rmk-document [data-rmk-deck][data-rmk-deck-mode='present'],
+.rmk-document [data-rmk-deck][data-rmk-deck-mode='presenter'] {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  margin: 0;
+  gap: 0;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--rmk-deck-backdrop);
+  color: var(--rmk-deck-chrome-text);
+  outline: none;
+}
+
+.rmk-document [data-rmk-deck][data-rmk-deck-mode='present'] {
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+}
+
+.rmk-document [data-rmk-deck][data-rmk-deck-mode='presenter'] {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide] {
+  grid-area: 1 / 1;
+  width: min(100%, calc(100dvh * 16 / 9));
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.rmk-document [data-rmk-deck-mode='present'][data-rmk-deck-aspect='4:3'] [data-rmk-slide] {
+  width: min(100%, calc(100dvh * 4 / 3));
+}
+
+.rmk-document [data-rmk-deck-mode='presenter'] [data-rmk-slide] {
+  width: min(100%, calc((100dvh - var(--rmk-deck-controls-height)) * 16 / 9));
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.rmk-document [data-rmk-deck-mode='presenter'][data-rmk-deck-aspect='4:3'] [data-rmk-slide] {
+  width: min(100%, calc((100dvh - var(--rmk-deck-controls-height)) * 4 / 3));
+}
+
+.rmk-document [data-rmk-deck-mode='present'] [data-rmk-slide]:not([data-rmk-slide-state='current']),
+.rmk-document [data-rmk-deck-mode='presenter'] [data-rmk-slide]:not([data-rmk-slide-state='current']):not([data-rmk-slide-preview]) {
+  display: none;
+}
+
+.rmk-document [data-rmk-fragment-state='hidden'] {
+  visibility: hidden;
+}
+
+/* A thin bar along the bottom edge: how far through the deck the talk is. */
+.rmk-document [data-rmk-deck-progress] {
+  position: fixed;
+  inset-inline-start: 0;
+  bottom: 0;
+  z-index: 2;
+  width: calc(var(--rmk-deck-progress, 0) * 100%);
+  height: 3px;
+  background: var(--rmk-deck-accent);
+  transition: width 0.3s ease;
+  pointer-events: none;
+}
+
+.rmk-document [data-rmk-deck-mode='presenter'] [data-rmk-deck-progress] {
+  display: none;
+}

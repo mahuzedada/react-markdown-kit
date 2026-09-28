@@ -17,7 +17,8 @@ import { slides as headlessSlides } from '../src/index.js'
 import { slides, SLIDES_LABELS, type SlidesPresentOptions } from '../src/present.js'
 import { createDeckArticle } from '../src/present/deck-article.js'
 import { inertValue } from '../src/present/sections.js'
-import { reduceDeck, INITIAL_DECK_STATE, type DeckShape } from '../src/present/use-deck-state.js'
+import { reduceDeck } from '../src/present/state/reduce-deck.js'
+import { INITIAL_DECK_STATE, type DeckShape } from '../src/present/state/deck-state.js'
 
 const DECK = `---
 title: Q3 review
@@ -443,6 +444,12 @@ describe('presenter view', () => {
     const notes = panel?.querySelector('[data-rmk-deck-notes] [data-rmk-slide-notes]')
     expect(notes?.hasAttribute('hidden')).toBe(false)
     expect(notes?.textContent).toBe('say this')
+    // Slide 2 has steps left, so the preview is slide 2 with its next step shown.
+    const step = panel?.querySelector('[data-rmk-slide-preview]')
+    expect(step?.getAttribute('data-rmk-slide')).toBe('2')
+    expect(step?.querySelector('[data-rmk-fragment="1"]')?.getAttribute('data-rmk-fragment-state')).toBe('shown')
+    press(deck, 'ArrowRight')
+    press(deck, 'ArrowRight')
     expect(panel?.querySelector('[data-rmk-slide-preview]')?.getAttribute('data-rmk-slide')).toBe('3')
     expect(action(view, 'presenter').getAttribute('aria-pressed')).toBe('true')
     press(deck, 'p')
@@ -700,7 +707,8 @@ describe('fullscreen', () => {
     const view = keep(render(TWO))
     const deck = present(view)
     expect(view.container.querySelector('[data-rmk-deck-action="fullscreen"]')).toBeNull()
-    expect(press(deck, 'f')).toBe(true)
+    // A command that is not on offer leaves its key to the browser.
+    expect(press(deck, 'f')).toBe(false)
     expect(deck.getAttribute('data-rmk-deck-mode')).toBe('present')
   })
 
@@ -752,15 +760,15 @@ describe('reduceDeck', () => {
     const empty: DeckShape = { count: 0, fragments: [] }
     expect(reduceDeck(INITIAL_DECK_STATE, { type: 'enter', mode: 'present' }, empty)).toBe(INITIAL_DECK_STATE)
     expect(reduceDeck(INITIAL_DECK_STATE, { type: 'enter', mode: 'presenter', index: 2 }, empty)).toBe(INITIAL_DECK_STATE)
-    expect(reduceDeck({ mode: 'present', index: 2, fragment: 1 }, { type: 'clamp' }, empty)).toEqual(INITIAL_DECK_STATE)
+    expect(reduceDeck({ mode: 'present', index: 2, fragment: 1, direction: 'forward' }, { type: 'clamp' }, empty)).toEqual({ ...INITIAL_DECK_STATE, direction: 'backward' })
     expect(reduceDeck(INITIAL_DECK_STATE, { type: 'clamp' }, empty)).toBe(INITIAL_DECK_STATE)
-    expect(reduceDeck({ mode: 'present', index: 2, fragment: 0 }, { type: 'clamp' }, shape).mode).toBe('present')
+    expect(reduceDeck({ mode: 'present', index: 2, fragment: 0, direction: 'forward' }, { type: 'clamp' }, shape).mode).toBe('present')
   })
 
   it('clamps out-of-range targets', () => {
-    expect(reduceDeck(INITIAL_DECK_STATE, { type: 'goto', index: 9, fragment: 9 }, shape)).toEqual({ mode: 'stack', index: 2, fragment: 0 })
-    expect(reduceDeck(INITIAL_DECK_STATE, { type: 'goto', index: 1, fragment: 9 }, shape)).toEqual({ mode: 'stack', index: 1, fragment: 2 })
-    expect(reduceDeck({ mode: 'stack', index: 5, fragment: 0 }, { type: 'clamp' }, shape)).toEqual({ mode: 'stack', index: 2, fragment: 0 })
+    expect(reduceDeck(INITIAL_DECK_STATE, { type: 'goto', index: 9, fragment: 9 }, shape)).toEqual({ mode: 'stack', index: 2, fragment: 0, direction: 'forward' })
+    expect(reduceDeck(INITIAL_DECK_STATE, { type: 'goto', index: 1, fragment: 9 }, shape)).toEqual({ mode: 'stack', index: 1, fragment: 2, direction: 'forward' })
+    expect(reduceDeck({ mode: 'stack', index: 5, fragment: 0, direction: 'forward' }, { type: 'clamp' }, shape)).toEqual({ mode: 'stack', index: 2, fragment: 0, direction: 'backward' })
     expect(reduceDeck(INITIAL_DECK_STATE, { type: 'last' }, { count: 0, fragments: [] })).toEqual(INITIAL_DECK_STATE)
   })
 })

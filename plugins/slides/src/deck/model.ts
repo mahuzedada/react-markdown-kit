@@ -8,25 +8,56 @@
  */
 import type { MarkdownNode } from '@internal/document-contracts/index.js'
 import type { MarkdownDiagnostic, SourceRange } from '@internal/diagnostics/index.js'
+import type { SlideLayout } from './directive-keys/layout.js'
+import type { SlideTransition } from './directive-keys/transition.js'
+
+export type { SlideLayout, SlideTransition }
 
 export type SlideAspect = '16:9' | '4:3'
 
-export interface SlideModel {
-  /** Zero-based. The rendered number is `index + 1`. */
-  readonly index: number
-  /** From `<!-- name: … -->`; absent when unset or a duplicate. */
-  readonly name?: string
-  /** Plain text of the slide's first heading. */
-  readonly title?: string
+/**
+ * What directives set on a slide. Front matter sets the deck-wide default
+ * of every key that allows it; the slide's own directive wins, except
+ * `classes`, which accumulate after the deck's.
+ */
+export interface SlideProperties {
   /** Deck classes first, then the slide's own, in source order. */
   readonly classes: readonly string[]
-  /** The slide's `background` directive, else the deck's. */
+  /** From `<!-- name: … -->`; absent when unset or a duplicate. */
+  readonly name?: string
   readonly background?: string
+  readonly layout?: SlideLayout
+  /** The picture an `image-left` or `image-right` layout places. */
+  readonly image?: string
+  readonly transition?: SlideTransition
+  readonly footer?: string
+  /** Show the slide number in the footer. */
+  readonly paginate?: boolean
+  /** Reveal the items of every root-level list one step at a time. */
+  readonly incremental?: boolean
+}
+
+/** One content block and where it stands: its fragment group (0 before any `--`) and column (1 after `::right::`). */
+export interface SlideBlock {
+  readonly node: MarkdownNode
+  readonly group: number
+  readonly column: number
+}
+
+export interface SlideModel extends SlideProperties {
+  /** Zero-based. The rendered number is `index + 1`. */
+  readonly index: number
+  /** Plain text of the slide's first heading. */
+  readonly title?: string
   /**
    * Content blocks by fragment group: `groups[0]` is always visible,
    * `groups[k]` appears after the k-th `--` marker.
    */
   readonly groups: readonly (readonly MarkdownNode[])[]
+  /** Every content block in source order, with its group and column. */
+  readonly blocks: readonly SlideBlock[]
+  /** 1, or 2 when the slide has a `::right::` marker. */
+  readonly columns: number
   /** Blocks after `???`. */
   readonly notes: readonly MarkdownNode[]
   /** No content blocks and no notes. Still rendered. */

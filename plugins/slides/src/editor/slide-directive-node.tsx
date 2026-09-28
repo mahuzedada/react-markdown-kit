@@ -35,12 +35,8 @@ import {
   type Spread,
 } from 'lexical'
 import { useLexicalEditor } from '@react-markdown-kit/editor/lexical'
-import {
-  directiveProblem,
-  isDirectiveKey,
-  type DirectiveKey,
-  type SlideDirectiveNode as SlideDirectiveMdastNode,
-} from '../deck/directives.js'
+import { isDirectiveKey, type DirectiveKey } from '../deck/directive-keys/registry.js'
+import { directiveProblem, type SlideDirectiveNode as SlideDirectiveMdastNode } from '../deck/directives.js'
 import { useSlidesEditorLabels } from './options.js'
 
 export type SerializedSlideDirectiveNode = Spread<{ key: DirectiveKey; argument: string }, SerializedLexicalNode>

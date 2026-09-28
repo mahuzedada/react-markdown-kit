@@ -18,12 +18,16 @@ export const SLIDES_DIAGNOSTIC_CODES = {
   directiveUnknown: 'SLIDES_DIRECTIVE_UNKNOWN',
   /** Two slides with the same `name`. */
   nameDuplicate: 'SLIDES_NAME_DUPLICATE',
-  /** A second `???` in a slide, or a `--` after `???`. */
+  /** A second `???` or `::right::` in a slide, or a `--` or `::right::` after `???`. */
   markerMisplaced: 'SLIDES_MARKER_MISPLACED',
-  /** A `--` or `???` glued to the paragraph above it. */
+  /** A marker glued to the paragraph above it. */
   markerAttached: 'SLIDES_MARKER_ATTACHED',
   /** A slide opening with bare `key: value` lines, remark style. */
   propertyBare: 'SLIDES_PROPERTY_BARE',
+  /** A `<!-- src: … -->` that `includeDeckFiles` did not expand. */
+  includeUnresolved: 'SLIDES_INCLUDE_UNRESOLVED',
+  /** A code fence whose `{…}` line ranges could not be read. */
+  codeStepsInvalid: 'SLIDES_CODE_STEPS_INVALID',
 } as const
 
 export type SlidesDiagnosticCode = (typeof SLIDES_DIAGNOSTIC_CODES)[keyof typeof SLIDES_DIAGNOSTIC_CODES]
@@ -38,6 +42,8 @@ const SEVERITY: Readonly<Record<SlidesDiagnosticCode, DiagnosticSeverity>> = {
   SLIDES_MARKER_MISPLACED: 'warning',
   SLIDES_MARKER_ATTACHED: 'warning',
   SLIDES_PROPERTY_BARE: 'info',
+  SLIDES_INCLUDE_UNRESOLVED: 'warning',
+  SLIDES_CODE_STEPS_INVALID: 'warning',
 }
 
 const MESSAGE: Readonly<Record<SlidesDiagnosticCode, string>> = {
@@ -49,10 +55,12 @@ const MESSAGE: Readonly<Record<SlidesDiagnosticCode, string>> = {
   SLIDES_DIRECTIVE_INVALID: 'The directive argument is not accepted, so the comment is shown as text.',
   SLIDES_DIRECTIVE_UNKNOWN: 'The comment looks like a directive but its key is not one, so it is shown as text.',
   SLIDES_NAME_DUPLICATE: 'Another slide already has this name, so this one gets no id.',
-  SLIDES_MARKER_MISPLACED: 'A second ??? in a slide, or a -- after ???, is ignored.',
-  SLIDES_MARKER_ATTACHED: 'A -- or ??? on the line right after text is part of the paragraph. Put a blank line before it.',
+  SLIDES_MARKER_MISPLACED: 'A second ??? or ::right:: in a slide, or a -- or ::right:: after ???, is ignored.',
+  SLIDES_MARKER_ATTACHED: 'A marker (--, ??? or ::right::) on the line right after text is part of the paragraph. Put a blank line before it.',
   SLIDES_PROPERTY_BARE:
     'A slide opening with bare `key: value` lines is prose here. Write each as a `<!-- key: value -->` comment.',
+  SLIDES_INCLUDE_UNRESOLVED: 'This file was not included. Expand `<!-- src: … -->` with includeDeckFiles before rendering.',
+  SLIDES_CODE_STEPS_INVALID: 'The `{…}` after the fence language is not a list of line ranges, so the code shows without highlights.',
 }
 
 export function slidesDiagnostic(
@@ -63,3 +71,6 @@ export function slidesDiagnostic(
   const message = detail === undefined ? MESSAGE[code] : `${MESSAGE[code]} ${detail}`
   return diagnostic(code, SEVERITY[code], message, range === undefined ? {} : { range })
 }
+
+/** How the reader's parts hand a problem back to the walk that collects them. */
+export type ReportProblem = (code: SlidesDiagnosticCode, range: SourceRange | undefined, detail?: string) => void

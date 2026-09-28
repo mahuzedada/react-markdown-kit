@@ -1,0 +1,91 @@
+/* ------------------------------------------------------------ the stack */
+
+.rmk-document [data-rmk-deck] {
+  display: grid;
+  gap: var(--rmk-slide-gap);
+}
+
+.rmk-document [data-rmk-slide] {
+  container-type: inline-size;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+  background: var(--rmk-slide-surface);
+  color: var(--rmk-slide-text);
+  border-radius: var(--rmk-slide-radius);
+  box-shadow: var(--rmk-slide-shadow);
+}
+
+.rmk-document [data-rmk-deck-aspect='4:3'] [data-rmk-slide] {
+  aspect-ratio: 4 / 3;
+}
+
+.rmk-document [data-rmk-slide-body] {
+  --rmk-space: 1em;
+  --rmk-measure: none;
+  position: absolute;
+  inset: 0;
+  padding: var(--rmk-slide-padding);
+  font-size: var(--rmk-slide-font-size);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+/* The renderer's rhythm rule only reaches direct children of .rmk-document.
+   A fragment group is a div; an incremental list item keeps the list's own rhythm. */
+.rmk-document [data-rmk-slide-body] > * + *,
+.rmk-document div[data-rmk-fragment] > * + * {
+  margin-block-start: var(--rmk-space);
+}
+
+.rmk-document div[data-rmk-fragment] + * {
+  margin-block-start: var(--rmk-space);
+}
+
+@supports not (font-size: 1cqw) {
+  .rmk-document [data-rmk-slide-body] {
+    font-size: 1rem;
+    padding: 1.5rem;
+  }
+}
+
+/* ------------------------------------------------------------ class hooks */
+/* One attribute more than the layout rules (20-layouts.css), so a slide's   */
+/* own class wins over its layout, deck-wide or not.                         */
+
+.rmk-document [data-rmk-slide][data-rmk-slide-class~='left'] [data-rmk-slide-body] { text-align: start; }
+.rmk-document [data-rmk-slide][data-rmk-slide-class~='center'] [data-rmk-slide-body] { text-align: center; }
+.rmk-document [data-rmk-slide][data-rmk-slide-class~='right'] [data-rmk-slide-body] { text-align: end; }
+.rmk-document [data-rmk-slide][data-rmk-slide-class~='top'] [data-rmk-slide-body] { justify-content: flex-start; }
+.rmk-document [data-rmk-slide][data-rmk-slide-class~='middle'] [data-rmk-slide-body] { justify-content: center; }
+.rmk-document [data-rmk-slide][data-rmk-slide-class~='bottom'] [data-rmk-slide-body] { justify-content: flex-end; }
+
+.rmk-document [data-rmk-slide][data-rmk-slide-class~='inverse'] {
+  background: var(--rmk-slide-inverse-surface);
+  color: var(--rmk-slide-inverse-text);
+}
+
+/* ------------------------------------------------------------- background */
+
+.rmk-document [data-rmk-slide-background] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+}
+
+.rmk-document [data-rmk-slide-background]:not([src]) {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ notes */
+
+/* The `hidden` attribute already does this; stated so a reset cannot undo it. */
+.rmk-document [data-rmk-slide-notes][hidden] {
+  display: none;
+}
+

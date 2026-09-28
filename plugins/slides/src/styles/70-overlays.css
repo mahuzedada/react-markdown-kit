@@ -1,0 +1,139 @@
+/* ---------------------------------------------------------------- overlays */
+/* data-rmk-deck-overlay on the article: `overview` lays every slide out as a */
+/* grid of tiles, `help` shows the shortcut list, `blackout` a black screen.  */
+
+.rmk-document [data-rmk-deck][data-rmk-deck-overlay='overview'] {
+  display: grid;
+  grid-template: none;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-auto-rows: auto;
+  align-content: start;
+  place-items: stretch;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 5rem;
+  overflow: auto;
+}
+
+/* One attribute more than the present and presenter rules that hide or place slides, so a tile shows whatever the file order. */
+.rmk-document [data-rmk-deck][data-rmk-deck-overlay='overview'] [data-rmk-slide][data-rmk-slide-state]:not([data-rmk-slide-print-step]) {
+  display: block;
+  grid-area: auto;
+  width: auto;
+  cursor: pointer;
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+}
+
+.rmk-document [data-rmk-deck-overlay='overview'] [data-rmk-slide] > * {
+  pointer-events: none;
+}
+
+.rmk-document [data-rmk-deck-overlay='overview'] [data-rmk-slide]:hover {
+  outline-color: var(--rmk-deck-chrome-text);
+}
+
+.rmk-document [data-rmk-deck-overlay='overview'] [data-rmk-slide][data-rmk-slide-state='current'] {
+  outline-color: var(--rmk-deck-accent);
+}
+
+/* In the overview every step shows, so a tile reads as the finished slide. */
+.rmk-document [data-rmk-deck-overlay='overview'] [data-rmk-fragment-state='hidden'] {
+  visibility: visible;
+}
+
+.rmk-document [data-rmk-deck-overlay='overview'] [data-rmk-deck-presenter] {
+  display: none;
+}
+
+/* The bar floats over the tiles, also in the presenter view where it normally has its own row. */
+.rmk-document [data-rmk-deck][data-rmk-deck-overlay='overview'] [data-rmk-deck-controls] {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  width: auto;
+  min-height: 0;
+  grid-row: auto;
+  border-radius: 999px;
+}
+
+/* One attribute more than the present-mode backdrop. The presenter keeps its preview. */
+.rmk-document [data-rmk-deck][data-rmk-deck-overlay='blackout'] {
+  background: var(--rmk-deck-blackout);
+}
+
+.rmk-document [data-rmk-deck-overlay='blackout'] [data-rmk-slide]:not([data-rmk-slide-preview]),
+.rmk-document [data-rmk-deck-overlay='blackout'] [data-rmk-deck-progress] {
+  visibility: hidden;
+}
+
+.rmk-document [data-rmk-deck-help] {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-content: center;
+  padding: 2rem;
+  background: var(--rmk-deck-scrim);
+  font-family: var(--rmk-font-body, inherit);
+  overflow: auto;
+}
+
+.rmk-document [data-rmk-deck-help-panel] {
+  max-width: 52rem;
+  outline: none;
+  padding: 1.5rem 1.75rem;
+  background: var(--rmk-deck-chrome);
+  color: var(--rmk-deck-chrome-text);
+  border-radius: calc(var(--rmk-slide-radius) * 2);
+  box-shadow: 0 8px 32px var(--rmk-deck-scrim);
+}
+
+.rmk-document [data-rmk-deck-help] h2 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+
+.rmk-document [data-rmk-deck-help] dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(16rem, 1fr));
+  gap: 0.6rem 2.5rem;
+  margin: 0;
+}
+
+.rmk-document [data-rmk-deck-help] dl > div {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.rmk-document [data-rmk-deck-help] dt {
+  flex: 0 0 9.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.rmk-document [data-rmk-deck-help] dd {
+  margin: 0;
+}
+
+.rmk-document [data-rmk-deck-help] kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0.1em 0.4em;
+  font-family: var(--rmk-font-mono, monospace);
+  font-size: 0.8125rem;
+  text-align: center;
+  background: var(--rmk-deck-chrome);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+@media (max-width: 40rem) {
+  .rmk-document [data-rmk-deck-help] dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -8,25 +8,41 @@
  * server output and the client's first render agree and hydration is clean.
  * From then on the deck is in one of three modes: `stack` (the page as
  * rendered, plus a Present button), `present` (fixed, one slide at a time)
- * and `presenter` (present plus the next slide, the notes and a clock).
+ * and `presenter` (present plus the next step, the notes and the timers),
+ * with at most one overlay (overview, help, blackout) and one pointer tool
+ * (draw, laser) on top.
  *
- * Every browser API is feature-detected and every listener lives on the
- * article element, so two decks on one page are independent and the static
- * stack never captures a key.
+ * This file wires the parts together; each concern is a hook in `hooks/`
+ * or a component beside it. Every browser API is feature-detected and every
+ * listener lives on the article element, so two decks on one page are
+ * independent and the static stack never captures a key.
  */
 import { useEffect, useMemo, useRef, useState, type HTMLAttributes, type ReactElement, type ReactNode } from 'react'
-import type { DeckControlAction } from './controls.js'
+import { cloneOpener } from './clone-window.js'
+import type { CommandContext } from './commands/command.js'
+import { isAvailable, runCommand } from './commands/registry.js'
 import { Controls } from './controls.js'
-import { exitFullscreen, fullscreenSupported, toggleFullscreen } from './fullscreen.js'
-import { currentHash, slideFromHash, writeSlideHash } from './hash.js'
-import { attachKeyboard, type KeyCommand } from './keyboard.js'
+import { useDeckController } from './hooks/use-deck-controller.js'
+import { useDeckFocus } from './hooks/use-deck-focus.js'
+import { useDeckInput } from './hooks/use-deck-input.js'
+import { useDeckSync } from './hooks/use-deck-sync.js'
+import { useDrawings } from './hooks/use-drawings.js'
+import { useIdle } from './hooks/use-idle.js'
+import { useHashWriting, useOpening } from './hooks/use-opening.js'
+import { usePresentationClock } from './hooks/use-presentation-clock.js'
+import { useFollow, useSlideChange } from './hooks/use-slide-change.js'
 import { resolveLabels } from './labels.js'
+import { SlideLayers } from './layers/slide-layers.js'
 import type { ResolvedPresentOptions } from './options.js'
-import { IDLE_MS, attachIdle, attachPointer } from './pointer.js'
-import { PresenterPanel } from './presenter-panel.js'
-import { collectSections, fragmentCount, presentSection, slideName, type SlideState } from './sections.js'
-import { openSync, type SyncChannel, type SyncPosition } from './sync.js'
-import { INITIAL_DECK_STATE, atEnd, atStart, useDeckState, type DeckAction, type DeckShape } from './use-deck-state.js'
+import { Announcer } from './overlays/announcer.js'
+import { OVERLAY_VIEWS } from './overlays/registry.js'
+import { Progress } from './overlays/progress.js'
+import { presentSection, slideStateOf } from './present-section.js'
+import { PresenterPanel } from './presenter/presenter-panel.js'
+import { withPrintSteps } from './print-steps.js'
+import { collectSections, fragmentCount, slideName, slideTitle } from './sections.js'
+import { atEnd, atStart } from './state/position.js'
+import type { DeckShape } from './state/deck-state.js'
 
 export interface DeckProps {
   /** The static article's attributes, as the renderer passed them */
@@ -35,173 +51,98 @@ export interface DeckProps {
   readonly children?: ReactNode
 }
 
-function slideStateOf(index: number, current: number): SlideState {
-  return index < current ? 'past' : index === current ? 'current' : 'future'
-}
-
-/** True while the focus is inside the deck and on a slide that can hold it (not an inert one). */
-function holdsFocus(element: HTMLElement): boolean {
-  const active = document.activeElement
-  return active !== null && element.contains(active) && active.closest('[inert]') === null
-}
+const NOTES_SCALES = [0.75, 0.875, 1, 1.25, 1.5, 1.75, 2] as const
 
 export function Deck({ attributes, options, children }: DeckProps): ReactElement {
   const ref = useRef<HTMLElement>(null)
   const sections = useMemo(() => collectSections(children), [children])
   const shape = useMemo<DeckShape>(() => ({ count: sections.length, fragments: sections.map(fragmentCount) }), [sections])
-  const [state, dispatch] = useDeckState(shape)
+  const names = useMemo(() => sections.map(slideName), [sections])
+  const [controller, state] = useDeckController(options.controller, shape)
   const [mounted, setMounted] = useState(false)
-  const [idle, setIdle] = useState(false)
+  const [typed, setTyped] = useState('')
+  const [notesScale, setNotesScale] = useState(2)
   const labels = useMemo(() => resolveLabels(options.labels), [options.labels])
   const live = state.mode !== 'stack'
+  const clock = usePresentationClock(live)
+  const drawings = useDrawings()
+  const idle = useIdle(ref, state.mode)
 
-  // Mount: from now on the controls render (for a deck with slides); a deep link or `initialMode` opens the deck.
-  const namesRef = useRef<readonly (string | undefined)[]>([])
-  namesRef.current = sections.map(slideName)
-  useEffect(() => {
-    setMounted(true)
-    const linked = options.hashRouting ? slideFromHash(currentHash(), namesRef.current) : undefined
-    const opening = options.initialMode === 'stack' ? undefined : options.initialMode
-    if (linked !== undefined) dispatch({ type: 'enter', mode: opening ?? 'present', index: linked })
-    else if (opening !== undefined) dispatch({ type: 'enter', mode: opening })
-  }, [dispatch, options.hashRouting, options.initialMode])
-
-  // The sections changed under the deck: keep the position inside the new bounds.
-  useEffect(() => {
-    dispatch({ type: 'clamp' })
-  }, [dispatch, shape])
-
-  // Keys and pointer, only while presenting and only on this element.
-  useEffect(() => {
-    const element = ref.current
-    if (!live || element === null) return
-    const onKey = (command: KeyCommand): void => {
-      if (command === 'fullscreen') toggleFullscreen(element)
-      else if (command === 'presenter') dispatch({ type: 'toggle-presenter' })
-      else dispatch({ type: command })
-    }
-    const detachKeys = attachKeyboard(element, onKey)
-    const detachPointer = attachPointer(element, {
-      next: () => dispatch({ type: 'next' }),
-      previous: () => dispatch({ type: 'previous' }),
-    })
-    return () => {
-      detachKeys()
-      detachPointer()
-    }
-  }, [live, dispatch])
-
-  // Where the deck is, readable from effects that must not re-run on every move.
-  const position = useRef<SyncPosition>({ index: state.index, fragment: state.fragment })
-  position.current = { index: state.index, fragment: state.fragment }
-
-  // Entering takes focus so the keys work at once; leaving gives fullscreen back, scrolls to the slide
-  // and keeps the focus in the deck (the Exit button that held it is gone from the DOM).
-  useEffect(() => {
-    const element = ref.current
-    if (!live || element === null) return
-    element.focus({ preventScroll: true })
-    return () => {
-      exitFullscreen(element)
-      if (element.isConnected && !holdsFocus(element)) element.focus({ preventScroll: true })
-      const slide = element.querySelector<HTMLElement>(`[data-rmk-slide="${position.current.index + 1}"]`)
-      if (slide !== null && typeof slide.scrollIntoView === 'function') slide.scrollIntoView({ block: 'nearest' })
-    }
-  }, [live])
-
-  // Moving off a slide that held the focus makes that slide inert, and the browser drops the focus
-  // onto the body; the deck takes it back so the keys keep working.
-  useEffect(() => {
-    const element = ref.current
-    if (live && element !== null && !holdsFocus(element)) element.focus({ preventScroll: true })
-  }, [live, state.index])
-
-  // The controls fade after a still pointer, in plain present mode only.
-  useEffect(() => {
-    const element = ref.current
-    if (state.mode !== 'present' || element === null) {
-      setIdle(false)
-      return
-    }
-    return attachIdle(element, IDLE_MS, setIdle)
-  }, [state.mode])
-
-  // Deep links follow the deck while it presents.
-  useEffect(() => {
-    if (options.hashRouting && live) writeSlideHash(state.index)
-  }, [options.hashRouting, live, state.index])
-
-  // Sync: follow the channel, and tell it about moves that did not come from it. `synced` is the
-  // last position the channel and this deck agreed on (posted or received); a render that lands
-  // there is an echo, any other is a local move. It starts at the mount position, so mounting
-  // posts nothing, however many times an effect runs.
-  const channel = useRef<SyncChannel | undefined>(undefined)
-  const synced = useRef<SyncPosition>({ index: INITIAL_DECK_STATE.index, fragment: INITIAL_DECK_STATE.fragment })
-  useEffect(() => {
-    if (options.sync === false) return
-    channel.current = openSync(
-      options.sync,
-      (incoming) => {
-        synced.current = incoming
-        dispatch({ type: 'goto', ...incoming })
-      },
-      () => position.current,
-    )
-    return () => {
-      channel.current?.close()
-      channel.current = undefined
-    }
-  }, [options.sync, dispatch])
-  useEffect(() => {
-    if (synced.current.index === state.index && synced.current.fragment === state.fragment) return
-    synced.current = { index: state.index, fragment: state.fragment }
-    channel.current?.post(synced.current)
-  }, [state.index, state.fragment])
-
-  // The consumer's callback, on a change only.
-  const onSlideChange = options.onSlideChange
-  const reported = useRef(state.index)
-  useEffect(() => {
-    if (reported.current === state.index) return
-    reported.current = state.index
-    onSlideChange?.(state.index)
-  }, [state.index, onSlideChange])
-
-  const onAction = (action: DeckControlAction): void => {
-    if (action === 'present') dispatch({ type: 'enter', mode: 'present' })
-    else if (action === 'fullscreen') {
-      if (ref.current !== null) toggleFullscreen(ref.current)
-    } else if (action === 'presenter') dispatch({ type: 'toggle-presenter' })
-    else dispatch({ type: action } as DeckAction)
+  const context: CommandContext = {
+    controller,
+    state,
+    get element() {
+      return ref.current
+    },
+    resetTimer: clock.reset,
+    clearDrawing: () => drawings.clear(state.index),
+    scaleNotes: (step) => setNotesScale((scale) => Math.min(Math.max(scale + step, 0), NOTES_SCALES.length - 1)),
+    clone: cloneOpener(options, state.index),
   }
+  const run = (command: Parameters<typeof runCommand>[0]): boolean => runCommand(command, context)
+  const current = sections[state.index]
+  const OverlayView = live && state.overlay !== undefined ? OVERLAY_VIEWS[state.overlay] : undefined
 
-  // The stack renders the children untouched; presenting re-dresses the sections (same keys, same DOM nodes).
+  useEffect(() => setMounted(true), [])
+  useOpening(options, controller, names)
+  useHashWriting(options.hashRouting, state)
+  useDeckInput(ref, controller, state, { run, setTyped })
+  useDeckFocus(ref, live, state.index)
+  useDeckSync(options.sync, controller, state)
+  useSlideChange(options.onSlideChange, state.index)
+  useFollow(options.follow, controller, state, shape.count)
+
+  const ControlBar = options.controls === true ? Controls : options.controls === false ? undefined : options.controls
   const rendered = live
-    ? sections.map((section, index) => presentSection(section, slideStateOf(index, state.index), state.fragment))
-    : children
+    ? sections.map((section, index) =>
+        presentSection(section, {
+          state: slideStateOf(index, state.index),
+          fragment: state.fragment,
+          overview: state.overlay === 'overview',
+          ...(index === state.index ? { layers: <SlideLayers state={state} drawings={drawings} /> } : {}),
+        }),
+      )
+    : mounted && options.printSteps
+      ? withPrintSteps(children)
+      : children
 
   return (
     <article
       ref={ref}
       {...attributes}
       {...(mounted ? { 'data-rmk-deck-mode': state.mode, tabIndex: -1 } : {})}
+      {...(live ? { 'data-rmk-deck-direction': state.direction } : {})}
+      {...(live && state.overlay !== undefined ? { 'data-rmk-deck-overlay': state.overlay } : {})}
+      {...(live && state.tool !== undefined ? { 'data-rmk-deck-tool': state.tool } : {})}
       {...(idle ? { 'data-rmk-deck-idle': '' } : {})}
     >
-      {mounted && options.controls && shape.count > 0 ? (
-        <Controls
-          mode={state.mode}
-          current={Math.min(state.index + 1, shape.count)}
+      {mounted && ControlBar !== undefined && shape.count > 0 ? (
+        <ControlBar
+          state={state}
           count={shape.count}
           atStart={atStart(state)}
           atEnd={atEnd(state, shape)}
-          fullscreen={fullscreenSupported(ref.current)}
+          typed={typed}
           labels={labels}
-          onAction={onAction}
+          available={(command) => isAvailable(command, context)}
+          run={(command) => void run(command)}
         />
       ) : null}
       {rendered}
+      {live ? <Progress current={state.index} count={shape.count} /> : null}
+      {mounted ? <Announcer message={live ? labels.announce(state.index + 1, shape.count, current === undefined ? undefined : slideTitle(current)) : ''} /> : null}
+      {OverlayView === undefined ? null : <OverlayView labels={labels} context={context} onClose={() => ref.current?.focus({ preventScroll: true })} />}
       {state.mode === 'presenter' ? (
-        <PresenterPanel next={sections[state.index + 1]} current={sections[state.index]} labels={labels} />
+        <PresenterPanel
+          sections={sections}
+          index={state.index}
+          fragment={state.fragment}
+          labels={labels}
+          startedAt={clock.startedAt}
+          notesScale={NOTES_SCALES[notesScale]!}
+          onResetTimer={clock.reset}
+          onScaleNotes={context.scaleNotes}
+        />
       ) : null}
     </article>
   )

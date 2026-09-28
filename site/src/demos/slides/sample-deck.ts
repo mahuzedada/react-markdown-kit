@@ -1,31 +1,40 @@
 /**
- * The deck the demo opens with: nine slides about the kit itself, written so
- * that every construct of the dialect appears once. Front matter, a title
- * slide, an agenda, a fence that holds a `---` line (which never splits), a
- * background directive, fragments, speaker notes, a rule inside a slide and a
- * closing slide that reads well at 16:9 and at 4:3.
+ * The deck the demo opens with: a short tour of the plugin, written so
+ * every construct of the dialect shows up at least once. Front matter with
+ * deck-wide defaults, each layout, two columns, an incremental list,
+ * stepped code, a background, a Mermaid diagram, fragments, speaker notes
+ * and a fence that holds a `---` line (which never splits).
  */
 export const SAMPLE_DECK = `---
 title: Slides from Markdown
+footer: React Markdown Kit
+paginate: true
+transition: slide
 ---
 
-<!-- class: center, middle -->
+<!-- layout: cover -->
+<!-- name: intro -->
+<!-- paginate: false -->
 
 # Slides from Markdown
 
-One \`.md\` file. The renderer shows a deck, the editor writes it back, GitHub shows a document.
-
-<!-- name: intro -->
+One \`.md\` file. The left pane is the file, the right pane is the deck. GitHub shows the same file as a document.
 
 ---
 
-## In the next eight slides
+<!-- incremental: true -->
 
-1. A deck is Markdown: what \`---\`, \`???\` and \`--\` mean
-2. Directives: \`class\`, \`background\`, \`name\`
-3. Fragments and speaker notes, live
-4. Present mode, the presenter window and deep links
-5. Scaling without a script, printing, theming
+## What's in this deck
+
+- The syntax: breaks, markers and directives
+- Layouts and two columns
+- Code that highlights one step at a time
+- Diagrams, pictures and speaker notes
+- Presenting: overview, presenter view, drawing, export
+
+???
+
+The list reveals one item per press because of the \`incremental\` directive.
 
 ---
 
@@ -36,86 +45,144 @@ One \`.md\` file. The renderer shows a deck, the editor writes it back, GitHub s
 | You write | The plugin reads |
 | --- | --- |
 | \`---\` between blank lines | a slide break |
-| a paragraph that is exactly \`???\` | the speaker notes start here |
-| a paragraph that is exactly \`--\` | a pause: what follows is a fragment |
-| \`<!-- class: center, middle -->\` | a directive for this slide |
-
-Nothing above changes how the file looks on GitHub: it is a document with rules.
-
-***
+| \`???\` on its own line | speaker notes start here |
+| \`--\` on its own line | a pause: what follows is the next step |
+| \`::right::\` on its own line | the second column starts here |
+| \`<!-- layout: two-cols -->\` | a directive for this slide |
 
 A \`***\` is a rule inside the slide. Only dashes split.
 
 ---
 
-## A \`---\` inside a fence never splits
+<!-- layout: two-cols -->
+
+## Two columns
+
+Everything before \`::right::\` goes on the left.
 
 \`\`\`md
----
-title: Q3 review
----
+<!-- layout: two-cols -->
 
-# Welcome
+## Two columns
 
----
+Left side.
 
-## Numbers
+::right::
+
+Right side.
 \`\`\`
 
-The front matter and the break are inside a code block, so this slide holds both lines. Blocks nested in a list or a quote are safe too.
+::right::
+
+The right column holds the rest. A pause on one side still counts on the other.
+
+--
+
+- \`cover\`, \`center\`, \`section\`, \`fact\`, \`quote\`
+- \`two-cols\`, \`image-left\`, \`image-right\`
 
 ---
 
-<!-- background: https://picsum.photos/seed/reactmarkdownkit/1600/900 -->
-<!-- class: inverse, bottom -->
+## Code, one step at a time
+
+\`\`\`ts {1-2|4-6|8|all}
+import { defineMarkdownPreset } from '@react-markdown-kit/renderer'
+import { slides } from '@react-markdown-kit/slides/present'
+
+const preset = defineMarkdownPreset({
+  extensions: [slides({ hashRouting: true, sync: 'talk' })],
+})
+
+<Markdown preset={preset}>{deck}</Markdown>
+\`\`\`
+
+The braces after the language pick the lines. GitHub ignores them.
+
+---
+
+<!-- layout: image-right -->
+<!-- image: https://picsum.photos/seed/reactmarkdownkit/900/1000 -->
 
 ## Directives are comments
 
-\`background\` becomes an \`<img>\` so the renderer's URL policy checks it. \`class\` becomes \`data-rmk-slide-class\`, never \`class\`. \`name\` gives the slide an id for deep links.
+\`<!-- key: value -->\` on its own line sets something on one slide. The same keys in the front matter set the default for every slide.
+
+\`image\` and \`background\` render as \`<img>\` elements, so the renderer's URL policy checks them like any other image.
 
 ---
 
-## Fragments, one pause at a time
+## Diagrams render in the slide
 
-Press the right arrow, or click the right half of the slide.
+\`\`\`mermaid
+flowchart LR
+  source[deck.md] --> parser[compileMarkdown]
+  parser --> deck[article of sections]
+  parser --> pptx[.pptx file]
+  deck --> present[present mode]
+\`\`\`
 
---
-
-- \`--\` on its own line is a pause
-- Everything after it is the next fragment
-
---
-
-- Fragments are hidden with \`visibility\`, so the layout never jumps
-- The presenter window shows them too
+The Mermaid plugin draws this as static SVG. No Mermaid.js runtime on the page.
 
 ---
 
 <!-- name: notes -->
 
-## Speaker notes
+## Fragments and notes
 
-Everything after \`???\` stays out of the slide. It is an \`<aside hidden>\` in the static HTML and the notes column of the presenter view.
+Press the right arrow, or click the right half of the slide.
 
-Open the presenter window from the header to read them next to the current slide, with a clock.
+--
+
+Each \`--\` on its own line is one more step.
+
+--
+
+Everything after \`???\` stays off the slide. Press **p** to see it in the presenter view.
 
 ???
 
-This is what the presenter sees. The audience window and this one share a BroadcastChannel, so moving here moves there.
+This is what the presenter sees, with the next step, a timer and the clock.
 
-Say the next slide is about scaling.
-
----
-
-## Scaling, printing, theming
-
-- Every slide is a size container; the body's font size is \`1.72cqw\`, so headings, lists and code follow the slide's width with no script
-- Print gives each slide a page. The demo sets \`@page { size: 16in 9in }\`
-- Colours are \`--rmk-slide-*\` and \`--rmk-deck-*\` custom properties: this site maps them onto its own theme, light and dark
+Press t to reset the timer, and + or - to change this text's size.
 
 ---
 
-<!-- class: center, middle, inverse -->
+<!-- layout: section -->
+
+## Presenting
+
+---
+
+## Keys while presenting
+
+| Key | Does |
+| --- | --- |
+| **o** | overview of every slide, click one to go there |
+| **p** | presenter view: next step, notes, timer |
+| **d** / **l** | draw on the slide / laser pointer |
+| **b** | black screen |
+| **12** then **Enter** | go to slide 12 |
+| **?** | every shortcut |
+
+---
+
+<!-- layout: fact -->
+
+# 1 file
+
+GitHub shows it as a document, this page shows it as a deck, and Export writes a .pptx.
+
+---
+
+<!-- layout: quote -->
+
+> A \`---\` inside a code fence, a quote or a list never splits the slide.
+
+---
+
+<!-- layout: center -->
+<!-- class: inverse -->
+<!-- paginate: false -->
 
 ## Thanks
 

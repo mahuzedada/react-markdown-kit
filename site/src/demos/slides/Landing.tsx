@@ -2,7 +2,9 @@ import type { ReactNode } from 'react'
 import CodeBlock from '../../components/CodeBlock'
 import { Callout, Feature, Features, Hero, LinkRow, Page, Steps } from '../../components/landing/Page'
 import { docsUrl, sites } from '../../sites'
-import { Faq, JsonLd, npmUrl, webApplication, type FaqItem } from '../../components/landing/Seo'
+import { Faq, JsonLd, npmUrl, webApplication } from '../../components/landing/Seo'
+import { FAQ } from './landing-faq'
+import { DECK, EDIT, EMBED, PRESENT, RENDER } from './landing-samples'
 
 /*
  * The crawlable copy of reactmarkdownkit.com/markdown-slides. It targets the searches
@@ -17,101 +19,6 @@ export const TITLE = 'Markdown Slides Editor Online'
 export const DESCRIPTION =
   'Write a slide deck in plain Markdown and present it in the browser. Slides split on ---, notes go after ???, fragments after --, with a presenter window.'
 
-const RENDER = `import Markdown, { defineMarkdownPreset } from '@react-markdown-kit/renderer'
-import { slides } from '@react-markdown-kit/slides'
-import '@react-markdown-kit/slides/styles.css'
-
-const preset = defineMarkdownPreset({ extensions: [slides()] })
-
-<div className="rmk-document">
-  <Markdown preset={preset}>{deck}</Markdown>
-</div>`
-
-const DECK = `---
-title: Q3 review
----
-
-# Welcome
-
----
-
-<!-- class: center, middle -->
-
-## Numbers
-
-Revenue is up.
-
---
-
-So are costs.
-
-???
-
-Pause before the second line.`
-
-const PRESENT = `import { defineMarkdownPreset } from '@react-markdown-kit/renderer'
-import { slides } from '@react-markdown-kit/slides/present'
-
-const preset = defineMarkdownPreset({
-  extensions: [slides({ hashRouting: true, sync: 'talk' })],
-})`
-
-const EDIT = `import { defineMarkdownPreset } from '@react-markdown-kit/renderer'
-import { MarkdownEditor } from '@react-markdown-kit/editor'
-import { slides } from '@react-markdown-kit/slides/editor'
-
-const preset = defineMarkdownPreset({ extensions: [slides()] })
-
-<MarkdownEditor preset={preset} value={source} onChange={setSource} />`
-
-const EMBED = `<iframe
-  src="https://reactmarkdownkit.com/markdown-slides?embed=1&d=uIyBXZWxjb21lCgotLS0KCiMjIFNlY29uZCBzbGlkZQoKT25lIGZpbGUsIHR3byBzbGlkZXMu"
-  title="A deck written in Markdown"
-  width="100%"
-  height="480"
-  loading="lazy"
-  allowfullscreen
-></iframe>`
-
-const FAQ: readonly FaqItem[] = [
-  {
-    question: 'Can I make slides from Markdown?',
-    answer:
-      'Yes. Separate slides with --- between blank lines and the file becomes a deck. It’s still a normal document on GitHub, in a diff and in any editor that doesn’t know about the plugin.',
-    more: { href: docsUrl('/docs/slides'), label: 'The dialect.' },
-  },
-  {
-    question: 'How do I add speaker notes to Markdown slides?',
-    answer:
-      'Put ??? on its own line. Everything after it in that slide is a note. Notes are hidden in the deck and shown in the presenter window, next to the upcoming slide and a clock.',
-  },
-  {
-    question: 'Can I present Markdown slides in the browser?',
-    answer:
-      'Yes. Present goes full screen with keyboard navigation. You can also open a presenter window that stays in sync, and share a link that opens the deck in present mode.',
-  },
-  {
-    question: 'How do I reveal points one at a time?',
-    answer: 'Put -- on its own line between them. Each -- starts a fragment that shows up on the next keypress.',
-  },
-  {
-    question: 'Can I set a class or a background on one slide?',
-    answer:
-      'Yes. Use a comment on a line by itself to set class, background or name. Front matter at the top of the file sets the title, the aspect ratio and the defaults for every slide.',
-  },
-  {
-    question: 'Can I embed a Markdown deck in a blog post?',
-    answer:
-      'Yes. Add embed=1 to a share link and put it in an iframe. The frame shows only the deck, in present mode. Keys work inside it, and there’s a link that opens the full editor.',
-  },
-  {
-    question: 'Is it a Marp or Slidev alternative?',
-    answer:
-      'For decks inside a React app, yes. If you need to export files, probably not. Marp and Slidev export PDF and PPTX, and this plugin only renders sections from Markdown your app already stores (and prints one page per slide).',
-    more: { href: docsUrl('/docs/slides'), label: 'What the plugin renders.' },
-  },
-]
-
 export default function Landing(): ReactNode {
   return (
     // Print is the deck alone: the landing copy and the footer after it stay off the page.
@@ -123,7 +30,7 @@ export default function Landing(): ReactNode {
           <>
             Write a deck in plain Markdown on the left and it renders on the right. You can present
             it from this page, open a presenter window with your notes, share a link that holds the
-            whole deck, or print it with one page per slide.
+            whole deck, print it with one page per slide or export it to PowerPoint.
           </>
         }
       >
@@ -141,8 +48,9 @@ export default function Landing(): ReactNode {
           <code>--</code>. GitHub still renders the file as a normal document.
         </Feature>
         <Feature title="Present mode">
-          Full screen with keyboard and pointer navigation. There&rsquo;s a presenter window with the
-          next slide and a clock, and you can deep link to any slide.
+          Full screen with keyboard and pointer navigation, an overview of every slide, and a
+          presenter window with the next step, your notes and a timer. You can deep link to any
+          slide.
         </Feature>
         <Feature title="Uses the same renderer">
           One plugin turns the Markdown your app stores into an <code>&lt;article&gt;</code> of{' '}
@@ -156,8 +64,8 @@ export default function Landing(): ReactNode {
       <p>
         You only need the first line to render a deck. The root entry doesn&rsquo;t load React, so a
         server component or a static build gets the same <code>&lt;article&gt;</code> of{' '}
-        <code>&lt;section&gt;</code>s. The <code>/present</code> entry adds present mode. The left pane
-        of this page is built from the editor and the <code>/editor</code> entry.
+        <code>&lt;section&gt;</code>s. The <code>/present</code> entry adds present mode, and the{' '}
+        <code>/editor</code> entry adds the slide commands to the rich editor if you want one.
       </p>
 
       <h2>Making slides from Markdown</h2>
@@ -165,8 +73,8 @@ export default function Landing(): ReactNode {
         <li>
           <strong>Render a deck.</strong> Put <code>slides()</code> in a preset. Slides split on{' '}
           <code>---</code>, the notes start at <code>???</code>, a <code>--</code> is a pause, and{' '}
-          <code>&lt;!-- class | background | name: … --&gt;</code> comments set a slide&rsquo;s
-          properties. The output is static HTML with no script, classes or inline styles, and the
+          <code>&lt;!-- key: value --&gt;</code> comments set a slide&rsquo;s layout, class,
+          background, transition and footer. The output is static HTML with no script, classes or inline styles, and the
           notes get the HTML <code>hidden</code> attribute.
           <CodeBlock language="tsx">{RENDER}</CodeBlock>
         </li>
@@ -180,8 +88,9 @@ export default function Landing(): ReactNode {
         <li>
           <strong>Present, then edit.</strong> The <code>/present</code> entry&rsquo;s{' '}
           <code>slides()</code> gives the deck a Present button, keyboard and pointer navigation,
-          fragments, a presenter view with the notes and a clock, <code>#3</code> deep links and a{' '}
-          <code>BroadcastChannel</code> that keeps two windows on the same slide. The{' '}
+          fragments, an overview, a presenter view with the notes and a timer, drawing and a laser
+          pointer, <code>#3</code> deep links and a <code>BroadcastChannel</code> that keeps two
+          windows on the same slide. The{' '}
           <code>/editor</code> entry adds the slide break, the markers and the directive chips to the
           editor, with four toolbar buttons.
           <CodeBlock language="tsx">{PRESENT}</CodeBlock>
@@ -222,19 +131,28 @@ export default function Landing(): ReactNode {
       <h2>About this editor</h2>
       <ul>
         <li>
-          The left pane is the rich editor with the <code>/editor</code> entry, and the right pane is
-          the renderer with the same preset. The deck re-renders as you type. Press Present in the
-          deck&rsquo;s control bar to show it from this window.
+          The left pane is the deck file as plain text, with the plugin&rsquo;s syntax coloured, and
+          the right pane is the renderer with the <code>/present</code> entry and the Mermaid
+          plugin. The deck re-renders as you type. Press Present to show it from this window, and{' '}
+          <code>?</code> while presenting for the keys.
+        </li>
+        <li>
+          <em>Stream it</em> replays the deck into the right pane a few characters at a time, the way
+          a model&rsquo;s reply arrives, and presents it as it grows. The deck&rsquo;s{' '}
+          <code>follow</code> option keeps it on the newest slide.
+        </li>
+        <li>
+          <em>Export .pptx</em> writes the deck as a PowerPoint file with the <code>/pptx</code>{' '}
+          entry. Every fragment and code step is shown, and a diagram comes out as its source.
         </li>
         <li>
           The deck lives in the address bar. <code>?d=</code> is the source, deflated and base64url
           encoded, so a link carries the whole file. Share copies a link that opens in present mode.{' '}
-          <em>Presenter window</em> opens a second window with the next slide, the notes and a clock,
+          <em>Presenter window</em> opens a second window with the next step, the notes and a timer,
           and it stays on the same slide as this window.
         </li>
         <li>
-          Printing gives each slide a 16 by 9 inch page, using the stylesheet&rsquo;s{' '}
-          <code>break-after: page</code> and this site&rsquo;s own <code>@page</code> rule. The deck
+          Printing gives each slide a 16 by 9 inch page from the plugin&rsquo;s stylesheet. The deck
           scales with container units, so nothing has to measure the window.
         </li>
         <li>

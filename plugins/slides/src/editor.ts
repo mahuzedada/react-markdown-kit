@@ -73,15 +73,10 @@ function withRestoredBreaks(renderer: RendererAdapter | undefined): { readonly r
   return { renderer: { ...renderer, handlers: { ...handlers, root: restoringRoot } } }
 }
 
-export type { SlidesPresentOptions, SlidesOptions, SlidesLabels, DeckMode } from './present.js'
-export { SLIDES_LABELS } from './present.js'
-export { SLIDE_MARKER_NODE, isSlideMarkerNode } from './deck/markers.js'
-export type { SlideMarkerNode as SlideMarkerMdastNode, MarkerKind } from './deck/markers.js'
-export { SLIDE_DIRECTIVE_NODE, isSlideDirectiveNode } from './deck/directives.js'
-export type { SlideDirectiveNode as SlideDirectiveMdastNode, DirectiveKey } from './deck/directives.js'
-export { SLIDES_DIAGNOSTIC_CODES } from './deck/diagnostics.js'
-export type { SlidesDiagnosticCode } from './deck/diagnostics.js'
-export type { DeckModel, SlideModel, SlideAspect } from './deck/model.js'
+// Everything `/present` exports besides its own `slides()`, so this entry is a superset of it.
+export * from './present/public-api.js'
+export type { SlideMarkerNode as SlideMarkerMdastNode } from './deck/markers.js'
+export type { SlideDirectiveNode as SlideDirectiveMdastNode } from './deck/directives.js'
 export type { BreakKind } from './deck/breaks.js'
 
 export { INSERT_SLIDE_COMMAND, INSERT_SLIDE_DIRECTIVE_COMMAND, INSERT_SLIDE_MARKER_COMMAND } from './editor/commands.js'

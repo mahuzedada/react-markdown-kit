@@ -19,9 +19,11 @@ function only(source: string, code: string): MarkdownDiagnostic {
 describe('slides(): diagnostics', () => {
   it('exports every code', () => {
     expect(Object.values(SLIDES_DIAGNOSTIC_CODES).sort()).toEqual([
+      'SLIDES_CODE_STEPS_INVALID',
       'SLIDES_DIRECTIVE_INVALID',
       'SLIDES_DIRECTIVE_UNKNOWN',
       'SLIDES_FRONT_MATTER_INVALID',
+      'SLIDES_INCLUDE_UNRESOLVED',
       'SLIDES_MARKER_ATTACHED',
       'SLIDES_MARKER_MISPLACED',
       'SLIDES_NAME_DUPLICATE',

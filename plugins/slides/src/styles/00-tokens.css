@@ -1,0 +1,41 @@
+/*
+ * Optional styling for @react-markdown-kit/slides.
+ *
+ * Scoped to the kit's two roots, `.rmk-document` (the rendered deck) and
+ * `.rmk-editor` (the authoring surface), single-class specificity, no reset,
+ * every colour a --rmk-slide-* or --rmk-deck-* custom property. Nothing here
+ * is required: without it a deck is a stack of plain <section>s.
+ *
+ * The package ships one styles.css; the build joins the files of
+ * src/styles/ in name order, one per concern, so a new feature's rules are
+ * a new file.
+ *
+ * Scaling has no script. Each slide is a size container with a fixed aspect
+ * ratio and its body sets the font size in `cqw`, so 1.72cqw is 22px on a
+ * 1280px-wide slide and everything the renderer sizes in `em` (headings,
+ * lists, code) follows. Browsers without container units get a fixed size.
+ */
+
+.rmk-document {
+  --rmk-slide-surface: #ffffff;
+  --rmk-slide-text: #1e1e1e;
+  --rmk-slide-inverse-surface: #1e1e1e;
+  --rmk-slide-inverse-text: #ffffff;
+  --rmk-slide-font-size: 1.72cqw;
+  --rmk-slide-padding: 3.75cqw;
+  --rmk-slide-radius: var(--rmk-radius, 4px);
+  --rmk-slide-shadow: none;
+  --rmk-slide-gap: var(--rmk-space, 1rem);
+  --rmk-deck-backdrop: #111111;
+  --rmk-deck-chrome: #222222;
+  --rmk-deck-chrome-text: #ffffff;
+  /* Progress bar, pressed buttons and the overview's current tile. */
+  --rmk-deck-accent: #4f8cff;
+  /* Freehand drawing and the laser dot. */
+  --rmk-deck-ink: #e5484d;
+  --rmk-deck-blackout: #000000;
+  --rmk-deck-scrim: rgba(0, 0, 0, 0.72);
+  /* The control bar's row in presenter mode; present mode floats the bar over the slide. */
+  --rmk-deck-controls-height: 2.75rem;
+  --rmk-deck-transition-duration: 0.35s;
+}

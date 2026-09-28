@@ -20,7 +20,8 @@ import {
   type SerializedLexicalNode,
   type Spread,
 } from 'lexical'
-import { markerSpelling, type MarkerKind, type SlideMarkerNode as SlideMarkerMdastNode } from '../deck/markers.js'
+import { isMarkerKind, type MarkerKind } from '../deck/marker-kinds/registry.js'
+import { markerSpelling, type SlideMarkerNode as SlideMarkerMdastNode } from '../deck/markers.js'
 import { useSlidesEditorLabels } from './options.js'
 
 export type SerializedSlideMarkerNode = Spread<{ kind: MarkerKind }, SerializedLexicalNode>
@@ -80,7 +81,7 @@ export class SlideMarkerNode extends DecoratorNode<ReactElement> {
     return {
       div: (element: HTMLElement) => {
         const kind = element.getAttribute(DOM_ATTRIBUTE)
-        if (kind !== 'notes' && kind !== 'pause') return null
+        if (kind === null || !isMarkerKind(kind)) return null
         return {
           conversion: (): DOMConversionOutput => ({ node: $createSlideMarkerNode(kind) }),
           priority: 2,
@@ -120,7 +121,8 @@ export class SlideMarkerNode extends DecoratorNode<ReactElement> {
 /** The caption; the stylesheet draws the lines on either side. */
 function MarkerView({ editor, kind }: { readonly editor: LexicalEditor; readonly kind: MarkerKind }): ReactElement {
   const labels = useSlidesEditorLabels(editor)
-  return <span role="separator" aria-label={kind === 'notes' ? labels.notes : labels.pause}>{kind === 'notes' ? labels.notes : labels.pause}</span>
+  const caption = labels[kind]
+  return <span role="separator" aria-label={caption}>{caption}</span>
 }
 
 /** A fresh marker (the insertion path). */
