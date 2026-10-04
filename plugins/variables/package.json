@@ -1,6 +1,6 @@
 {
   "name": "@react-markdown-kit/variables",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Markdown variables for React Markdown Kit, as plugins: variables({ data }) resolves typed placeholders while the renderer parses; variableChips() edits them as chips. No standalone API.",
   "homepage": "https://reactmarkdownkit.com/markdown-variables",
   "repository": {
@@ -47,8 +47,8 @@
   },
   "peerDependencies": {
     "@lexical/utils": "^0.35.0",
-    "@react-markdown-kit/editor": "^0.2.0",
-    "@react-markdown-kit/renderer": "^0.1.0",
+    "@react-markdown-kit/editor": "^0.2.1",
+    "@react-markdown-kit/renderer": "^0.1.1",
     "lexical": "^0.35.0",
     "react": ">=18"
   },

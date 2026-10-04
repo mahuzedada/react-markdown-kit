@@ -15,7 +15,7 @@ import { THEME_SCRIPT } from './src/app/theme-script'
  */
 export default defineConfig({
   plugins: [
-    { enforce: 'pre', ...mdx({ remarkPlugins: [remarkFrontmatter, remarkGfm, remarkSite] }) },
+    { enforce: 'pre', ...mdx({ include: /\.mdx$/, remarkPlugins: [remarkFrontmatter, remarkGfm, remarkSite] }) },
     react({ include: /\.(mdx|tsx|ts)$/ }),
     tailwindcss(),
     pages(),

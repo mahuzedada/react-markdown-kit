@@ -245,6 +245,8 @@
  * static renderer figure gets the same treatment on its SVG.
  */
 html .rmk-editor {
+  --rmk-table-popover-bg: var(--popover);
+  --rmk-table-popover-text: var(--popover-foreground);
   --rmk-diagram-accent: var(--primary);
   --rmk-diagram-foreground: var(--foreground);
   --rmk-diagram-muted-foreground: var(--muted-foreground);
@@ -409,7 +411,7 @@ html[data-theme='dark'] .rmk-editor {
   /* The two widths every layout uses: a reading column and the site frame. */
   --width-reading: 46rem;
   --width-wide: 80rem;
-  --navbar-height: 3.25rem;
+  --navbar-height: 60px;
 
   /* Code: Blueprint's surfaces with GitHub's token colours in light mode. */
   --code-comment: #6e7781;

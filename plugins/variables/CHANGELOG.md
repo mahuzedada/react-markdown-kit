@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.1 (2026-10-04)
+
+- Peer ranges raised to `@react-markdown-kit/renderer` ^0.1.1 and `@react-markdown-kit/editor` ^0.2.1. The plugin reads sibling extensions' `variables.literalNodeTypes`, which renderer 0.1.0 still declared under `template`.
+
+## 0.1.0 (2026-09-28)
 
 First release under the name `@react-markdown-kit/variables`. The package was `@react-markdown-kit/template`, which stops at 0.1.0. Behaviour is unchanged; only names moved:
 

@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import published from './fixtures/published-site-routes.json'
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
@@ -120,6 +121,40 @@ for (const site of SITES) {
   }
   describe.skipIf(!built(site))(`${site.name} (${site.url})`, () => {
     const dir = join(root, site.dir)
+
+    // Baseline from the live sitemap and homepage on 2026-09-29, before the
+    // Markdown-first redesign. Removing a URL requires a deliberate migration;
+    // a layout refactor must not silently remove published pages or guide links.
+    it('preserves published routes and their direct homepage links', () => {
+      const home = readFileSync(join(dir, 'index.html'), 'utf8')
+      const anchors = [...home.matchAll(/<a\s[^>]*href="([^"]*)"/g)].map((match) => {
+        const url = new URL(decode(match[1]), site.url)
+        return url.origin === site.url ? url.pathname.replace(/\/$/, '') || '/' : undefined
+      })
+      for (const route of published.routes) {
+        expect(existsSync(join(dir, route, 'index.html')), route).toBe(true)
+      }
+      expect(anchors).toEqual(expect.arrayContaining(published.homepageLinks))
+    })
+
+    it('makes every built page reachable through rendered links from the homepage', () => {
+      const documents = new Map(pages(dir).map((page) => [
+        '/' + relative(dir, page).replace(/\/?index\.html$/, ''), readFileSync(page, 'utf8'),
+      ]))
+      const visited = new Set(['/'])
+      const queue = ['/']
+      for (const route of queue) {
+        for (const match of (documents.get(route) ?? '').matchAll(/<a\s[^>]*href="([^"]*)"/g)) {
+          const url = new URL(decode(match[1]), `${site.url}${route}`)
+          const path = url.pathname.replace(/\/$/, '') || '/'
+          if (url.origin !== site.url || !documents.has(path) || visited.has(path)) continue
+          visited.add(path)
+          queue.push(path)
+        }
+      }
+      expect([...documents.keys()].filter((route) => !visited.has(route))).toEqual([])
+    })
+
     for (const page of built(site) ? pages(dir) : []) {
       const route = '/' + relative(dir, page).replace(/index\.html$/, '')
       it(`${route} links only to files and routes that exist`, () => {

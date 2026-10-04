@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 (2026-10-04)
+
+- Diagram payloads are declared literal under the renderer's `variables` key, so `{{...}}` inside a diagram stays text with `@react-markdown-kit/variables`.
+- Peer ranges raised to `@react-markdown-kit/renderer` ^0.1.1 and `@react-markdown-kit/editor` ^0.2.1.
+
 ## 0.4.0 (2026-09-24)
 
 - Flowchart property bar options from Excalidraw, each written as Mermaid: stroke width (thin, medium, bold) as `stroke-width` and the thick link `==>`; stroke style (solid, dashed, dotted) as `stroke-dasharray` and the dotted link `-.->`; sharp or round corners on a rectangle as `[text]` and `(text)`; arrow, circle, cross or no head as `-->`, `--o`, `--x` and `---`, both ways as `<-->`, `o--o`, `x--x`. The parser models all of them, so dotted, thick, circle and cross links, `(text)` nodes and those `style` properties are no longer lossy. New shape fields `strokeStyle`, `corners`, `head` and `color`; new annotation edge member `strokeStyle`.

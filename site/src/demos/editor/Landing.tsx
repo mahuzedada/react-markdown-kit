@@ -212,9 +212,9 @@ export default function Landing({ roundTrip }: LandingProps): ReactNode {
       <h2>About this editor</h2>
       <ul>
         <li>
-          The sample is a customer report, written once and resolved for one account. If you edit
-          the source on the left, the right pane updates, since you changed the document and the
-          data stayed the same. What gets saved is the placeholder. The chip only previews the value.
+          The sample is a launch plan with variables for the team and ship date. Choose Show output
+          to inspect the saved Markdown or rendered document as you edit. What gets saved is the
+          placeholder. The chip only previews the value.
         </li>
         <li>
           You can edit the flowchart in place. If you drag a box, the saved Markdown is still plain

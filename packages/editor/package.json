@@ -1,6 +1,6 @@
 {
   "name": "@react-markdown-kit/editor",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Rich, source and preview Markdown editing for React. Markdown in, Markdown out.",
   "homepage": "https://reactmarkdownkit.com/markdown-editor",
   "repository": {
@@ -31,6 +31,10 @@
       "types": "./dist/lexical.d.ts",
       "default": "./dist/lexical.js"
     },
+    "./table-of-contents": {
+      "types": "./dist/table-of-contents.d.ts",
+      "default": "./dist/table-of-contents.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./package.json": "./package.json"
   },
@@ -50,7 +54,7 @@
     "mdast-util-to-markdown": "^2.1.2"
   },
   "peerDependencies": {
-    "@react-markdown-kit/renderer": "^0.1.0",
+    "@react-markdown-kit/renderer": "^0.1.1",
     "react": ">=18",
     "react-dom": ">=18"
   },

@@ -1,6 +1,7 @@
 import { lazy, type ReactNode } from 'react'
 import ClientOnly from '@site/src/components/ClientOnly'
-import { DemoPlaceholder } from '@site/src/layouts/DemoLayout'
+import MarkdownDocument from '@site/src/components/document/MarkdownDocument'
+import source from '../../content/editor.md?raw'
 
 // The editor pulls in Lexical and needs a browser, so the demo is its own
 // chunk, loaded on the client behind a placeholder the exact height it will
@@ -12,7 +13,7 @@ const RoundTripPanel = lazy(() => import('./RoundTrip'))
 
 export default function Demo(): ReactNode {
   return (
-    <ClientOnly fallback={<DemoPlaceholder />}>
+    <ClientOnly fallback={<main className="document-reading"><MarkdownDocument source={source} /></main>}>
       <KitDemo />
     </ClientOnly>
   )

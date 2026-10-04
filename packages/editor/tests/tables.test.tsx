@@ -1,0 +1,367 @@
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest'
+import { $getRoot, $getNodeByKey, $getSelection, $isNodeSelection, KEY_ESCAPE_COMMAND, KEY_TAB_COMMAND } from 'lexical'
+import { MarkdownEditor, useMarkdownEditorContext, type MarkdownEditorInstance } from '@react-markdown-kit/editor'
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import { editorOf } from '../src/bridge/session.js'
+import { internalsOf } from '../src/react/internals.js'
+import { $isTableNode } from '../src/nodes/table.js'
+import { $activeCell, $rows, $pasteCells, parseTableClipboard, serializeTableClipboard } from '../src/tables.js'
+import { TableRail } from '../src/react/table-rail.js'
+import { mount, run, runAsync, click } from './helpers/mount.js'
+beforeAll(() => {
+  Range.prototype.getBoundingClientRect = () => new DOMRect()
+  Range.prototype.getClientRects = () => [] as unknown as DOMRectList
+})
+const preset = defineMarkdownPreset({extensions:[gfm()]})
+const source = '| Name | Count |\n| --- | ---: |\n| Alpha | 12 |\n| Beta | 34 |\n'
+function setup(value = source) {
+  let editor!: MarkdownEditorInstance
+  function Capture() { editor = useMarkdownEditorContext(); return null }
+  const view = mount(<MarkdownEditor preset={preset} defaultValue={value}><Capture/></MarkdownEditor>)
+  const native = editorOf(internalsOf(editor).bridge)
+  const cell = (r: number, c: number) => {
+    let key = ''
+    run(() => native.update(() => { const table = $getRoot().getChildren().find($isTableNode)!; const target = $rows(table)[r]![c]!; key = target.getKey(); target.selectStart() }, {discrete:true}))
+    return key
+  }
+  return {view, editor, native, cell}
+}
+// Realistic cell rectangles exercise the edge hit targets, including arbitrary
+// rows/columns rather than only the cell containing the caret.
+function tableGeometry() {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    const table = this.closest('table')
+    if (this.tagName === 'TABLE') return new DOMRect(32, 40, 320, this.querySelectorAll('tr').length * 40)
+    if (this.tagName === 'TR') return new DOMRect(32, 40 + Array.from(table!.querySelectorAll('tr')).indexOf(this as HTMLTableRowElement) * 40, 320, 40)
+    if (this.tagName === 'TD' || this.tagName === 'TH') {
+      const row = this.parentElement as HTMLTableRowElement
+      const width = 320 / row.children.length
+      return new DOMRect(32 + (this as HTMLTableCellElement).cellIndex * width, 40 + Array.from(table!.querySelectorAll('tr')).indexOf(row) * 40, width, 40)
+    }
+    if (this.classList.contains('rmk-table-rail')) return new DOMRect(parseFloat(this.style.left), parseFloat(this.style.top), parseFloat(this.style.width), parseFloat(this.style.height))
+    return new DOMRect(0, 0, 384, 600)
+  })
+}
+function pointer(target: Element, type: string, x: number, y: number, pointerType = 'mouse') {
+  const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, cancelable: true })
+  Object.defineProperty(event, 'pointerType', { value: pointerType })
+  run(() => target.dispatchEvent(event))
+}
+afterEach(() => vi.restoreAllMocks())
+describe('table editing', () => {
+  it('preserves untouched bytes and renders and edits column alignment', () => {
+    const {view,editor,cell} = setup()
+    expect(editor.getMarkdown()).toBe(source)
+    expect(view.container.querySelectorAll('td')[1]?.getAttribute('align')).toBe('right')
+    cell(1,1); run(() => editor.commands.alignTableColumn('center'))
+    expect(view.container.querySelectorAll('td')[1]?.getAttribute('align')).toBe('center')
+    expect(editor.getMarkdown()).toMatch(/:-+:/)
+    run(() => editor.undo())
+    expect(view.container.querySelectorAll('td')[1]?.getAttribute('align')).toBe('right')
+    view.unmount()
+  })
+  it('inserts a table using the dimension picker', () => {
+    const {view,editor} = setup('')
+    click(view.container.querySelector('[aria-label="Insert table"]'))
+    click(view.container.querySelector('[aria-label="3 rows, 4 columns"]'))
+    expect(view.container.querySelectorAll('tr')).toHaveLength(3)
+    expect(view.container.querySelectorAll('th')).toHaveLength(4)
+    expect(editor.getMarkdown()).toContain('|')
+    view.unmount()
+  })
+  it('protects the header on insertion and promotes the next row on deletion', () => {
+    const {view,editor,cell} = setup()
+    cell(0,0); run(() => editor.commands.tableAction('rowAbove'))
+    expect(view.container.querySelectorAll('th')).toHaveLength(2)
+    expect(view.container.querySelector('th')?.textContent).toBe('Name')
+    expect(view.container.querySelectorAll('tr')[1]?.querySelector('td')?.textContent).toBe('')
+    cell(0,0); run(() => editor.commands.tableAction('deleteRow'))
+    expect(view.container.querySelector('th')?.textContent).toBe('')
+    expect(editor.getMarkdown()).toContain('Alpha')
+    view.unmount()
+  })
+  it('inserts and deletes columns without losing adjacent alignment or content', () => {
+    const {view,editor,cell} = setup()
+    cell(1,0); run(() => editor.commands.tableAction('columnRight'))
+    expect(view.container.querySelectorAll('th')).toHaveLength(3)
+    expect(view.container.querySelectorAll('td')[2]?.getAttribute('align')).toBe('right')
+    cell(1,1); run(() => editor.commands.tableAction('deleteColumn'))
+    expect(view.container.querySelectorAll('th')).toHaveLength(2)
+    expect(view.container.querySelectorAll('td')[1]?.getAttribute('align')).toBe('right')
+    expect(editor.getMarkdown()).toContain('Alpha')
+    view.unmount()
+  })
+  it('tabs between cells and appends a body row at the end', () => {
+    const {view,native,cell} = setup()
+    cell(1,0)
+    const event = new KeyboardEvent('keydown',{key:'Tab',cancelable:true})
+    run(() => { native.dispatchCommand(KEY_TAB_COMMAND,event); native.update(() => {}, {discrete:true}) })
+    expect(event.defaultPrevented).toBe(true)
+    cell(2,1)
+    run(() => { native.dispatchCommand(KEY_TAB_COMMAND,new KeyboardEvent('keydown',{key:'Tab',cancelable:true})); native.update(() => {}, {discrete:true}) })
+    expect(view.container.querySelectorAll('tr')).toHaveLength(4)
+    expect(view.container.querySelectorAll('th')).toHaveLength(2)
+    view.unmount()
+  })
+  it('pastes rectangular cells and expands the table while preserving surrounding content', () => {
+    const {view,native,cell,editor} = setup()
+    const key = cell(2,1)
+    run(() => native.update(() => { const target = $getNodeByKey(key)!; $pasteCells(target as Parameters<typeof $pasteCells>[0], [['one','two'],['three','four']]) }, {discrete:true}))
+    expect(view.container.querySelectorAll('tr')).toHaveLength(4)
+    expect(view.container.querySelectorAll('th')).toHaveLength(3)
+    expect(editor.getMarkdown()).toContain('Alpha')
+    expect(editor.getMarkdown()).toContain('four')
+    view.unmount()
+  })
+  it('replaces the final column with a usable paragraph', () => {
+    const {view,editor,cell} = setup('| A |\n| - |\n| B |')
+    cell(1,0); run(() => editor.commands.tableAction('deleteColumn'))
+    expect(view.container.querySelector('table')).toBeNull()
+    expect(view.container.querySelector('[contenteditable] p')).not.toBeNull()
+    view.unmount()
+  })
+  it('selects a rectangle, copies TSV, fills it, and undoes the paste', () => {
+    const {view,cell,editor} = setup()
+    cell(1,0)
+    const cells = view.container.querySelectorAll('td')
+    run(() => {
+      cells[0]!.dispatchEvent(new MouseEvent('pointerdown',{bubbles:true}))
+      document.dispatchEvent(new MouseEvent('pointerup',{bubbles:true}))
+      cells[3]!.dispatchEvent(new MouseEvent('pointerdown',{bubbles:true,shiftKey:true,cancelable:true}))
+    })
+    expect(view.container.querySelectorAll('[data-rmk-cell-selected]')).toHaveLength(4)
+    const stored: Record<string,string> = {}
+    const copy = new Event('copy',{bubbles:true,cancelable:true})
+    Object.defineProperty(copy,'clipboardData',{value:{setData:(type:string,value:string) => { stored[type] = value }}})
+    run(() => cells[0]!.dispatchEvent(copy))
+    expect(stored['text/plain']).toBe('Alpha\t12\nBeta\t34')
+    const paste = new Event('paste',{bubbles:true,cancelable:true})
+    Object.defineProperty(paste,'clipboardData',{value:{getData:(type:string) => type === 'text/plain' ? 'Filled' : ''}})
+    run(() => cells[0]!.dispatchEvent(paste))
+    expect(Array.from(view.container.querySelectorAll('td'),cell => cell.textContent)).toEqual(['Filled','Filled','Filled','Filled'])
+    run(() => editor.undo())
+    expect(Array.from(view.container.querySelectorAll('td'),cell => cell.textContent)).toEqual(['Alpha','12','Beta','34'])
+    view.unmount()
+  })
+  it('leaves ordinary single-cell text paste to the editor', () => {
+    const {view,cell} = setup()
+    cell(1,0)
+    const event = new Event('paste',{bubbles:true,cancelable:true})
+    Object.defineProperty(event,'clipboardData',{value:{getData:() => 'word',types:['text/plain']}})
+    // Observe at the capture boundary before Lexical handles normal text.
+    let prevented = true
+    view.container.querySelector('[contenteditable]')!.addEventListener('paste',event => { prevented = event.defaultPrevented; event.stopImmediatePropagation() },true)
+    run(() => view.container.querySelector('td')!.dispatchEvent(event))
+    expect(prevented).toBe(false)
+    view.unmount()
+  })
+  it('keeps the caret column when adding a row, but Tab wraps to column one', () => {
+    const {view,editor,native,cell} = setup()
+    cell(1,1)
+    run(() => editor.commands.tableAction('rowBelow'))
+    expect(native.getEditorState().read(() => $activeCell()?.getIndexWithinParent())).toBe(1)
+    cell(3,1)
+    run(() => { native.dispatchCommand(KEY_TAB_COMMAND,new KeyboardEvent('keydown',{key:'Tab',cancelable:true})); native.update(() => {},{discrete:true}) })
+    expect(native.getEditorState().read(() => $activeCell()?.getIndexWithinParent())).toBe(0)
+    view.unmount()
+  })
+  it('lands on the replacement column after deleting a middle column', () => {
+    const {view,editor,native,cell} = setup('| A | B | C |\n| - | - | - |\n| a | b | c |')
+    cell(1,1)
+    run(() => editor.commands.tableAction('deleteColumn'))
+    expect(native.getEditorState().read(() => $activeCell()?.getTextContent())).toBe('c')
+    view.unmount()
+  })
+  it('pads short rows for editing without changing the original source on load', () => {
+    const ragged = '| A | B | C |\n| - | - | - |\n| a | b |\n| c |'
+    const {view,editor,cell} = setup(ragged)
+    expect(editor.getMarkdown()).toBe(ragged)
+    expect(Array.from(view.container.querySelectorAll('tr'), row => row.children.length)).toEqual([3,3,3])
+    cell(1,1)
+    run(() => editor.commands.tableAction('columnRight'))
+    expect(Array.from(view.container.querySelectorAll('tr'), row => row.children.length)).toEqual([4,4,4])
+    expect(editor.getMarkdown()).toContain('c')
+    view.unmount()
+  })
+  it('does not intercept modified Tab or append a row from a text selection', () => {
+    const {view,native,cell} = setup()
+    cell(2,1)
+    const event = new KeyboardEvent('keydown',{key:'Tab',ctrlKey:true,cancelable:true})
+    run(() => { native.dispatchCommand(KEY_TAB_COMMAND,event); native.update(() => {},{discrete:true}) })
+    expect(event.defaultPrevented).toBe(false)
+    expect(view.container.querySelectorAll('tr')).toHaveLength(3)
+    run(() => native.update(() => $activeCell()?.select(0,1),{discrete:true}))
+    run(() => { native.dispatchCommand(KEY_TAB_COMMAND,new KeyboardEvent('keydown',{key:'Tab',cancelable:true})); native.update(() => {},{discrete:true}) })
+    expect(view.container.querySelectorAll('tr')).toHaveLength(3)
+    view.unmount()
+  })
+  it('previews and inserts at the hovered row boundary, preserving caret column and undo', () => {
+    tableGeometry()
+    const {view, editor, native, cell} = setup()
+    cell(1, 1)
+    const rail = view.container.querySelector('.rmk-table-rail-row')!
+    pointer(rail, 'pointermove', 12, 120)
+    expect(rail.querySelector('button')?.getAttribute('aria-label')).toBe('Insert row before 3')
+    expect((rail.querySelector('.rmk-table-rail-preview') as HTMLElement).style.top).toBe('80px')
+    click(rail.querySelector('button'))
+    expect(Array.from(view.container.querySelectorAll('tr'), row => row.textContent)).toEqual(['NameCount', 'Alpha12', '', 'Beta34'])
+    expect(native.getEditorState().read(() => $activeCell()?.getIndexWithinParent())).toBe(1)
+    expect(view.container.querySelector('.rmk-table-tools [role="status"]')?.textContent).toBe('Row 3 inserted.')
+    run(() => editor.undo())
+    expect(Array.from(view.container.querySelectorAll('tr'), row => row.textContent)).toEqual(['NameCount', 'Alpha12', 'Beta34'])
+    view.unmount()
+  })
+  it('targets a different column from the caret and preserves neighboring alignment', () => {
+    tableGeometry()
+    const {view, editor, cell} = setup()
+    cell(1, 1)
+    const rail = view.container.querySelector('.rmk-table-rail-column')!
+    pointer(rail, 'pointermove', 112, 26)
+    expect(rail.querySelector('button')?.getAttribute('aria-label')).toBe('Delete column 1')
+    click(rail.querySelector('button'))
+    expect(Array.from(view.container.querySelectorAll('tr'), row => row.textContent)).toEqual(['Count', '12', '34'])
+    expect(view.container.querySelector('th')?.getAttribute('align')).toBe('right')
+    run(() => editor.undo())
+    pointer(rail, 'pointermove', 192, 26)
+    expect(rail.querySelector('button')?.getAttribute('aria-label')).toBe('Insert column before 2')
+    click(rail.querySelector('button'))
+    expect(view.container.querySelectorAll('th')).toHaveLength(3)
+    expect(view.container.querySelectorAll('th')[2]?.getAttribute('align')).toBe('right')
+    view.unmount()
+  })
+  it('requires a separate touch activation after previewing a deletion', () => {
+    tableGeometry()
+    const {view, cell} = setup()
+    cell(1, 0)
+    const rail = view.container.querySelector('.rmk-table-rail-row')!
+    pointer(rail, 'pointerdown', 12, 140, 'touch')
+    expect(rail.querySelector('button')?.getAttribute('aria-label')).toBe('Delete row 3')
+    // Even a synthetic click retargeted to the newly revealed handle is ignored.
+    click(rail.querySelector('button'))
+    expect(view.container.querySelectorAll('tr')).toHaveLength(3)
+    pointer(rail.querySelector('button')!, 'pointerdown', 12, 140, 'touch')
+    click(rail.querySelector('button'))
+    expect(Array.from(view.container.querySelectorAll('tr'), row => row.textContent)).toEqual(['NameCount', 'Alpha12'])
+    view.unmount()
+  })
+  it('lets keyboard users choose edge actions and return to the table with Escape', async () => {
+    tableGeometry()
+    const {view, cell} = setup()
+    cell(1, 0)
+    const handle = view.container.querySelector('.rmk-table-rail-row button') as HTMLButtonElement
+    run(() => view.container.querySelector('[contenteditable]')!.dispatchEvent(new KeyboardEvent('keydown', {key: 'F10', altKey: true, bubbles: true, cancelable: true})))
+    expect(document.activeElement).toBe(handle)
+    run(() => handle.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true})))
+    expect(handle.getAttribute('aria-label')).toBe('Delete row 3')
+    run(() => handle.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true})))
+    expect(handle.getAttribute('aria-label')).toBe('Insert row before 3')
+    click(handle)
+    expect(view.container.querySelectorAll('tr')).toHaveLength(4)
+    await runAsync(async () => { handle.focus(); handle.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true})) })
+    expect(document.activeElement).toBe(view.container.querySelector('[contenteditable]'))
+    view.unmount()
+  })
+  it('keeps one row and column and provides explicit whole-table deletion', () => {
+    tableGeometry()
+    const {view, cell, editor} = setup('| Header |\n| - |')
+    cell(0, 0)
+    pointer(view.container.querySelector('.rmk-table-rail-row')!, 'pointermove', 12, 60)
+    pointer(view.container.querySelector('.rmk-table-rail-column')!, 'pointermove', 192, 26)
+    expect(view.container.querySelector('.rmk-table-rail-row button')?.getAttribute('aria-label')).toBe('Add row')
+    expect(view.container.querySelector('.rmk-table-rail-column button')?.getAttribute('aria-label')).not.toContain('Delete')
+    click(view.container.querySelector('[aria-label="Table options"]'))
+    click(view.container.querySelector('.rmk-table-delete'))
+    expect(view.container.querySelector('table')).toBeNull()
+    run(() => editor.undo())
+    expect(view.container.querySelector('th')?.textContent).toBe('Header')
+    view.unmount()
+  })
+  it('selects and deletes the whole table from its corner, preserving neighboring content and undo', () => {
+    tableGeometry()
+    const {view, cell, native, editor} = setup('Before\n\n' + source + '\nAfter\n\n| Other |\n| - |\n| Keep |')
+    cell(1, 1)
+    click(view.container.querySelector('[aria-label="Select table"]'))
+    expect(native.getEditorState().read(() => $isNodeSelection($getSelection()))).toBe(true)
+    expect(view.container.querySelectorAll('[data-rmk-table-selected]')).toHaveLength(1)
+    expect(view.container.querySelector('[aria-label="Select table"]')?.getAttribute('aria-pressed')).toBe('true')
+    expect(view.container.querySelectorAll('table')).toHaveLength(2)
+    click(view.container.querySelector('[aria-label="Selected table"] button'))
+    expect(view.container.querySelectorAll('table')).toHaveLength(1)
+    expect(editor.getMarkdown()).not.toContain('Alpha')
+    expect(editor.getMarkdown()).toContain('Before')
+    expect(editor.getMarkdown()).toContain('After')
+    expect(editor.getMarkdown()).toContain('Keep')
+    expect(view.container.querySelector('.rmk-table-sr-only[role="status"]')?.textContent).toBe('Table deleted.')
+    run(() => editor.undo())
+    expect(view.container.querySelectorAll('table')).toHaveLength(2)
+    expect(view.container.querySelectorAll('td')[1]?.getAttribute('align')).toBe('right')
+    run(() => editor.redo())
+    expect(view.container.querySelectorAll('table')).toHaveLength(1)
+    view.unmount()
+  })
+  it.each(['Backspace', 'Delete'])('removes the selected table with %s and leaves a paragraph ready for typing', key => {
+    tableGeometry()
+    const {view, cell, native} = setup()
+    cell(1, 0)
+    click(view.container.querySelector('[aria-label="Select table"]'))
+    const target = key === 'Backspace' ? view.container.querySelector('[contenteditable]')! : view.container.querySelector('[aria-label="Select table"]')!
+    const event = new KeyboardEvent('keydown', {key, bubbles: true, cancelable: true})
+    run(() => target.dispatchEvent(event))
+    expect(event.defaultPrevented).toBe(true)
+    expect(view.container.querySelector('table')).toBeNull()
+    expect(native.getEditorState().read(() => $getRoot().getFirstChild()?.getType())).toBe('paragraph')
+    expect(native.getEditorState().read(() => $isNodeSelection($getSelection()))).toBe(false)
+    view.unmount()
+  })
+  it('cancels whole-table selection with Escape or a cell click', () => {
+    tableGeometry()
+    const {view, cell, native, editor} = setup()
+    cell(1, 1)
+    click(view.container.querySelector('[aria-label="Select table"]'))
+    run(() => { native.dispatchCommand(KEY_ESCAPE_COMMAND, new KeyboardEvent('keydown',{key: 'Escape'})); native.update(() => {}, {discrete:true}) })
+    expect(view.container.querySelector('[data-rmk-table-selected]')).toBeNull()
+    expect(view.container.querySelector('[aria-label="Selected table"]')).toBeNull()
+    expect(native.getEditorState().read(() => $activeCell()?.getTextContent())).toBe('Name')
+    click(view.container.querySelector('[aria-label="Select table"]'))
+    pointer(view.container.querySelector('td')!, 'pointerdown', 100, 100)
+    cell(1, 0)
+    expect(view.container.querySelector('[aria-label="Select table"]')?.getAttribute('aria-pressed')).toBe('false')
+    expect(view.container.querySelector('[data-rmk-table-selected]')).toBeNull()
+    expect(editor.getMarkdown()).toBe(source)
+    view.unmount()
+  })
+  it('deletes the header from its edge and promotes the next row without losing content', () => {
+    tableGeometry()
+    const {view, cell, editor} = setup()
+    cell(2, 1)
+    const rail = view.container.querySelector('.rmk-table-rail-row')!
+    pointer(rail, 'pointermove', 12, 60)
+    expect(rail.querySelector('button')?.getAttribute('aria-label')).toBe('Delete row 1')
+    click(rail.querySelector('button'))
+    expect(Array.from(view.container.querySelectorAll('th'), cell => cell.textContent)).toEqual(['Alpha', '12'])
+    expect(view.container.querySelector('td')?.textContent).toBe('Beta')
+    run(() => editor.undo())
+    expect(view.container.querySelector('th')?.textContent).toBe('Name')
+    view.unmount()
+  })
+  it('maps reversed column geometry to logical insertions in RTL tables', () => {
+    tableGeometry()
+    const action = vi.fn()
+    const view = mount(<TableRail axis="column" box={{top: 40, left: 32, width: 320, height: 120, rtl: true}} lanes={[{start:160, size:160}, {start:0, size:160}]} current={0} onAction={action}/>)
+    const rail = view.container.querySelector('.rmk-table-rail-column')!
+    pointer(rail, 'pointermove', 192, 26)
+    expect(rail.querySelector('button')?.getAttribute('aria-label')).toBe('Insert column before 2')
+    click(rail.querySelector('button'))
+    expect(action).toHaveBeenCalledWith('insert', 1)
+    pointer(rail, 'pointermove', 32, 26)
+    expect(rail.querySelector('button')?.getAttribute('aria-label')).toBe('Add column')
+    click(rail.querySelector('button'))
+    expect(action).toHaveBeenLastCalledWith('insert', 2)
+    view.unmount()
+  })
+  it('round trips spreadsheet TSV with tabs, quotes and newlines', () => {
+    const values = [['a\tb','two\nlines','say "hi"'],['','z','']]
+    expect(parseTableClipboard(serializeTableClipboard(values))).toEqual(values)
+    expect(parseTableClipboard('a\tb\r\nc\td\r\n')).toEqual([['a','b'],['c','d']])
+  })
+})

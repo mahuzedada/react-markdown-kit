@@ -1,3 +1,5 @@
+import { $isTableNode } from '../nodes/table.js'
+import { CompactToolbar } from './compact-toolbar.js'
 /**
  * The default toolbar (docs/STYLING.md, "Editor chrome").
  *
@@ -6,7 +8,7 @@
  * state. Remove it with `toolbar={false}`, replace it with a render prop, or
  * ignore it entirely and build your own on `useMarkdownEditor`.
  */
-import { useEffect, useState, type ReactElement } from 'react'
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
 import {
   $getSelection,
   $isRangeSelection,
@@ -16,7 +18,6 @@ import {
   type LexicalNode,
 } from 'lexical'
 import { mergeRegister } from '@lexical/utils'
-import { cx, editorClass } from '../class-names.js'
 import { editorOf } from '../bridge/session.js'
 import { adapterOf } from '../bridge/adapters.js'
 import { $isBlockquoteNode, $isCodeBlockNode, $isHeadingNode, $isListItemNode, $isListNode } from '../nodes/blocks.js'
@@ -48,6 +49,7 @@ const DEFAULT_LABELS: Readonly<Record<string, string>> = {
   link: 'Link',
   image: 'Image',
   thematicBreak: 'Horizontal rule',
+  table: 'Insert table',
   undo: 'Undo',
   redo: 'Redo',
   rich: 'Rich text',
@@ -116,7 +118,8 @@ function describeBlock(node: LexicalNode): { block: string; list: SurfaceState['
   let list: SurfaceState['list'] = null
   let block = 'paragraph'
   while (current !== null) {
-    if ($isHeadingNode(current)) block = `heading${current.getDepth()}`
+    if ($isTableNode(current)) block = 'table'
+    else if ($isHeadingNode(current)) block = `heading${current.getDepth()}`
     else if ($isBlockquoteNode(current)) block = 'blockquote'
     else if ($isCodeBlockNode(current)) block = 'codeBlock'
     else if ($isListItemNode(current) && current.getChecked() !== null) list = 'task'
@@ -208,6 +211,7 @@ export function buildToolbarItems(
       const url = promptFor(label('imagePrompt'))
       if (url !== null) commands.insertImage({ src: url })
     }),
+    ...(internals.bridge.profile === 'gfm' ? [item('table', 'insert', false, () => commands.insertTable(3, 3), { disabled: disabled || state.block === 'table' })] : []),
     item('thematicBreak', 'insert', false, () => {
       commands.insertThematicBreak()
     }),
@@ -260,58 +264,13 @@ export interface MarkdownToolbarProps {
   readonly editor: MarkdownEditorInstance
   readonly internals: EditorInternals
   readonly render?: MarkdownToolbarRenderer | undefined
+  readonly end?: ReactNode
 }
 
-export function MarkdownToolbar({ editor, internals, render }: MarkdownToolbarProps): ReactElement {
+export function MarkdownToolbar({ editor, internals, render, end }: MarkdownToolbarProps): ReactElement {
   const state = useSurfaceState(internals)
   const items = buildToolbarItems(editor, internals, state, internals.labels)
   if (render !== undefined) return <>{render(items, editor)}</>
 
-  const groups: MarkdownToolbarItem[][] = []
-  for (const item of items) {
-    const last = groups[groups.length - 1]
-    if (last !== undefined && last[0]?.group === item.group) last.push(item)
-    else groups.push([item])
-  }
-  const labels = internals.labels
-  const label = (key: string): string => labels?.[key] ?? DEFAULT_LABELS[key] ?? key
-
-  return (
-    <div
-      className={editorClass('toolbar', internals.classNames)}
-      role="toolbar"
-      aria-label={label('toolbar')}
-    >
-      {groups.map((group) => (
-        <div
-          key={group[0]?.group}
-          className={editorClass('toolbarGroup', internals.classNames)}
-          role="group"
-          aria-label={group[0]?.group === 'mode' ? label('modes') : undefined}
-        >
-          {group.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={cx(
-                editorClass('toolbarButton', internals.classNames),
-                item.active ? editorClass('toolbarButtonActive', internals.classNames) : undefined,
-              )}
-              aria-label={item.label}
-              aria-pressed={item.active}
-              disabled={item.disabled}
-              data-rmk-toolbar-item={item.id}
-              onMouseDown={(event) => {
-                event.preventDefault()
-              }}
-              onClick={item.run}
-            >
-              {item.icon}
-            </button>
-          ))}
-        </div>
-      ))}
-    </div>
-  )
+  return <CompactToolbar editor={editor} internals={internals} items={items} end={end} />
 }
-

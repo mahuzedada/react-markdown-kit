@@ -3,7 +3,8 @@ import { cp } from 'node:fs/promises'
 
 export default defineConfig({
   // `lexical` is the extension-author entry: the one place Lexical types are public.
-  entry: { index: 'src/index.ts', lexical: 'src/lexical.ts' },
+  // `table-of-contents` carries no Lexical, for pages that only want the heading list.
+  entry: { index: 'src/index.ts', lexical: 'src/lexical.ts', 'table-of-contents': 'src/table-of-contents.ts' },
   format: ['esm'],
   dts: true,
   clean: true,

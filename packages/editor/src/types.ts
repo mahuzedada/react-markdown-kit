@@ -65,6 +65,9 @@ export interface MarkdownEditorCommands {
   insertLink(url: string, options?: { readonly title?: string; readonly text?: string }): void
   removeLink(): void
   insertImage(image: MarkdownImageValue): void
+  insertTable(rows: number, columns: number): void
+  tableAction(action: 'rowAbove' | 'rowBelow' | 'columnLeft' | 'columnRight' | 'deleteRow' | 'deleteColumn' | 'deleteTable'): void
+  alignTableColumn(align: 'left' | 'center' | 'right' | null): void
   insertThematicBreak(): void
   /** Parses `source` with the active preset and inserts it at the selection. */
   insertMarkdown(source: string): void
@@ -151,6 +154,10 @@ export interface MarkdownEditorProps extends UseMarkdownEditorOptions {
   readonly labels?: MarkdownEditorLabels
   /** `false` removes the toolbar; a function replaces it (spec 7.11, STYLING). */
   readonly toolbar?: boolean | MarkdownToolbarRenderer
+  /** Extra controls at the end of the default toolbar, such as an app's save or share buttons. */
+  readonly toolbarEnd?: ReactNode
+  /** Dock a table of contents beside the rich surface (`MarkdownOutline`). */
+  readonly outline?: boolean
   readonly children?: ReactNode
   readonly 'aria-label'?: string
   readonly 'aria-labelledby'?: string

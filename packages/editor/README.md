@@ -106,6 +106,45 @@ document. In a list, Enter starts the next item, Enter on an empty item leaves
 the list, and Backspace at the start of an item removes its checkbox and then
 the bullet. In a blockquote, Enter on an empty last line leaves the quote.
 
+## Editing tables
+
+With the GFM preset, use **Insert table** to choose a grid size. The first row
+is always the header; inserting above it adds a body row underneath, keeping
+the column labels in place. Focus a cell to reveal its edge controls. A **+**
+at a row or column boundary inserts there; a **−** over a row or column
+deletes it. A line or tint previews the change. The circle at the top-left
+corner selects the whole table and reveals **Delete table** above it. Delete
+or Backspace also removes a selected table; Escape returns to cell editing.
+Use **Table options** below the grid to align the selected column. Alignment
+is displayed in rich mode and saved in the Markdown delimiter row.
+
+- **Tab / Shift+Tab** move between cells with a collapsed caret. Tab from the
+  final cell adds a row and moves to its first cell. Row edge actions keep
+  the current column; modified Tab shortcuts remain available to the browser.
+- **Shift-click or drag across cells** selects a rectangle; Escape clears it.
+- **Copy / cut / paste** transfer rectangular values as TSV and HTML tables.
+  Pasting spreadsheet values expands the table when needed. Pasting one value
+  over a selected rectangle fills it. Delete clears selected cell contents.
+- Press **Alt+F10** in a table to focus its edge controls. Use Tab to switch
+  edges and arrow keys to choose an action, then Enter to
+  apply. Escape returns to the table. On touch screens, tap an edge to preview,
+  then tap the control to apply.
+- Edge controls keep at least one row and column. Structural changes and paste
+  can be undone. Using the command API to remove the last row or column
+  leaves a paragraph ready for typing.
+
+Custom toolbars can use `commands.insertTable(rows, columns)`,
+`commands.tableAction('rowBelow')` (also `rowAbove`, `columnLeft`, `columnRight`,
+`deleteRow`, `deleteColumn`, `deleteTable`), and
+`commands.alignTableColumn('left' | 'center' | 'right' | null)`.
+Insertion accepts 1–100 rows and 1–30 columns and requires GFM.
+Clipboard transfers cell text; merged cells and spreadsheet formatting are
+not part of the Markdown table format.
+
+The optional theme provides subtle grid lines, padded cells, selection
+outlines and contextual menus. Override `--rmk-table-popover-bg` and
+`--rmk-table-popover-text` to match your application's light or dark surface.
+
 ## Controlled or uncontrolled
 
 ```tsx
@@ -121,10 +160,49 @@ document deliberately, change `documentKey`:
 <MarkdownEditor documentKey={note.id} value={note.markdown} onChange={setMarkdown} />
 ```
 
+## Table of contents
+
+```tsx
+<MarkdownEditor value={value} onChange={setValue} outline />
+```
+
+`outline` docks a table of contents beside the rich surface. It lists the
+headings as you type, indents them from the shallowest level, scrolls to a
+heading when you click it, and marks the section on screen. A button folds
+it away. It is view only: nothing is written to the Markdown. Source and
+preview modes hide it.
+
+In a composed layout, place `<MarkdownOutline />` yourself anywhere inside
+the provider. `offset` moves the reading line down by the height of a sticky
+header.
+
+The list itself, `TableOfContents`, and the scroll tracker,
+`useActiveHeading`, work without an editor. Import them from
+`@react-markdown-kit/editor/table-of-contents`, which carries no Lexical, to
+draw the same table of contents over a page's own headings. Entries with an
+`href` render as links:
+
+```tsx
+import { TableOfContents, useActiveHeading } from '@react-markdown-kit/editor/table-of-contents'
+
+const entries = headings.map((h) => ({ id: h.id, text: h.text, depth: h.level, href: `#${h.id}` }))
+const activeId = useActiveHeading(entries, (entry) => document.getElementById(entry.id))
+
+<TableOfContents entries={entries} activeId={activeId} labels={{ 'outline.title': 'On this page' }} />
+```
+
+Labels: `outline.title`, `outline.empty`, `outline.untitled`. Class parts:
+`body`, `outline`, `outlineToggle`, `outlineTitle`, `outlineList`,
+`outlineItem`, `outlineItemActive`, `outlineEmpty`.
+
 ## Build your own interface
 
-The default editor ships a toolbar so it is useful immediately. When you need
-your own, keep the engine and replace the chrome:
+The default editor has a compact command bar: text formatting and insertion
+menus, quick table/image/task controls, undo/redo, and an editing-mode menu.
+Selecting text also opens a small formatting toolbar beside the selection.
+`toolbarEnd` adds your own controls at the end of that bar, such as a share
+or save button.
+When you need your own interface, keep the engine and replace the chrome:
 
 ```tsx
 const editor = useMarkdownEditor({ value, onChange, preset })
@@ -220,6 +298,8 @@ import { createMarkdownBridge, serializeDocument } from '@react-markdown-kit/edi
 | `useMarkdownEditor` | Headless instance |
 | `MarkdownEditorProvider` | Context for composable layouts |
 | `MarkdownEditorContent` | The editable surface |
+| `MarkdownOutline` | The table of contents, for composed layouts |
+| `TableOfContents`, `useActiveHeading` | The heading list and scroll tracker, no editor needed (also on `/table-of-contents`) |
 | `useMarkdownEditorContext` | Read the instance from context |
 | `useOptionalMarkdownEditorContext` | The same, null outside a provider, for chrome that also takes an `editor` prop |
 | `createMarkdownBridge`, `serializeDocument` | Markdown in and out, no React |

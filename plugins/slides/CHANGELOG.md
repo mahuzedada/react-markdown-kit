@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 (2026-10-04)
+
+- Peer ranges raised to `@react-markdown-kit/renderer` ^0.1.1 and `@react-markdown-kit/editor` ^0.2.1. Slide markers and directives are declared literal under the renderer's `variables` key, which renderer 0.1.0 does not read.
+
 ## 0.2.0 (2026-09-27)
 
 Dialect:

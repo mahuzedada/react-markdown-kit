@@ -54,6 +54,9 @@ export class TableNode extends ElementNode {
   setAlign(align: TableAlign[]): this {
     const self = this.getWritable()
     self.__align = align
+    for (const row of self.getChildren()) {
+      if ($isTableRowNode(row)) for (const cell of row.getChildren()) cell.markDirty()
+    }
     return self
   }
 
@@ -103,6 +106,11 @@ export class TableRowNode extends ElementNode {
     return { ...super.exportJSON(), type: TableRowNode.getType(), version: VERSION, header: this.__header }
   }
 
+  setHeader(header: boolean): this {
+    this.getWritable().__header = header
+    return this
+  }
+
   isHeader(): boolean {
     return this.getLatest().__header
   }
@@ -150,12 +158,26 @@ export class TableCellNode extends ElementNode {
     return { ...super.exportJSON(), type: TableCellNode.getType(), version: VERSION, header: this.__header }
   }
 
-  override createDOM(): HTMLElement {
-    return document.createElement(this.__header ? 'th' : 'td')
+  setHeader(header: boolean): this {
+    this.getWritable().__header = header
+    return this
   }
 
-  override updateDOM(): boolean {
-    return false
+  override createDOM(): HTMLElement {
+    const element = document.createElement(this.__header ? 'th' : 'td')
+    this.applyAlignment(element)
+    return element
+  }
+
+  private applyAlignment(element: HTMLElement): void {
+    const table = this.getParent()?.getParent()
+    const align = $isTableNode(table) ? table.getAlign()[this.getIndexWithinParent()] : null
+    element.setAttribute('align', align ?? 'left')
+  }
+
+  override updateDOM(previous: TableCellNode, element: HTMLElement): boolean {
+    this.applyAlignment(element)
+    return previous.__header !== this.__header
   }
 
   override canBeEmpty(): boolean {

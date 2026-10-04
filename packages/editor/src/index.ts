@@ -16,6 +16,10 @@ export { MarkdownEditorProvider, useMarkdownEditorContext, useOptionalMarkdownEd
 export { MarkdownEditorContent } from './react/content.js'
 export type { MarkdownEditorProviderProps } from './react/context.js'
 export type { MarkdownEditorContentProps, EditorAriaProps } from './react/content.js'
+export { MarkdownOutline } from './react/outline.js'
+export type { MarkdownOutlineProps } from './react/outline.js'
+export { TableOfContents, useActiveHeading } from './react/table-of-contents.js'
+export type { TableOfContentsEntry, TableOfContentsProps, ActiveHeadingOptions } from './react/table-of-contents.js'
 
 export type {
   MarkdownEditorMode,

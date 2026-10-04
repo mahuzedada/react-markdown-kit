@@ -1,6 +1,10 @@
 import { lazy, type ReactNode } from 'react'
 import ClientOnly from '@site/src/components/ClientOnly'
 import { DemoPlaceholder } from '@site/src/layouts/DemoLayout'
+import MarkdownDocument from '../../components/document/MarkdownDocument'
+import { readingSource } from './reading-source'
+import { SAMPLE_DECK } from './sample-deck'
+import '@react-markdown-kit/slides/styles.css'
 
 // The workbench pulls in Lexical and needs a browser, so the demo is its own
 // chunk, loaded on the client behind a placeholder the exact height it will
@@ -15,6 +19,6 @@ const Embed = lazy(() => import('./Embed'))
  */
 export default function Demo({ embed = false }: { readonly embed?: boolean }): ReactNode {
   return (
-    <ClientOnly fallback={<DemoPlaceholder />}>{embed ? <Embed /> : <SlidesDemo />}</ClientOnly>
+    <ClientOnly fallback={embed ? <DemoPlaceholder /> : <main className="document-reading"><MarkdownDocument source={readingSource(SAMPLE_DECK)} /></main>}>{embed ? <Embed /> : <SlidesDemo />}</ClientOnly>
   )
 }

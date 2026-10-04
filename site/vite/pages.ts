@@ -26,11 +26,29 @@ export interface PageEntry {
   readonly description?: string
   readonly sidebarLabel?: string
   readonly hideToc?: boolean
-  /** `YYYY-MM-DD` of the last commit that touched the file. */
+  /** `YYYY-MM-DD` of the last commit that touched the page or its Markdown document. */
   readonly lastUpdated: string
 }
 
 const SITE = resolve(dirname(new URL(import.meta.url).pathname), '..')
+
+// These documents are the bodies of the demo pages, even when imported through
+// a demo component. Content-only edits must update sitemap lastmod too.
+const PAGE_DOCUMENTS: Readonly<Record<string, string>> = {
+  'src/pages/index.tsx': 'src/content/home.md',
+  'src/pages/markdown-editor.tsx': 'src/content/editor.md',
+  'src/pages/markdown-renderer.tsx': 'src/content/renderer.md',
+  'src/pages/markdown-streaming.tsx': 'src/content/streaming.md',
+  'src/pages/markdown-variables.tsx': 'src/content/variables.md',
+  'src/pages/markdown-slides.tsx': 'src/content/slides.md',
+}
+
+export function pageLastUpdated(file: string, dates: ReadonlyMap<string, string>, fallback: string): string {
+  const document = PAGE_DOCUMENTS[file]
+  const changed = [dates.get(file), document ? dates.get(document) : undefined]
+    .filter((date): date is string => date !== undefined)
+  return changed.sort().at(-1) ?? fallback
+}
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -72,7 +90,7 @@ function lastUpdated(): Map<string, string> {
   const dates = new Map<string, string>()
   let date = ''
   try {
-    const log = execFileSync('git', ['log', '--format=%cs', '--name-only', '--', 'docs', 'src/pages'], { cwd: SITE, encoding: 'utf8' })
+    const log = execFileSync('git', ['log', '--format=%cs', '--name-only', '--', 'docs', 'src/pages', 'src/content'], { cwd: SITE, encoding: 'utf8' })
     for (const line of log.split('\n')) {
       if (/^\d{4}-\d{2}-\d{2}$/.test(line)) date = line
       else if (line !== '') {
@@ -103,7 +121,7 @@ export function findPages(): PageEntry[] {
       description: matter['description'],
       sidebarLabel: matter['sidebar_label'],
       hideToc: matter['hide_table_of_contents'] === 'true',
-      lastUpdated: dates.get(file) ?? today,
+      lastUpdated: pageLastUpdated(file, dates, today),
     }
   })
 }

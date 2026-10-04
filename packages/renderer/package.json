@@ -1,6 +1,6 @@
 {
   "name": "@react-markdown-kit/renderer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Render Markdown as React. Safe by default, unstyled by default, extensible.",
   "homepage": "https://reactmarkdownkit.com/markdown-renderer",
   "repository": {

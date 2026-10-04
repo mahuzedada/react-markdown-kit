@@ -13,6 +13,7 @@ import { useMarkdownEditor } from './use-markdown-editor.js'
 import { MarkdownEditorProvider } from './context.js'
 import { MarkdownEditorContent } from './content.js'
 import { MarkdownToolbar } from './toolbar.js'
+import { MarkdownOutline } from './outline.js'
 import { internalsOf } from './internals.js'
 import type { MarkdownEditorProps } from '../types.js'
 
@@ -44,6 +45,17 @@ export function MarkdownEditor(props: MarkdownEditorProps): ReactElement {
   const editor = useMarkdownEditor(props)
   const internals = internalsOf(editor)
   const showToolbar = props.toolbar !== false
+  const content = (
+    <MarkdownEditorContent
+      {...(props['aria-label'] === undefined ? {} : { 'aria-label': props['aria-label'] })}
+      {...(props['aria-labelledby'] === undefined
+        ? {}
+        : { 'aria-labelledby': props['aria-labelledby'] })}
+      {...(props['aria-describedby'] === undefined
+        ? {}
+        : { 'aria-describedby': props['aria-describedby'] })}
+    />
+  )
 
   return (
     <MarkdownEditorProvider editor={editor}>
@@ -57,6 +69,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): ReactElement {
             editor={editor}
             internals={internals}
             render={typeof props.toolbar === 'function' ? props.toolbar : undefined}
+            end={props.toolbarEnd}
           />
         ) : null}
         <div
@@ -67,15 +80,14 @@ export function MarkdownEditor(props: MarkdownEditorProps): ReactElement {
         >
           {props.labels?.[`announce.${internals.mode}`] ?? MODE_ANNOUNCEMENTS[internals.mode]}
         </div>
-        <MarkdownEditorContent
-          {...(props['aria-label'] === undefined ? {} : { 'aria-label': props['aria-label'] })}
-          {...(props['aria-labelledby'] === undefined
-            ? {}
-            : { 'aria-labelledby': props['aria-labelledby'] })}
-          {...(props['aria-describedby'] === undefined
-            ? {}
-            : { 'aria-describedby': props['aria-describedby'] })}
-        />
+        {props.outline === true ? (
+          <div className={editorClass('body', props.classNames)}>
+            {content}
+            <MarkdownOutline />
+          </div>
+        ) : (
+          content
+        )}
         {props.children}
       </div>
     </MarkdownEditorProvider>

@@ -1,3 +1,4 @@
+import { TableTools } from './table-tools.js'
 /**
  * `MarkdownEditorContent` (spec 7.3, 7.4) — the surface for the active mode.
  *
@@ -105,6 +106,7 @@ function RichSurface({ internals, ...aria }: SurfaceProps): ReactElement {
         <Placeholder internals={internals}>{internals.placeholder}</Placeholder>
       ) : null}
       <Decorators internals={internals} />
+      <TableTools internals={internals} />
     </div>
   )
 }

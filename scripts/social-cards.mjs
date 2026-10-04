@@ -11,8 +11,9 @@ import { Resvg } from '@resvg/resvg-js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-// The master logo from scripts/brand-icons.mjs, nested at the card's top left.
-const logo = readFileSync(join(root, 'site/brand/logo.svg'), 'utf8')
+// The master logo from scripts/brand-icons.mjs in its dark-mode ink (the
+// cards are dark), nested at the card's top left.
+const logo = readFileSync(join(root, 'site/brand/logo.svg'), 'utf8').replaceAll('#1c2127', '#f6f7f9')
 const LOGO = logo
   .replace(/<svg [^>]*viewBox="([^"]+)"[^>]*>/, '<svg x="60" y="56" width="96" height="96" viewBox="$1">')
   .trim()

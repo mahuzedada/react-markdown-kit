@@ -115,11 +115,17 @@ for (const site of SITES) {
         expect(loc.startsWith(site.url)).toBe(true)
         expect(resolves(dir, loc.slice(site.url.length)), loc).toBe(true)
       }
+      const expected = pages(dir).map((page) => {
+        const route = '/' + relative(dir, page).replace(/\/?index\.html$/, '')
+        return `${site.url}${route}`
+      })
+      expect(locs.sort()).toEqual(expected.sort())
     })
 
     it('ships a 404.html that search engines will not index', () => {
       const html = readFileSync(join(dir, '404.html'), 'utf8')
       expect(html.match(/<h1[\s>]/g) ?? []).toHaveLength(1)
+      expect(meta(html, 'name', 'robots')).toMatch(/\bnoindex\b/i)
     })
 
     it('carries the Search Console and Bing Webmaster ownership tags on its root page', () => {
@@ -160,11 +166,12 @@ for (const site of SITES) {
           expect(description.length, description).toBeLessThanOrEqual(155)
         })
 
-        it('has an absolute canonical on this host', () => {
+        it('has its own absolute canonical and allows indexing', () => {
           const canonical = attribute(html, /<link[^>]*rel="canonical"[^>]*href="([^"]*)"/)
-          expect(canonical).toBeDefined()
-          expect(canonical?.startsWith(site.url)).toBe(true)
-          if (landing) expect(canonical).toBe(`${site.url}${route.replace(/\/$/, '')}`)
+          expect(canonical).toBe(`${site.url}${route === '/' ? '/' : route.replace(/\/$/, '')}`)
+          for (const crawler of ['robots', 'googlebot', 'bingbot']) {
+            expect(meta(html, 'name', crawler) ?? '').not.toMatch(/\b(noindex|none)\b/i)
+          }
         })
 
         it('has Open Graph and Twitter tags with a PNG image that exists', () => {

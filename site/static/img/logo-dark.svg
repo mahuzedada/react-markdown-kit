@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="React Markdown Kit">
+  <defs>
+    <mask id="rmk-back">
+      <rect width="32" height="32" fill="#fff"/>
+      <rect x="1.4" y="7.4" width="23.2" height="23.2" rx="6.6" fill="#000"/>
+    </mask>
+    <mask id="rmk-front">
+      <rect x="3" y="9" width="20" height="20" rx="5" fill="#fff"/>
+      <path d="M8 23V14.8l5 5.4 5-5.4V23" fill="none" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <rect x="9.8" y="2.8" width="18.4" height="18.4" rx="4.2" fill="none" stroke="#f6f7f9" stroke-width="1.6" mask="url(#rmk-back)"/>
+  <rect x="3" y="9" width="20" height="20" rx="5" fill="#f6f7f9" mask="url(#rmk-front)"/>
+</svg>

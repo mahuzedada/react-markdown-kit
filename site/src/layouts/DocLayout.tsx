@@ -4,7 +4,6 @@ import { usePage } from '../app/page-context'
 import { DOCS_ORDER, DOCS_SIDEBAR, type SidebarItem } from '../app/navigation'
 import { pages, type PageEntry, type TocItem } from '../app/routes'
 import { ArticleJsonLd, BreadcrumbJsonLd } from '../components/JsonLd'
-import { ChevronIcon } from '../components/icons'
 import Reading, { LastUpdated } from './Reading'
 import Shell from './Shell'
 
@@ -47,14 +46,9 @@ function Sidebar({ current }: { readonly current: string }): ReactNode {
       </li>
     ) : (
       <li key={entry.label}>
-        {/* A native disclosure: every link is in the HTML, open or not. */}
-        <details open={entry.open || entry.items.some((id) => doc(id).route === current)} className="group">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-(--radius) px-2.5 py-1.5 font-medium text-sidebar-foreground hover:bg-sidebar-accent [&::-webkit-details-marker]:hidden">
-            {entry.label}
-            <ChevronIcon className="size-4 transition-transform group-open:rotate-90" />
-          </summary>
-          <ul className="m-0 list-none p-0 ps-3">{entry.items.map((id) => item(id))}</ul>
-        </details>
+        {/* Groups are always open: a label over its links. */}
+        <span className="document-directory-group">{entry.label}</span>
+        <ul className="m-0 list-none p-0 ps-3">{entry.items.map((id) => item(id))}</ul>
       </li>
     )
   return (
@@ -71,7 +65,7 @@ function Pager({ current }: { readonly current: string }): ReactNode {
   const card = (page: PageEntry, direction: 'Previous' | 'Next'): ReactNode => (
     <a
       href={page.route}
-      className={cn('block rounded-(--radius) border border-border px-4 py-3 no-underline hover:border-primary', direction === 'Next' && 'text-end')}
+      className={cn('block border-t border-border py-3 no-underline', direction === 'Next' && 'text-end')}
     >
       <span className="block text-sm text-muted-foreground">{direction}</span>
       <span className="font-medium text-primary-text">{label(page)}</span>
@@ -90,11 +84,6 @@ export default function DocLayout({ toc, children }: { readonly toc: readonly To
   const sidebar = <Sidebar current={page.route} />
   return (
     <Shell menu={sidebar}>
-      <div className="flex">
-        <aside className="sticky top-(--navbar-height) hidden h-[calc(100dvh-var(--navbar-height))] w-72 shrink-0 overflow-y-auto border-e border-border px-3 py-4 lg:block">
-          {sidebar}
-        </aside>
-        <div className="min-w-0 flex-1">
           <Reading
             toc={toc}
             footer={
@@ -106,8 +95,6 @@ export default function DocLayout({ toc, children }: { readonly toc: readonly To
           >
             {children}
           </Reading>
-        </div>
-      </div>
       <BreadcrumbJsonLd trail={[{ name: label(page), path: page.route }]} />
       <ArticleJsonLd headline={page.title ?? label(page)} description={page.description ?? ''} path={page.route} />
     </Shell>

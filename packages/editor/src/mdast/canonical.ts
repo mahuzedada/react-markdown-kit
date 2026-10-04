@@ -50,8 +50,18 @@ function canonicalOf(node: MarkdownNode, explicitRaw: string | null, raw: RawRes
       return ['code', node['lang'] ?? null, node['meta'] ?? null, node['value'] ?? '']
     case 'thematicBreak':
       return ['thematicBreak']
-    case 'table':
-      return ['table', node['align'] ?? [], blocks()]
+    case 'table': {
+      // Missing trailing cells and explicit empty cells mean the same thing.
+      // Normalize only the comparison key so the original ragged source can
+      // still be reused byte-for-byte after the rich grid pads its rows.
+      const rows = node.children ?? []
+      const width = Math.max(0, ...rows.map(row => row.children?.length ?? 0))
+      return ['table', node['align'] ?? [], rows.map(row => {
+        const cells = [...(row.children ?? [])]
+        while (cells.length < width) cells.push({ type: 'tableCell', children: [] })
+        return canonicalOf({ ...row, children: cells }, null, raw)
+      })]
+    }
     case 'tableRow':
       return ['tableRow', blocks()]
     case 'tableCell':

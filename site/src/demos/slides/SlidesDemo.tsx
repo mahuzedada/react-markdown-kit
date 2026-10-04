@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { compileMarkdown } from '@react-markdown-kit/renderer'
+import MarkdownDocument from '../../components/document/MarkdownDocument'
 import { ActivityScope } from '@zuilib/primitives/activity'
 import Button from '@zuilib/primitives/button'
 import Text from '@zuilib/primitives/text'
-import { DocsLink, PaneSwitch, StatusStrip } from '../../components/DemoStrip'
 import DeckHeader from './DeckHeader'
 import DeckPane from './DeckPane'
 import { downloadPptx } from './export-pptx'
@@ -12,6 +12,7 @@ import { openPresenterWindow, shareDeck } from './link-actions'
 import { createDeckSetup, type DeckSetup } from './preset'
 import { SAMPLE_DECK } from './sample-deck'
 import SourcePane from './SourcePane'
+import { readingSource } from './reading-source'
 import { readView } from './url-state'
 import { useDeckSource } from './use-deck-source'
 import { useStreamReplay } from './use-stream-replay'
@@ -19,23 +20,7 @@ import { useStreamReplay } from './use-stream-replay'
 import '@react-markdown-kit/mermaid/styles.css'
 import '@react-markdown-kit/slides/styles.css'
 
-type MobilePane = 'editor' | 'deck'
-const PANES: readonly (readonly [MobilePane, string])[] = [
-  ['editor', 'Source'],
-  ['deck', 'Deck'],
-]
-
-/*
- * Chrome for the workbench: the header and the two panes. The deck and
- * present mode are styled by the kit's own stylesheets. Print is the deck
- * alone, one slide per page, sized by the plugin's stylesheet.
- */
-const SHELL =
-  'flex h-[var(--rmk-demo-height,100dvh)] flex-col overflow-hidden border-b border-border bg-card print:h-auto print:overflow-visible print:border-0 print:bg-transparent'
-/** Below 900px one pane shows at a time, the deck first. */
-const PANE = 'flex min-h-0 min-w-0 flex-col max-[900px]:data-[mobile-hidden]:hidden'
-const PANE_HEAD = 'flex items-center justify-between gap-2 border-b border-border px-3 py-2 print:hidden'
-
+const SHELL = 'document-workbench document-slides'
 /**
  * The slides workbench: the deck's Markdown as plain text on the left, the
  * deck it describes on the right, and a header with the deck's title, its
@@ -71,7 +56,7 @@ function Workbench({ setup, initial }: { readonly setup: DeckSetup; readonly ini
   const deck = useDeckSource(initial)
   const stream = useStreamReplay(deck.source, controller)
   const [meta, setMeta] = useState<DeckMeta>({ title: '', count: 0 })
-  const [mobilePane, setMobilePane] = useState<MobilePane>('deck')
+  const [showSource, setShowSource] = useState(false)
   const [exporting, setExporting] = useState(false)
   const deckRef = useRef<HTMLDivElement>(null)
 
@@ -99,9 +84,11 @@ function Workbench({ setup, initial }: { readonly setup: DeckSetup; readonly ini
 
   return (
     <ActivityScope feature="slides-workbench">
-      <div className={SHELL}>
+      <main className={SHELL} data-panel={showSource ? 'source' : 'closed'}>
         <DeckHeader
           title={meta.title}
+          sourceOpen={showSource}
+          onToggleSource={() => setShowSource(!showSource)}
           count={meta.count}
           problems={problems.length}
           warning={problems.some((problem) => problem.severity !== 'info')}
@@ -133,25 +120,22 @@ function Workbench({ setup, initial }: { readonly setup: DeckSetup; readonly ini
           </Text>
         ) : null}
 
-        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] max-[900px]:grid-cols-1 print:block">
-          <SourcePane value={deck.source} onChange={deck.edit} className={`${PANE} print:hidden`} head={PANE_HEAD} hidden={mobilePane !== 'editor'} />
+        <div className="document-layout">
+          {showSource && <SourcePane value={deck.source} onChange={deck.edit} className="document-source print:hidden" head="document-source-header" hidden={false} />}
+          <article className="document-reading"><MarkdownDocument source={readingSource(shown)} /></article>
+        </div>
+        <div className="document-presentation">
           <DeckPane
             preset={preset}
             document={document}
             deckRef={deckRef}
-            className={PANE}
-            head={PANE_HEAD}
-            hidden={mobilePane !== 'deck'}
+            className="document-deck"
+            head="hidden"
+            hidden={false}
             streaming={stream.shown !== undefined}
           />
         </div>
-
-        <StatusStrip>
-          <PaneSwitch panes={PANES} value={mobilePane} onChange={setMobilePane} />
-          <span className="ml-auto max-[900px]:ml-0">kept in this browser and in the link, nothing is uploaded</span>
-          <DocsLink />
-        </StatusStrip>
-      </div>
+      </main>
     </ActivityScope>
   )
 }

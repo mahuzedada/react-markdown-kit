@@ -21,6 +21,14 @@ export type EditorClassNamePart =
   | 'strong'
   | 'emphasis'
   | 'strikethrough'
+  | 'body'
+  | 'outline'
+  | 'outlineToggle'
+  | 'outlineTitle'
+  | 'outlineList'
+  | 'outlineItem'
+  | 'outlineItemActive'
+  | 'outlineEmpty'
 
 export type EditorClassNames = Partial<Record<EditorClassNamePart, string>>
 

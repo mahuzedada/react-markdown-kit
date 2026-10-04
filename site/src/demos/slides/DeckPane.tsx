@@ -26,7 +26,7 @@ export interface DeckPaneProps {
 export default function DeckPane({ preset, document, deckRef, className, head, hidden, streaming }: DeckPaneProps): ReactNode {
   const problems = document.diagnostics
   return (
-    <div className={cn(className, 'border-l border-border max-[900px]:border-l-0 print:border-0')} data-mobile-hidden={hidden ? '' : undefined}>
+    <div className={className} data-mobile-hidden={hidden ? '' : undefined}>
       <div className={head}>
         <Text as="span" size="sm" weight="medium">
           Deck
@@ -35,7 +35,7 @@ export default function DeckPane({ preset, document, deckRef, className, head, h
           {streaming ? 'streaming in, presenting as it grows' : 'static sections until you press Present'}
         </Badge>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto bg-muted p-4 print:overflow-visible print:bg-transparent print:p-0" ref={deckRef}>
+      <div className="document-deck-content" ref={deckRef}>
         <div className="rmk-document mx-auto max-w-5xl print:m-0 print:max-w-none">
           <Markdown preset={preset} document={document} />
         </div>

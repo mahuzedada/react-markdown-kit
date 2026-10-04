@@ -5,7 +5,8 @@ import type { TocItem } from '../app/routes'
 
 /**
  * The reading column the docs and the articles share: prose at the site's
- * reading width, the table of contents beside it on wide screens.
+ * reading width, the editor's table of contents beside it on wide screens
+ * and above it on narrow ones.
  */
 export default function Reading({
   toc,
@@ -17,17 +18,12 @@ export default function Reading({
   readonly children: ReactNode
 }): ReactNode {
   return (
-    <div className="flex justify-center gap-12 px-4 py-12">
-      <main className="w-full max-w-(--width-reading) min-w-0">
-        <Toc toc={toc} variant="inline" />
-        <Prose>{children}</Prose>
+    <div className="document-page">
+      <Toc toc={toc} />
+      <main className="document-reading">
+        <Prose className="document-prose">{children}</Prose>
         {footer}
       </main>
-      {toc.length > 0 ? (
-        <aside className="hidden w-56 shrink-0 xl:block">
-          <Toc toc={toc} variant="aside" />
-        </aside>
-      ) : null}
     </div>
   )
 }

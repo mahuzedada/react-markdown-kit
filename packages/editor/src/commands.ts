@@ -1,3 +1,4 @@
+import { $insertTable, $tableAction, $alignColumn } from './tables.js'
 /**
  * Editing verbs (spec 7.7).
  *
@@ -13,6 +14,7 @@ import {
   $insertNodes,
   $isRangeSelection,
   REDO_COMMAND,
+  HISTORY_PUSH_TAG,
   UNDO_COMMAND,
   type ElementNode,
   type LexicalEditor,
@@ -151,6 +153,12 @@ export function createCommands(context: CommandContext): MarkdownEditorCommands 
         $insertNodes([$createImageNode(image.src, image.alt ?? null, image.title ?? null)])
       })
     },
+
+    insertTable(rows, columns) {
+      if (context.bridge.profile === 'gfm') editor().update(() => $insertTable(rows, columns), { discrete: true, tag: HISTORY_PUSH_TAG })
+    },
+    tableAction(action) { editor().update(() => $tableAction(action), { discrete: true, tag: HISTORY_PUSH_TAG }) },
+    alignTableColumn(align) { editor().update(() => $alignColumn(align), { discrete: true, tag: HISTORY_PUSH_TAG }) },
 
     insertThematicBreak() {
       write(() => {
