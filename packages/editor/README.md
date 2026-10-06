@@ -366,3 +366,20 @@ deck. See each package's README:
 ## License
 
 MIT
+
+
+### Reusing the table picker
+
+`MarkdownTablePicker` is the same dimension picker used by the editor toolbar.
+Pass `editor` to insert at its selection, or `onInsert` to open a host-managed
+editing session. Include the editor stylesheet and an `.rmk-editor` ancestor.
+
+```tsx
+<MarkdownTablePicker editor={editor} />
+<MarkdownTablePicker
+  placement="above"
+  onInsert={(rows, columns) => openEditor((commands) => commands.insertTable(rows, columns))}
+/>
+```
+
+`placement` defaults to `"below"`; `disabled` defaults to `false`.

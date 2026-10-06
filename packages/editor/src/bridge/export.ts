@@ -158,7 +158,12 @@ function blockNodeToMdast(
     return { type: 'tableCell', children: atomsToMdast(inlineAtomsOf(node, rawByNode, adapters)) }
   }
   if ($isParagraphNode(node) || $isElementNode(node)) {
-    const children = atomsToMdast(inlineAtomsOf(node as ElementNode, rawByNode, adapters))
+    const atoms = inlineAtomsOf(node as ElementNode, rawByNode, adapters)
+    // CommonMark hard breaks require following inline content. A terminal
+    // break serializes as a literal backslash on reload. Keep these caret-only
+    // lines in Lexical while typing, but omit them from the Markdown paragraph.
+    while (atoms.at(-1)?.kind === 'break') atoms.pop()
+    const children = atomsToMdast(atoms)
     // An empty paragraph has no Markdown spelling; Lexical keeps one around as
     // the caret's home, so dropping it is what keeps an empty document empty.
     if (children.length === 0) return null

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest'
 import { $getRoot, $getNodeByKey, $getSelection, $isNodeSelection, KEY_ESCAPE_COMMAND, KEY_TAB_COMMAND } from 'lexical'
-import { MarkdownEditor, useMarkdownEditorContext, type MarkdownEditorInstance } from '@react-markdown-kit/editor'
+import { MarkdownEditor, MarkdownTablePicker, useMarkdownEditorContext, type MarkdownEditorInstance } from '@react-markdown-kit/editor'
 import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
 import { editorOf } from '../src/bridge/session.js'
 import { internalsOf } from '../src/react/internals.js'
@@ -58,6 +58,16 @@ describe('table editing', () => {
     expect(editor.getMarkdown()).toMatch(/:-+:/)
     run(() => editor.undo())
     expect(view.container.querySelectorAll('td')[1]?.getAttribute('align')).toBe('right')
+    view.unmount()
+  })
+  it('reuses the dimension picker with a host-managed insertion callback', () => {
+    const insert = vi.fn()
+    const view = mount(<div className="rmk-editor"><MarkdownTablePicker onInsert={insert} placement="above" /></div>)
+    click(view.container.querySelector('[aria-label="Insert table"]'))
+    click(view.container.querySelector('[aria-label="2 rows, 5 columns"]'))
+    expect(insert).toHaveBeenCalledWith(2, 5)
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull()
+    expect(view.container.querySelector('.rmk-table-picker')?.getAttribute('data-placement')).toBe('above')
     view.unmount()
   })
   it('inserts a table using the dimension picker', () => {

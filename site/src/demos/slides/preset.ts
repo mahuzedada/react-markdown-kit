@@ -1,14 +1,16 @@
 /**
- * One preset for the deck pane: GFM, the Mermaid plugin (diagrams render
- * inside slides) and the `/present` entry's `slides()`. The page drives the
- * deck through `controller` (the header's Present button, the stream
- * replay), and every window of the demo shares one BroadcastChannel so the
- * presenter window drives the audience window. `?view=present` and
- * `?view=presenter` open straight into that mode with deep links on.
+ * One preset for the canvas and the deck: GFM, the Mermaid plugin (diagrams
+ * render inside slides) and the `/canvas` entry's `slides()`, which is the
+ * present-mode deck plus the editor nodes the canvas edits slides with. The
+ * page drives the deck through `controller` (the canvas's Present button,
+ * the stream replay), and every window of the demo shares one
+ * BroadcastChannel so the presenter window drives the audience window.
+ * `?view=present` and `?view=presenter` open straight into that mode with
+ * deep links on.
  */
 import { defineMarkdownPreset, gfm, type MarkdownPreset } from '@react-markdown-kit/renderer'
 import { mermaid } from '@react-markdown-kit/mermaid'
-import { createDeckController, slides, type DeckController } from '@react-markdown-kit/slides/present'
+import { createDeckController, slides, type DeckController } from '@react-markdown-kit/slides/canvas'
 import type { DemoView } from './url-state'
 
 export const SYNC_CHANNEL = 'rmk-slides-demo'

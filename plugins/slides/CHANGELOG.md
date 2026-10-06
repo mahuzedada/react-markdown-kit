@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 (2026-10-06)
+
+- New `/canvas` entry: `<SlideCanvas>`, a slide editor. The current slide fits a canvas, every slide is a labeled thumbnail in a strip or a sectioned grid, and double-clicking a Markdown block edits it in place. Slides can be added, duplicated, deleted and dragged to a new place, and speaker notes are edited under the slide. Body and notes edits splice their Markdown ranges; structural edits normalize spacing between slides. Also exports `CanvasMenu`, `CANVAS_TOOLS`, `SLIDE_CANVAS_LABELS` and `slideSpans`, and re-exports `/editor`.
+- Floating insertion and view controls, previous/next buttons, focus mode and deck undo/redo (bounded, and including edits the host makes to the source). Block properties, formatting and Edit/Done appear only while a block is selected or being edited. A layout selector writes the `layout` directive.
+- Blocks move by dragging or with Alt+Up/Down, and keep the column they belong to. Two-column slides edit one column at a time without flattening or rewriting the other.
+- Tables use the editor's dimension picker and `insertTable` command.
+- `onBlockSelect` reports the selected block's source range; `onRevealSource` lets a host editor jump to it.
+- Leading separators follow the renderer's slide-count rules. Thumbnail navigation no longer scrolls the host page.
+- Peer range raised to `@react-markdown-kit/editor` ^0.2.2 for `MarkdownTablePicker`.
+
 ## 0.2.1 (2026-10-04)
 
 - Peer ranges raised to `@react-markdown-kit/renderer` ^0.1.1 and `@react-markdown-kit/editor` ^0.2.1. Slide markers and directives are declared literal under the renderer's `variables` key, which renderer 0.1.0 does not read.

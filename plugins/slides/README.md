@@ -6,8 +6,9 @@ notes follow `???`, fragments follow `--`, a second column follows
 (layout, class, background, transition, footer and a few more). The file
 stays plain CommonMark: GitHub shows it as a document with rules, the
 renderer shows it as a deck of `<section>`s, `/present` turns that deck into
-a keyboard-driven presentation, `/editor` adds the authoring commands and
-`/pptx` writes a PowerPoint file.
+a keyboard-driven presentation, `/editor` adds the authoring commands,
+`/canvas` is a slide editor with text edited on the slide, and `/pptx`
+writes a PowerPoint file.
 
 ```bash
 npm install @react-markdown-kit/renderer @react-markdown-kit/slides
@@ -200,9 +201,10 @@ never throw.
 | `@react-markdown-kit/slides` | nothing beyond the parser | the headless extension above |
 | `@react-markdown-kit/slides/present` | React | `slides()` with a client `article` component: present mode, keyboard and pointer navigation, fragments, presenter view, overview, drawing, hash routing, sync |
 | `@react-markdown-kit/slides/editor` | React and Lexical | the present entry plus editor nodes and toolbar commands (new slide, speaker notes, pause, background) |
+| `@react-markdown-kit/slides/canvas` | React and Lexical | the editor entry plus `<SlideCanvas>`: the current slide on a canvas, every slide in a strip or a grid, text edited on the slide, speaker notes under it |
 | `@react-markdown-kit/slides/pptx` | `pptxgenjs` (optional peer, loaded on first call) | `deckToPptx(compiledDocument)`: a .pptx with one slide per deck slide |
 
-The first three return an extension named `slides`, so a later entry replaces an
+The first three (and `/canvas`, which re-exports `/editor`) return an extension named `slides`, so a later entry replaces an
 earlier one in a preset. The `/present` and `/editor` entries bind a React
 component per `slides()` call, so build the preset once (at module level,
 or in `useMemo`) rather than calling `slides()` inside render, which would
@@ -233,6 +235,80 @@ deck syncs; Escape closes whatever is open, then leaves.
 
 Keys, the control bar and the help list all read one command registry
 (`DECK_COMMANDS`), so a custom control bar can run any command by id.
+
+## Slide canvas
+
+```tsx
+import { defineMarkdownPreset, gfm } from '@react-markdown-kit/renderer'
+import { SlideCanvas, slides } from '@react-markdown-kit/slides/canvas'
+import '@react-markdown-kit/editor/styles.css'
+import '@react-markdown-kit/slides/styles.css'
+
+const preset = defineMarkdownPreset({ extensions: [gfm(), slides()] })
+
+<div style={{ height: '100vh' }}>
+  <SlideCanvas value={deck} onChange={setDeck} preset={preset} onPresent={(index) => …} />
+</div>
+```
+
+The canvas fills its parent. Floating toolbars provide text, image and table
+insertion, undo/redo, your `actions`, presentation and zoom. Formatting tools
+appear while editing. Properties shows either the selected block's Markdown
+or the slide's layout. The layout selector writes a `<!-- layout: … -->`
+directive, including a local override of a front-matter default. Choosing Two
+columns inserts `::right::` when needed.
+
+Table insertion uses the editor's shared `MarkdownTablePicker` and
+`insertTable` command. While editing a table, `MarkdownEditorContent` provides
+the same row/column controls, alignment, selection and clipboard behavior as
+the document editor; table changes write back to the selected Markdown range.
+
+Click a heading, paragraph, list, table or code block to select it; double-click
+or press Enter or Edit block to edit it in place. Escape or Done finishes editing
+and returns focus to the selected block. Inserting Text opens its editor immediately. Enter in a text paragraph inserts a
+Markdown hard line break, so multiple lines remain one selectable box after
+editing. Lists, tables, code and headings retain their structural Enter behavior. Only that block's
+source range is replaced: neighboring blocks, column boundaries, directives
+and notes keep their bytes. The editor uses the same Markdown preset as the
+preview. The properties panel also offers a Markdown field for the block and
+an optional host-provided “Reveal in source” action. `onBlockSelect` exposes
+the selected source range for highlighting in a host editor.
+
+A floating selection toolbar appears only when a block is selected or edited.
+Drag a selected block (or its grip) onto another block to move it; the arrow
+buttons and Alt+Up/Down provide the same operation without dragging. Moving
+forward places it after the target; moving backward places it before the target.
+Column and fragment markers stay in place, so only the moved block crosses
+columns or reveal steps. Position follows Markdown document flow, not absolute
+coordinates. Focus canvas temporarily hides the filmstrip, notes and properties;
+Exit focus restores them. Escape exits focus once the block selection is cleared.
+
+Undo and Redo keep up to 100 Markdown snapshots, including changes arriving
+from a host source pane. A typing burst is grouped into one step; structural
+and layout changes are separate steps. Cmd/Ctrl+Z and Cmd/Ctrl+Shift+Z work
+when focus is outside text fields; an active text editor keeps its native
+history. Remount the canvas to start a fresh history for a different document.
+
+The bottom bar adds, duplicates and deletes slides, opens speaker notes,
+navigates slides, and switches between the labeled filmstrip and grid.
+Section-layout slides provide group headings in the grid. Drag a thumbnail, or press Alt with an arrow key, to move a slide.
+Structural edits normalize blank lines between slides; body and notes edits
+splice only their source ranges. Without `onChange` the canvas only views.
+
+| Prop | Effect |
+| --- | --- |
+| `value`, `onChange` | The deck's Markdown; every edit arrives as the whole deck |
+| `preset`, `extensions` | What renders the deck and edits a slide; hold `slides()` from `/canvas` or `/editor` |
+| `index`, `defaultIndex`, `onIndexChange` | The current slide; `onIndexChange` also gets the slide's span in `value` |
+| `onPresent` | Shows a Present button; called with the current slide |
+| `onBlockSelect` | Reports the selected block’s source span, or `undefined` when deselected |
+| `onRevealSource` | Adds a Reveal in source action to block controls and properties |
+| `actions` | Your controls in the floating view toolbar; `CanvasMenu` makes a menu in the same style |
+| `labels` | Every UI string (`SLIDE_CANVAS_LABELS`) |
+
+`slideSpans(document.tree, source)` gives each slide's span in the source,
+for marking the current slide in a source view. Colours are the
+`--rmk-canvas-*` properties on `.rmk-editor.rmk-slide-canvas`.
 
 ## PowerPoint
 

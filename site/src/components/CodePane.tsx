@@ -1,4 +1,4 @@
-import { useCallback, useRef, type ChangeEvent, type KeyboardEvent, type ReactNode, type UIEvent } from 'react'
+import { useCallback, useEffect, useRef, type ChangeEvent, type KeyboardEvent, type ReactNode, type UIEvent } from 'react'
 import { cn } from '@zuilib/primitives/lib/cn'
 
 const INDENT = '    '
@@ -24,6 +24,20 @@ export interface CodePaneProps<Kind extends string> {
   readonly lines: readonly (readonly CodeToken<Kind>[])[]
   /** The utility classes each token kind is drawn with. */
   readonly tokenClasses: Readonly<Record<Kind, string>>
+  /** Character offsets whose lines are marked, such as the slide on screen. */
+  readonly highlight?: { readonly start: number; readonly end: number }
+  /** A new value scrolls the highlighted lines into view. */
+  readonly highlightKey?: unknown
+  /** Explicit request to focus and select the highlighted source range. */
+  readonly revealKey?: number | undefined
+  /** Cursor position in the source, for linked previews. */
+  readonly onSelectionChange?: (offset: number) => void
+}
+
+function lineOf(value: string, offset: number): number {
+  let line = 0
+  for (let index = value.indexOf('\n'); index !== -1 && index < offset; index = value.indexOf('\n', index + 1)) line += 1
+  return line
 }
 
 /**
@@ -33,8 +47,33 @@ export interface CodePaneProps<Kind extends string> {
  * its own language. Tab indents, Enter keeps the indentation of the line
  * above, as a code editor does. No editor library is loaded.
  */
-export default function CodePane<Kind extends string>({ value, onChange, label, lines, tokenClasses }: CodePaneProps<Kind>): ReactNode {
+export default function CodePane<Kind extends string>({ value, onChange, label, lines, tokenClasses, highlight, highlightKey, revealKey, onSelectionChange }: CodePaneProps<Kind>): ReactNode {
   const layer = useRef<HTMLPreElement>(null)
+  const field = useRef<HTMLTextAreaElement>(null)
+  const first = highlight === undefined ? -1 : lineOf(value, highlight.start)
+  const last = highlight === undefined ? -1 : lineOf(value, highlight.end)
+
+  // Only a new key scrolls: typing inside the highlighted lines keeps the reader where they are.
+  const firstLine = useRef(first)
+  firstLine.current = first
+  useEffect(() => {
+    const area = field.current
+    if (area === null || firstLine.current < 0 || document.activeElement === area) return
+    const lineHeight = Number.parseFloat(getComputedStyle(area).lineHeight) || 20
+    area.scrollTop = Math.max(0, (firstLine.current - 2) * lineHeight)
+  }, [highlightKey])
+
+  const highlighted = useRef(highlight)
+  highlighted.current = highlight
+  useEffect(() => {
+    const area = field.current
+    const span = highlighted.current
+    if (!revealKey || area === null || span === undefined) return
+    area.focus({ preventScroll: true })
+    area.setSelectionRange(span.start, span.end)
+    const lineHeight = Number.parseFloat(getComputedStyle(area).lineHeight) || 20
+    area.scrollTop = Math.max(0, (firstLine.current - 2) * lineHeight)
+  }, [revealKey])
 
   const onScroll = useCallback((event: UIEvent<HTMLTextAreaElement>) => {
     const pre = layer.current
@@ -80,7 +119,7 @@ export default function CodePane<Kind extends string>({ value, onChange, label, 
     <div className="relative min-h-0 flex-1 font-mono text-[12.5px] leading-[1.6] [tab-size:4] [--code-gutter:3rem] [--code-pad:0.75rem]">
       <pre ref={layer} className={cn(STACKED, 'pointer-events-none overflow-hidden bg-transparent text-foreground')} aria-hidden="true">
         {lines.map((tokens, index) => (
-          <div key={index} className="flex min-w-max">
+          <div key={index} className={cn('flex min-w-max', index >= first && index <= last && 'bg-primary/8')}>
             <span className="flex-[0_0_var(--code-gutter)] pr-[0.9rem] text-right text-muted-foreground opacity-70 select-none">{index + 1}</span>
             <span className="flex-1">
               {tokens.map((token, position) =>
@@ -96,6 +135,7 @@ export default function CodePane<Kind extends string>({ value, onChange, label, 
         ))}
       </pre>
       <textarea
+        ref={field}
         className={cn(
           STACKED,
           'resize-none overflow-auto bg-transparent pl-(--code-gutter) text-transparent caret-foreground outline-none',
@@ -103,6 +143,7 @@ export default function CodePane<Kind extends string>({ value, onChange, label, 
         )}
         value={value}
         onChange={onInput}
+        onSelect={(event) => onSelectionChange?.(event.currentTarget.selectionStart)}
         onScroll={onScroll}
         onKeyDown={onKeyDown}
         spellCheck={false}

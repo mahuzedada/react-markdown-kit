@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 (2026-10-06)
+
+- `MarkdownTablePicker` is exported: the toolbar's table dimension picker. Pass `editor` to insert at its selection, or `onInsert` to handle the chosen size yourself; `placement="above"` opens it upward.
+- A trailing hard break at the end of a paragraph is dropped on export instead of saving as a literal backslash.
+- Escape in the table picker or table tools no longer reaches outer handlers, and focus moves in the table controls no longer scroll the page.
+
 ## 0.2.1 (2026-10-04)
 
 - Table editing with the GFM preset: **Insert table** picks a grid size; edge controls insert or delete rows and columns at the focused cell; the corner control selects the whole table; **Table options** aligns a column, saved in the delimiter row. Tab and Shift+Tab move between cells, Tab from the last cell adds a row, Shift-click or drag selects a rectangle, and copy, cut and paste move rectangles as TSV and HTML. Alt+F10 reaches the edge controls from the keyboard. New commands `insertTable(rows, columns)`, `tableAction(action)` and `alignTableColumn(align)`.

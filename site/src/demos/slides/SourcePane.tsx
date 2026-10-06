@@ -27,10 +27,17 @@ export interface SourcePaneProps {
   readonly className: string
   readonly head: string
   readonly hidden: boolean
+  /** The slide on the canvas, marked in the text */
+  readonly highlight?: { readonly start: number; readonly end: number }
+  /** Changes when the canvas moves to another slide, which scrolls to it */
+  readonly highlightKey?: number
+  readonly revealKey?: number
+  readonly onSelectionChange?: (offset: number) => void
+  readonly onClose?: () => void
 }
 
 /** The left pane: the deck file as plain text, with the plugin's syntax coloured. What you type here is what gets saved. */
-export default function SourcePane({ value, onChange, className, head, hidden }: SourcePaneProps): ReactNode {
+export default function SourcePane({ value, onChange, className, head, hidden, highlight, highlightKey, revealKey, onClose, onSelectionChange }: SourcePaneProps): ReactNode {
   const lines = useMemo(() => tokenizeDeck(value), [value])
   return (
     <div className={className} data-mobile-hidden={hidden ? '' : undefined}>
@@ -39,10 +46,25 @@ export default function SourcePane({ value, onChange, className, head, hidden }:
           deck.md
         </Text>
         <Badge variant="subtle" tone="success" size="sm" className="whitespace-nowrap">
-          plain Markdown, the file as saved
+          Source of truth
         </Badge>
+        {onClose === undefined ? null : (
+          <button type="button" aria-label="Close source" onClick={onClose}>
+            ×
+          </button>
+        )}
       </div>
-      <CodePane value={value} onChange={onChange} label="Deck source" lines={lines} tokenClasses={TOKEN_CLASSES} />
+      <CodePane
+        value={value}
+        onChange={onChange}
+        label="Deck source"
+        lines={lines}
+        tokenClasses={TOKEN_CLASSES}
+        {...(highlight === undefined ? {} : { highlight })}
+        highlightKey={highlightKey}
+        revealKey={revealKey}
+        {...(onSelectionChange === undefined ? {} : { onSelectionChange })}
+      />
       <Text size="sm" muted className="m-0 border-t border-border px-[0.9rem] py-2 [&_code]:font-mono [&_code]:text-[0.9em]">
         <code>---</code> starts a slide, <code>--</code> a step, <code>???</code> the notes and <code>::right::</code> a second
         column. While presenting, press <code>?</code> for the keys.

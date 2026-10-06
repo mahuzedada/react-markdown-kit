@@ -2,7 +2,7 @@
  * Two builds, one package.
  *
  * `index` is the headless plugin: no React, no Lexical, safe in a server
- * component; `pptx` is the PowerPoint export, also free of React. `present` and `editor` are client entries and must start with
+ * component; `pptx` is the PowerPoint export, also free of React. `present`, `editor` and `canvas` are client entries and must start with
  * `'use client'`; tsup's code splitting drops a directive that lives in a
  * source file, so those two are built by a second config that prepends it as
  * a banner. Both configs leave `dist` alone (`clean: false`); the build
@@ -49,7 +49,7 @@ export default defineConfig([
   },
   {
     ...shared,
-    entry: { present: 'src/present.ts', editor: 'src/editor.ts' },
+    entry: { present: 'src/present.ts', editor: 'src/editor.ts', canvas: 'src/canvas.ts' },
     splitting: true,
     banner: { js: "'use client';" },
     // tsup's treeshake pass runs rollup over esbuild's output and drops a

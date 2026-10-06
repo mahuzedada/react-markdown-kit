@@ -16,7 +16,16 @@ function TableActionIcon({ action }: { action: TableAction | 'left' | 'center' |
   </svg>
 }
 
-export function TablePicker({ editor, disabled }: { editor: MarkdownEditorInstance; disabled: boolean }): ReactElement {
+/** The same picker can insert into an editor or a host-managed edit session. */
+export type MarkdownTablePickerProps = {
+  readonly disabled?: boolean
+  readonly placement?: 'above' | 'below'
+} & (
+  | { readonly editor: MarkdownEditorInstance; readonly onInsert?: never }
+  | { readonly editor?: never; readonly onInsert: (rows: number, columns: number) => void }
+)
+
+export function TablePicker({ editor, onInsert, disabled = false, placement = 'below' }: MarkdownTablePickerProps): ReactElement {
   const [open, setOpen] = useState(false)
   const [size, setSize] = useState([3, 3])
   const [panel, setPanel] = useState({ left: 0, width: 218 })
@@ -24,10 +33,10 @@ export function TablePicker({ editor, disabled }: { editor: MarkdownEditorInstan
   const trigger = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!open) return
-    root.current?.querySelector<HTMLButtonElement>('[data-size]')?.focus()
+    root.current?.querySelector<HTMLButtonElement>('[data-size]')?.focus({ preventScroll: true })
     const position = (): void => {
       const rect = root.current?.getBoundingClientRect()
-      const toolbar = root.current?.closest('[role=toolbar]')?.getBoundingClientRect()
+      const toolbar = root.current?.closest('.rmk-editor')?.getBoundingClientRect()
       if (!rect) return
       const start = Math.max(8, toolbar?.left ?? 0)
       const end = Math.min(window.innerWidth - 8, toolbar?.right ?? window.innerWidth)
@@ -41,8 +50,8 @@ export function TablePicker({ editor, disabled }: { editor: MarkdownEditorInstan
     document.addEventListener('pointerdown', close)
     return () => { document.removeEventListener('pointerdown', close); window.removeEventListener('resize', position); document.removeEventListener('scroll', position, true) }
   }, [open])
-  return <div className="rmk-table-picker" ref={root} onKeyDown={event => {
-    if (event.key === 'Escape') { setOpen(false); trigger.current?.focus() }
+  return <div className="rmk-table-picker" data-placement={placement} ref={root} onKeyDown={event => {
+    if (event.key === 'Escape' && open) { event.stopPropagation(); setOpen(false); trigger.current?.focus({ preventScroll: true }) }
   }}>
     <button ref={trigger} type="button" className="rmk-toolbar-button" data-rmk-toolbar-item="table" aria-label="Insert table" title="Insert table" aria-expanded={open} aria-haspopup="dialog" disabled={disabled} onMouseDown={event => event.preventDefault()} onClick={() => setOpen(!open)}>
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="2"/><path d="M3 8h14M3 12.5h14M8 8v9M12.5 8v9"/></svg>
@@ -53,8 +62,8 @@ export function TablePicker({ editor, disabled }: { editor: MarkdownEditorInstan
         const r = Math.floor(index / 8) + 1, c = index % 8 + 1
         return <button key={index} type="button" data-size="" data-active={r <= size[0]! && c <= size[1]!} aria-label={`${r} rows, ${c} columns`} onFocus={() => setSize([r,c])} onMouseEnter={() => setSize([r,c])} onKeyDown={event => {
           const delta = ({ArrowRight: 1, ArrowLeft: -1, ArrowDown: 8, ArrowUp: -8} as Record<string, number>)[event.key]
-          if (delta !== undefined) { event.preventDefault(); root.current?.querySelectorAll<HTMLButtonElement>('[data-size]')[Math.max(0, Math.min(47, index + delta))]?.focus() }
-        }} onClick={() => { editor.commands.insertTable(r,c); setOpen(false); editor.focus() }}/>
+          if (delta !== undefined) { event.preventDefault(); root.current?.querySelectorAll<HTMLButtonElement>('[data-size]')[Math.max(0, Math.min(47, index + delta))]?.focus({ preventScroll: true }) }
+        }} onClick={() => { setOpen(false); if (editor) { editor.commands.insertTable(r,c); editor.focus() } else onInsert(r,c) }}/>
       })}</div><span className="rmk-table-hint">First row is the header</span>
     </div>}
   </div>
@@ -91,7 +100,7 @@ export function TableTools({ internals }: { internals: EditorInternals }): React
     setMenu(false); setAnnouncement('Table deleted.'); editor.focus()
   }, [editor])
   useEffect(() => {
-    if (menu) tools.current?.querySelector<HTMLButtonElement>('.rmk-table-actions button')?.focus()
+    if (menu) tools.current?.querySelector<HTMLButtonElement>('.rmk-table-actions button')?.focus({ preventScroll: true })
   }, [menu])
   useEffect(() => {
     if (internals.readOnly) return
@@ -235,7 +244,7 @@ export function TableTools({ internals }: { internals: EditorInternals }): React
     const keydown = (event: KeyboardEvent): void => {
       if (event.altKey && event.key === 'F10' && activeKey.current) {
         event.preventDefault(); event.stopPropagation()
-        tools.current?.querySelector<HTMLButtonElement>('.rmk-table-rail-row button')?.focus()
+        tools.current?.querySelector<HTMLButtonElement>('.rmk-table-rail-row button')?.focus({ preventScroll: true })
         return
       }
       if (selectedTableKey.current && (event.key === 'Backspace' || event.key === 'Delete')) {
@@ -325,7 +334,7 @@ export function TableTools({ internals }: { internals: EditorInternals }): React
     setMenu(false); editor.focus()
   }
   return <div ref={tools} className="rmk-table-tools" data-table-selected={active.selected} onMouseDown={event => event.preventDefault()} onKeyDown={event => {
-    if (event.key === 'Escape') { event.preventDefault(); deselectTable() }
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); deselectTable() }
     if (active.selected && (event.key === 'Delete' || event.key === 'Backspace')) { event.preventDefault(); deleteTable(active.tableKey) }
   }}>
     {status}

@@ -311,6 +311,32 @@ html[data-theme='dark'] .rmk-document {
 }
 
 /*
+ * The slide canvas (`@react-markdown-kit/slides/canvas`) on /markdown-slides:
+ * a muted backdrop with the slide as a card on it, workspace controls in the
+ * popover colours, the primary colour for the selection. The `html` prefix
+ * outranks the plugin's own declaration on `.rmk-editor.rmk-slide-canvas`.
+ */
+html .rmk-editor.rmk-slide-canvas {
+  --rmk-canvas-backdrop: color-mix(in oklab, var(--foreground) 7%, var(--background));
+  --rmk-canvas-island: var(--background);
+  --rmk-canvas-text: var(--foreground);
+  --rmk-canvas-muted: var(--muted-foreground);
+  --rmk-canvas-border: var(--border);
+  --rmk-canvas-hover: var(--muted);
+  --rmk-canvas-pressed: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --rmk-canvas-accent: var(--primary);
+  --rmk-canvas-accent-text: var(--primary-foreground);
+  --rmk-canvas-island-shadow: var(--shadow-2);
+  --rmk-canvas-slide-shadow: var(--shadow-3);
+  font-family: var(--font-sans);
+}
+
+html[data-theme='dark'] .rmk-editor.rmk-slide-canvas {
+  --rmk-canvas-backdrop: color-mix(in oklab, var(--background), black 30%);
+  --rmk-canvas-island: var(--card);
+}
+
+/*
  * The docs' slide examples (`<div className="slides-examples">` in
  * docs/slides.mdx and marp-alternative.mdx). A slide in a half-width example
  * pane is a thumbnail, so the stack raises the plugin's 1.72cqw (22px on a

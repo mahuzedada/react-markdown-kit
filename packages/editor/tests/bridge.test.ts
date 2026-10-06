@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest'
 import {
   $getRoot,
   $createTextNode,
+  $createLineBreakNode,
   $isElementNode,
   type LexicalEditor,
   type LexicalNode,
@@ -256,5 +257,29 @@ describe('document contract', () => {
     expect(document.profile).toBe('gfm')
     expect(document.source).toBe('# Title\n\nBody.\n')
     expect(() => JSON.stringify(document)).not.toThrow()
+  })
+})
+
+
+describe('trailing hard breaks', () => {
+  it('omits terminal breaks without changing literal backslashes or breaks between text', () => {
+    const bridge = open('First line\n')
+    native(bridge).update(() => {
+      const paragraph = $getRoot().getFirstChild()
+      if ($isElementNode(paragraph)) paragraph.append(
+        $createLineBreakNode(),
+        $createLineBreakNode(),
+        $createTextNode('Path C:' + String.fromCharCode(92)),
+        $createLineBreakNode(),
+        $createLineBreakNode(),
+      )
+    }, { discrete: true })
+    const saved = bridge.getMarkdown()
+    const restored = open(saved)
+    expect(restored.getMarkdown()).toBe(saved)
+    native(restored).getEditorState().read(() => {
+      const paragraph = $getRoot().getFirstChild()
+      expect(paragraph?.getTextContent()).toBe('First line\n\nPath C:' + String.fromCharCode(92))
+    })
   })
 })

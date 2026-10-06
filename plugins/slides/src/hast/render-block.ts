@@ -27,7 +27,14 @@ export function blockRenderer(state: HastState, root: MarkdownRoot): RenderBlock
     if (isPending(block) || (block === last && isOpenComment(block))) return []
     const result = state.one(block, root)
     if (result === undefined || result === null) return []
-    return (Array.isArray(result) ? result : [result]) as ElementContent[]
+    const rendered = (Array.isArray(result) ? result : [result]) as ElementContent[]
+    // Canvas-only source mapping. Static and presentation output stay unchanged.
+    const data = root.data as { rmkCanvas?: boolean } | undefined
+    const start = block.position?.start.offset
+    if (data?.rmkCanvas && start !== undefined) {
+      for (const element of rendered) if (element.type === 'element') element.properties.dataRmkCanvasBlock = String(start)
+    }
+    return rendered
   }
 }
 
