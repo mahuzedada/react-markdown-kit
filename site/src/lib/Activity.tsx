@@ -18,8 +18,8 @@ export interface SiteActivityProps {
  * `data-zui-tag` each primitive writes for its `track` name; tab changes are
  * reported by the component. Every event carries the site it came from.
  *
- * Production reports to the self-hosted Umami at stats.reactmarkdownkit.com
- * (./umami.ts); development only logs to the console and loads no script.
+ * Production reports to the shared self-hosted Umami through this site's own
+ * /_s/ paths (./umami.ts); development only logs to the console and loads no script.
  */
 export function SiteActivity({ site, dev, children }: SiteActivityProps): ReactNode {
   useEffect(() => {

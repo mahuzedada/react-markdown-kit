@@ -55,5 +55,8 @@
       "status": 200,
       "contains": "https://reactmarkdownkit.com/markdown-editor"
     }
-  ]
+  ],
+  "analytics": {
+    "enabled": true
+  }
 }

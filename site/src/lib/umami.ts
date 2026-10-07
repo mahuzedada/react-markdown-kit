@@ -1,13 +1,20 @@
 import type { ActivityAdapter, ActivityEvent } from '@zuilib/primitives/activity'
 import type { ActivitySite } from './Activity'
 
-/** The self-hosted Umami instance (Shipiru app `umami`). */
-const UMAMI_SCRIPT = 'https://stats.reactmarkdownkit.com/s.js'
+/**
+ * The shared Umami (Shipiru app `umami`, dashboard at stats.shipiru.com),
+ * served on this site's own origin by Shipiru's analytics include
+ * (`"analytics"` in .shipiru.json), so ad blockers see a first-party request.
+ * Until 2026-10-07 the scripts loaded from stats.reactmarkdownkit.com; the
+ * website id below is unchanged, so the history carries on.
+ */
+const UMAMI_HOST = '/_s'
+const UMAMI_SCRIPT = `${UMAMI_HOST}/s.js`
 /**
  * Session replay and heatmaps. Sampling, masking and the on/off switch are
  * per-website settings in the Umami dashboard, read by the recorder at start.
  */
-const UMAMI_RECORDER = 'https://stats.reactmarkdownkit.com/recorder.js'
+const UMAMI_RECORDER = `${UMAMI_HOST}/r.js`
 
 /**
  * The Umami website of the site, created in the Umami dashboard. Until
@@ -73,8 +80,12 @@ function appendScript(src: string, data: Record<string, string>, onLoad?: () => 
 export function loadUmami(site: ActivitySite): void {
   if (document.querySelector(`script[src="${UMAMI_SCRIPT}"]`) !== null) return
   const websiteId = UMAMI_WEBSITE_IDS[site]
-  appendScript(UMAMI_SCRIPT, { websiteId, autoTrack: 'false', excludeSearch: 'true', excludeHash: 'true' }, flushPending)
-  appendScript(UMAMI_RECORDER, { websiteId })
+  appendScript(
+    UMAMI_SCRIPT,
+    { websiteId, hostUrl: UMAMI_HOST, autoTrack: 'false', excludeSearch: 'true', excludeHash: 'true' },
+    flushPending,
+  )
+  appendScript(UMAMI_RECORDER, { websiteId, hostUrl: UMAMI_HOST })
 }
 
 function eventData(event: ActivityEvent): UmamiData {
